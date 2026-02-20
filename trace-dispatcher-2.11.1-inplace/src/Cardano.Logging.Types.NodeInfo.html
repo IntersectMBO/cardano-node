@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# Language DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# Language DeriveAnyClass #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Types.NodeInfo</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.NodeInfo.html#NodeInfo"><span class="hs-identifier">NodeInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.html"><span class="hs-identifier">Data.Time</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | NodeInfo</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="NodeInfo"><span class="annot"><a href="Cardano.Logging.Types.NodeInfo.html#NodeInfo"><span class="hs-identifier hs-var">NodeInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeInfo"><span class="annot"><a href="Cardano.Logging.Types.NodeInfo.html#NodeInfo"><span class="hs-identifier hs-var">NodeInfo</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="niName"><span class="annot"><span class="annottext">NodeInfo -&gt; Text
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niName"><span class="hs-identifier hs-var hs-var">niName</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="niProtocol"><span class="annot"><span class="annottext">NodeInfo -&gt; Text
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niProtocol"><span class="hs-identifier hs-var hs-var">niProtocol</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="niVersion"><span class="annot"><span class="annottext">NodeInfo -&gt; Text
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niVersion"><span class="hs-identifier hs-var hs-var">niVersion</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="niCommit"><span class="annot"><span class="annottext">NodeInfo -&gt; Text
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niCommit"><span class="hs-identifier hs-var hs-var">niCommit</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="niStartTime"><span class="annot"><span class="annottext">NodeInfo -&gt; UTCTime
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niStartTime"><span class="hs-identifier hs-var hs-var">niStartTime</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="niSystemStartTime"><span class="annot"><span class="annottext">NodeInfo -&gt; UTCTime
+</span><a href="Cardano.Logging.Types.NodeInfo.html#niSystemStartTime"><span class="hs-identifier hs-var hs-var">niSystemStartTime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679137614"><span id="local-6989586621679137624"><span class="annot"><span class="annottext">NodeInfo -&gt; NodeInfo -&gt; Bool
+(NodeInfo -&gt; NodeInfo -&gt; Bool)
+-&gt; (NodeInfo -&gt; NodeInfo -&gt; Bool) -&gt; Eq NodeInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeInfo -&gt; NodeInfo -&gt; Bool
+== :: NodeInfo -&gt; NodeInfo -&gt; Bool
+$c/= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+/= :: NodeInfo -&gt; NodeInfo -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137629"><span id="local-6989586621679137641"><span id="local-6989586621679137645"><span class="annot"><span class="annottext">Int -&gt; NodeInfo -&gt; ShowS
+[NodeInfo] -&gt; ShowS
+NodeInfo -&gt; String
+(Int -&gt; NodeInfo -&gt; ShowS)
+-&gt; (NodeInfo -&gt; String) -&gt; ([NodeInfo] -&gt; ShowS) -&gt; Show NodeInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeInfo -&gt; ShowS
+showsPrec :: Int -&gt; NodeInfo -&gt; ShowS
+$cshow :: NodeInfo -&gt; String
+show :: NodeInfo -&gt; String
+$cshowList :: [NodeInfo] -&gt; ShowS
+showList :: [NodeInfo] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137649"><span id="local-6989586621679137651"><span class="annot"><span class="annottext">(forall x. NodeInfo -&gt; Rep NodeInfo x)
+-&gt; (forall x. Rep NodeInfo x -&gt; NodeInfo) -&gt; Generic NodeInfo
+forall x. Rep NodeInfo x -&gt; NodeInfo
+forall x. NodeInfo -&gt; Rep NodeInfo x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. NodeInfo -&gt; Rep NodeInfo x
+from :: forall x. NodeInfo -&gt; Rep NodeInfo x
+$cto :: forall x. Rep NodeInfo x -&gt; NodeInfo
+to :: forall x. Rep NodeInfo x -&gt; NodeInfo
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679137655"><span class="annot"><span class="annottext">NodeInfo -&gt; ()
+(NodeInfo -&gt; ()) -&gt; NFData NodeInfo
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: NodeInfo -&gt; ()
+rnf :: NodeInfo -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137684"><span id="local-6989586621679137691"><span id="local-6989586621679137694"><span id="local-6989586621679137697"><span id="local-6989586621679137700"><span class="annot"><span class="annottext">[NodeInfo] -&gt; Value
+[NodeInfo] -&gt; Encoding
+NodeInfo -&gt; Bool
+NodeInfo -&gt; Value
+NodeInfo -&gt; Encoding
+(NodeInfo -&gt; Value)
+-&gt; (NodeInfo -&gt; Encoding)
+-&gt; ([NodeInfo] -&gt; Value)
+-&gt; ([NodeInfo] -&gt; Encoding)
+-&gt; (NodeInfo -&gt; Bool)
+-&gt; ToJSON NodeInfo
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: NodeInfo -&gt; Value
+toJSON :: NodeInfo -&gt; Value
+$ctoEncoding :: NodeInfo -&gt; Encoding
+toEncoding :: NodeInfo -&gt; Encoding
+$ctoJSONList :: [NodeInfo] -&gt; Value
+toJSONList :: [NodeInfo] -&gt; Value
+$ctoEncodingList :: [NodeInfo] -&gt; Encoding
+toEncodingList :: [NodeInfo] -&gt; Encoding
+$comitField :: NodeInfo -&gt; Bool
+omitField :: NodeInfo -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137857"><span id="local-6989586621679137864"><span id="local-6989586621679137867"><span class="annot"><span class="annottext">Maybe NodeInfo
+Value -&gt; Parser [NodeInfo]
+Value -&gt; Parser NodeInfo
+(Value -&gt; Parser NodeInfo)
+-&gt; (Value -&gt; Parser [NodeInfo])
+-&gt; Maybe NodeInfo
+-&gt; FromJSON NodeInfo
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser NodeInfo
+parseJSON :: Value -&gt; Parser NodeInfo
+$cparseJSONList :: Value -&gt; Parser [NodeInfo]
+parseJSONList :: Value -&gt; Parser [NodeInfo]
+$comittedField :: Maybe NodeInfo
+omittedField :: Maybe NodeInfo
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span></pre></body></html>

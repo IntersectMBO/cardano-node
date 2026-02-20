@@ -1,0 +1,972 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679216512"><span id="local-6989586621679216513"><span id="local-6989586621679216514"><span id="local-6989586621679216515"><span id="local-6989586621679216516"><span id="local-6989586621679216517"></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE CPP, OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Attributes.Arrows
+   Description : Arrow types
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+
+
+ -}</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Attributes.Arrows</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Internal.Util.html"><span class="hs-identifier">Data.GraphViz.Internal.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Internal.Util.html#bool"><span class="hs-identifier">bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html"><span class="hs-identifier">Data.GraphViz.Parsing</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Printing.html"><span class="hs-identifier">Data.GraphViz.Printing</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier">isJust</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if !MIN_VERSION_base (4,13,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator">&lt;&gt;</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | /Dot/ has a basic grammar of arrow shapes which allows usage of</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--   up to 1,544,761 different shapes from 9 different basic</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--   'ArrowShape's.  Note that whilst an explicit list is used in the</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--   definition of 'ArrowType', there must be at least one tuple and a</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--   maximum of 4 (since that is what is required by Dot).  For more</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--   information, see: &lt;http://graphviz.org/doc/info/arrows.html&gt;</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--   The 19 basic arrows shown on the overall attributes page have</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   been defined below as a convenience.  Parsing of the 5</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--   backward-compatible special cases is also supported.</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">newtype</span><span> </span><span id="ArrowType"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-var">ArrowType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AType"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-type">ArrowModifier</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowShape"><span class="hs-identifier hs-type">ArrowShape</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216522"><span id="local-6989586621679216528"><span class="annot"><span class="annottext">ArrowType -&gt; ArrowType -&gt; Bool
+(ArrowType -&gt; ArrowType -&gt; Bool)
+-&gt; (ArrowType -&gt; ArrowType -&gt; Bool) -&gt; Eq ArrowType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ArrowType -&gt; ArrowType -&gt; Bool
+== :: ArrowType -&gt; ArrowType -&gt; Bool
+$c/= :: ArrowType -&gt; ArrowType -&gt; Bool
+/= :: ArrowType -&gt; ArrowType -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216544"><span id="local-6989586621679216550"><span id="local-6989586621679216555"><span id="local-6989586621679216560"><span id="local-6989586621679216565"><span id="local-6989586621679216570"><span id="local-6989586621679216575"><span class="annot"><span class="annottext">Eq ArrowType
+Eq ArrowType =&gt;
+(ArrowType -&gt; ArrowType -&gt; Ordering)
+-&gt; (ArrowType -&gt; ArrowType -&gt; Bool)
+-&gt; (ArrowType -&gt; ArrowType -&gt; Bool)
+-&gt; (ArrowType -&gt; ArrowType -&gt; Bool)
+-&gt; (ArrowType -&gt; ArrowType -&gt; Bool)
+-&gt; (ArrowType -&gt; ArrowType -&gt; ArrowType)
+-&gt; (ArrowType -&gt; ArrowType -&gt; ArrowType)
+-&gt; Ord ArrowType
+ArrowType -&gt; ArrowType -&gt; Bool
+ArrowType -&gt; ArrowType -&gt; Ordering
+ArrowType -&gt; ArrowType -&gt; ArrowType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ArrowType -&gt; ArrowType -&gt; Ordering
+compare :: ArrowType -&gt; ArrowType -&gt; Ordering
+$c&lt; :: ArrowType -&gt; ArrowType -&gt; Bool
+&lt; :: ArrowType -&gt; ArrowType -&gt; Bool
+$c&lt;= :: ArrowType -&gt; ArrowType -&gt; Bool
+&lt;= :: ArrowType -&gt; ArrowType -&gt; Bool
+$c&gt; :: ArrowType -&gt; ArrowType -&gt; Bool
+&gt; :: ArrowType -&gt; ArrowType -&gt; Bool
+$c&gt;= :: ArrowType -&gt; ArrowType -&gt; Bool
+&gt;= :: ArrowType -&gt; ArrowType -&gt; Bool
+$cmax :: ArrowType -&gt; ArrowType -&gt; ArrowType
+max :: ArrowType -&gt; ArrowType -&gt; ArrowType
+$cmin :: ArrowType -&gt; ArrowType -&gt; ArrowType
+min :: ArrowType -&gt; ArrowType -&gt; ArrowType
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216599"><span id="local-6989586621679216606"><span id="local-6989586621679216610"><span class="annot"><span class="annottext">Int -&gt; ArrowType -&gt; ShowS
+[ArrowType] -&gt; ShowS
+ArrowType -&gt; String
+(Int -&gt; ArrowType -&gt; ShowS)
+-&gt; (ArrowType -&gt; String)
+-&gt; ([ArrowType] -&gt; ShowS)
+-&gt; Show ArrowType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ArrowType -&gt; ShowS
+showsPrec :: Int -&gt; ArrowType -&gt; ShowS
+$cshow :: ArrowType -&gt; String
+show :: ArrowType -&gt; String
+$cshowList :: [ArrowType] -&gt; ShowS
+showList :: [ArrowType] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216619"><span id="local-6989586621679216623"><span id="local-6989586621679216626"><span id="local-6989586621679216635"><span class="annot"><span class="annottext">ReadPrec [ArrowType]
+ReadPrec ArrowType
+Int -&gt; ReadS ArrowType
+ReadS [ArrowType]
+(Int -&gt; ReadS ArrowType)
+-&gt; ReadS [ArrowType]
+-&gt; ReadPrec ArrowType
+-&gt; ReadPrec [ArrowType]
+-&gt; Read ArrowType
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ArrowType
+readsPrec :: Int -&gt; ReadS ArrowType
+$creadList :: ReadS [ArrowType]
+readList :: ReadS [ArrowType]
+$creadPrec :: ReadPrec ArrowType
+readPrec :: ReadPrec ArrowType
+$creadListPrec :: ReadPrec [ArrowType]
+readListPrec :: ReadPrec [ArrowType]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Used for default</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#normal"><span class="hs-identifier hs-type">normal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-type">ArrowType</span></a></span><span>
+</span><span id="line-42"></span><span id="normal"><span class="annot"><span class="annottext">normal :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#normal"><span class="hs-identifier hs-var hs-var">normal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#noMods"><span class="hs-identifier hs-var">noMods</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Used for backward-compatible parsing</span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#eDiamond"><span class="hs-identifier hs-type">eDiamond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#openArr"><span class="hs-identifier hs-type">openArr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#halfOpen"><span class="hs-identifier hs-type">halfOpen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#emptyArr"><span class="hs-identifier hs-type">emptyArr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#invEmpty"><span class="hs-identifier hs-type">invEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-type">ArrowType</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span id="eDiamond"><span class="annot"><span class="annottext">eDiamond :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#eDiamond"><span class="hs-identifier hs-var hs-var">eDiamond</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openMod"><span class="hs-identifier hs-var">openMod</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Diamond"><span class="hs-identifier hs-var">Diamond</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span id="openArr"><span class="annot"><span class="annottext">openArr :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openArr"><span class="hs-identifier hs-var hs-var">openArr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#noMods"><span class="hs-identifier hs-var">noMods</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Vee"><span class="hs-identifier hs-var">Vee</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span id="halfOpen"><span class="annot"><span class="annottext">halfOpen :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#halfOpen"><span class="hs-identifier hs-var hs-var">halfOpen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowSide -&gt; ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-var">ArrMod</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#FilledArrow"><span class="hs-identifier hs-var">FilledArrow</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#LeftSide"><span class="hs-identifier hs-var">LeftSide</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Vee"><span class="hs-identifier hs-var">Vee</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span id="emptyArr"><span class="annot"><span class="annottext">emptyArr :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#emptyArr"><span class="hs-identifier hs-var hs-var">emptyArr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openMod"><span class="hs-identifier hs-var">openMod</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span id="invEmpty"><span class="annot"><span class="annottext">invEmpty :: ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#invEmpty"><span class="hs-identifier hs-var hs-var">invEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#noMods"><span class="hs-identifier hs-var">noMods</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Inv"><span class="hs-identifier hs-var">Inv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openMod"><span class="hs-identifier hs-var">openMod</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216660"><span id="local-6989586621679216664"><span id="local-6989586621679216667"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-type">ArrowType</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679216680"><span class="annot"><span class="annottext">unqtDot :: ArrowType -&gt; DotCode
+</span><a href="#local-6989586621679216680"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-type">AType</span></a></span><span> </span><span id="local-6989586621679216682"><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)]
+</span><a href="#local-6989586621679216682"><span class="hs-identifier hs-var">mas</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotCodeM [Doc] -&gt; DotCode
+forall (m :: * -&gt; *). Functor m =&gt; m [Doc] -&gt; m Doc
+</span><span class="hs-identifier hs-var">hcat</span></span><span> </span><span class="annot"><span class="annottext">(DotCodeM [Doc] -&gt; DotCode) -&gt; DotCodeM [Doc] -&gt; DotCode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((ArrowModifier, ArrowShape) -&gt; DotCode)
+-&gt; [(ArrowModifier, ArrowShape)] -&gt; DotCodeM [Doc]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">(ArrowModifier, ArrowShape) -&gt; DotCode
+forall {a} {a}. (PrintDot a, PrintDot a) =&gt; (a, a) -&gt; DotCode
+</span><a href="#local-6989586621679216685"><span class="hs-identifier hs-var">appMod</span></a></span><span> </span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)]
+</span><a href="#local-6989586621679216682"><span class="hs-identifier hs-var">mas</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679216685"><span class="annot"><span class="annottext">appMod :: (a, a) -&gt; DotCode
+</span><a href="#local-6989586621679216685"><span class="hs-identifier hs-var hs-var">appMod</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216692"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216692"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216693"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216693"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216692"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">DotCode -&gt; DotCode -&gt; DotCode
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216693"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216696"><span id="local-6989586621679216700"><span id="local-6989586621679216703"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-type">ArrowType</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679216716"><span class="annot"><span class="annottext">parseUnqt :: Parse ArrowType
+</span><a href="#local-6989586621679216716"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#specialArrowParse"><span class="hs-identifier hs-var">specialArrowParse</span></a></span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="annottext">Parse ArrowType -&gt; Parse ArrowType -&gt; Parse ArrowType
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-62"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ArrowModifier, ArrowShape)] -&gt; ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#AType"><span class="hs-identifier hs-var">AType</span></a></span><span> </span><span class="annot"><span class="annottext">([(ArrowModifier, ArrowShape)] -&gt; ArrowType)
+-&gt; Parser GraphvizState [(ArrowModifier, ArrowShape)]
+-&gt; Parse ArrowType
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState (ArrowModifier, ArrowShape)
+-&gt; Parser GraphvizState [(ArrowModifier, ArrowShape)]
+forall (p :: * -&gt; *) a. PolyParse p =&gt; p a -&gt; p [a]
+</span><span class="hs-identifier hs-var">many1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ArrowModifier -&gt; ArrowShape -&gt; (ArrowModifier, ArrowShape))
+-&gt; Parser GraphvizState ArrowModifier
+-&gt; Parser GraphvizState ArrowShape
+-&gt; Parser GraphvizState (ArrowModifier, ArrowShape)
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; Parser GraphvizState a
+-&gt; Parser GraphvizState b
+-&gt; Parser GraphvizState c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowModifier
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowShape
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#specialArrowParse"><span class="hs-identifier hs-type">specialArrowParse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowType"><span class="hs-identifier hs-type">ArrowType</span></a></span><span>
+</span><span id="line-65"></span><span id="specialArrowParse"><span class="annot"><span class="annottext">specialArrowParse :: Parse ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#specialArrowParse"><span class="hs-identifier hs-var hs-var">specialArrowParse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, ArrowType)] -&gt; Parse ArrowType
+forall a. [(String, a)] -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringValue"><span class="hs-identifier hs-var">stringValue</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ediamond&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#eDiamond"><span class="hs-identifier hs-var">eDiamond</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;open&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openArr"><span class="hs-identifier hs-var">openArr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;halfopen&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#halfOpen"><span class="hs-identifier hs-var">halfOpen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;empty&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#emptyArr"><span class="hs-identifier hs-var">emptyArr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;invempty&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowType
+</span><a href="Data.GraphViz.Attributes.Arrows.html#invEmpty"><span class="hs-identifier hs-var">invEmpty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>                                </span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">data</span><span> </span><span id="ArrowShape"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowShape"><span class="hs-identifier hs-var">ArrowShape</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Box"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Box"><span class="hs-identifier hs-var">Box</span></a></span></span><span>
+</span><span id="line-73"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Crow"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Crow"><span class="hs-identifier hs-var">Crow</span></a></span></span><span>
+</span><span id="line-74"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Diamond"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Diamond"><span class="hs-identifier hs-var">Diamond</span></a></span></span><span>
+</span><span id="line-75"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="DotArrow"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#DotArrow"><span class="hs-identifier hs-var">DotArrow</span></a></span></span><span>
+</span><span id="line-76"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Inv"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Inv"><span class="hs-identifier hs-var">Inv</span></a></span></span><span>
+</span><span id="line-77"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="NoArrow"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#NoArrow"><span class="hs-identifier hs-var">NoArrow</span></a></span></span><span>
+</span><span id="line-78"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Normal"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span></span><span>
+</span><span id="line-79"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Tee"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Tee"><span class="hs-identifier hs-var">Tee</span></a></span></span><span>
+</span><span id="line-80"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Vee"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#Vee"><span class="hs-identifier hs-var">Vee</span></a></span></span><span>
+</span><span id="line-81"></span><span>                </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216730"><span id="local-6989586621679216732"><span class="annot"><span class="annottext">ArrowShape -&gt; ArrowShape -&gt; Bool
+(ArrowShape -&gt; ArrowShape -&gt; Bool)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; Bool) -&gt; Eq ArrowShape
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ArrowShape -&gt; ArrowShape -&gt; Bool
+== :: ArrowShape -&gt; ArrowShape -&gt; Bool
+$c/= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+/= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216737"><span id="local-6989586621679216739"><span id="local-6989586621679216741"><span id="local-6989586621679216744"><span id="local-6989586621679216747"><span id="local-6989586621679216750"><span id="local-6989586621679216753"><span class="annot"><span class="annottext">Eq ArrowShape
+Eq ArrowShape =&gt;
+(ArrowShape -&gt; ArrowShape -&gt; Ordering)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; Bool)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; Bool)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; Bool)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; Bool)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; ArrowShape)
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; ArrowShape)
+-&gt; Ord ArrowShape
+ArrowShape -&gt; ArrowShape -&gt; Bool
+ArrowShape -&gt; ArrowShape -&gt; Ordering
+ArrowShape -&gt; ArrowShape -&gt; ArrowShape
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ArrowShape -&gt; ArrowShape -&gt; Ordering
+compare :: ArrowShape -&gt; ArrowShape -&gt; Ordering
+$c&lt; :: ArrowShape -&gt; ArrowShape -&gt; Bool
+&lt; :: ArrowShape -&gt; ArrowShape -&gt; Bool
+$c&lt;= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+&lt;= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+$c&gt; :: ArrowShape -&gt; ArrowShape -&gt; Bool
+&gt; :: ArrowShape -&gt; ArrowShape -&gt; Bool
+$c&gt;= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+&gt;= :: ArrowShape -&gt; ArrowShape -&gt; Bool
+$cmax :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape
+max :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape
+$cmin :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape
+min :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216756"><span id="local-6989586621679216758"><span class="annot"><span class="annottext">ArrowShape
+ArrowShape -&gt; ArrowShape -&gt; Bounded ArrowShape
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: ArrowShape
+minBound :: ArrowShape
+$cmaxBound :: ArrowShape
+maxBound :: ArrowShape
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216762"><span id="local-6989586621679216770"><span id="local-6989586621679216776"><span id="local-6989586621679216789"><span id="local-6989586621679216791"><span id="local-6989586621679216795"><span id="local-6989586621679216799"><span id="local-6989586621679216803"><span class="annot"><span class="annottext">Int -&gt; ArrowShape
+ArrowShape -&gt; Int
+ArrowShape -&gt; [ArrowShape]
+ArrowShape -&gt; ArrowShape
+ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+ArrowShape -&gt; ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+(ArrowShape -&gt; ArrowShape)
+-&gt; (ArrowShape -&gt; ArrowShape)
+-&gt; (Int -&gt; ArrowShape)
+-&gt; (ArrowShape -&gt; Int)
+-&gt; (ArrowShape -&gt; [ArrowShape])
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; [ArrowShape])
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; [ArrowShape])
+-&gt; (ArrowShape -&gt; ArrowShape -&gt; ArrowShape -&gt; [ArrowShape])
+-&gt; Enum ArrowShape
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ArrowShape -&gt; ArrowShape
+succ :: ArrowShape -&gt; ArrowShape
+$cpred :: ArrowShape -&gt; ArrowShape
+pred :: ArrowShape -&gt; ArrowShape
+$ctoEnum :: Int -&gt; ArrowShape
+toEnum :: Int -&gt; ArrowShape
+$cfromEnum :: ArrowShape -&gt; Int
+fromEnum :: ArrowShape -&gt; Int
+$cenumFrom :: ArrowShape -&gt; [ArrowShape]
+enumFrom :: ArrowShape -&gt; [ArrowShape]
+$cenumFromThen :: ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+enumFromThen :: ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+$cenumFromTo :: ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+enumFromTo :: ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+$cenumFromThenTo :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+enumFromThenTo :: ArrowShape -&gt; ArrowShape -&gt; ArrowShape -&gt; [ArrowShape]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216807"><span id="local-6989586621679216809"><span id="local-6989586621679216812"><span class="annot"><span class="annottext">Int -&gt; ArrowShape -&gt; ShowS
+[ArrowShape] -&gt; ShowS
+ArrowShape -&gt; String
+(Int -&gt; ArrowShape -&gt; ShowS)
+-&gt; (ArrowShape -&gt; String)
+-&gt; ([ArrowShape] -&gt; ShowS)
+-&gt; Show ArrowShape
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ArrowShape -&gt; ShowS
+showsPrec :: Int -&gt; ArrowShape -&gt; ShowS
+$cshow :: ArrowShape -&gt; String
+show :: ArrowShape -&gt; String
+$cshowList :: [ArrowShape] -&gt; ShowS
+showList :: [ArrowShape] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216815"><span id="local-6989586621679216818"><span id="local-6989586621679216821"><span id="local-6989586621679216832"><span class="annot"><span class="annottext">ReadPrec [ArrowShape]
+ReadPrec ArrowShape
+Int -&gt; ReadS ArrowShape
+ReadS [ArrowShape]
+(Int -&gt; ReadS ArrowShape)
+-&gt; ReadS [ArrowShape]
+-&gt; ReadPrec ArrowShape
+-&gt; ReadPrec [ArrowShape]
+-&gt; Read ArrowShape
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ArrowShape
+readsPrec :: Int -&gt; ReadS ArrowShape
+$creadList :: ReadS [ArrowShape]
+readList :: ReadS [ArrowShape]
+$creadPrec :: ReadPrec ArrowShape
+readPrec :: ReadPrec ArrowShape
+$creadListPrec :: ReadPrec [ArrowShape]
+readListPrec :: ReadPrec [ArrowShape]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216836"><span id="local-6989586621679216839"><span id="local-6989586621679216842"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowShape"><span class="hs-identifier hs-type">ArrowShape</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679216864"><span class="annot"><span class="annottext">unqtDot :: ArrowShape -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Box"><span class="hs-identifier hs-var">Box</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;box&quot;</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Crow"><span class="hs-identifier hs-var">Crow</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;crow&quot;</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Diamond"><span class="hs-identifier hs-var">Diamond</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;diamond&quot;</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#DotArrow"><span class="hs-identifier hs-var">DotArrow</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;dot&quot;</span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Inv"><span class="hs-identifier hs-var">Inv</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;inv&quot;</span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#NoArrow"><span class="hs-identifier hs-var">NoArrow</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;none&quot;</span></span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;normal&quot;</span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Tee"><span class="hs-identifier hs-var">Tee</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;tee&quot;</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Vee"><span class="hs-identifier hs-var">Vee</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;vee&quot;</span></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216868"><span id="local-6989586621679216871"><span id="local-6989586621679216874"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowShape"><span class="hs-identifier hs-type">ArrowShape</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679216876"><span class="annot"><span class="annottext">parseUnqt :: Parser GraphvizState ArrowShape
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(String, ArrowShape)] -&gt; Parser GraphvizState ArrowShape
+forall a. [(String, a)] -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringValue"><span class="hs-identifier hs-var">stringValue</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;box&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Box"><span class="hs-identifier hs-var">Box</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;crow&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Crow"><span class="hs-identifier hs-var">Crow</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;diamond&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Diamond"><span class="hs-identifier hs-var">Diamond</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dot&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#DotArrow"><span class="hs-identifier hs-var">DotArrow</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;inv&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Inv"><span class="hs-identifier hs-var">Inv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;none&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#NoArrow"><span class="hs-identifier hs-var">NoArrow</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;normal&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Normal"><span class="hs-identifier hs-var">Normal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;tee&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Tee"><span class="hs-identifier hs-var">Tee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vee&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ArrowShape
+</span><a href="Data.GraphViz.Attributes.Arrows.html#Vee"><span class="hs-identifier hs-var">Vee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>                          </span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><span class="hs-comment">-- | What modifications to apply to an 'ArrowShape'.</span></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">data</span><span> </span><span id="ArrowModifier"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-var">ArrowModifier</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ArrMod"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-var">ArrMod</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="arrowFill"><span class="annot"><span class="annottext">ArrowModifier -&gt; ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#arrowFill"><span class="hs-identifier hs-var hs-var">arrowFill</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowFill"><span class="hs-identifier hs-type">ArrowFill</span></a></span><span>
+</span><span id="line-108"></span><span>                            </span><span class="hs-special">,</span><span> </span><span id="arrowSide"><span class="annot"><span class="annottext">ArrowModifier -&gt; ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#arrowSide"><span class="hs-identifier hs-var hs-var">arrowSide</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowSide"><span class="hs-identifier hs-type">ArrowSide</span></a></span><span>
+</span><span id="line-109"></span><span>                            </span><span class="hs-special">}</span><span>
+</span><span id="line-110"></span><span>                   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216880"><span id="local-6989586621679216886"><span class="annot"><span class="annottext">ArrowModifier -&gt; ArrowModifier -&gt; Bool
+(ArrowModifier -&gt; ArrowModifier -&gt; Bool)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; Bool) -&gt; Eq ArrowModifier
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+== :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+$c/= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+/= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216891"><span id="local-6989586621679216897"><span id="local-6989586621679216901"><span id="local-6989586621679216904"><span id="local-6989586621679216907"><span id="local-6989586621679216910"><span id="local-6989586621679216913"><span class="annot"><span class="annottext">Eq ArrowModifier
+Eq ArrowModifier =&gt;
+(ArrowModifier -&gt; ArrowModifier -&gt; Ordering)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; Bool)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; Bool)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; Bool)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; Bool)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier)
+-&gt; (ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier)
+-&gt; Ord ArrowModifier
+ArrowModifier -&gt; ArrowModifier -&gt; Bool
+ArrowModifier -&gt; ArrowModifier -&gt; Ordering
+ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ArrowModifier -&gt; ArrowModifier -&gt; Ordering
+compare :: ArrowModifier -&gt; ArrowModifier -&gt; Ordering
+$c&lt; :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+&lt; :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+$c&lt;= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+&lt;= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+$c&gt; :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+&gt; :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+$c&gt;= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+&gt;= :: ArrowModifier -&gt; ArrowModifier -&gt; Bool
+$cmax :: ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier
+max :: ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier
+$cmin :: ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier
+min :: ArrowModifier -&gt; ArrowModifier -&gt; ArrowModifier
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216916"><span id="local-6989586621679216923"><span id="local-6989586621679216926"><span class="annot"><span class="annottext">Int -&gt; ArrowModifier -&gt; ShowS
+[ArrowModifier] -&gt; ShowS
+ArrowModifier -&gt; String
+(Int -&gt; ArrowModifier -&gt; ShowS)
+-&gt; (ArrowModifier -&gt; String)
+-&gt; ([ArrowModifier] -&gt; ShowS)
+-&gt; Show ArrowModifier
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ArrowModifier -&gt; ShowS
+showsPrec :: Int -&gt; ArrowModifier -&gt; ShowS
+$cshow :: ArrowModifier -&gt; String
+show :: ArrowModifier -&gt; String
+$cshowList :: [ArrowModifier] -&gt; ShowS
+showList :: [ArrowModifier] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216929"><span id="local-6989586621679216932"><span id="local-6989586621679216935"><span id="local-6989586621679216948"><span class="annot"><span class="annottext">ReadPrec [ArrowModifier]
+ReadPrec ArrowModifier
+Int -&gt; ReadS ArrowModifier
+ReadS [ArrowModifier]
+(Int -&gt; ReadS ArrowModifier)
+-&gt; ReadS [ArrowModifier]
+-&gt; ReadPrec ArrowModifier
+-&gt; ReadPrec [ArrowModifier]
+-&gt; Read ArrowModifier
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ArrowModifier
+readsPrec :: Int -&gt; ReadS ArrowModifier
+$creadList :: ReadS [ArrowModifier]
+readList :: ReadS [ArrowModifier]
+$creadPrec :: ReadPrec ArrowModifier
+readPrec :: ReadPrec ArrowModifier
+$creadListPrec :: ReadPrec [ArrowModifier]
+readListPrec :: ReadPrec [ArrowModifier]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="annot"><span class="hs-comment">-- | Apply no modifications to an 'ArrowShape'.</span></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#noMods"><span class="hs-identifier hs-type">noMods</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-type">ArrowModifier</span></a></span><span>
+</span><span id="line-114"></span><span id="noMods"><span class="annot"><span class="annottext">noMods :: ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#noMods"><span class="hs-identifier hs-var hs-var">noMods</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowSide -&gt; ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-var">ArrMod</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#FilledArrow"><span class="hs-identifier hs-var">FilledArrow</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#BothSides"><span class="hs-identifier hs-var">BothSides</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><span class="hs-comment">-- | 'OpenArrow' and 'BothSides'</span></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#openMod"><span class="hs-identifier hs-type">openMod</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-type">ArrowModifier</span></a></span><span>
+</span><span id="line-118"></span><span id="openMod"><span class="annot"><span class="annottext">openMod :: ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#openMod"><span class="hs-identifier hs-var hs-var">openMod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowSide -&gt; ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-var">ArrMod</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#OpenArrow"><span class="hs-identifier hs-var">OpenArrow</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#BothSides"><span class="hs-identifier hs-var">BothSides</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216954"><span id="local-6989586621679216957"><span id="local-6989586621679216960"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-type">ArrowModifier</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621679216967"><span class="annot"><span class="annottext">unqtDot :: ArrowModifier -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-type">ArrMod</span></a></span><span> </span><span id="local-6989586621679216968"><span class="annot"><span class="annottext">ArrowFill
+</span><a href="#local-6989586621679216968"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679216969"><span class="annot"><span class="annottext">ArrowSide
+</span><a href="#local-6989586621679216969"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArrowFill -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="#local-6989586621679216968"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">DotCode -&gt; DotCode -&gt; DotCode
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide -&gt; DotCode
+forall a. PrintDot a =&gt; a -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="#local-6989586621679216969"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679216972"><span id="local-6989586621679216975"><span id="local-6989586621679216978"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowModifier"><span class="hs-identifier hs-type">ArrowModifier</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679216985"><span class="annot"><span class="annottext">parseUnqt :: Parser GraphvizState ArrowModifier
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ArrowFill -&gt; ArrowSide -&gt; ArrowModifier)
+-&gt; Parser GraphvizState ArrowFill
+-&gt; Parser GraphvizState ArrowSide
+-&gt; Parser GraphvizState ArrowModifier
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; Parser GraphvizState a
+-&gt; Parser GraphvizState b
+-&gt; Parser GraphvizState c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowSide -&gt; ArrowModifier
+</span><a href="Data.GraphViz.Attributes.Arrows.html#ArrMod"><span class="hs-identifier hs-var">ArrMod</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowFill
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowSide
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">data</span><span> </span><span id="ArrowFill"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowFill"><span class="hs-identifier hs-var">ArrowFill</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OpenArrow"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#OpenArrow"><span class="hs-identifier hs-var">OpenArrow</span></a></span></span><span>
+</span><span id="line-127"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="FilledArrow"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#FilledArrow"><span class="hs-identifier hs-var">FilledArrow</span></a></span></span><span>
+</span><span id="line-128"></span><span>               </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216987"><span id="local-6989586621679216989"><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowFill -&gt; Bool
+(ArrowFill -&gt; ArrowFill -&gt; Bool)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; Bool) -&gt; Eq ArrowFill
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ArrowFill -&gt; ArrowFill -&gt; Bool
+== :: ArrowFill -&gt; ArrowFill -&gt; Bool
+$c/= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+/= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216994"><span id="local-6989586621679216996"><span id="local-6989586621679216998"><span id="local-6989586621679217001"><span id="local-6989586621679217004"><span id="local-6989586621679217007"><span id="local-6989586621679217010"><span class="annot"><span class="annottext">Eq ArrowFill
+Eq ArrowFill =&gt;
+(ArrowFill -&gt; ArrowFill -&gt; Ordering)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; Bool)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; Bool)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; Bool)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; Bool)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; ArrowFill)
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; ArrowFill)
+-&gt; Ord ArrowFill
+ArrowFill -&gt; ArrowFill -&gt; Bool
+ArrowFill -&gt; ArrowFill -&gt; Ordering
+ArrowFill -&gt; ArrowFill -&gt; ArrowFill
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ArrowFill -&gt; ArrowFill -&gt; Ordering
+compare :: ArrowFill -&gt; ArrowFill -&gt; Ordering
+$c&lt; :: ArrowFill -&gt; ArrowFill -&gt; Bool
+&lt; :: ArrowFill -&gt; ArrowFill -&gt; Bool
+$c&lt;= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+&lt;= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+$c&gt; :: ArrowFill -&gt; ArrowFill -&gt; Bool
+&gt; :: ArrowFill -&gt; ArrowFill -&gt; Bool
+$c&gt;= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+&gt;= :: ArrowFill -&gt; ArrowFill -&gt; Bool
+$cmax :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill
+max :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill
+$cmin :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill
+min :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217013"><span id="local-6989586621679217015"><span class="annot"><span class="annottext">ArrowFill
+ArrowFill -&gt; ArrowFill -&gt; Bounded ArrowFill
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: ArrowFill
+minBound :: ArrowFill
+$cmaxBound :: ArrowFill
+maxBound :: ArrowFill
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217018"><span id="local-6989586621679217024"><span id="local-6989586621679217030"><span id="local-6989586621679217041"><span id="local-6989586621679217043"><span id="local-6989586621679217046"><span id="local-6989586621679217050"><span id="local-6989586621679217054"><span class="annot"><span class="annottext">Int -&gt; ArrowFill
+ArrowFill -&gt; Int
+ArrowFill -&gt; [ArrowFill]
+ArrowFill -&gt; ArrowFill
+ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+ArrowFill -&gt; ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+(ArrowFill -&gt; ArrowFill)
+-&gt; (ArrowFill -&gt; ArrowFill)
+-&gt; (Int -&gt; ArrowFill)
+-&gt; (ArrowFill -&gt; Int)
+-&gt; (ArrowFill -&gt; [ArrowFill])
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; [ArrowFill])
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; [ArrowFill])
+-&gt; (ArrowFill -&gt; ArrowFill -&gt; ArrowFill -&gt; [ArrowFill])
+-&gt; Enum ArrowFill
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ArrowFill -&gt; ArrowFill
+succ :: ArrowFill -&gt; ArrowFill
+$cpred :: ArrowFill -&gt; ArrowFill
+pred :: ArrowFill -&gt; ArrowFill
+$ctoEnum :: Int -&gt; ArrowFill
+toEnum :: Int -&gt; ArrowFill
+$cfromEnum :: ArrowFill -&gt; Int
+fromEnum :: ArrowFill -&gt; Int
+$cenumFrom :: ArrowFill -&gt; [ArrowFill]
+enumFrom :: ArrowFill -&gt; [ArrowFill]
+$cenumFromThen :: ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+enumFromThen :: ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+$cenumFromTo :: ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+enumFromTo :: ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+$cenumFromThenTo :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+enumFromThenTo :: ArrowFill -&gt; ArrowFill -&gt; ArrowFill -&gt; [ArrowFill]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217057"><span id="local-6989586621679217059"><span id="local-6989586621679217062"><span class="annot"><span class="annottext">Int -&gt; ArrowFill -&gt; ShowS
+[ArrowFill] -&gt; ShowS
+ArrowFill -&gt; String
+(Int -&gt; ArrowFill -&gt; ShowS)
+-&gt; (ArrowFill -&gt; String)
+-&gt; ([ArrowFill] -&gt; ShowS)
+-&gt; Show ArrowFill
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ArrowFill -&gt; ShowS
+showsPrec :: Int -&gt; ArrowFill -&gt; ShowS
+$cshow :: ArrowFill -&gt; String
+show :: ArrowFill -&gt; String
+$cshowList :: [ArrowFill] -&gt; ShowS
+showList :: [ArrowFill] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217065"><span id="local-6989586621679217068"><span id="local-6989586621679217071"><span id="local-6989586621679217075"><span class="annot"><span class="annottext">ReadPrec [ArrowFill]
+ReadPrec ArrowFill
+Int -&gt; ReadS ArrowFill
+ReadS [ArrowFill]
+(Int -&gt; ReadS ArrowFill)
+-&gt; ReadS [ArrowFill]
+-&gt; ReadPrec ArrowFill
+-&gt; ReadPrec [ArrowFill]
+-&gt; Read ArrowFill
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ArrowFill
+readsPrec :: Int -&gt; ReadS ArrowFill
+$creadList :: ReadS [ArrowFill]
+readList :: ReadS [ArrowFill]
+$creadPrec :: ReadPrec ArrowFill
+readPrec :: ReadPrec ArrowFill
+$creadListPrec :: ReadPrec [ArrowFill]
+readListPrec :: ReadPrec [ArrowFill]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679217079"><span id="local-6989586621679217082"><span id="local-6989586621679217085"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowFill"><span class="hs-identifier hs-type">ArrowFill</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679217089"><span class="annot"><span class="annottext">unqtDot :: ArrowFill -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#OpenArrow"><span class="hs-identifier hs-var">OpenArrow</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Char -&gt; m Doc
+</span><span class="hs-identifier hs-var">char</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'o'</span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#FilledArrow"><span class="hs-identifier hs-var">FilledArrow</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; m Doc
+</span><span class="hs-identifier hs-var">empty</span></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679217095"><span id="local-6989586621679217098"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowFill"><span class="hs-identifier hs-type">ArrowFill</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679217103"><span class="annot"><span class="annottext">parseUnqt :: Parser GraphvizState ArrowFill
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArrowFill -&gt; ArrowFill -&gt; Bool -&gt; ArrowFill
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="Data.GraphViz.Internal.Util.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#FilledArrow"><span class="hs-identifier hs-var">FilledArrow</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowFill
+</span><a href="Data.GraphViz.Attributes.Arrows.html#OpenArrow"><span class="hs-identifier hs-var">OpenArrow</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; ArrowFill)
+-&gt; (Maybe Char -&gt; Bool) -&gt; Maybe Char -&gt; ArrowFill
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Char -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Char -&gt; ArrowFill)
+-&gt; Parser GraphvizState (Maybe Char)
+-&gt; Parser GraphvizState ArrowFill
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char -&gt; Parser GraphvizState (Maybe Char)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'o'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-comment">-- Not used individually</span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679217108"><span class="annot"><span class="annottext">parse :: Parser GraphvizState ArrowFill
+</span><a href="#local-6989586621679217108"><span class="hs-identifier hs-var hs-var hs-var hs-var">parse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowFill
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Represents which side (when looking towards the node the arrow is</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--   pointing to) is drawn.</span><span>
+</span><span id="line-142"></span><span class="hs-keyword">data</span><span> </span><span id="ArrowSide"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowSide"><span class="hs-identifier hs-var">ArrowSide</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LeftSide"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#LeftSide"><span class="hs-identifier hs-var">LeftSide</span></a></span></span><span>
+</span><span id="line-143"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="RightSide"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#RightSide"><span class="hs-identifier hs-var">RightSide</span></a></span></span><span>
+</span><span id="line-144"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="BothSides"><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#BothSides"><span class="hs-identifier hs-var">BothSides</span></a></span></span><span>
+</span><span id="line-145"></span><span>               </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217112"><span id="local-6989586621679217114"><span class="annot"><span class="annottext">ArrowSide -&gt; ArrowSide -&gt; Bool
+(ArrowSide -&gt; ArrowSide -&gt; Bool)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; Bool) -&gt; Eq ArrowSide
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ArrowSide -&gt; ArrowSide -&gt; Bool
+== :: ArrowSide -&gt; ArrowSide -&gt; Bool
+$c/= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+/= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217119"><span id="local-6989586621679217121"><span id="local-6989586621679217123"><span id="local-6989586621679217126"><span id="local-6989586621679217129"><span id="local-6989586621679217132"><span id="local-6989586621679217135"><span class="annot"><span class="annottext">Eq ArrowSide
+Eq ArrowSide =&gt;
+(ArrowSide -&gt; ArrowSide -&gt; Ordering)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; Bool)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; Bool)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; Bool)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; Bool)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; ArrowSide)
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; ArrowSide)
+-&gt; Ord ArrowSide
+ArrowSide -&gt; ArrowSide -&gt; Bool
+ArrowSide -&gt; ArrowSide -&gt; Ordering
+ArrowSide -&gt; ArrowSide -&gt; ArrowSide
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ArrowSide -&gt; ArrowSide -&gt; Ordering
+compare :: ArrowSide -&gt; ArrowSide -&gt; Ordering
+$c&lt; :: ArrowSide -&gt; ArrowSide -&gt; Bool
+&lt; :: ArrowSide -&gt; ArrowSide -&gt; Bool
+$c&lt;= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+&lt;= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+$c&gt; :: ArrowSide -&gt; ArrowSide -&gt; Bool
+&gt; :: ArrowSide -&gt; ArrowSide -&gt; Bool
+$c&gt;= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+&gt;= :: ArrowSide -&gt; ArrowSide -&gt; Bool
+$cmax :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide
+max :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide
+$cmin :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide
+min :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217138"><span id="local-6989586621679217140"><span class="annot"><span class="annottext">ArrowSide
+ArrowSide -&gt; ArrowSide -&gt; Bounded ArrowSide
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: ArrowSide
+minBound :: ArrowSide
+$cmaxBound :: ArrowSide
+maxBound :: ArrowSide
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217143"><span id="local-6989586621679217149"><span id="local-6989586621679217155"><span id="local-6989586621679217166"><span id="local-6989586621679217168"><span id="local-6989586621679217171"><span id="local-6989586621679217175"><span id="local-6989586621679217179"><span class="annot"><span class="annottext">Int -&gt; ArrowSide
+ArrowSide -&gt; Int
+ArrowSide -&gt; [ArrowSide]
+ArrowSide -&gt; ArrowSide
+ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+ArrowSide -&gt; ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+(ArrowSide -&gt; ArrowSide)
+-&gt; (ArrowSide -&gt; ArrowSide)
+-&gt; (Int -&gt; ArrowSide)
+-&gt; (ArrowSide -&gt; Int)
+-&gt; (ArrowSide -&gt; [ArrowSide])
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; [ArrowSide])
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; [ArrowSide])
+-&gt; (ArrowSide -&gt; ArrowSide -&gt; ArrowSide -&gt; [ArrowSide])
+-&gt; Enum ArrowSide
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ArrowSide -&gt; ArrowSide
+succ :: ArrowSide -&gt; ArrowSide
+$cpred :: ArrowSide -&gt; ArrowSide
+pred :: ArrowSide -&gt; ArrowSide
+$ctoEnum :: Int -&gt; ArrowSide
+toEnum :: Int -&gt; ArrowSide
+$cfromEnum :: ArrowSide -&gt; Int
+fromEnum :: ArrowSide -&gt; Int
+$cenumFrom :: ArrowSide -&gt; [ArrowSide]
+enumFrom :: ArrowSide -&gt; [ArrowSide]
+$cenumFromThen :: ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+enumFromThen :: ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+$cenumFromTo :: ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+enumFromTo :: ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+$cenumFromThenTo :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+enumFromThenTo :: ArrowSide -&gt; ArrowSide -&gt; ArrowSide -&gt; [ArrowSide]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217182"><span id="local-6989586621679217184"><span id="local-6989586621679217187"><span class="annot"><span class="annottext">Int -&gt; ArrowSide -&gt; ShowS
+[ArrowSide] -&gt; ShowS
+ArrowSide -&gt; String
+(Int -&gt; ArrowSide -&gt; ShowS)
+-&gt; (ArrowSide -&gt; String)
+-&gt; ([ArrowSide] -&gt; ShowS)
+-&gt; Show ArrowSide
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ArrowSide -&gt; ShowS
+showsPrec :: Int -&gt; ArrowSide -&gt; ShowS
+$cshow :: ArrowSide -&gt; String
+show :: ArrowSide -&gt; String
+$cshowList :: [ArrowSide] -&gt; ShowS
+showList :: [ArrowSide] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217190"><span id="local-6989586621679217193"><span id="local-6989586621679217196"><span id="local-6989586621679217201"><span class="annot"><span class="annottext">ReadPrec [ArrowSide]
+ReadPrec ArrowSide
+Int -&gt; ReadS ArrowSide
+ReadS [ArrowSide]
+(Int -&gt; ReadS ArrowSide)
+-&gt; ReadS [ArrowSide]
+-&gt; ReadPrec ArrowSide
+-&gt; ReadPrec [ArrowSide]
+-&gt; Read ArrowSide
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ArrowSide
+readsPrec :: Int -&gt; ReadS ArrowSide
+$creadList :: ReadS [ArrowSide]
+readList :: ReadS [ArrowSide]
+$creadPrec :: ReadPrec ArrowSide
+readPrec :: ReadPrec ArrowSide
+$creadListPrec :: ReadPrec [ArrowSide]
+readListPrec :: ReadPrec [ArrowSide]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679217205"><span id="local-6989586621679217208"><span id="local-6989586621679217211"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowSide"><span class="hs-identifier hs-type">ArrowSide</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679217216"><span class="annot"><span class="annottext">unqtDot :: ArrowSide -&gt; DotCode
+</span><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#LeftSide"><span class="hs-identifier hs-var">LeftSide</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Char -&gt; m Doc
+</span><span class="hs-identifier hs-var">char</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'l'</span></span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#RightSide"><span class="hs-identifier hs-var">RightSide</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Char -&gt; m Doc
+</span><span class="hs-identifier hs-var">char</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'r'</span></span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#BothSides"><span class="hs-identifier hs-var">BothSides</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; m Doc
+</span><span class="hs-identifier hs-var">empty</span></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679217220"><span id="local-6989586621679217223"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Arrows.html#ArrowSide"><span class="hs-identifier hs-type">ArrowSide</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621679217228"><span class="annot"><span class="annottext">parseUnqt :: Parser GraphvizState ArrowSide
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Char -&gt; ArrowSide
+</span><a href="#local-6989586621679217229"><span class="hs-identifier hs-var">getSideType</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Char -&gt; ArrowSide)
+-&gt; Parser GraphvizState (Maybe Char)
+-&gt; Parser GraphvizState ArrowSide
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char -&gt; Parser GraphvizState (Maybe Char)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Parser GraphvizState Char] -&gt; Parser GraphvizState Char
+forall (p :: * -&gt; *) a. PolyParse p =&gt; [p a] -&gt; p a
+</span><span class="hs-identifier hs-var">oneOf</span></span><span> </span><span class="annot"><span class="annottext">([Parser GraphvizState Char] -&gt; Parser GraphvizState Char)
+-&gt; [Parser GraphvizState Char] -&gt; Parser GraphvizState Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Parser GraphvizState Char)
+-&gt; String -&gt; [Parser GraphvizState Char]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'l'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'r'</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>      </span><span id="local-6989586621679217229"><span class="annot"><span class="annottext">getSideType :: Maybe Char -&gt; ArrowSide
+</span><a href="#local-6989586621679217229"><span class="hs-identifier hs-var hs-var">getSideType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArrowSide -&gt; (Char -&gt; ArrowSide) -&gt; Maybe Char -&gt; ArrowSide
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#BothSides"><span class="hs-identifier hs-var">BothSides</span></a></span><span>
+</span><span id="line-156"></span><span>                          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ArrowSide -&gt; ArrowSide -&gt; Bool -&gt; ArrowSide
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="Data.GraphViz.Internal.Util.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#RightSide"><span class="hs-identifier hs-var">RightSide</span></a></span><span> </span><span class="annot"><span class="annottext">ArrowSide
+</span><a href="Data.GraphViz.Attributes.Arrows.html#LeftSide"><span class="hs-identifier hs-var">LeftSide</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; ArrowSide) -&gt; (Char -&gt; Bool) -&gt; Char -&gt; ArrowSide
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">(==)</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'l'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-comment">-- Not used individually</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679217235"><span class="annot"><span class="annottext">parse :: Parser GraphvizState ArrowSide
+</span><a href="Data.GraphViz.Parsing.html#parse"><span class="hs-identifier hs-var hs-var hs-var hs-var">parse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState ArrowSide
+forall a. ParseDot a =&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#parseUnqt"><span class="hs-identifier hs-var">parseUnqt</span></a></span><span>
+</span><span id="line-160"></span></pre></body></html>

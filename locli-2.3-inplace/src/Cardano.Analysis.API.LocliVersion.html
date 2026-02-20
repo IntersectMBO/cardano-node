@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Analysis.API.LocliVersion</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html"><span class="hs-identifier">Cardano.Analysis.API.LocliVersion</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier">mconcat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html"><span class="hs-identifier">Cardano.Git.Rev</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html#gitRev"><span class="hs-identifier">gitRev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#take"><span class="hs-identifier">take</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html"><span class="hs-identifier">Data.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier">showVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Paths_locli.html"><span class="hs-identifier">Paths_locli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Paths_locli.html#version"><span class="hs-identifier">version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier">Show</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">data</span><span> </span><span id="LocliVersion"><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#LocliVersion"><span class="hs-identifier hs-var">LocliVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-16"></span><span>  </span><span id="LocliVersion"><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#LocliVersion"><span class="hs-identifier hs-var">LocliVersion</span></a></span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="gitRev"><span class="annot"><span class="annottext">LocliVersion -&gt; Text
+</span><a href="Cardano.Analysis.API.LocliVersion.html#gitRev"><span class="hs-identifier hs-var hs-var">gitRev</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="version"><span class="annot"><span class="annottext">LocliVersion -&gt; Text
+</span><a href="Cardano.Analysis.API.LocliVersion.html#version"><span class="hs-identifier hs-var hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679431233"><span id="local-6989586621679431235"><span class="annot"><span class="annottext">(forall x. LocliVersion -&gt; Rep LocliVersion x)
+-&gt; (forall x. Rep LocliVersion x -&gt; LocliVersion)
+-&gt; Generic LocliVersion
+forall x. Rep LocliVersion x -&gt; LocliVersion
+forall x. LocliVersion -&gt; Rep LocliVersion x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. LocliVersion -&gt; Rep LocliVersion x
+from :: forall x. LocliVersion -&gt; Rep LocliVersion x
+$cto :: forall x. Rep LocliVersion x -&gt; LocliVersion
+to :: forall x. Rep LocliVersion x -&gt; LocliVersion
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679431239"><span id="local-6989586621679431246"><span id="local-6989586621679431249"><span class="annot"><span class="annottext">Maybe LocliVersion
+Value -&gt; Parser [LocliVersion]
+Value -&gt; Parser LocliVersion
+(Value -&gt; Parser LocliVersion)
+-&gt; (Value -&gt; Parser [LocliVersion])
+-&gt; Maybe LocliVersion
+-&gt; FromJSON LocliVersion
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser LocliVersion
+parseJSON :: Value -&gt; Parser LocliVersion
+$cparseJSONList :: Value -&gt; Parser [LocliVersion]
+parseJSONList :: Value -&gt; Parser [LocliVersion]
+$comittedField :: Maybe LocliVersion
+omittedField :: Maybe LocliVersion
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679431330"><span id="local-6989586621679431337"><span id="local-6989586621679431341"><span class="annot"><span class="annottext">Int -&gt; LocliVersion -&gt; ShowS
+[LocliVersion] -&gt; ShowS
+LocliVersion -&gt; String
+(Int -&gt; LocliVersion -&gt; ShowS)
+-&gt; (LocliVersion -&gt; String)
+-&gt; ([LocliVersion] -&gt; ShowS)
+-&gt; Show LocliVersion
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LocliVersion -&gt; ShowS
+showsPrec :: Int -&gt; LocliVersion -&gt; ShowS
+$cshow :: LocliVersion -&gt; String
+show :: LocliVersion -&gt; String
+$cshowList :: [LocliVersion] -&gt; ShowS
+showList :: [LocliVersion] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679431345"><span id="local-6989586621679431352"><span id="local-6989586621679431355"><span id="local-6989586621679431358"><span id="local-6989586621679431361"><span class="annot"><span class="annottext">[LocliVersion] -&gt; Value
+[LocliVersion] -&gt; Encoding
+LocliVersion -&gt; Bool
+LocliVersion -&gt; Value
+LocliVersion -&gt; Encoding
+(LocliVersion -&gt; Value)
+-&gt; (LocliVersion -&gt; Encoding)
+-&gt; ([LocliVersion] -&gt; Value)
+-&gt; ([LocliVersion] -&gt; Encoding)
+-&gt; (LocliVersion -&gt; Bool)
+-&gt; ToJSON LocliVersion
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: LocliVersion -&gt; Value
+toJSON :: LocliVersion -&gt; Value
+$ctoEncoding :: LocliVersion -&gt; Encoding
+toEncoding :: LocliVersion -&gt; Encoding
+$ctoJSONList :: [LocliVersion] -&gt; Value
+toJSONList :: [LocliVersion] -&gt; Value
+$ctoEncodingList :: [LocliVersion] -&gt; Encoding
+toEncodingList :: [LocliVersion] -&gt; Encoding
+$comitField :: LocliVersion -&gt; Bool
+omitField :: LocliVersion -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span id="local-6989586621679431444"><span class="annot"><span class="annottext">LocliVersion -&gt; ()
+(LocliVersion -&gt; ()) -&gt; NFData LocliVersion
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: LocliVersion -&gt; ()
+rnf :: LocliVersion -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#getLocliVersion"><span class="hs-identifier hs-type">getLocliVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#LocliVersion"><span class="hs-identifier hs-type">LocliVersion</span></a></span><span>
+</span><span id="line-24"></span><span id="getLocliVersion"><span class="annot"><span class="annottext">getLocliVersion :: LocliVersion
+</span><a href="Cardano.Analysis.API.LocliVersion.html#getLocliVersion"><span class="hs-identifier hs-var hs-var">getLocliVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; LocliVersion
+</span><a href="Cardano.Analysis.API.LocliVersion.html#LocliVersion"><span class="hs-identifier hs-var">LocliVersion</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html#gitRev"><span class="hs-identifier hs-type">Cardano.Git.Rev.gitRev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier hs-var">showVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Paths_locli.html#version"><span class="hs-identifier hs-var">Paths_locli.version</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#renderProgramAndVersion"><span class="hs-identifier hs-type">renderProgramAndVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.LocliVersion.html#LocliVersion"><span class="hs-identifier hs-type">LocliVersion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-30"></span><span id="renderProgramAndVersion"><span class="annot"><span class="annottext">renderProgramAndVersion :: LocliVersion -&gt; Text
+</span><a href="Cardano.Analysis.API.LocliVersion.html#renderProgramAndVersion"><span class="hs-identifier hs-var hs-var">renderProgramAndVersion</span></a></span></span><span> </span><span id="local-6989586621679431467"><span class="annot"><span class="annottext">LocliVersion
+</span><a href="#local-6989586621679431467"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;locli &quot;</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LocliVersion -&gt; Text
+</span><a href="Cardano.Analysis.API.LocliVersion.html#version"><span class="hs-identifier hs-var">Cardano.Analysis.API.LocliVersion.version</span></a></span><span> </span><span class="annot"><span class="annottext">LocliVersion
+</span><a href="#local-6989586621679431467"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; (&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LocliVersion -&gt; Text
+</span><a href="Cardano.Analysis.API.LocliVersion.html#gitRev"><span class="hs-identifier hs-var">gitRev</span></a></span><span> </span><span class="annot"><span class="annottext">LocliVersion
+</span><a href="#local-6989586621679431467"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span></pre></body></html>

@@ -1,0 +1,584 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-partial-fields #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">{- HLINT ignore &quot;Use concatMap&quot; -}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Org</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Org.html"><span class="hs-identifier">Cardano.Org</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>                </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">data</span><span> </span><span id="Org"><span class="annot"><a href="Cardano.Org.html#Org"><span class="hs-identifier hs-var">Org</span></a></span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Props"><span class="annot"><a href="Cardano.Org.html#Props"><span class="hs-identifier hs-var">Props</span></a></span></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="oProps"><span class="annot"><span class="annottext">Org -&gt; [(Text, Text)]
+</span><a href="Cardano.Org.html#oProps"><span class="hs-identifier hs-var hs-var">oProps</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="oBody"><span class="annot"><span class="annottext">Org -&gt; [Org]
+</span><a href="Cardano.Org.html#oBody"><span class="hs-identifier hs-var hs-var">oBody</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Org.html#Org"><span class="hs-identifier hs-type">Org</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="oConstants"><span class="annot"><span class="annottext">Org -&gt; [(Text, Text)]
+</span><a href="Cardano.Org.html#oConstants"><span class="hs-identifier hs-var hs-var">oConstants</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Table"><span class="annot"><a href="Cardano.Org.html#Table"><span class="hs-identifier hs-var">Table</span></a></span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="tColHeaders"><span class="annot"><span class="annottext">Org -&gt; [Text]
+</span><a href="Cardano.Org.html#tColHeaders"><span class="hs-identifier hs-var hs-var">tColHeaders</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tExtended"><span class="annot"><span class="annottext">Org -&gt; Bool
+</span><a href="Cardano.Org.html#tExtended"><span class="hs-identifier hs-var hs-var">tExtended</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tApexHeader"><span class="annot"><span class="annottext">Org -&gt; Maybe Text
+</span><a href="Cardano.Org.html#tApexHeader"><span class="hs-identifier hs-var hs-var">tApexHeader</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tRowHeaders"><span class="annot"><span class="annottext">Org -&gt; [Text]
+</span><a href="Cardano.Org.html#tRowHeaders"><span class="hs-identifier hs-var hs-var">tRowHeaders</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tColumns"><span class="annot"><span class="annottext">Org -&gt; [[Text]]
+</span><a href="Cardano.Org.html#tColumns"><span class="hs-identifier hs-var hs-var">tColumns</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tSummaryHeaders"><span class="annot"><span class="annottext">Org -&gt; [Text]
+</span><a href="Cardano.Org.html#tSummaryHeaders"><span class="hs-identifier hs-var hs-var">tSummaryHeaders</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tSummaryValues"><span class="annot"><span class="annottext">Org -&gt; [[Text]]
+</span><a href="Cardano.Org.html#tSummaryValues"><span class="hs-identifier hs-var hs-var">tSummaryValues</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tFormula"><span class="annot"><span class="annottext">Org -&gt; [Text]
+</span><a href="Cardano.Org.html#tFormula"><span class="hs-identifier hs-var hs-var">tFormula</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tConstants"><span class="annot"><span class="annottext">Org -&gt; [(Text, Text)]
+</span><a href="Cardano.Org.html#tConstants"><span class="hs-identifier hs-var hs-var">tConstants</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679415515"><span id="local-6989586621679415537"><span id="local-6989586621679415541"><span class="annot"><span class="annottext">Int -&gt; Org -&gt; ShowS
+[Org] -&gt; ShowS
+Org -&gt; String
+(Int -&gt; Org -&gt; ShowS)
+-&gt; (Org -&gt; String) -&gt; ([Org] -&gt; ShowS) -&gt; Show Org
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Org -&gt; ShowS
+showsPrec :: Int -&gt; Org -&gt; ShowS
+$cshow :: Org -&gt; String
+show :: Org -&gt; String
+$cshowList :: [Org] -&gt; ShowS
+showList :: [Org] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Cardano.Org.html#render"><span class="hs-identifier hs-type">render</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Org.html#Org"><span class="hs-identifier hs-type">Org</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span id="render"><span class="annot"><span class="annottext">render :: Org -&gt; [Text]
+</span><a href="Cardano.Org.html#render"><span class="hs-identifier hs-var hs-var">render</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Org.html#Props"><span class="hs-identifier hs-type">Props</span></a></span><span class="hs-special">{</span><span id="local-6989586621679415548"><span id="local-6989586621679415549"><span id="local-6989586621679415550"><span class="annot"><span class="annottext">[(Text, Text)]
+[Org]
+oProps :: Org -&gt; [(Text, Text)]
+oBody :: Org -&gt; [Org]
+oConstants :: Org -&gt; [(Text, Text)]
+oProps :: [(Text, Text)]
+oBody :: [Org]
+oConstants :: [(Text, Text)]
+</span><a href="Cardano.Org.html#oProps"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415548"><span class="hs-identifier hs-var">oProps</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; [(Text, Text)] -&gt; [(Text, Text)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CONSTANTS&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">T.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; [Text] -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415550"><span class="hs-identifier hs-var">oConstants</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; ((Text, Text) -&gt; Text) -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679415553"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415553"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679415554"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415554"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415553"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;=&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415554"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415550"><span class="hs-identifier hs-var">oConstants</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>   </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; ((Text, Text) -&gt; Text) -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679415557"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415557"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679415558"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415558"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#+&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415557"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;: &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415558"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Org]
+</span><a href="#local-6989586621679415549"><span class="hs-identifier hs-var">oBody</span></a></span><span> </span><span class="annot"><span class="annottext">[Org] -&gt; (Org -&gt; [Text]) -&gt; [[Text]]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Org -&gt; [Text]
+</span><a href="Cardano.Org.html#render"><span class="hs-identifier hs-var">render</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; ([[Text]] -&gt; [Text]) -&gt; [Text]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; [Text]
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Cardano.Org.html#render"><span class="hs-identifier hs-var">render</span></a></span><span> </span><span class="annot"><a href="Cardano.Org.html#Table"><span class="hs-identifier hs-type">Table</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">tConstants :: Org -&gt; [(Text, Text)]
+</span><a href="Cardano.Org.html#tConstants"><span class="hs-identifier hs-var">tConstants</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text, Text)
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tExtended :: Org -&gt; Bool
+</span><a href="Cardano.Org.html#tExtended"><span class="hs-identifier hs-var">tExtended</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [Text]
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Asked to render a non-extended Org table with an extended table feature:  named constants&quot;</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Org.html#render"><span class="hs-identifier hs-var">render</span></a></span><span> </span><span class="annot"><a href="Cardano.Org.html#Table"><span class="hs-identifier hs-type">Table</span></a></span><span class="hs-special">{</span><span id="local-6989586621679415561"><span id="local-6989586621679415562"><span id="local-6989586621679415563"><span id="local-6989586621679415564"><span id="local-6989586621679415565"><span id="local-6989586621679415566"><span id="local-6989586621679415567"><span id="local-6989586621679415568"><span id="local-6989586621679415569"><span class="annot"><span class="annottext">Bool
+[[Text]]
+[(Text, Text)]
+[Text]
+Maybe Text
+tColHeaders :: Org -&gt; [Text]
+tExtended :: Org -&gt; Bool
+tApexHeader :: Org -&gt; Maybe Text
+tRowHeaders :: Org -&gt; [Text]
+tColumns :: Org -&gt; [[Text]]
+tSummaryHeaders :: Org -&gt; [Text]
+tSummaryValues :: Org -&gt; [[Text]]
+tFormula :: Org -&gt; [Text]
+tConstants :: Org -&gt; [(Text, Text)]
+tColHeaders :: [Text]
+tExtended :: Bool
+tApexHeader :: Maybe Text
+tRowHeaders :: [Text]
+tColumns :: [[Text]]
+tSummaryHeaders :: [Text]
+tSummaryValues :: [[Text]]
+tFormula :: [Text]
+tConstants :: [(Text, Text)]
+</span><a href="Cardano.Org.html#tColHeaders"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415570"><span class="hs-identifier hs-var">renderTableHLine</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679415571"><span class="hs-identifier hs-var">renderTableRow</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415572"><span class="hs-identifier hs-var">jusAllHeaders</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415570"><span class="hs-identifier hs-var">renderTableHLine</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; [[Text]] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679415571"><span class="hs-identifier hs-var">renderTableRow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+forall a. [[a]] -&gt; [[a]]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#transpose"><span class="hs-identifier hs-var">transpose</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415574"><span class="hs-identifier hs-var">jusAllColumns</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">[Text] -&gt; ([Text] -&gt; [Text]) -&gt; [Text]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [Text] -&gt; [Text]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415576"><span class="hs-identifier hs-var">jusAllSummaryLines</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">[Text] -&gt; ([Text] -&gt; [Text]) -&gt; [Text]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [Text] -&gt; [Text]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415577"><span class="hs-identifier hs-var">jusAllConstantLines</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">[Text] -&gt; ([Text] -&gt; [Text]) -&gt; [Text]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [Text] -&gt; [Text]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Bool -&gt; [Text]
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#+TBLFM:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415568"><span class="hs-identifier hs-var">tFormula</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; ([Text] -&gt; Text) -&gt; Text
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">T.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;::&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415568"><span class="hs-identifier hs-var">tFormula</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>   </span><span class="annot"><a href="#local-6989586621679415572"><span class="hs-identifier hs-type">jusAllHeaders</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>   </span><span id="local-6989586621679415572"><span class="annot"><span class="annottext">jusAllHeaders :: [Text]
+</span><a href="#local-6989586621679415572"><span class="hs-identifier hs-var hs-var">jusAllHeaders</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Text -&gt; Text) -&gt; [Int] -&gt; [Text] -&gt; [Text]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-operator hs-var">`T.justifyRight`</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var">rowHdrWidth</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Int] -&gt; [Int]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415582"><span class="hs-identifier hs-var">colWidths</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Text
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679415563"><span class="hs-identifier hs-var">tApexHeader</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415561"><span class="hs-identifier hs-var">tColHeaders</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>                   </span><span class="annot"><span class="annottext">[Text] -&gt; ([Text] -&gt; [Text]) -&gt; [Text]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679415584"><span class="hs-identifier hs-var">consIfSpecial</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;!&quot;</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>   </span><span class="annot"><a href="#local-6989586621679415574"><span class="hs-identifier hs-type">jusAllColumns</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>   </span><span id="local-6989586621679415574"><span class="annot"><span class="annottext">jusAllColumns :: [[Text]]
+</span><a href="#local-6989586621679415574"><span class="hs-identifier hs-var hs-var">jusAllColumns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415564"><span class="hs-identifier hs-var">tRowHeaders</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; (Text -&gt; Text) -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">T.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var">rowHdrWidth</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>                   </span><span class="annot"><span class="annottext">[Text] -&gt; [[Text]] -&gt; [[Text]]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+</span><a href="#local-6989586621679415585"><span class="hs-identifier hs-var">justifySourceColumns</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415565"><span class="hs-identifier hs-var">tColumns</span></a></span><span>
+</span><span id="line-66"></span><span>                   </span><span class="annot"><span class="annottext">[[Text]] -&gt; ([[Text]] -&gt; [[Text]]) -&gt; [[Text]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [[Text]] -&gt; [[Text]]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679415584"><span class="hs-identifier hs-var">consIfSpecial</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415586"><span class="hs-identifier hs-var">specialCol</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>   </span><span class="annot"><a href="#local-6989586621679415576"><span class="hs-identifier hs-type">jusAllSummaryLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>   </span><span id="local-6989586621679415576"><span class="annot"><span class="annottext">jusAllSummaryLines :: [Text]
+</span><a href="#local-6989586621679415576"><span class="hs-identifier hs-var hs-var">jusAllSummaryLines</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-70"></span><span>     </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415566"><span class="hs-identifier hs-var">tSummaryHeaders</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">else</span><span>
+</span><span id="line-71"></span><span>       </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415570"><span class="hs-identifier hs-var">renderTableHLine</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span>
+</span><span id="line-72"></span><span>       </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; [[Text]] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679415571"><span class="hs-identifier hs-var">renderTableRow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [[Text]] -&gt; [[Text]]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415566"><span class="hs-identifier hs-var">tSummaryHeaders</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; (Text -&gt; Text) -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">T.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var">rowHdrWidth</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+forall a. [[a]] -&gt; [[a]]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#transpose"><span class="hs-identifier hs-var">transpose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+</span><a href="#local-6989586621679415585"><span class="hs-identifier hs-var">justifySourceColumns</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415567"><span class="hs-identifier hs-var">tSummaryValues</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>                             </span><span class="annot"><span class="annottext">[[Text]] -&gt; ([Text] -&gt; [Text]) -&gt; [[Text]]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679415584"><span class="hs-identifier hs-var">consIfSpecial</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool -&gt; Text
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#&quot;</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679415562"><span class="hs-identifier hs-var">tExtended</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>   </span><span class="annot"><a href="#local-6989586621679415585"><span class="hs-identifier hs-type">justifySourceColumns</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>   </span><span id="local-6989586621679415585"><span class="annot"><span class="annottext">justifySourceColumns :: [[Text]] -&gt; [[Text]]
+</span><a href="#local-6989586621679415585"><span class="hs-identifier hs-var hs-var">justifySourceColumns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; [Text] -&gt; [Text]) -&gt; [Int] -&gt; [[Text]] -&gt; [[Text]]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679415587"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415587"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; [Text] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">T.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415587"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415582"><span class="hs-identifier hs-var">colWidths</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>   </span><span class="annot"><a href="#local-6989586621679415577"><span class="hs-identifier hs-type">jusAllConstantLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>   </span><span id="local-6989586621679415577"><span class="annot"><span class="annottext">jusAllConstantLines :: [Text]
+</span><a href="#local-6989586621679415577"><span class="hs-identifier hs-var hs-var">jusAllConstantLines</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>     </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415569"><span class="hs-identifier hs-var">tConstants</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">else</span><span>
+</span><span id="line-83"></span><span>       </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415570"><span class="hs-identifier hs-var">renderTableHLine</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; [Text]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span>
+</span><span id="line-84"></span><span>       </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; [[Text]] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679415571"><span class="hs-identifier hs-var">renderTableRow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [[Text]] -&gt; [[Text]]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>                             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; [Text]
+forall a. HasCallStack =&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#cycle"><span class="hs-identifier hs-var">cycle</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>                             </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415589"><span class="hs-identifier hs-var">constRows</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>      </span><span id="local-6989586621679415589"><span class="annot"><span class="annottext">constRows :: [[Text]]
+</span><a href="#local-6989586621679415589"><span class="hs-identifier hs-var hs-var">constRows</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [(Text, Text)] -&gt; [[(Text, Text)]]
+forall e. Int -&gt; [e] -&gt; [[e]]
+</span><a href="file:///nix/store/x3j2nbh6wj9x2xxa20pnxaw13x0b89rs-split-lib-split-0.2.5-haddock-doc/share/doc/split/html/src/Data.List.Split.Internals.html#chunksOf"><span class="hs-identifier hs-var">chunksOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415591"><span class="hs-identifier hs-var">nTotalColumns</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415569"><span class="hs-identifier hs-var">tConstants</span></a></span><span>                                          </span><span class="hs-comment">-- we can fit so many definitions per row</span><span>
+</span><span id="line-89"></span><span>                   </span><span class="annot"><span class="annottext">[[(Text, Text)]]
+-&gt; ([[(Text, Text)]] -&gt; [[(Text, Text)]]) -&gt; [[(Text, Text)]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">([(Text, Text)] -&gt; [(Text, Text)])
+-&gt; [[(Text, Text)]] -&gt; [[(Text, Text)]]
+forall a. (a -&gt; a) -&gt; [a] -&gt; [a]
+</span><a href="Cardano.Util.html#mapLast"><span class="hs-identifier hs-var">mapLast</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679415593"><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415593"><span class="hs-identifier hs-var">row</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415593"><span class="hs-identifier hs-var">row</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; [(Text, Text)] -&gt; [(Text, Text)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Text, Text) -&gt; [(Text, Text)]
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415591"><span class="hs-identifier hs-var">nTotalColumns</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679415593"><span class="hs-identifier hs-var">row</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- last row needs completion</span><span>
+</span><span id="line-90"></span><span>                   </span><span class="annot"><span class="annottext">[[(Text, Text)]]
+-&gt; ([[(Text, Text)]] -&gt; [[((Text, Text), Int)]])
+-&gt; [[((Text, Text), Int)]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">([(Text, Text)] -&gt; [((Text, Text), Int)])
+-&gt; [[(Text, Text)]] -&gt; [[((Text, Text), Int)]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; [Int] -&gt; [((Text, Text), Int)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zip"><span class="hs-operator hs-var">`zip`</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415596"><span class="hs-identifier hs-var">allColWidths</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>                                               </span><span class="hs-comment">-- and we supply column widths for justification</span><span>
+</span><span id="line-91"></span><span>                  </span><span class="annot"><span class="annottext">[[((Text, Text), Int)]]
+-&gt; ([((Text, Text), Int)] -&gt; [[Text]]) -&gt; [[[Text]]]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+forall a. [[a]] -&gt; [[a]]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#transpose"><span class="hs-identifier hs-var">transpose</span></a></span><span> </span><span class="annot"><span class="annottext">([[Text]] -&gt; [[Text]])
+-&gt; ([((Text, Text), Int)] -&gt; [[Text]])
+-&gt; [((Text, Text), Int)]
+-&gt; [[Text]]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(((Text, Text), Int) -&gt; [Text])
+-&gt; [((Text, Text), Int)] -&gt; [[Text]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679415598"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415598"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679415599"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415599"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679415600"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415600"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>                                </span><span class="hs-comment">-- each row -&gt; row pair of justified [Name, Definition]</span><span>
+</span><span id="line-92"></span><span>                                          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">T.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415600"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415598"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-93"></span><span>                                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">T.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415600"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679415599"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>                   </span><span class="annot"><span class="annottext">[[[Text]]] -&gt; ([[[Text]]] -&gt; [[Text]]) -&gt; [[Text]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[[[Text]]] -&gt; [[Text]]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span>                                                                   </span><span class="hs-comment">-- merge into a single list of rows</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>   </span><span class="annot"><a href="#local-6989586621679415581"><span class="hs-identifier hs-type">rowHdrWidth</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679415591"><span class="hs-identifier hs-type">nTotalColumns</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-97"></span><span>   </span><span id="local-6989586621679415581"><span class="annot"><span class="annottext">rowHdrWidth :: Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var hs-var">rowHdrWidth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Ord a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#maximum"><span class="hs-identifier hs-var">maximum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Int) -&gt; [Text] -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Text -&gt; [Text]
+forall a. Maybe a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679415563"><span class="hs-identifier hs-var">tApexHeader</span></a></span><span>
+</span><span id="line-98"></span><span>                                       </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415564"><span class="hs-identifier hs-var">tRowHeaders</span></a></span><span>
+</span><span id="line-99"></span><span>                                       </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415566"><span class="hs-identifier hs-var">tSummaryHeaders</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>   </span><span id="local-6989586621679415591"><span class="annot"><span class="annottext">nTotalColumns :: Int
+</span><a href="#local-6989586621679415591"><span class="hs-identifier hs-var hs-var">nTotalColumns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415596"><span class="hs-identifier hs-var">allColWidths</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>   </span><span class="annot"><a href="#local-6989586621679415582"><span class="hs-identifier hs-type">colWidths</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679415596"><span class="hs-identifier hs-type">allColWidths</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>   </span><span id="local-6989586621679415596"><span class="annot"><span class="annottext">allColWidths :: [Int]
+</span><a href="#local-6989586621679415596"><span class="hs-identifier hs-var hs-var">allColWidths</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var">rowHdrWidth</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Int] -&gt; [Int]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415582"><span class="hs-identifier hs-var">colWidths</span></a></span><span>
+</span><span id="line-104"></span><span>   </span><span id="local-6989586621679415582"><span class="annot"><span class="annottext">colWidths :: [Int]
+</span><a href="#local-6989586621679415582"><span class="hs-identifier hs-var hs-var">colWidths</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Ord a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#maximum"><span class="hs-identifier hs-var">maximum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; ([Text] -&gt; [Int]) -&gt; [Text] -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Int) -&gt; [Text] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Int) -&gt; [[Text]] -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-105"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415565"><span class="hs-identifier hs-var">tColumns</span></a></span><span>
+</span><span id="line-106"></span><span>                </span><span class="annot"><span class="annottext">[[Text]] -&gt; ([[Text]] -&gt; [[Text]]) -&gt; [[Text]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; [Text] -&gt; [Text]) -&gt; [Text] -&gt; [[Text]] -&gt; [[Text]]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415561"><span class="hs-identifier hs-var">tColHeaders</span></a></span><span>
+</span><span id="line-107"></span><span>                </span><span class="annot"><span class="annottext">[[Text]] -&gt; ([[Text]] -&gt; [[Text]]) -&gt; [[Text]]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415567"><span class="hs-identifier hs-var">tSummaryValues</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[[Text]] -&gt; [[Text]]
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span>
+</span><span id="line-108"></span><span>                  </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [Text] -&gt; [Text]) -&gt; [[Text]] -&gt; [[Text]] -&gt; [[Text]]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">[[Text]]
+</span><a href="#local-6989586621679415567"><span class="hs-identifier hs-var">tSummaryValues</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>   </span><span class="annot"><a href="#local-6989586621679415586"><span class="hs-identifier hs-type">specialCol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>   </span><span id="local-6989586621679415586"><span class="annot"><span class="annottext">specialCol :: [Text]
+</span><a href="#local-6989586621679415586"><span class="hs-identifier hs-var hs-var">specialCol</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415564"><span class="hs-identifier hs-var">tRowHeaders</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; [Text]
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#replicate"><span class="hs-operator hs-var">`replicate`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#&quot;</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>   </span><span id="local-6989586621679415606"><span class="annot"><a href="#local-6989586621679415584"><span class="hs-identifier hs-type">consIfSpecial</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679415606"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679415606"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679415606"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-114"></span><span>   </span><span id="local-6989586621679415584"><span class="annot"><span class="annottext">consIfSpecial :: forall a. a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679415584"><span class="hs-identifier hs-var hs-var">consIfSpecial</span></a></span></span><span> </span><span id="local-6989586621679415608"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415608"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a]) -&gt; ([a] -&gt; [a]) -&gt; Bool -&gt; [a] -&gt; [a]
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span>  </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415608"><span class="hs-identifier hs-var">x</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">)</span><span>  </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679415562"><span class="hs-identifier hs-var">tExtended</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>   </span><span class="annot"><a href="#local-6989586621679415571"><span class="hs-identifier hs-type">renderTableRow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-117"></span><span>   </span><span id="local-6989586621679415571"><span class="annot"><span class="annottext">renderTableRow :: [Text] -&gt; Text
+</span><a href="#local-6989586621679415571"><span class="hs-identifier hs-var hs-var">renderTableRow</span></a></span></span><span> </span><span id="local-6989586621679415609"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415609"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;| &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">T.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; | &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679415609"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; |&quot;</span></span><span>
+</span><span id="line-118"></span><span>   </span><span class="annot"><a href="#local-6989586621679415570"><span class="hs-identifier hs-type">renderTableHLine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-119"></span><span>   </span><span id="local-6989586621679415570"><span class="annot"><span class="annottext">renderTableHLine :: Text
+</span><a href="#local-6989586621679415570"><span class="hs-identifier hs-var hs-var">renderTableHLine</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;|-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; ([Int] -&gt; Text) -&gt; [Int] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-|&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; ([Int] -&gt; Text) -&gt; [Int] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">T.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-+-&quot;</span></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; ([Int] -&gt; [Text]) -&gt; [Int] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Text -&gt; Text) -&gt; Text -&gt; Int -&gt; Text
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replicate"><span class="hs-identifier hs-var">T.replicate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Text) -&gt; [Int] -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Text) -&gt; [Int] -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-120"></span><span>                      </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679415581"><span class="hs-identifier hs-var">rowHdrWidth</span></a></span><span>
+</span><span id="line-121"></span><span>                      </span><span class="annot"><span class="annottext">Int -&gt; [Int] -&gt; [Int]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679415582"><span class="hs-identifier hs-var">colWidths</span></a></span><span>
+</span><span id="line-122"></span><span>                      </span><span class="annot"><span class="annottext">[Int] -&gt; ([Int] -&gt; [Int]) -&gt; [Int]
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Int] -&gt; [Int]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="#local-6989586621679415584"><span class="hs-identifier hs-var">consIfSpecial</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-123"></span></pre></body></html>

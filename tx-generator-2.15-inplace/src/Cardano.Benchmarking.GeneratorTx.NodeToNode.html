@@ -1,0 +1,1296 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PackageImports #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans -Wno-unticked-promoted-constructors -Wno-all-missed-specialisations #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.GeneratorTx.NodeToNode</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#ConnectClient"><span class="hs-identifier">ConnectClient</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#benchmarkConnectTxSubmit"><span class="hs-identifier">benchmarkConnectTxSubmit</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier">forever</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#throwIO"><span class="hs-identifier">throwIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-string">&quot;contra-tracer&quot;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.html"><span class="hs-identifier">Codec.Serialise</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier">DeserialiseFailure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-l-strict-stm-ecfc11eadd34337724c40b3fec31e4fbaa555bd5ee912c87fc7bf807f80921d3/share/doc/html/src/Control.Concurrent.Class.MonadSTM.Strict.html"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-l-strict-stm-ecfc11eadd34337724c40b3fec31e4fbaa555bd5ee912c87fc7bf807f80921d3/share/doc/html/src/Control.Concurrent.Class.MonadSTM.Strict.TVar.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html"><span class="hs-identifier">Control.Monad.Class.MonadTimer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#MonadTimer"><span class="hs-identifier">MonadTimer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#fold"><span class="hs-identifier">fold</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier">Proxy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Void.html"><span class="hs-identifier">Data.Void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Void"><span class="hs-identifier">Void</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#absurd"><span class="hs-identifier">absurd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.html"><span class="hs-identifier">Network.Mux</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mux</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.html"><span class="hs-identifier">Network.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier">AddrInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/kz59gdfjy4r2c0v6cijz5x54a1a17j9k-random-lib-random-1.2.1.3-haddock-doc/share/doc/random/html/src/System.Random.html"><span class="hs-identifier">System.Random</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/kz59gdfjy4r2c0v6cijz5x54a1a17j9k-random-lib-random-1.2.1.3-haddock-doc/share/doc/random/html/src/System.Random.html#newStdGen"><span class="hs-identifier">newStdGen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html"><span class="hs-identifier">Ouroboros.Consensus.Block.Abstract</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Ledger.Mempool.html"><span class="hs-identifier">Ouroboros.Consensus.Byron.Ledger.Mempool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTx"><span class="hs-identifier">GenTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Block.html#CardanoBlock"><span class="hs-identifier">CardanoBlock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html"><span class="hs-identifier">Ouroboros.Consensus.Ledger.SupportsMempool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTxId"><span class="hs-identifier">GenTxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html"><span class="hs-identifier">Ouroboros.Consensus.Network.NodeToNode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#Codecs"><span class="hs-identifier">Codecs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#defaultCodecs"><span class="hs-identifier">defaultCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.NetworkProtocolVersion.html"><span class="hs-identifier">Ouroboros.Consensus.Node.NetworkProtocolVersion</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.Run.html"><span class="hs-identifier">Ouroboros.Consensus.Node.Run</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.Run.html#RunNode"><span class="hs-identifier">RunNode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Eras.html"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Eras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Channel.html"><span class="hs-identifier">Ouroboros.Network.Channel</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Channel.html#Channel"><span class="hs-identifier">Channel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Context.html"><span class="hs-identifier">Ouroboros.Network.Context</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.ControlMessage.html"><span class="hs-identifier">Ouroboros.Network.ControlMessage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.ControlMessage.html#continueForever"><span class="hs-identifier">continueForever</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.DeltaQ.html"><span class="hs-identifier">Ouroboros.Network.DeltaQ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.DeltaQ.html#defaultGSV"><span class="hs-identifier">defaultGSV</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.html"><span class="hs-identifier">Ouroboros.Network.Driver</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier">runPeer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Limits.html#runPeerWithLimits"><span class="hs-identifier">runPeerWithLimits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.KeepAlive.html"><span class="hs-identifier">Ouroboros.Network.KeepAlive</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html"><span class="hs-identifier">Ouroboros.Network.Magic</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html"><span class="hs-identifier">Ouroboros.Network.Mux</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier">MiniProtocolCb</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier">OuroborosApplication</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosBundle"><span class="hs-identifier">OuroborosBundle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToClient.html"><span class="hs-identifier">Ouroboros.Network.NodeToClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToClient.html#chainSyncPeerNull"><span class="hs-identifier">chainSyncPeerNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html"><span class="hs-identifier">Ouroboros.Network.NodeToNode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Socket.html#NetworkConnectTracers"><span class="hs-identifier">NetworkConnectTracers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html"><span class="hs-identifier">Ouroboros.Network.NodeToNode</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NtN</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.PeerSharing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.html#PeerSharing"><span class="hs-identifier">PeerSharing</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.Codec.html"><span class="hs-identifier">Ouroboros.Network.PeerSelection.PeerSharing.Codec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.Codec.html#decodeRemoteAddress"><span class="hs-identifier">decodeRemoteAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.Codec.html#encodeRemoteAddress"><span class="hs-identifier">encodeRemoteAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html"><span class="hs-identifier">Ouroboros.Network.Protocol.BlockFetch.Client</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html#BlockFetchClient"><span class="hs-identifier">BlockFetchClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html#blockFetchClientPeer"><span class="hs-identifier">blockFetchClientPeer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html"><span class="hs-identifier">Ouroboros.Network.Protocol.Handshake.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html#simpleSingletonVersions"><span class="hs-identifier">simpleSingletonVersions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Client.html"><span class="hs-identifier">Ouroboros.Network.Protocol.KeepAlive.Client</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Client.html#SendMsgDone"><span class="hs-identifier">SendMsgDone</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Codec.html"><span class="hs-identifier">Ouroboros.Network.Protocol.KeepAlive.Codec</span></a></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html"><span class="hs-identifier">Ouroboros.Network.Protocol.TxSubmission2.Client</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html#TxSubmissionClient"><span class="hs-identifier">TxSubmissionClient</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html#txSubmissionClientPeer"><span class="hs-identifier">txSubmissionClientPeer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html"><span class="hs-identifier">Ouroboros.Network.Protocol.PeerSharing.Client</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html#PeerSharingClient"><span class="hs-identifier">PeerSharingClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html#peerSharingClientPeer"><span class="hs-identifier">peerSharingClientPeer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Snocket.html"><span class="hs-identifier">Ouroboros.Network.Snocket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Snocket.html#socketSnocket"><span class="hs-identifier">socketSnocket</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html"><span class="hs-identifier">Cardano.Benchmarking.LogTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier">EnvConsts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#SendRecvConnect"><span class="hs-identifier">SendRecvConnect</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#SendRecvTxSubmission2"><span class="hs-identifier">SendRecvTxSubmission2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html"><span class="hs-identifier">Cardano.TxGenerator.Setup.NixService</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#defaultKeepaliveTimeout"><span class="hs-identifier">defaultKeepaliveTimeout</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#getKeepaliveTimeout"><span class="hs-identifier">getKeepaliveTimeout</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">type</span><span> </span><span id="CardanoBlock"><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#CardanoBlock"><span class="hs-identifier hs-var">CardanoBlock</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Block.html#CardanoBlock"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></a></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">type</span><span> </span><span id="ConnectClient"><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#ConnectClient"><span class="hs-identifier hs-var">ConnectClient</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">AddrInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html#TxSubmissionClient"><span class="hs-identifier hs-type">TxSubmissionClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTxId"><span class="hs-identifier hs-type">GenTxId</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#CardanoBlock"><span class="hs-identifier hs-type">CardanoBlock</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTx"><span class="hs-identifier hs-type">GenTx</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#CardanoBlock"><span class="hs-identifier hs-type">CardanoBlock</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#benchmarkConnectTxSubmit"><span class="hs-identifier hs-type">benchmarkConnectTxSubmit</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679926767"><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#~"><span class="hs-operator hs-type">~</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#CardanoBlock"><span class="hs-identifier hs-type">CardanoBlock</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.Run.html#RunNode"><span class="hs-identifier hs-type">RunNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier hs-type">EnvConsts</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#SendRecvConnect"><span class="hs-identifier hs-type">SendRecvConnect</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#SendRecvTxSubmission2"><span class="hs-identifier hs-type">SendRecvTxSubmission2</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#CodecConfig"><span class="hs-identifier hs-type">CodecConfig</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#CardanoBlock"><span class="hs-identifier hs-type">CardanoBlock</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">AddrInfo</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ remote address information</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html#TxSubmissionClient"><span class="hs-identifier hs-type">TxSubmissionClient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTxId"><span class="hs-identifier hs-type">GenTxId</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#GenTx"><span class="hs-identifier hs-type">GenTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ the particular txSubmission peer</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="benchmarkConnectTxSubmit"><span class="annot"><span class="annottext">benchmarkConnectTxSubmit :: forall blk.
+(blk ~ CardanoBlock, RunNode blk) =&gt;
+EnvConsts
+-&gt; Tracer IO SendRecvConnect
+-&gt; Tracer IO SendRecvTxSubmission2
+-&gt; CodecConfig CardanoBlock
+-&gt; NetworkMagic
+-&gt; AddrInfo
+-&gt; TxSubmissionClient (GenTxId blk) (GenTx blk) IO ()
+-&gt; IO ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#benchmarkConnectTxSubmit"><span class="hs-identifier hs-var hs-var">benchmarkConnectTxSubmit</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier hs-type">EnvConsts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679927235"><span id="local-6989586621679927236"><span id="local-6989586621679927237"><span id="local-6989586621679927238"><span class="annot"><span class="annottext">Maybe NixServiceOptions
+TVar (Maybe BenchTracers)
+TVar (Maybe AsyncBenchmarkControl)
+IOManager
+envIOManager :: IOManager
+envThreads :: TVar (Maybe AsyncBenchmarkControl)
+envNixSvcOpts :: Maybe NixServiceOptions
+benchTracers :: TVar (Maybe BenchTracers)
+envIOManager :: EnvConsts -&gt; IOManager
+envThreads :: EnvConsts -&gt; TVar (Maybe AsyncBenchmarkControl)
+envNixSvcOpts :: EnvConsts -&gt; Maybe NixServiceOptions
+benchTracers :: EnvConsts -&gt; TVar (Maybe BenchTracers)
+</span><a href="#local-6989586621679927235"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679927243"><span class="annot"><span class="annottext">Tracer IO SendRecvConnect
+</span><a href="#local-6989586621679927243"><span class="hs-identifier hs-var">handshakeTracer</span></a></span></span><span> </span><span id="local-6989586621679927244"><span class="annot"><span class="annottext">Tracer IO SendRecvTxSubmission2
+</span><a href="#local-6989586621679927244"><span class="hs-identifier hs-var">submissionTracer</span></a></span></span><span> </span><span id="local-6989586621679927245"><span class="annot"><span class="annottext">CodecConfig CardanoBlock
+</span><a href="#local-6989586621679927245"><span class="hs-identifier hs-var">codecConfig</span></a></span></span><span> </span><span id="local-6989586621679927246"><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679927246"><span class="hs-identifier hs-var">networkMagic</span></a></span></span><span> </span><span id="local-6989586621679927247"><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927247"><span class="hs-identifier hs-var">remoteAddr</span></a></span></span><span> </span><span id="local-6989586621679927248"><span class="annot"><span class="annottext">TxSubmissionClient (TxId (GenTx blk)) (GenTx blk) IO ()
+</span><a href="#local-6989586621679927248"><span class="hs-identifier hs-var">myTxSubClient</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679927249"><span class="annot"><span class="annottext">Either SomeException (Either () Void)
+</span><a href="#local-6989586621679927249"><span class="hs-identifier hs-var">done</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Snocket IO Socket RemoteAddress
+-&gt; NetworkConnectTracers RemoteAddress NodeToNodeVersion
+-&gt; Versions
+     NodeToNodeVersion
+     NodeToNodeVersionData
+     (OuroborosApplicationWithMinimalCtx
+        'InitiatorMode RemoteAddress ByteString IO () Void)
+-&gt; Maybe RemoteAddress
+-&gt; RemoteAddress
+-&gt; IO (Either SomeException (Either () Void))
+forall a b.
+Snocket IO Socket RemoteAddress
+-&gt; NetworkConnectTracers RemoteAddress NodeToNodeVersion
+-&gt; Versions
+     NodeToNodeVersion
+     NodeToNodeVersionData
+     (OuroborosApplicationWithMinimalCtx
+        'InitiatorMode RemoteAddress ByteString IO a b)
+-&gt; Maybe RemoteAddress
+-&gt; RemoteAddress
+-&gt; IO (Either SomeException (Either a b))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#connectTo"><span class="hs-identifier hs-var">NtN.connectTo</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IOManager -&gt; Snocket IO Socket RemoteAddress
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Snocket.html#socketSnocket"><span class="hs-identifier hs-var">socketSnocket</span></a></span><span> </span><span class="annot"><span class="annottext">IOManager
+</span><a href="#local-6989586621679927235"><span class="hs-identifier hs-var">envIOManager</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Socket.html#NetworkConnectTracers"><span class="hs-identifier hs-type">NetworkConnectTracers</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">nctMuxTracers :: TracersWithBearer (ConnectionId RemoteAddress) IO
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Socket.html#nctMuxTracers"><span class="hs-identifier hs-var">nctMuxTracers</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracersWithBearer (ConnectionId RemoteAddress) IO
+forall (m :: * -&gt; *) (f :: * -&gt; *). Applicative m =&gt; Tracers' m f
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Trace.html#nullTracers"><span class="hs-identifier hs-var">Mux.nullTracers</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">nctHandshakeTracer :: Tracer IO SendRecvConnect
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Socket.html#nctHandshakeTracer"><span class="hs-identifier hs-var">nctHandshakeTracer</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tracer IO SendRecvConnect
+</span><a href="#local-6989586621679927243"><span class="hs-identifier hs-var">handshakeTracer</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">Versions
+  NodeToNodeVersion
+  NodeToNodeVersionData
+  (OuroborosApplicationWithMinimalCtx
+     'InitiatorMode RemoteAddress ByteString IO () Void)
+</span><a href="#local-6989586621679927255"><span class="hs-identifier hs-var">peerMultiplex</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrInfo -&gt; RemoteAddress
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrAddress"><span class="hs-identifier hs-var">addrAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(AddrInfo -&gt; RemoteAddress)
+-&gt; Maybe AddrInfo -&gt; Maybe RemoteAddress
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe AddrInfo
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrInfo -&gt; RemoteAddress
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrAddress"><span class="hs-identifier hs-var">addrAddress</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927247"><span class="hs-identifier hs-var">remoteAddr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either SomeException (Either () Void)
+</span><a href="#local-6989586621679927249"><span class="hs-identifier hs-var">done</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679927258"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679927258"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; IO ()
+forall (m :: * -&gt; *) e a. (MonadIO m, Exception e) =&gt; e -&gt; m a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679927258"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679927259"><span class="annot"><span class="annottext">Either () Void
+</span><a href="#local-6989586621679927259"><span class="hs-identifier hs-var">choice</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either () Void
+</span><a href="#local-6989586621679927259"><span class="hs-identifier hs-var">choice</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679927260"><span class="annot"><span class="annottext">Void
+</span><a href="#local-6989586621679927260"><span class="hs-identifier hs-var">void</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Void -&gt; IO ()
+forall a. Void -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#absurd"><span class="hs-identifier hs-var">absurd</span></a></span><span> </span><span class="annot"><span class="annottext">Void
+</span><a href="#local-6989586621679927260"><span class="hs-identifier hs-var">void</span></a></span><span>
+</span><span id="line-103"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679927261"><span class="annot"><span class="annottext">ownPeerSharing :: PeerSharing
+</span><a href="#local-6989586621679927261"><span class="hs-identifier hs-var hs-var">ownPeerSharing</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PeerSharing
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.html#PeerSharingDisabled"><span class="hs-identifier hs-var">PeerSharingDisabled</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679926859"><span id="local-6989586621679926860"><span id="local-6989586621679926861"><span id="local-6989586621679926862"><span id="local-6989586621679926863"><span id="local-6989586621679926864"><span id="local-6989586621679926865"><span class="annot"><a href="#local-6989586621679927263"><span class="hs-identifier hs-type">mkApp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosBundle"><span class="hs-identifier hs-type">OuroborosBundle</span></a></span><span>      </span><span class="annot"><a href="#local-6989586621679926859"><span class="hs-identifier hs-type">mode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926860"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926861"><span class="hs-identifier hs-type">responderCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926862"><span class="hs-identifier hs-type">bs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926863"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926864"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926865"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier hs-type">OuroborosApplication</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926859"><span class="hs-identifier hs-type">mode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926860"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926861"><span class="hs-identifier hs-type">responderCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926862"><span class="hs-identifier hs-type">bs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926863"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926864"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926865"><span class="hs-identifier hs-type">b</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679927263"><span class="annot"><span class="annottext">mkApp :: forall (mode :: Mode) initiatorCtx responderCtx bs (m :: * -&gt; *) a
+       b.
+OuroborosBundle mode initiatorCtx responderCtx bs m a b
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bs m a b
+</span><a href="#local-6989586621679927263"><span class="hs-identifier hs-var hs-var">mkApp</span></a></span></span><span> </span><span id="local-6989586621679927268"><span class="annot"><span class="annottext">OuroborosBundle mode initiatorCtx responderCtx bs m a b
+</span><a href="#local-6989586621679927268"><span class="hs-identifier hs-var">bundle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">[MiniProtocol mode initiatorCtx responderCtx bs m a b]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bs m a b
+forall (mode :: Mode) initiatorCtx responderCtx bytes (m :: * -&gt; *)
+       a b.
+[MiniProtocol mode initiatorCtx responderCtx bytes m a b]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bytes m a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier hs-var">OuroborosApplication</span></a></span><span> </span><span class="annot"><span class="annottext">([MiniProtocol mode initiatorCtx responderCtx bs m a b]
+ -&gt; OuroborosApplication mode initiatorCtx responderCtx bs m a b)
+-&gt; [MiniProtocol mode initiatorCtx responderCtx bs m a b]
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bs m a b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OuroborosBundle mode initiatorCtx responderCtx bs m a b
+-&gt; [MiniProtocol mode initiatorCtx responderCtx bs m a b]
+forall m. Monoid m =&gt; TemperatureBundle m -&gt; m
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#fold"><span class="hs-identifier hs-var">fold</span></a></span><span> </span><span class="annot"><span class="annottext">OuroborosBundle mode initiatorCtx responderCtx bs m a b
+</span><a href="#local-6989586621679927268"><span class="hs-identifier hs-var">bundle</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><a href="#local-6989586621679927270"><span class="hs-identifier hs-type">n2nVer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersion"><span class="hs-identifier hs-type">NodeToNodeVersion</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679927270"><span class="annot"><span class="annottext">n2nVer :: NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var hs-var">n2nVer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeV_14"><span class="hs-identifier hs-var">NodeToNodeV_14</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><a href="#local-6989586621679927272"><span class="hs-identifier hs-type">blkN2nVer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.NetworkProtocolVersion.html#BlockNodeToNodeVersion"><span class="hs-identifier hs-type">BlockNodeToNodeVersion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679927272"><span class="annot"><span class="annottext">blkN2nVer :: BlockNodeToNodeVersion blk
+</span><a href="#local-6989586621679927272"><span class="hs-identifier hs-var hs-var">blkN2nVer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
+Map
+  NodeToNodeVersion
+  (HardForkNodeToNodeVersion
+     (ByronBlock : CardanoShelleyEras StandardCrypto))
+</span><a href="#local-6989586621679927273"><span class="hs-identifier hs-var">supportedVers</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  NodeToNodeVersion
+  (HardForkNodeToNodeVersion
+     (ByronBlock : CardanoShelleyEras StandardCrypto))
+-&gt; NodeToNodeVersion
+-&gt; HardForkNodeToNodeVersion
+     (ByronBlock : CardanoShelleyEras StandardCrypto)
+forall k a. Ord k =&gt; Map k a -&gt; k -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#%21"><span class="hs-operator hs-var">Map.!</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var">n2nVer</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="#local-6989586621679927273"><span class="hs-identifier hs-type">supportedVers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersion"><span class="hs-identifier hs-type">NodeToNodeVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.NetworkProtocolVersion.html#BlockNodeToNodeVersion"><span class="hs-identifier hs-type">BlockNodeToNodeVersion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679927273"><span class="annot"><span class="annottext">supportedVers :: Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
+</span><a href="#local-6989586621679927273"><span class="hs-identifier hs-var hs-var">supportedVers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy blk -&gt; Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
+forall blk.
+SupportedNetworkProtocolVersion blk =&gt;
+Proxy blk -&gt; Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Node.NetworkProtocolVersion.html#supportedNodeToNodeVersions"><span class="hs-identifier hs-var">supportedNodeToNodeVersions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="#local-6989586621679927277"><span class="hs-identifier hs-type">myCodecs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#Codecs"><span class="hs-identifier hs-type">Codecs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926767"><span class="hs-identifier hs-type">blk</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#RemoteAddress"><span class="hs-identifier hs-type">NtN.RemoteAddress</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-117"></span><span>                </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-118"></span><span>                </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621679927277"><span class="annot"><span class="annottext">myCodecs :: Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var hs-var">myCodecs</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CodecConfig blk
+-&gt; BlockNodeToNodeVersion blk
+-&gt; (NodeToNodeVersion -&gt; RemoteAddress -&gt; Encoding)
+-&gt; (NodeToNodeVersion -&gt; forall s. Decoder s RemoteAddress)
+-&gt; NodeToNodeVersion
+-&gt; Codecs
+     blk
+     RemoteAddress
+     DeserialiseFailure
+     IO
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+forall (m :: * -&gt; *) blk addr.
+(IOLike m, SerialiseNodeToNodeConstraints blk) =&gt;
+CodecConfig blk
+-&gt; BlockNodeToNodeVersion blk
+-&gt; (NodeToNodeVersion -&gt; addr -&gt; Encoding)
+-&gt; (NodeToNodeVersion -&gt; forall s. Decoder s addr)
+-&gt; NodeToNodeVersion
+-&gt; Codecs
+     blk
+     addr
+     DeserialiseFailure
+     m
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+     ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#defaultCodecs"><span class="hs-identifier hs-var">defaultCodecs</span></a></span><span> </span><span class="annot"><span class="annottext">CodecConfig blk
+CodecConfig CardanoBlock
+</span><a href="#local-6989586621679927245"><span class="hs-identifier hs-var">codecConfig</span></a></span><span> </span><span class="annot"><span class="annottext">BlockNodeToNodeVersion blk
+</span><a href="#local-6989586621679927272"><span class="hs-identifier hs-var">blkN2nVer</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion -&gt; RemoteAddress -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.Codec.html#encodeRemoteAddress"><span class="hs-identifier hs-var">encodeRemoteAddress</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion -&gt; Decoder s RemoteAddress
+NodeToNodeVersion -&gt; forall s. Decoder s RemoteAddress
+forall s. NodeToNodeVersion -&gt; Decoder s RemoteAddress
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.PeerSelection.PeerSharing.Codec.html#decodeRemoteAddress"><span class="hs-identifier hs-var">decodeRemoteAddress</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var">n2nVer</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><a href="#local-6989586621679927255"><span class="hs-identifier hs-type">peerMultiplex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html#Versions"><span class="hs-identifier hs-type">NtN.Versions</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersion"><span class="hs-identifier hs-type">NodeToNodeVersion</span></a></span><span>
+</span><span id="line-121"></span><span>                                </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersionData"><span class="hs-identifier hs-type">NtN.NodeToNodeVersionData</span></a></span><span>
+</span><span id="line-122"></span><span>                                </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#OuroborosApplication"><span class="hs-identifier hs-type">OuroborosApplication</span></a></span><span>
+</span><span id="line-123"></span><span>                                  </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-type">Mux.InitiatorMode</span></a></span><span>
+</span><span id="line-124"></span><span>                                  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Context.html#MinimalInitiatorContext"><span class="hs-identifier hs-type">MinimalInitiatorContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#RemoteAddress"><span class="hs-identifier hs-type">NtN.RemoteAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>                                  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Context.html#ResponderContext"><span class="hs-identifier hs-type">ResponderContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#RemoteAddress"><span class="hs-identifier hs-type">NtN.RemoteAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>                                  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679927255"><span class="annot"><span class="annottext">peerMultiplex :: Versions
+  NodeToNodeVersion
+  NodeToNodeVersionData
+  (OuroborosApplicationWithMinimalCtx
+     'InitiatorMode RemoteAddress ByteString IO () Void)
+</span><a href="#local-6989586621679927255"><span class="hs-identifier hs-var hs-var">peerMultiplex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">NodeToNodeVersion
+-&gt; NodeToNodeVersionData
+-&gt; (NodeToNodeVersionData
+    -&gt; OuroborosApplicationWithMinimalCtx
+         'InitiatorMode RemoteAddress ByteString IO () Void)
+-&gt; Versions
+     NodeToNodeVersion
+     NodeToNodeVersionData
+     (OuroborosApplicationWithMinimalCtx
+        'InitiatorMode RemoteAddress ByteString IO () Void)
+forall vNum vData r.
+vNum -&gt; vData -&gt; (vData -&gt; r) -&gt; Versions vNum vData r
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Protocol.Handshake.Version.html#simpleSingletonVersions"><span class="hs-identifier hs-var">simpleSingletonVersions</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var">n2nVer</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersionData"><span class="hs-identifier hs-type">NtN.NodeToNodeVersionData</span></a></span><span>
+</span><span id="line-131"></span><span>       </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">networkMagic :: NetworkMagic
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#networkMagic"><span class="hs-identifier hs-var">NtN.networkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679927246"><span class="hs-identifier hs-var">networkMagic</span></a></span><span>
+</span><span id="line-132"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">diffusionMode :: DiffusionMode
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#diffusionMode"><span class="hs-identifier hs-var">NtN.diffusionMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffusionMode
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#InitiatorOnlyDiffusionMode"><span class="hs-identifier hs-var">NtN.InitiatorOnlyDiffusionMode</span></a></span><span>
+</span><span id="line-133"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">peerSharing :: PeerSharing
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#peerSharing"><span class="hs-identifier hs-var">NtN.peerSharing</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PeerSharing
+</span><a href="#local-6989586621679927261"><span class="hs-identifier hs-var">ownPeerSharing</span></a></span><span>
+</span><span id="line-134"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">query :: Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#query"><span class="hs-identifier hs-var">NtN.query</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-135"></span><span>       </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((NodeToNodeVersionData
+  -&gt; OuroborosApplicationWithMinimalCtx
+       'InitiatorMode RemoteAddress ByteString IO () Void)
+ -&gt; Versions
+      NodeToNodeVersion
+      NodeToNodeVersionData
+      (OuroborosApplicationWithMinimalCtx
+         'InitiatorMode RemoteAddress ByteString IO () Void))
+-&gt; (NodeToNodeVersionData
+    -&gt; OuroborosApplicationWithMinimalCtx
+         'InitiatorMode RemoteAddress ByteString IO () Void)
+-&gt; Versions
+     NodeToNodeVersion
+     NodeToNodeVersionData
+     (OuroborosApplicationWithMinimalCtx
+        'InitiatorMode RemoteAddress ByteString IO () Void)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="hs-glyph">\</span><span id="local-6989586621679927284"><span class="annot"><span class="annottext">NodeToNodeVersionData
+</span><a href="#local-6989586621679927284"><span class="hs-identifier hs-var">n2nData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">OuroborosBundle
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+-&gt; OuroborosApplicationWithMinimalCtx
+     'InitiatorMode RemoteAddress ByteString IO () Void
+forall (mode :: Mode) initiatorCtx responderCtx bs (m :: * -&gt; *) a
+       b.
+OuroborosBundle mode initiatorCtx responderCtx bs m a b
+-&gt; OuroborosApplication mode initiatorCtx responderCtx bs m a b
+</span><a href="#local-6989586621679927263"><span class="hs-identifier hs-var">mkApp</span></a></span><span> </span><span class="annot"><span class="annottext">(OuroborosBundle
+   'InitiatorMode
+   (MinimalInitiatorContext RemoteAddress)
+   (ResponderContext RemoteAddress)
+   ByteString
+   IO
+   ()
+   Void
+ -&gt; OuroborosApplicationWithMinimalCtx
+      'InitiatorMode RemoteAddress ByteString IO () Void)
+-&gt; OuroborosBundle
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+-&gt; OuroborosApplicationWithMinimalCtx
+     'InitiatorMode RemoteAddress ByteString IO () Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">MiniProtocolParameters
+-&gt; NodeToNodeProtocols
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+-&gt; NodeToNodeVersion
+-&gt; NodeToNodeVersionData
+-&gt; OuroborosBundle
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall (muxMode :: Mode) initiatorCtx responderCtx bytes
+       (m :: * -&gt; *) a b.
+MiniProtocolParameters
+-&gt; NodeToNodeProtocols
+     muxMode initiatorCtx responderCtx bytes m a b
+-&gt; NodeToNodeVersion
+-&gt; NodeToNodeVersionData
+-&gt; OuroborosBundle muxMode initiatorCtx responderCtx bytes m a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#nodeToNodeProtocols"><span class="hs-identifier hs-var">NtN.nodeToNodeProtocols</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolParameters
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#defaultMiniProtocolParameters"><span class="hs-identifier hs-var">NtN.defaultMiniProtocolParameters</span></a></span><span>
+</span><span id="line-139"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#NodeToNodeProtocols"><span class="hs-identifier hs-type">NtN.NodeToNodeProtocols</span></a></span><span>
+</span><span id="line-140"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">chainSyncProtocol :: RunMiniProtocol
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#chainSyncProtocol"><span class="hs-identifier hs-var">NtN.chainSyncProtocol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolCb
+  (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb
+   (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode
+      (MinimalInitiatorContext RemoteAddress)
+      (ResponderContext RemoteAddress)
+      ByteString
+      IO
+      ()
+      Void)
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(MinimalInitiatorContext RemoteAddress
+ -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((MinimalInitiatorContext RemoteAddress
+  -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb
+      (MinimalInitiatorContext RemoteAddress) ByteString IO ())
+-&gt; (MinimalInitiatorContext RemoteAddress
+    -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679927291"><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927291"><span class="hs-identifier hs-var">_ctx</span></a></span></span><span> </span><span id="local-6989586621679927292"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927292"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>                                        </span><span class="annot"><span class="annottext">Tracer
+  IO (TraceSendRecv (ChainSync (Header blk) (Point blk) (Tip blk)))
+-&gt; Codec
+     (ChainSync (Header blk) (Point blk) (Tip blk))
+     DeserialiseFailure
+     IO
+     ByteString
+-&gt; Channel IO ByteString
+-&gt; Peer
+     (ChainSync (Header blk) (Point blk) (Tip blk))
+     'AsClient
+     'NonPipelined
+     'StIdle
+     IO
+     ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadEvaluate m, MonadThrow m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ NFData failure, Show failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier hs-var">runPeer</span></a></span><span>
+</span><span id="line-142"></span><span>                                          </span><span class="annot"><span class="annottext">Tracer
+  IO (TraceSendRecv (ChainSync (Header blk) (Point blk) (Tip blk)))
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-143"></span><span>                                          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+-&gt; Codec
+     (ChainSync (Header blk) (Point blk) (Tip blk))
+     DeserialiseFailure
+     IO
+     ByteString
+forall blk addr e (m :: * -&gt; *) bCS bSCS bBF bSBF bTX bKA bPS.
+Codecs blk addr e m bCS bSCS bBF bSBF bTX bKA bPS
+-&gt; Codec (ChainSync (Header blk) (Point blk) (Tip blk)) e m bCS
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#cChainSyncCodec"><span class="hs-identifier hs-var">cChainSyncCodec</span></a></span><span> </span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var">myCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>                                          </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927292"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-145"></span><span>                                          </span><span class="annot"><span class="annottext">Peer
+  (ChainSync (Header blk) (Point blk) (Tip blk))
+  'AsClient
+  'NonPipelined
+  'StIdle
+  IO
+  ()
+forall header point tip (m :: * -&gt; *) a.
+MonadDelay m =&gt;
+Client (ChainSync header point tip) 'NonPipelined 'StIdle m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToClient.html#chainSyncPeerNull"><span class="hs-identifier hs-var">chainSyncPeerNull</span></a></span><span>
+</span><span id="line-146"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">blockFetchProtocol :: RunMiniProtocol
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#blockFetchProtocol"><span class="hs-identifier hs-var">NtN.blockFetchProtocol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolCb
+  (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb
+   (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode
+      (MinimalInitiatorContext RemoteAddress)
+      (ResponderContext RemoteAddress)
+      ByteString
+      IO
+      ()
+      Void)
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(MinimalInitiatorContext RemoteAddress
+ -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((MinimalInitiatorContext RemoteAddress
+  -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb
+      (MinimalInitiatorContext RemoteAddress) ByteString IO ())
+-&gt; (MinimalInitiatorContext RemoteAddress
+    -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679927295"><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927295"><span class="hs-identifier hs-var">_ctx</span></a></span></span><span> </span><span id="local-6989586621679927296"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927296"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-147"></span><span>                                         </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv (BlockFetch blk (Point blk)))
+-&gt; Codec
+     (BlockFetch blk (Point blk)) DeserialiseFailure IO ByteString
+-&gt; Channel IO ByteString
+-&gt; Peer
+     (BlockFetch blk (Point blk)) 'AsClient 'NonPipelined 'BFIdle IO ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadEvaluate m, MonadThrow m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ NFData failure, Show failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier hs-var">runPeer</span></a></span><span>
+</span><span id="line-148"></span><span>                                           </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv (BlockFetch blk (Point blk)))
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-149"></span><span>                                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+-&gt; Codec
+     (BlockFetch blk (Point blk)) DeserialiseFailure IO ByteString
+forall blk addr e (m :: * -&gt; *) bCS bSCS bBF bSBF bTX bKA bPS.
+Codecs blk addr e m bCS bSCS bBF bSBF bTX bKA bPS
+-&gt; Codec (BlockFetch blk (Point blk)) e m bBF
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#cBlockFetchCodec"><span class="hs-identifier hs-var">cBlockFetchCodec</span></a></span><span> </span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var">myCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>                                           </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927296"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-151"></span><span>                                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockFetchClient blk (Point blk) IO ()
+-&gt; Peer
+     (BlockFetch blk (Point blk)) 'AsClient 'NonPipelined 'BFIdle IO ()
+forall block point (m :: * -&gt; *) a.
+Monad m =&gt;
+BlockFetchClient block point m a
+-&gt; Client (BlockFetch block point) 'NonPipelined 'BFIdle m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html#blockFetchClientPeer"><span class="hs-identifier hs-var">blockFetchClientPeer</span></a></span><span> </span><span class="annot"><span class="annottext">BlockFetchClient blk (Point blk) IO ()
+forall block point (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+BlockFetchClient block point m a
+</span><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#blockFetchClientNull"><span class="hs-identifier hs-var">blockFetchClientNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">keepAliveProtocol :: RunMiniProtocol
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#keepAliveProtocol"><span class="hs-identifier hs-var">NtN.keepAliveProtocol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolCb
+  (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb
+   (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode
+      (MinimalInitiatorContext RemoteAddress)
+      (ResponderContext RemoteAddress)
+      ByteString
+      IO
+      ()
+      Void)
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(MinimalInitiatorContext RemoteAddress
+ -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((MinimalInitiatorContext RemoteAddress
+  -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb
+      (MinimalInitiatorContext RemoteAddress) ByteString IO ())
+-&gt; (MinimalInitiatorContext RemoteAddress
+    -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679927300"><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927300"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679927301"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927301"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>                                          </span><span class="annot"><span class="annottext">NodeToNodeVersion
+-&gt; RemoteAddress
+-&gt; Channel IO ByteString
+-&gt; IO ((), Maybe ByteString)
+forall remotePeer.
+Ord remotePeer =&gt;
+NodeToNodeVersion
+-&gt; remotePeer -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString)
+</span><a href="#local-6989586621679927302"><span class="hs-identifier hs-var">kaClient</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var">n2nVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId RemoteAddress -&gt; RemoteAddress
+forall addr. ConnectionId addr -&gt; addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.ConnectionId.html#remoteAddress"><span class="hs-identifier hs-var">remoteAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(ConnectionId RemoteAddress -&gt; RemoteAddress)
+-&gt; ConnectionId RemoteAddress -&gt; RemoteAddress
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress -&gt; ConnectionId RemoteAddress
+forall addr. MinimalInitiatorContext addr -&gt; ConnectionId addr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Context.html#micConnectionId"><span class="hs-identifier hs-var">micConnectionId</span></a></span><span> </span><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927300"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927301"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-154"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txSubmissionProtocol :: RunMiniProtocol
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#txSubmissionProtocol"><span class="hs-identifier hs-var">NtN.txSubmissionProtocol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolCb
+  (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb
+   (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode
+      (MinimalInitiatorContext RemoteAddress)
+      (ResponderContext RemoteAddress)
+      ByteString
+      IO
+      ()
+      Void)
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(MinimalInitiatorContext RemoteAddress
+ -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((MinimalInitiatorContext RemoteAddress
+  -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb
+      (MinimalInitiatorContext RemoteAddress) ByteString IO ())
+-&gt; (MinimalInitiatorContext RemoteAddress
+    -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679927306"><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927306"><span class="hs-identifier hs-var">_ctx</span></a></span></span><span> </span><span id="local-6989586621679927307"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927307"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>                                          </span><span class="annot"><span class="annottext">Tracer IO SendRecvTxSubmission2
+-&gt; Codec
+     (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
+     DeserialiseFailure
+     IO
+     ByteString
+-&gt; Channel IO ByteString
+-&gt; Peer
+     (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
+     'AsClient
+     'NonPipelined
+     'StInit
+     IO
+     ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadEvaluate m, MonadThrow m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ NFData failure, Show failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier hs-var">runPeer</span></a></span><span>
+</span><span id="line-156"></span><span>                                             </span><span class="annot"><span class="annottext">Tracer IO SendRecvTxSubmission2
+</span><a href="#local-6989586621679927244"><span class="hs-identifier hs-var">submissionTracer</span></a></span><span>
+</span><span id="line-157"></span><span>                                             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Codecs
+  CardanoBlock
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+-&gt; Codec
+     (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
+     DeserialiseFailure
+     IO
+     ByteString
+forall blk addr e (m :: * -&gt; *) bCS bSCS bBF bSBF bTX bKA bPS.
+Codecs blk addr e m bCS bSCS bBF bSBF bTX bKA bPS
+-&gt; Codec (TxSubmission2 (GenTxId blk) (GenTx blk)) e m bTX
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#cTxSubmission2Codec"><span class="hs-identifier hs-var">cTxSubmission2Codec</span></a></span><span> </span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+Codecs
+  CardanoBlock
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var">myCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>                                             </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927307"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-159"></span><span>                                             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxSubmissionClient
+  (GenTxId CardanoBlock) (GenTx CardanoBlock) IO ()
+-&gt; Peer
+     (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
+     'AsClient
+     'NonPipelined
+     'StInit
+     IO
+     ()
+forall txid tx (m :: * -&gt; *) a.
+Monad m =&gt;
+TxSubmissionClient txid tx m a
+-&gt; Client (TxSubmission2 txid tx) 'NonPipelined 'StInit m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.TxSubmission2.Client.html#txSubmissionClientPeer"><span class="hs-identifier hs-var">txSubmissionClientPeer</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmissionClient (TxId (GenTx blk)) (GenTx blk) IO ()
+TxSubmissionClient
+  (GenTxId CardanoBlock) (GenTx CardanoBlock) IO ()
+</span><a href="#local-6989586621679927248"><span class="hs-identifier hs-var">myTxSubClient</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">peerSharingProtocol :: RunMiniProtocol
+  'InitiatorMode
+  (MinimalInitiatorContext RemoteAddress)
+  (ResponderContext RemoteAddress)
+  ByteString
+  IO
+  ()
+  Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.NodeToNode.html#peerSharingProtocol"><span class="hs-identifier hs-var">NtN.peerSharingProtocol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MiniProtocolCb
+  (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb
+   (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode
+      (MinimalInitiatorContext RemoteAddress)
+      (ResponderContext RemoteAddress)
+      ByteString
+      IO
+      ()
+      Void)
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode
+     (MinimalInitiatorContext RemoteAddress)
+     (ResponderContext RemoteAddress)
+     ByteString
+     IO
+     ()
+     Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(MinimalInitiatorContext RemoteAddress
+ -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((MinimalInitiatorContext RemoteAddress
+  -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb
+      (MinimalInitiatorContext RemoteAddress) ByteString IO ())
+-&gt; (MinimalInitiatorContext RemoteAddress
+    -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb
+     (MinimalInitiatorContext RemoteAddress) ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679927310"><span class="annot"><span class="annottext">MinimalInitiatorContext RemoteAddress
+</span><a href="#local-6989586621679927310"><span class="hs-identifier hs-var">_ctx</span></a></span></span><span> </span><span id="local-6989586621679927311"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927311"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>                                          </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv (PeerSharing RemoteAddress))
+-&gt; Codec
+     (PeerSharing RemoteAddress) DeserialiseFailure IO ByteString
+-&gt; Channel IO ByteString
+-&gt; Peer
+     (PeerSharing RemoteAddress) 'AsClient 'NonPipelined 'StIdle IO ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadEvaluate m, MonadThrow m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ NFData failure, Show failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier hs-var">runPeer</span></a></span><span>
+</span><span id="line-162"></span><span>                                             </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv (PeerSharing RemoteAddress))
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-163"></span><span>                                             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+-&gt; Codec
+     (PeerSharing RemoteAddress) DeserialiseFailure IO ByteString
+forall blk addr e (m :: * -&gt; *) bCS bSCS bBF bSBF bTX bKA bPS.
+Codecs blk addr e m bCS bSCS bBF bSBF bTX bKA bPS
+-&gt; Codec (PeerSharing addr) e m bPS
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#cPeerSharingCodec"><span class="hs-identifier hs-var">cPeerSharingCodec</span></a></span><span> </span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var">myCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>                                             </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927311"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-165"></span><span>                                             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PeerSharingClient RemoteAddress IO ()
+-&gt; Peer
+     (PeerSharing RemoteAddress) 'AsClient 'NonPipelined 'StIdle IO ()
+forall (m :: * -&gt; *) peerAddress a.
+Monad m =&gt;
+PeerSharingClient peerAddress m a
+-&gt; Client (PeerSharing peerAddress) 'NonPipelined 'StIdle m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html#peerSharingClientPeer"><span class="hs-identifier hs-var">peerSharingClientPeer</span></a></span><span> </span><span class="annot"><span class="annottext">PeerSharingClient RemoteAddress IO ()
+forall addr (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+PeerSharingClient addr m a
+</span><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#peerSharingClientNull"><span class="hs-identifier hs-var">peerSharingClientNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-167"></span><span>          </span><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927270"><span class="hs-identifier hs-var">n2nVer</span></a></span><span>
+</span><span id="line-168"></span><span>          </span><span class="annot"><span class="annottext">NodeToNodeVersionData
+</span><a href="#local-6989586621679927284"><span class="hs-identifier hs-var">n2nData</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-comment">-- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs</span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679926990"><span class="annot"><a href="#local-6989586621679927302"><span class="hs-identifier hs-type">kaClient</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926990"><span class="hs-identifier hs-type">remotePeer</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.NodeToNode.Version.html#NodeToNodeVersion"><span class="hs-identifier hs-type">NodeToNodeVersion</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679926990"><span class="hs-identifier hs-type">remotePeer</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Channel.html#Channel"><span class="hs-identifier hs-type">Channel</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621679927302"><span class="annot"><span class="annottext">kaClient :: forall remotePeer.
+Ord remotePeer =&gt;
+NodeToNodeVersion
+-&gt; remotePeer -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString)
+</span><a href="#local-6989586621679927302"><span class="hs-identifier hs-var hs-var">kaClient</span></a></span></span><span> </span><span id="local-6989586621679927349"><span class="annot"><span class="annottext">NodeToNodeVersion
+</span><a href="#local-6989586621679927349"><span class="hs-identifier hs-var">_version</span></a></span></span><span> </span><span id="local-6989586621679927350"><span class="annot"><span class="annottext">remotePeer
+</span><a href="#local-6989586621679927350"><span class="hs-identifier hs-var">them</span></a></span></span><span> </span><span id="local-6989586621679927351"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927351"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-178"></span><span>    </span><span id="local-6989586621679927352"><span class="annot"><span class="annottext">StdGen
+</span><a href="#local-6989586621679927352"><span class="hs-identifier hs-var">keepAliveRng</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO StdGen
+forall (m :: * -&gt; *). MonadIO m =&gt; m StdGen
+</span><a href="file:///nix/store/kz59gdfjy4r2c0v6cijz5x54a1a17j9k-random-lib-random-1.2.1.3-haddock-doc/share/doc/random/html/src/System.Random.html#newStdGen"><span class="hs-identifier hs-var">newStdGen</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679927353"><span class="annot"><span class="annottext">StrictTVar IO (Map remotePeer PeerGSV)
+</span><a href="#local-6989586621679927353"><span class="hs-identifier hs-var">peerGSVMap</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (StrictTVar IO (Map remotePeer PeerGSV))
+-&gt; IO (StrictTVar IO (Map remotePeer PeerGSV))
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (StrictTVar IO (Map remotePeer PeerGSV))
+ -&gt; IO (StrictTVar IO (Map remotePeer PeerGSV)))
+-&gt; (Map remotePeer PeerGSV
+    -&gt; IO (StrictTVar IO (Map remotePeer PeerGSV)))
+-&gt; Map remotePeer PeerGSV
+-&gt; IO (StrictTVar IO (Map remotePeer PeerGSV))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map remotePeer PeerGSV
+-&gt; IO (StrictTVar IO (Map remotePeer PeerGSV))
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (StrictTVar m a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-l-strict-stm-ecfc11eadd34337724c40b3fec31e4fbaa555bd5ee912c87fc7bf807f80921d3/share/doc/html/src/Control.Concurrent.Class.MonadSTM.Strict.TVar.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">(Map remotePeer PeerGSV
+ -&gt; IO (StrictTVar IO (Map remotePeer PeerGSV)))
+-&gt; Map remotePeer PeerGSV
+-&gt; IO (StrictTVar IO (Map remotePeer PeerGSV))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">remotePeer -&gt; PeerGSV -&gt; Map remotePeer PeerGSV
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">remotePeer
+</span><a href="#local-6989586621679927350"><span class="hs-identifier hs-var">them</span></a></span><span> </span><span class="annot"><span class="annottext">PeerGSV
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.DeltaQ.html#defaultGSV"><span class="hs-identifier hs-var">defaultGSV</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv KeepAlive)
+-&gt; Codec KeepAlive DeserialiseFailure IO ByteString
+-&gt; ProtocolSizeLimits KeepAlive ByteString
+-&gt; ProtocolTimeLimits KeepAlive
+-&gt; Channel IO ByteString
+-&gt; Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadAsync m, MonadEvaluate m, MonadFork m, MonadMask m,
+ MonadThrow (STM m), MonadTimer m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ Show failure, NFData failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; ProtocolSizeLimits ps bytes
+-&gt; ProtocolTimeLimits ps
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Limits.html#runPeerWithLimits"><span class="hs-identifier hs-var">runPeerWithLimits</span></a></span><span>
+</span><span id="line-181"></span><span>      </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv KeepAlive)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-182"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+-&gt; Codec KeepAlive DeserialiseFailure IO ByteString
+forall blk addr e (m :: * -&gt; *) bCS bSCS bBF bSBF bTX bKA bPS.
+Codecs blk addr e m bCS bSCS bBF bSBF bTX bKA bPS
+-&gt; Codec KeepAlive e m bKA
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Network.NodeToNode.html#cKeepAliveCodec"><span class="hs-identifier hs-var">cKeepAliveCodec</span></a></span><span> </span><span class="annot"><span class="annottext">Codecs
+  blk
+  RemoteAddress
+  DeserialiseFailure
+  IO
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+  ByteString
+</span><a href="#local-6989586621679927277"><span class="hs-identifier hs-var">myCodecs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; Word) -&gt; ProtocolSizeLimits KeepAlive ByteString
+forall bytes. (bytes -&gt; Word) -&gt; ProtocolSizeLimits KeepAlive bytes
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Codec.html#byteLimitsKeepAlive"><span class="hs-identifier hs-var">byteLimitsKeepAlive</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; ByteString -&gt; Word
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- TODO: Real Bytelimits, see #1727</span><span>
+</span><span id="line-184"></span><span>      </span><span class="annot"><span class="annottext">ProtocolTimeLimits KeepAlive
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Codec.html#timeLimitsKeepAlive"><span class="hs-identifier hs-var">timeLimitsKeepAlive</span></a></span><span>
+</span><span id="line-185"></span><span>      </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679927351"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-186"></span><span>      </span><span class="annot"><span class="annottext">(Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ()
+ -&gt; IO ((), Maybe ByteString))
+-&gt; Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ()
+-&gt; IO ((), Maybe ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">KeepAliveClient IO ()
+-&gt; Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ()
+forall (m :: * -&gt; *) a.
+MonadThrow m =&gt;
+KeepAliveClient m a -&gt; Client KeepAlive 'NonPipelined 'StClient m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.KeepAlive.Client.html#keepAliveClientPeer"><span class="hs-identifier hs-var">keepAliveClientPeer</span></a></span><span>
+</span><span id="line-187"></span><span>      </span><span class="annot"><span class="annottext">(KeepAliveClient IO ()
+ -&gt; Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ())
+-&gt; KeepAliveClient IO ()
+-&gt; Peer KeepAlive 'AsClient 'NonPipelined 'StClient IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO (TraceKeepAliveClient remotePeer)
+-&gt; StdGen
+-&gt; ControlMessageSTM IO
+-&gt; remotePeer
+-&gt; StrictTVar IO (Map remotePeer PeerGSV)
+-&gt; KeepAliveInterval
+-&gt; KeepAliveClient IO ()
+forall (m :: * -&gt; *) peer.
+(MonadTimer m, Ord peer) =&gt;
+Tracer m (TraceKeepAliveClient peer)
+-&gt; StdGen
+-&gt; ControlMessageSTM m
+-&gt; peer
+-&gt; StrictTVar m (Map peer PeerGSV)
+-&gt; KeepAliveInterval
+-&gt; KeepAliveClient m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.KeepAlive.html#keepAliveClient"><span class="hs-identifier hs-var">keepAliveClient</span></a></span><span>
+</span><span id="line-188"></span><span>          </span><span class="annot"><span class="annottext">Tracer IO (TraceKeepAliveClient remotePeer)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-189"></span><span>          </span><span class="annot"><span class="annottext">StdGen
+</span><a href="#local-6989586621679927352"><span class="hs-identifier hs-var">keepAliveRng</span></a></span><span>
+</span><span id="line-190"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy IO -&gt; ControlMessageSTM IO
+forall (m :: * -&gt; *) (proxy :: (* -&gt; *) -&gt; *).
+Applicative (STM m) =&gt;
+proxy m -&gt; ControlMessageSTM m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.ControlMessage.html#continueForever"><span class="hs-identifier hs-var">continueForever</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy IO
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">remotePeer
+</span><a href="#local-6989586621679927350"><span class="hs-identifier hs-var">them</span></a></span><span> </span><span class="annot"><span class="annottext">StrictTVar IO (Map remotePeer PeerGSV)
+</span><a href="#local-6989586621679927353"><span class="hs-identifier hs-var">peerGSVMap</span></a></span><span>
+</span><span id="line-191"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; KeepAliveInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.KeepAlive.html#KeepAliveInterval"><span class="hs-identifier hs-var">KeepAliveInterval</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; KeepAliveInterval) -&gt; DiffTime -&gt; KeepAliveInterval
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+-&gt; (NixServiceOptions -&gt; DiffTime)
+-&gt; Maybe NixServiceOptions
+-&gt; DiffTime
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="Cardano.TxGenerator.Setup.NixService.html#defaultKeepaliveTimeout"><span class="hs-identifier hs-var">defaultKeepaliveTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">NixServiceOptions -&gt; DiffTime
+</span><a href="Cardano.TxGenerator.Setup.NixService.html#getKeepaliveTimeout"><span class="hs-identifier hs-var">getKeepaliveTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe NixServiceOptions
+</span><a href="#local-6989586621679927237"><span class="hs-identifier hs-var">envNixSvcOpts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- the null block fetch client</span><span>
+</span><span id="line-194"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#blockFetchClientNull"><span class="hs-identifier hs-type">blockFetchClientNull</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679926987"><span class="annot"><a href="#local-6989586621679926987"><span class="hs-identifier hs-type">block</span></a></span></span><span> </span><span id="local-6989586621679926988"><span class="annot"><a href="#local-6989586621679926988"><span class="hs-identifier hs-type">point</span></a></span></span><span> </span><span id="local-6989586621679926986"><span class="annot"><a href="#local-6989586621679926986"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679926989"><span class="annot"><a href="#local-6989586621679926989"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#MonadTimer"><span class="hs-identifier hs-type">MonadTimer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926986"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html#BlockFetchClient"><span class="hs-identifier hs-type">BlockFetchClient</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926987"><span class="hs-identifier hs-type">block</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926988"><span class="hs-identifier hs-type">point</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926986"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679926989"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-197"></span><span id="blockFetchClientNull"><span class="annot"><span class="annottext">blockFetchClientNull :: forall block point (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+BlockFetchClient block point m a
+</span><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#blockFetchClientNull"><span class="hs-identifier hs-var hs-var">blockFetchClientNull</span></a></span></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (BlockFetchRequest block point m a)
+-&gt; BlockFetchClient block point m a
+forall block point (m :: * -&gt; *) a.
+m (BlockFetchRequest block point m a)
+-&gt; BlockFetchClient block point m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.BlockFetch.Client.html#BlockFetchClient"><span class="hs-identifier hs-var">BlockFetchClient</span></a></span><span> </span><span class="annot"><span class="annottext">(m (BlockFetchRequest block point m a)
+ -&gt; BlockFetchClient block point m a)
+-&gt; m (BlockFetchRequest block point m a)
+-&gt; BlockFetchClient block point m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m (BlockFetchRequest block point m a)
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m (BlockFetchRequest block point m a))
+-&gt; m () -&gt; m (BlockFetchRequest block point m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; Int -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">24</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">60</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">60</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">{- one day in seconds -}</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- the null peer sharing client</span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#peerSharingClientNull"><span class="hs-identifier hs-type">peerSharingClientNull</span></a></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679927026"><span class="annot"><a href="#local-6989586621679927026"><span class="hs-identifier hs-type">addr</span></a></span></span><span> </span><span id="local-6989586621679927025"><span class="annot"><a href="#local-6989586621679927025"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679927027"><span class="annot"><a href="#local-6989586621679927027"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#MonadTimer"><span class="hs-identifier hs-type">MonadTimer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927025"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html#PeerSharingClient"><span class="hs-identifier hs-type">PeerSharingClient</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927026"><span class="hs-identifier hs-type">addr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927025"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927027"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-204"></span><span id="peerSharingClientNull"><span class="annot"><span class="annottext">peerSharingClientNull :: forall addr (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+PeerSharingClient addr m a
+</span><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#peerSharingClientNull"><span class="hs-identifier hs-var hs-var">peerSharingClientNull</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; PeerSharingClient addr m a
+forall (m :: * -&gt; *) a peerAddress.
+m a -&gt; PeerSharingClient peerAddress m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-protocols-0.15.2.0-b439924fa3249dd4afbb1905f4be972219312771ab980786ca87e9ee78f81cca/share/doc/html/src/Ouroboros.Network.Protocol.PeerSharing.Client.html#SendMsgDone"><span class="hs-identifier hs-var">SendMsgDone</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; PeerSharingClient addr m a)
+-&gt; m a -&gt; PeerSharingClient addr m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m a) -&gt; m () -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; m ()
+forall (m :: * -&gt; *). MonadDelay m =&gt; Int -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadTimer.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">24</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">60</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">60</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">{- one day in seconds -}</span><span>
+</span><span id="line-205"></span></pre></body></html>

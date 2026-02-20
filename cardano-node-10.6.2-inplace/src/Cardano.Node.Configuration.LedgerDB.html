@@ -1,0 +1,392 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralisedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Configuration.LedgerDB</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier">DeprecatedOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbConfiguration"><span class="hs-identifier">LedgerDbConfiguration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbSelectorFlag"><span class="hs-identifier">LedgerDbSelectorFlag</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier">Gigabytes</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#noDeprecatedOptions"><span class="hs-identifier">noDeprecatedOptions</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#selectorToArgs"><span class="hs-identifier">selectorToArgs</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.Args</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Snapshots.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.Snapshots</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.V1.Args</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V1</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#LMDBLimits"><span class="hs-identifier">LMDBLimits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V2.Args.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.V2.Args</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V2</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Util.Args.html"><span class="hs-identifier">Ouroboros.Consensus.Util.Args</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.Dict.html"><span class="hs-identifier">Data.SOP.Dict</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | Choose the LedgerDB Backend</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- As of UTxO-HD, the LedgerDB now uses either an in-memory backend or LMDB to</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- keep track of differences in the UTxO set.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- - 'V2InMemory': uses more memory than the minimum requirements but is somewhat</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--   faster.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- - 'V1LMDB': uses less memory but is somewhat slower.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- - 'V1InMemory': Not intended for production. It is an in-memory reproduction</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   of the LMDB implementation.</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="LedgerDbSelectorFlag"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbSelectorFlag"><span class="hs-identifier hs-var">LedgerDbSelectorFlag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>    </span><span id="V1LMDB"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#V1LMDB"><span class="hs-identifier hs-var">V1LMDB</span></a></span></span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#FlushFrequency"><span class="hs-identifier hs-type">V1.FlushFrequency</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The frequency at which changes are flushed to the disk.</span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Path for the live tables.</span></span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier hs-type">Gigabytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-comment">-- ^ A map size can be specified, this is the maximum disk space the LMDB</span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-comment">-- database can fill. If not provided, the default of 16GB will be used.</span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ An override to the max number of readers.</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="V1InMemory"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#V1InMemory"><span class="hs-identifier hs-var">V1InMemory</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#FlushFrequency"><span class="hs-identifier hs-type">V1.FlushFrequency</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="V2InMemory"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#V2InMemory"><span class="hs-identifier hs-var">V2InMemory</span></a></span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681667701"><span id="local-6989586621681667713"><span class="annot"><span class="annottext">LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool
+(LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool)
+-&gt; (LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool)
+-&gt; Eq LedgerDbSelectorFlag
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool
+== :: LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool
+$c/= :: LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool
+/= :: LedgerDbSelectorFlag -&gt; LedgerDbSelectorFlag -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681667723"><span id="local-6989586621681667738"><span id="local-6989586621681667742"><span class="annot"><span class="annottext">Int -&gt; LedgerDbSelectorFlag -&gt; ShowS
+[LedgerDbSelectorFlag] -&gt; ShowS
+LedgerDbSelectorFlag -&gt; FilePath
+(Int -&gt; LedgerDbSelectorFlag -&gt; ShowS)
+-&gt; (LedgerDbSelectorFlag -&gt; FilePath)
+-&gt; ([LedgerDbSelectorFlag] -&gt; ShowS)
+-&gt; Show LedgerDbSelectorFlag
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LedgerDbSelectorFlag -&gt; ShowS
+showsPrec :: Int -&gt; LedgerDbSelectorFlag -&gt; ShowS
+$cshow :: LedgerDbSelectorFlag -&gt; FilePath
+show :: LedgerDbSelectorFlag -&gt; FilePath
+$cshowList :: [LedgerDbSelectorFlag] -&gt; ShowS
+showList :: [LedgerDbSelectorFlag] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Some options that existed in the TopLevel were now moved to a</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- subsection. We use this field to propagate the results from parsing those</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- into the monadic part of the node so that we can emit warnings.</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">newtype</span><span> </span><span id="DeprecatedOptions"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier hs-var">DeprecatedOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DeprecatedOptions"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier hs-var">DeprecatedOptions</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681667752"><span id="local-6989586621681667757"><span class="annot"><span class="annottext">DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool
+(DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool)
+-&gt; (DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool)
+-&gt; Eq DeprecatedOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool
+== :: DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool
+$c/= :: DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool
+/= :: DeprecatedOptions -&gt; DeprecatedOptions -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681667765"><span id="local-6989586621681667770"><span id="local-6989586621681667774"><span class="annot"><span class="annottext">Int -&gt; DeprecatedOptions -&gt; ShowS
+[DeprecatedOptions] -&gt; ShowS
+DeprecatedOptions -&gt; FilePath
+(Int -&gt; DeprecatedOptions -&gt; ShowS)
+-&gt; (DeprecatedOptions -&gt; FilePath)
+-&gt; ([DeprecatedOptions] -&gt; ShowS)
+-&gt; Show DeprecatedOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DeprecatedOptions -&gt; ShowS
+showsPrec :: Int -&gt; DeprecatedOptions -&gt; ShowS
+$cshow :: DeprecatedOptions -&gt; FilePath
+show :: DeprecatedOptions -&gt; FilePath
+$cshowList :: [DeprecatedOptions] -&gt; ShowS
+showList :: [DeprecatedOptions] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#noDeprecatedOptions"><span class="hs-identifier hs-type">noDeprecatedOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier hs-type">DeprecatedOptions</span></a></span><span>
+</span><span id="line-61"></span><span id="noDeprecatedOptions"><span class="annot"><span class="annottext">noDeprecatedOptions :: DeprecatedOptions
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#noDeprecatedOptions"><span class="hs-identifier hs-var hs-var">noDeprecatedOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[FilePath] -&gt; DeprecatedOptions
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier hs-var">DeprecatedOptions</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">data</span><span> </span><span id="LedgerDbConfiguration"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbConfiguration"><span class="hs-identifier hs-var">LedgerDbConfiguration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>    </span><span id="LedgerDbConfiguration"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbConfiguration"><span class="hs-identifier hs-var">LedgerDbConfiguration</span></a></span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Snapshots.html#NumOfDiskSnapshots"><span class="hs-identifier hs-type">NumOfDiskSnapshots</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Snapshots.html#SnapshotInterval"><span class="hs-identifier hs-type">SnapshotInterval</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html#QueryBatchSize"><span class="hs-identifier hs-type">QueryBatchSize</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbSelectorFlag"><span class="hs-identifier hs-type">LedgerDbSelectorFlag</span></a></span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#DeprecatedOptions"><span class="hs-identifier hs-type">DeprecatedOptions</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681667779"><span id="local-6989586621681667789"><span class="annot"><span class="annottext">LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool
+(LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool)
+-&gt; (LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool)
+-&gt; Eq LedgerDbConfiguration
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool
+== :: LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool
+$c/= :: LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool
+/= :: LedgerDbConfiguration -&gt; LedgerDbConfiguration -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681667793"><span id="local-6989586621681667804"><span id="local-6989586621681667808"><span class="annot"><span class="annottext">Int -&gt; LedgerDbConfiguration -&gt; ShowS
+[LedgerDbConfiguration] -&gt; ShowS
+LedgerDbConfiguration -&gt; FilePath
+(Int -&gt; LedgerDbConfiguration -&gt; ShowS)
+-&gt; (LedgerDbConfiguration -&gt; FilePath)
+-&gt; ([LedgerDbConfiguration] -&gt; ShowS)
+-&gt; Show LedgerDbConfiguration
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LedgerDbConfiguration -&gt; ShowS
+showsPrec :: Int -&gt; LedgerDbConfiguration -&gt; ShowS
+$cshow :: LedgerDbConfiguration -&gt; FilePath
+show :: LedgerDbConfiguration -&gt; FilePath
+$cshowList :: [LedgerDbConfiguration] -&gt; ShowS
+showList :: [LedgerDbConfiguration] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | A number of gigabytes.</span></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">newtype</span><span> </span><span id="Gigabytes"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier hs-var">Gigabytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Gigabytes"><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier hs-var">Gigabytes</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681667812"><span id="local-6989586621681667815"><span class="annot"><span class="annottext">Gigabytes -&gt; Gigabytes -&gt; Bool
+(Gigabytes -&gt; Gigabytes -&gt; Bool)
+-&gt; (Gigabytes -&gt; Gigabytes -&gt; Bool) -&gt; Eq Gigabytes
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Gigabytes -&gt; Gigabytes -&gt; Bool
+== :: Gigabytes -&gt; Gigabytes -&gt; Bool
+$c/= :: Gigabytes -&gt; Gigabytes -&gt; Bool
+/= :: Gigabytes -&gt; Gigabytes -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681667818"><span id="local-6989586621681667822"><span id="local-6989586621681667825"><span class="annot"><span class="annottext">Int -&gt; Gigabytes -&gt; ShowS
+[Gigabytes] -&gt; ShowS
+Gigabytes -&gt; FilePath
+(Int -&gt; Gigabytes -&gt; ShowS)
+-&gt; (Gigabytes -&gt; FilePath)
+-&gt; ([Gigabytes] -&gt; ShowS)
+-&gt; Show Gigabytes
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Gigabytes -&gt; ShowS
+showsPrec :: Int -&gt; Gigabytes -&gt; ShowS
+$cshow :: Gigabytes -&gt; FilePath
+show :: Gigabytes -&gt; FilePath
+$cshowList :: [Gigabytes] -&gt; ShowS
+showList :: [Gigabytes] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681667828"><span id="local-6989586621681667833"><span id="local-6989586621681667837"><span id="local-6989586621681667841"><span class="annot"><span class="annottext">ReadPrec [Gigabytes]
+ReadPrec Gigabytes
+Int -&gt; ReadS Gigabytes
+ReadS [Gigabytes]
+(Int -&gt; ReadS Gigabytes)
+-&gt; ReadS [Gigabytes]
+-&gt; ReadPrec Gigabytes
+-&gt; ReadPrec [Gigabytes]
+-&gt; Read Gigabytes
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS Gigabytes
+readsPrec :: Int -&gt; ReadS Gigabytes
+$creadList :: ReadS [Gigabytes]
+readList :: ReadS [Gigabytes]
+$creadPrec :: ReadPrec Gigabytes
+readPrec :: ReadPrec Gigabytes
+$creadListPrec :: ReadPrec [Gigabytes]
+readListPrec :: ReadPrec [Gigabytes]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681667847"><span id="local-6989586621681667852"><span id="local-6989586621681667856"><span class="annot"><span class="annottext">Maybe Gigabytes
+Value -&gt; Parser [Gigabytes]
+Value -&gt; Parser Gigabytes
+(Value -&gt; Parser Gigabytes)
+-&gt; (Value -&gt; Parser [Gigabytes])
+-&gt; Maybe Gigabytes
+-&gt; FromJSON Gigabytes
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser Gigabytes
+parseJSON :: Value -&gt; Parser Gigabytes
+$cparseJSONList :: Value -&gt; Parser [Gigabytes]
+parseJSONList :: Value -&gt; Parser [Gigabytes]
+$comittedField :: Maybe Gigabytes
+omittedField :: Maybe Gigabytes
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Aeson.FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><span class="hs-comment">-- | Convert a number of Gigabytes to the equivalent number of bytes.</span></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#toBytes"><span class="hs-identifier hs-type">toBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier hs-type">Gigabytes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-79"></span><span id="toBytes"><span class="annot"><span class="annottext">toBytes :: Gigabytes -&gt; Int
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#toBytes"><span class="hs-identifier hs-var hs-var">toBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#Gigabytes"><span class="hs-identifier hs-type">Gigabytes</span></a></span><span> </span><span id="local-6989586621681667862"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681667862"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681667862"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | Recommended settings for the LMDB backing store.</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- === @'lmdbMapSize'@</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- The default @'LMDBLimits'@ uses an @'lmdbMapSize'@ of @1024 * 1024 * 1024 * 16@</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- bytes, or 16 Gigabytes. @'lmdbMapSize'@ sets the size of the memory map</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- that is used internally by the LMDB backing store, and is also the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- maximum size of the on-disk database. 16 GB should be sufficient for the</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- medium term, i.e., it is sufficient until a more performant alternative to</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- the LMDB backing store is implemented, which will probably replace the LMDB</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- backing store altogether.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- Note(jdral): It is recommended not to set the @'lmdbMapSize'@ to a value</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- that is much smaller than 16 GB through manual configuration: the node will</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- die with a fatal error as soon as the database size exceeds the</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- @'lmdbMapSize'@. If this fatal error were to occur, we would expect that</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- the node can continue normal operation if it is restarted with a higher</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- @'lmdbMapSize'@ configured. Nonetheless, this situation should be avoided.</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- === @'lmdbMaxDatabases'@</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- The @'lmdbMaxDatabases'@ is set to 10, which means that the LMDB backing</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- store will allow up @&lt;= 10@ internal databases. We say /internal/</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- databases, since they are not exposed outside the backing store interface,</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- such that from the outside view there is just one /logical/ database.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- Two of these internal databases are reserved for normal operation of the</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- backing store, while the remaining databases will be used to store ledger</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- tables. At the moment, there is at most one ledger table that will be</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- stored in an internal database: the UTxO. Nonetheless, we set</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- @'lmdbMaxDatabases'@ to @10@ in order to future-proof these limits.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- === @'lmdbMaxReaders'@</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- The @'lmdbMaxReaders'@ limit sets the maximum number of threads that can</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- read from the LMDB database. Currently, there should only be a single reader</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- active. Again, we set @'lmdbMaxReaders'@ to @16@ in order to future-proof</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- these limits.</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- === References</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- For more information about LMDB limits, one should inspect:</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- * The @lmdb-simple@ and @haskell-lmdb@ forked repositories.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- * The official LMDB API documentation at</span><span>
+</span><span id="line-120"></span><span class="hs-comment">--    &lt;http://www.lmdb.tech/doc/group__mdb.html&gt;.</span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBLimits"><span class="hs-identifier hs-type">defaultLMDBLimits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#LMDBLimits"><span class="hs-identifier hs-type">LMDBLimits</span></a></span><span>
+</span><span id="line-122"></span><span id="defaultLMDBLimits"><span class="annot"><span class="annottext">defaultLMDBLimits :: LMDBLimits
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBLimits"><span class="hs-identifier hs-var hs-var">defaultLMDBLimits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#LMDBLimits"><span class="hs-identifier hs-type">LMDBLimits</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">lmdbMapSize :: Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#lmdbMapSize"><span class="hs-identifier hs-var">lmdbMapSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">lmdbMaxDatabases :: Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#lmdbMaxDatabases"><span class="hs-identifier hs-var">lmdbMaxDatabases</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">lmdbMaxReaders :: Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#lmdbMaxReaders"><span class="hs-identifier hs-var">lmdbMaxReaders</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBPath"><span class="hs-identifier hs-type">defaultLMDBPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-129"></span><span id="defaultLMDBPath"><span class="annot"><span class="annottext">defaultLMDBPath :: FilePath
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBPath"><span class="hs-identifier hs-var hs-var">defaultLMDBPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;mainnet/db/lmdb&quot;</span></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#selectorToArgs"><span class="hs-identifier hs-type">selectorToArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#LedgerDbSelectorFlag"><span class="hs-identifier hs-type">LedgerDbSelectorFlag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Util.Args.html#Complete"><span class="hs-identifier hs-type">Complete</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html#LedgerDbFlavorArgs"><span class="hs-identifier hs-type">LedgerDbFlavorArgs</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-132"></span><span id="selectorToArgs"><span class="annot"><span class="annottext">selectorToArgs :: LedgerDbSelectorFlag -&gt; Complete LedgerDbFlavorArgs IO
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#selectorToArgs"><span class="hs-identifier hs-var hs-var">selectorToArgs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#V1InMemory"><span class="hs-identifier hs-type">V1InMemory</span></a></span><span> </span><span id="local-6989586621681667870"><span class="annot"><span class="annottext">FlushFrequency
+</span><a href="#local-6989586621681667870"><span class="hs-identifier hs-var">ff</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+LedgerDbFlavorArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html#LedgerDbFlavorArgsV1"><span class="hs-identifier hs-var">LedgerDbFlavorArgsV1</span></a></span><span> </span><span class="annot"><span class="annottext">(LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO)
+-&gt; LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FlushFrequency
+-&gt; BackingStoreArgs Identity IO -&gt; LedgerDbFlavorArgs Identity IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+FlushFrequency -&gt; BackingStoreArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#V1Args"><span class="hs-identifier hs-var">V1.V1Args</span></a></span><span> </span><span class="annot"><span class="annottext">FlushFrequency
+</span><a href="#local-6989586621681667870"><span class="hs-identifier hs-var">ff</span></a></span><span> </span><span class="annot"><span class="annottext">BackingStoreArgs Identity IO
+forall (f :: * -&gt; *) (m :: * -&gt; *). BackingStoreArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#InMemoryBackingStoreArgs"><span class="hs-identifier hs-var">V1.InMemoryBackingStoreArgs</span></a></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#selectorToArgs"><span class="hs-identifier hs-var">selectorToArgs</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerDbSelectorFlag
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#V2InMemory"><span class="hs-identifier hs-var">V2InMemory</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+LedgerDbFlavorArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html#LedgerDbFlavorArgsV2"><span class="hs-identifier hs-var">LedgerDbFlavorArgsV2</span></a></span><span> </span><span class="annot"><span class="annottext">(LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO)
+-&gt; LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HandleArgs Identity IO -&gt; LedgerDbFlavorArgs Identity IO
+forall {k} {k1} (f :: k) (m :: k1).
+HandleArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V2.Args.html#V2Args"><span class="hs-identifier hs-var">V2.V2Args</span></a></span><span> </span><span class="annot"><span class="annottext">HandleArgs Identity IO
+forall {k} {k1} (f :: k) (m :: k1). HandleArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V2.Args.html#InMemoryHandleArgs"><span class="hs-identifier hs-var">V2.InMemoryHandleArgs</span></a></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#selectorToArgs"><span class="hs-identifier hs-var">selectorToArgs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#V1LMDB"><span class="hs-identifier hs-type">V1LMDB</span></a></span><span> </span><span id="local-6989586621681667877"><span class="annot"><span class="annottext">FlushFrequency
+</span><a href="#local-6989586621681667877"><span class="hs-identifier hs-var">ff</span></a></span></span><span> </span><span id="local-6989586621681667878"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621681667878"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681667879"><span class="annot"><span class="annottext">Maybe Gigabytes
+</span><a href="#local-6989586621681667879"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681667880"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621681667880"><span class="hs-identifier hs-var">mxReaders</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+LedgerDbFlavorArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Args.html#LedgerDbFlavorArgsV1"><span class="hs-identifier hs-var">LedgerDbFlavorArgsV1</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><span class="annottext">(LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO)
+-&gt; LedgerDbFlavorArgs Identity IO -&gt; Complete LedgerDbFlavorArgs IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FlushFrequency
+-&gt; BackingStoreArgs Identity IO -&gt; LedgerDbFlavorArgs Identity IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+FlushFrequency -&gt; BackingStoreArgs f m -&gt; LedgerDbFlavorArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#V1Args"><span class="hs-identifier hs-var">V1.V1Args</span></a></span><span> </span><span class="annot"><span class="annottext">FlushFrequency
+</span><a href="#local-6989586621681667877"><span class="hs-identifier hs-var">ff</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="annottext">(BackingStoreArgs Identity IO -&gt; LedgerDbFlavorArgs Identity IO)
+-&gt; BackingStoreArgs Identity IO -&gt; LedgerDbFlavorArgs Identity IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; HKD Identity LMDBLimits
+-&gt; Dict MonadIOPrim IO
+-&gt; BackingStoreArgs Identity IO
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+FilePath
+-&gt; HKD f LMDBLimits -&gt; Dict MonadIOPrim m -&gt; BackingStoreArgs f m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.Args.html#LMDBBackingStoreArgs"><span class="hs-identifier hs-var">V1.LMDBBackingStoreArgs</span></a></span><span>
+</span><span id="line-138"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Maybe FilePath -&gt; FilePath
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBPath"><span class="hs-identifier hs-var">defaultLMDBPath</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621681667878"><span class="hs-identifier hs-var">fp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(LMDBLimits -&gt; HKD Identity LMDBLimits)
+-&gt; (Int -&gt; LMDBLimits -&gt; HKD Identity LMDBLimits)
+-&gt; Maybe Int
+-&gt; LMDBLimits
+-&gt; HKD Identity LMDBLimits
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">LMDBLimits -&gt; HKD Identity LMDBLimits
+LMDBLimits -&gt; LMDBLimits
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681667884"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681667884"><span class="hs-identifier hs-var">overrideMaxReaders</span></a></span></span><span> </span><span id="local-6989586621681667885"><span class="annot"><span class="annottext">LMDBLimits
+</span><a href="#local-6989586621681667885"><span class="hs-identifier hs-var">lim</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LMDBLimits
+</span><a href="#local-6989586621681667885"><span class="hs-identifier hs-var">lim</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#lmdbMaxReaders"><span class="hs-identifier hs-var">lmdbMaxReaders</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621681667884"><span class="hs-identifier hs-type">overrideMaxReaders</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621681667880"><span class="hs-identifier hs-var">mxReaders</span></a></span><span>
+</span><span id="line-140"></span><span>       </span><span class="annot"><span class="annottext">(LMDBLimits -&gt; HKD Identity LMDBLimits)
+-&gt; LMDBLimits -&gt; HKD Identity LMDBLimits
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LMDBLimits -&gt; LMDBLimits)
+-&gt; (Gigabytes -&gt; LMDBLimits -&gt; LMDBLimits)
+-&gt; Maybe Gigabytes
+-&gt; LMDBLimits
+-&gt; LMDBLimits
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">LMDBLimits -&gt; LMDBLimits
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681667886"><span class="annot"><span class="annottext">Gigabytes
+</span><a href="#local-6989586621681667886"><span class="hs-identifier hs-var">ll</span></a></span></span><span> </span><span id="local-6989586621681667887"><span class="annot"><span class="annottext">LMDBLimits
+</span><a href="#local-6989586621681667887"><span class="hs-identifier hs-var">lim</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LMDBLimits
+</span><a href="#local-6989586621681667887"><span class="hs-identifier hs-var">lim</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB.html#lmdbMapSize"><span class="hs-identifier hs-var">lmdbMapSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Node.Configuration.LedgerDB.html#toBytes"><span class="hs-identifier hs-type">toBytes</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681667886"><span class="hs-identifier hs-type">ll</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Gigabytes
+</span><a href="#local-6989586621681667879"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">LMDBLimits
+</span><a href="Cardano.Node.Configuration.LedgerDB.html#defaultLMDBLimits"><span class="hs-identifier hs-var">defaultLMDBLimits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">Dict MonadIOPrim IO
+forall {k} (c :: k -&gt; Constraint) (a :: k). c a =&gt; Dict c a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.Dict.html#Dict"><span class="hs-identifier hs-var">Dict</span></a></span><span>
+</span><span id="line-142"></span></pre></body></html>

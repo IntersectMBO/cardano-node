@@ -1,0 +1,538 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Testnet.Property.Run</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#runTestnet"><span class="hs-identifier">runTestnet</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-comment">-- Ignore tests on various OSs</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier">ignoreOn</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnWindows"><span class="hs-identifier">ignoreOnWindows</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnMac"><span class="hs-identifier">ignoreOnMac</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnMacAndWindows"><span class="hs-identifier">ignoreOnMacAndWindows</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#disabled"><span class="hs-identifier">disabled</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.html"><span class="hs-identifier">Cardano.Api.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier">unFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vd9gsr1jwa9sdr7r5wcwn24c5sxsgnwk-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.html"><span class="hs-identifier">Control.Monad.Trans.Resource</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bool.html"><span class="hs-identifier">Data.Bool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bool.html#bool"><span class="hs-identifier">bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Console.ANSI</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ANSI</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Console.ANSI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Color</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ColorIntensity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ConsoleLayer</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SGR</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier">normalise</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#%3C%2F%3E"><span class="hs-operator">(&lt;/&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html"><span class="hs-identifier">System.Info</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SYS</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier">printf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Process.RunIO.html"><span class="hs-identifier">Testnet.Process.RunIO</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Property.Util.html"><span class="hs-identifier">Testnet.Property.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Property.Util.html#integration"><span class="hs-identifier">integration</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Property.Util.html#integrationWorkspace"><span class="hs-identifier">integrationWorkspace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Types.html"><span class="hs-identifier">Testnet.Start.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier">Conf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier">UserProvidedEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier">mkConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Types.html"><span class="hs-identifier">Testnet.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#TestnetNode"><span class="hs-identifier">TestnetNode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier">TestnetRuntime</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#spoNodes"><span class="hs-identifier">spoNodes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier">Property</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html"><span class="hs-identifier">Hedgehog.Extras.Stock.IO.Network.Sprocket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#Sprocket"><span class="hs-identifier">Sprocket</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.OS.html"><span class="hs-identifier">Hedgehog.Extras.Stock.OS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.OS.html#isWin32"><span class="hs-identifier">isWin32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html"><span class="hs-identifier">Hedgehog.Extras.Test.Base</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/rmx4zdhya9wadq1fhwgnbzb11p9xwryi-tasty-expected-failure-lib-tasty-expected-failure-0.12.3-haddock-doc/share/doc/tasty-expected-failure/html/src/Test.Tasty.ExpectedFailure.html"><span class="hs-identifier">Test.Tasty.ExpectedFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/rmx4zdhya9wadq1fhwgnbzb11p9xwryi-tasty-expected-failure-lib-tasty-expected-failure-0.12.3-haddock-doc/share/doc/tasty-expected-failure/html/src/Test.Tasty.ExpectedFailure.html#wrapTest"><span class="hs-identifier">wrapTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/5nzby6glh211w3yr63jm4s6sjahz34sd-tasty-hedgehog-lib-tasty-hedgehog-1.4.0.2-haddock-doc/share/doc/tasty-hedgehog/html/src/Test.Tasty.Hedgehog.html"><span class="hs-identifier">Test.Tasty.Hedgehog</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Providers.html"><span class="hs-identifier">Test.Tasty.Providers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Providers.html#testPassed"><span class="hs-identifier">testPassed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Runners.html"><span class="hs-identifier">Test.Tasty.Runners</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#Result"><span class="hs-identifier">Result</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#resultShortDescription"><span class="hs-identifier">resultShortDescription</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier">TestTree</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Testnet.Property.Run.html#runTestnet"><span class="hs-identifier hs-type">runTestnet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-type">UserProvidedEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-type">Conf</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Internal.Test.Integration.html#Integration"><span class="hs-identifier hs-type">H.Integration</span></a></span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span id="runTestnet"><span class="annot"><span class="annottext">runTestnet :: UserProvidedEnv -&gt; (Conf -&gt; Integration TestnetRuntime) -&gt; IO ()
+</span><a href="Testnet.Property.Run.html#runTestnet"><span class="hs-identifier hs-var hs-var">runTestnet</span></a></span></span><span> </span><span id="local-6989586621679568221"><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="#local-6989586621679568221"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679568222"><span class="annot"><span class="annottext">Conf -&gt; Integration TestnetRuntime
+</span><a href="#local-6989586621679568222"><span class="hs-identifier hs-var">tn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679568223"><span class="annot"><span class="annottext">TVar (Maybe TestnetRuntime)
+</span><a href="#local-6989586621679568223"><span class="hs-identifier hs-var">tvRunning</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe TestnetRuntime -&gt; IO (TVar (Maybe TestnetRuntime))
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">STM.newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe TestnetRuntime
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">IO Bool -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; IO ()) -&gt; (Property -&gt; IO Bool) -&gt; Property -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Property -&gt; IO Bool
+forall (m :: * -&gt; *). MonadIO m =&gt; Property -&gt; m Bool
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Runner.html#check"><span class="hs-identifier hs-var">H.check</span></a></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; IO ()) -&gt; Property -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UserProvidedEnv -&gt; (Conf -&gt; Integration ()) -&gt; Property
+</span><a href="Testnet.Property.Run.html#testnetProperty"><span class="hs-identifier hs-var">testnetProperty</span></a></span><span> </span><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="#local-6989586621679568221"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">((Conf -&gt; Integration ()) -&gt; Property)
+-&gt; (Conf -&gt; Integration ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679568229"><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568229"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>    </span><span id="local-6989586621679568230"><span class="annot"><span class="annottext">TestnetRuntime
+</span><a href="#local-6989586621679568230"><span class="hs-identifier hs-var">runtime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Conf -&gt; Integration TestnetRuntime
+</span><a href="#local-6989586621679568222"><span class="hs-identifier hs-var">tn</span></a></span><span> </span><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568229"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; Integration ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Integration ())
+-&gt; (STM () -&gt; IO ()) -&gt; STM () -&gt; Integration ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; Integration ()) -&gt; STM () -&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Maybe TestnetRuntime) -&gt; Maybe TestnetRuntime -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">STM.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Maybe TestnetRuntime)
+</span><a href="#local-6989586621679568223"><span class="hs-identifier hs-var">tvRunning</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestnetRuntime -&gt; Maybe TestnetRuntime
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetRuntime
+</span><a href="#local-6989586621679568230"><span class="hs-identifier hs-var">runtime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">TVar (Maybe TestnetRuntime) -&gt; IO (Maybe TestnetRuntime)
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">STM.readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Maybe TestnetRuntime)
+</span><a href="#local-6989586621679568223"><span class="hs-identifier hs-var">tvRunning</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Maybe TestnetRuntime)
+-&gt; (Maybe TestnetRuntime -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679568235"><span class="annot"><span class="annottext">runtime :: TestnetRuntime
+</span><a href="#local-6989586621679568235"><span class="hs-identifier hs-var">runtime</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679568237"><span class="annot"><span class="annottext">NodeConfigFile 'In
+configurationFile :: NodeConfigFile 'In
+configurationFile :: TestnetRuntime -&gt; NodeConfigFile 'In
+</span><a href="#local-6989586621679568237"><span class="hs-identifier hs-var hs-var">configurationFile</span></a></span></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568239"><span class="annot"><span class="annottext">Int
+testnetMagic :: Int
+testnetMagic :: TestnetRuntime -&gt; Int
+</span><a href="#local-6989586621679568239"><span class="hs-identifier hs-var hs-var">testnetMagic</span></a></span></span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Green</span></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">IO.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span>
+</span><span id="line-63"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Please disregard the message above implying a failure.\n\
+        \\n\
+        \Testnet is running with config file %s&quot;</span></span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeConfigFile 'In -&gt; String
+forall content (direction :: FileDirection).
+File content direction -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfigFile 'In
+</span><a href="#local-6989586621679568237"><span class="hs-identifier hs-var">configurationFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TestnetRuntime -&gt; [TestnetNode]
+</span><a href="Testnet.Types.html#spoNodes"><span class="hs-identifier hs-var">spoNodes</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetRuntime
+</span><a href="#local-6989586621679568235"><span class="hs-identifier hs-var">runtime</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><a href="Testnet.Types.html#TestnetNode"><span class="hs-identifier hs-type">TestnetNode</span></a></span><span>
+</span><span id="line-69"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">nodeSprocket :: TestnetNode -&gt; Sprocket
+</span><a href="Testnet.Types.html#nodeSprocket"><span class="hs-identifier hs-var">nodeSprocket</span></a></span><span class="hs-glyph">=</span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#Sprocket"><span class="hs-identifier hs-type">Sprocket</span></a></span><span class="hs-special">{</span><span id="local-6989586621679568250"><span class="annot"><span class="annottext">String
+sprocketBase :: String
+sprocketBase :: Sprocket -&gt; String
+</span><a href="#local-6989586621679568250"><span class="hs-identifier hs-var hs-var">sprocketBase</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568252"><span class="annot"><span class="annottext">String
+sprocketName :: String
+sprocketName :: Sprocket -&gt; String
+</span><a href="#local-6989586621679568252"><span class="hs-identifier hs-var hs-var">sprocketName</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-70"></span><span>          </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568254"><span class="annot"><span class="annottext">String
+nodeStdout :: String
+nodeStdout :: TestnetNode -&gt; String
+</span><a href="#local-6989586621679568254"><span class="hs-identifier hs-var hs-var">nodeStdout</span></a></span></span><span>
+</span><span id="line-71"></span><span>          </span><span class="hs-special">}</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[TestnetNode]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; Int -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span>
+</span><span id="line-72"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Logs of the SPO node can be found at %s\n\
+            \\n\
+            \To interact with the testnet using cardano-cli, you might want to set:\n\
+            \\n\
+            \  export CARDANO_NODE_SOCKET_PATH=%s\n\
+            \  export CARDANO_NODE_NETWORK_ID=%d\n&quot;</span></span><span>
+</span><span id="line-78"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568254"><span class="hs-identifier hs-var">nodeStdout</span></a></span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#normalise"><span class="hs-identifier hs-var">normalise</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; String -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568250"><span class="hs-identifier hs-var">sprocketBase</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#%3C%2F%3E"><span class="hs-operator hs-var">&lt;/&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568252"><span class="hs-identifier hs-var">sprocketName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>            </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679568239"><span class="hs-identifier hs-var">testnetMagic</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>          </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Yellow</span></span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">IO.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\nFailed to find any SPO node in the testnet\n&quot;</span></span><span>
+</span><span id="line-84"></span><span>          </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Green</span></span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">IO.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Type CTRL-C to exit.&quot;</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">SGR
+</span><span class="hs-identifier hs-var">Reset</span></span><span class="hs-special">]</span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">IO Any -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Any -&gt; IO ()) -&gt; (IO () -&gt; IO Any) -&gt; IO () -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO Any
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">IO.threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10000000</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">Maybe TestnetRuntime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConsoleLayer -&gt; ColorIntensity -&gt; Color -&gt; SGR
+</span><span class="hs-identifier hs-var">SetColor</span></span><span> </span><span class="annot"><span class="annottext">ConsoleLayer
+</span><span class="hs-identifier hs-var">Foreground</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Red</span></span><span class="hs-special">]</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">IO.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed to start testnet.&quot;</span></span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">[SGR] -&gt; IO ()
+</span><span class="hs-identifier hs-var">ANSI.setSGR</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">SGR
+</span><span class="hs-identifier hs-var">Reset</span></span><span class="hs-special">]</span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">IO ()
+forall a. IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitFailure"><span class="hs-identifier hs-var">IO.exitFailure</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Testnet.Property.Run.html#testnetProperty"><span class="hs-identifier hs-type">testnetProperty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-type">UserProvidedEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-type">Conf</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Internal.Test.Integration.html#Integration"><span class="hs-identifier hs-type">H.Integration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">H.Property</span></a></span><span>
+</span><span id="line-97"></span><span id="testnetProperty"><span class="annot"><span class="annottext">testnetProperty :: UserProvidedEnv -&gt; (Conf -&gt; Integration ()) -&gt; Property
+</span><a href="Testnet.Property.Run.html#testnetProperty"><span class="hs-identifier hs-var hs-var">testnetProperty</span></a></span></span><span> </span><span id="local-6989586621679568262"><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="#local-6989586621679568262"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679568263"><span class="annot"><span class="annottext">Conf -&gt; Integration ()
+</span><a href="#local-6989586621679568263"><span class="hs-identifier hs-var">runTn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="#local-6989586621679568262"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="Testnet.Start.Types.html#NoUserProvidedEnv"><span class="hs-identifier hs-var">NoUserProvidedEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; (String -&gt; Integration ()) -&gt; Property
+String -&gt; (String -&gt; Integration ()) -&gt; Property
+</span><a href="Testnet.Property.Util.html#integrationWorkspace"><span class="hs-identifier hs-var">integrationWorkspace</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;testnet&quot;</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Integration ()) -&gt; Property)
+-&gt; (String -&gt; Integration ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679568265"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568265"><span class="hs-identifier hs-var">workspaceDir</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) Conf
+forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m) =&gt;
+String -&gt; m Conf
+</span><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier hs-var">mkConf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568265"><span class="hs-identifier hs-var">workspaceDir</span></a></span><span> </span><span class="annot"><span class="annottext">PropertyT (ReaderT IntegrationState (ResourceT IO)) Conf
+-&gt; (Conf -&gt; Integration ()) -&gt; Integration ()
+forall a b.
+PropertyT (ReaderT IntegrationState (ResourceT IO)) a
+-&gt; (a -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) b)
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Conf -&gt; Integration ()
+forall {b}.
+Conf -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) b
+</span><a href="#local-6989586621679568266"><span class="hs-identifier hs-var">forkAndRunTestnet</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-type">UserProvidedEnv</span></a></span><span> </span><span id="local-6989586621679568268"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568268"><span class="hs-identifier hs-var">userOutputDir</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integration () -&gt; Property
+Integration () -&gt; Property
+</span><a href="Testnet.Property.Util.html#integration"><span class="hs-identifier hs-var">integration</span></a></span><span> </span><span class="annot"><span class="annottext">(Integration () -&gt; Property) -&gt; Integration () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>          </span><span id="local-6989586621679568269"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO String
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) String
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO String
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) String)
+-&gt; IO String
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#makeAbsolute"><span class="hs-identifier hs-var">makeAbsolute</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568268"><span class="hs-identifier hs-var">userOutputDir</span></a></span><span>
+</span><span id="line-105"></span><span>          </span><span id="local-6989586621679568271"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679568271"><span class="hs-identifier hs-var">dirExists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) Bool
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) Bool)
+-&gt; IO Bool
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#doesDirectoryExist"><span class="hs-identifier hs-var">doesDirectoryExist</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span><span>
+</span><span id="line-106"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679568271"><span class="hs-identifier hs-var">dirExists</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-107"></span><span>            </span><span class="hs-comment">-- Happens when the environment has previously been created by the user</span><span>
+</span><span id="line-108"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Integration ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Integration ()) -&gt; String -&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Reusing &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>            </span><span class="annot"><span class="annottext">IO () -&gt; Integration ()
+forall (m :: * -&gt; *) a. (HasCallStack, MonadIO m) =&gt; IO a -&gt; m a
+</span><a href="Testnet.Process.RunIO.html#liftIOAnnotated"><span class="hs-identifier hs-var">liftIOAnnotated</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Integration ()) -&gt; IO () -&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#createDirectory"><span class="hs-identifier hs-var">createDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span><span>
+</span><span id="line-111"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Integration ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Integration ()) -&gt; String -&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Created &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span><span>
+</span><span id="line-112"></span><span>          </span><span id="local-6989586621679568276"><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568276"><span class="hs-identifier hs-var">conf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) Conf
+forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m) =&gt;
+String -&gt; m Conf
+</span><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier hs-var">mkConf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568269"><span class="hs-identifier hs-var">absUserOutputDir</span></a></span><span>
+</span><span id="line-113"></span><span>          </span><span class="annot"><span class="annottext">Conf -&gt; Integration ()
+forall {b}.
+Conf -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) b
+</span><a href="#local-6989586621679568266"><span class="hs-identifier hs-var">forkAndRunTestnet</span></a></span><span> </span><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568276"><span class="hs-identifier hs-var">conf</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621679568266"><span class="annot"><span class="annottext">forkAndRunTestnet :: Conf -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) b
+</span><a href="#local-6989586621679568266"><span class="hs-identifier hs-var hs-var">forkAndRunTestnet</span></a></span></span><span> </span><span id="local-6989586621679568319"><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568319"><span class="hs-identifier hs-var">conf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-comment">-- Fork a thread to keep alive indefinitely any resources allocated by testnet.</span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+-&gt; Integration ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+ -&gt; Integration ())
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+-&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadCatch m, HasCallStack) =&gt;
+m a -&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalM"><span class="hs-identifier hs-var">H.evalM</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId)
+-&gt; (IO ()
+    -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId)
+-&gt; IO ()
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceT IO ThreadId
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+forall a.
+ResourceT IO a
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) a
+forall (m :: * -&gt; *) a. MonadResource m =&gt; ResourceT IO a -&gt; m a
+</span><a href="file:///nix/store/vd9gsr1jwa9sdr7r5wcwn24c5sxsgnwk-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.Internal.html#liftResourceT"><span class="hs-identifier hs-var">liftResourceT</span></a></span><span> </span><span class="annot"><span class="annottext">(ResourceT IO ThreadId
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId)
+-&gt; (IO () -&gt; ResourceT IO ThreadId)
+-&gt; IO ()
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceT IO () -&gt; ResourceT IO ThreadId
+forall (m :: * -&gt; *).
+MonadUnliftIO m =&gt;
+ResourceT m () -&gt; ResourceT m ThreadId
+</span><a href="file:///nix/store/vd9gsr1jwa9sdr7r5wcwn24c5sxsgnwk-resourcet-lib-resourcet-1.3.0-haddock-doc/share/doc/resourcet/html/src/Control.Monad.Trans.Resource.html#resourceForkIO"><span class="hs-identifier hs-var">resourceForkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(ResourceT IO () -&gt; ResourceT IO ThreadId)
+-&gt; (IO () -&gt; ResourceT IO ()) -&gt; IO () -&gt; ResourceT IO ThreadId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceT IO () -&gt; ResourceT IO ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(ResourceT IO () -&gt; ResourceT IO ())
+-&gt; (IO () -&gt; ResourceT IO ()) -&gt; IO () -&gt; ResourceT IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ResourceT IO ()
+forall (m :: * -&gt; *) a. (HasCallStack, MonadIO m) =&gt; IO a -&gt; m a
+</span><a href="Testnet.Process.RunIO.html#liftIOAnnotated"><span class="hs-identifier hs-var">liftIOAnnotated</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ()
+ -&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId)
+-&gt; IO ()
+-&gt; PropertyT (ReaderT IntegrationState (ResourceT IO)) ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">IO.threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10000000</span></span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">Integration () -&gt; Integration ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Integration () -&gt; Integration ())
+-&gt; Integration () -&gt; Integration ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Conf -&gt; Integration ()
+</span><a href="#local-6989586621679568263"><span class="hs-identifier hs-var">runTn</span></a></span><span> </span><span class="annot"><span class="annottext">Conf
+</span><a href="#local-6989586621679568319"><span class="hs-identifier hs-var">conf</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">PropertyT (ReaderT IntegrationState (ResourceT IO)) b
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#failure"><span class="hs-identifier hs-var">H.failure</span></a></span><span> </span><span class="hs-comment">-- Intentional failure to force failure report</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- Ignore properties on various OSs</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">type</span><span> </span><span id="Os"><span class="annot"><a href="Testnet.Property.Run.html#Os"><span class="hs-identifier hs-var">Os</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnWindows"><span class="hs-identifier hs-type">ignoreOnWindows</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-128"></span><span id="ignoreOnWindows"><span class="annot"><span class="annottext">ignoreOnWindows :: String -&gt; Property -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOnWindows"><span class="hs-identifier hs-var hs-var">ignoreOnWindows</span></a></span></span><span> </span><span id="local-6989586621679568325"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568325"><span class="hs-identifier hs-var">pName</span></a></span></span><span> </span><span id="local-6989586621679568326"><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568326"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree)
+-&gt; (TestTree -&gt; TestTree) -&gt; Bool -&gt; TestTree -&gt; TestTree
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree -&gt; TestTree
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; TestTree -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-var">ignoreOn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Windows&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.OS.html#isWin32"><span class="hs-identifier hs-var">isWin32</span></a></span><span> </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree) -&gt; TestTree -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="file:///nix/store/5nzby6glh211w3yr63jm4s6sjahz34sd-tasty-hedgehog-lib-tasty-hedgehog-1.4.0.2-haddock-doc/share/doc/tasty-hedgehog/html/src/Test.Tasty.Hedgehog.html#testPropertyNamed"><span class="hs-identifier hs-var">H.testPropertyNamed</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568325"><span class="hs-identifier hs-var">pName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; PropertyName
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568325"><span class="hs-identifier hs-var">pName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568326"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnMac"><span class="hs-identifier hs-type">ignoreOnMac</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-132"></span><span id="ignoreOnMac"><span class="annot"><span class="annottext">ignoreOnMac :: String -&gt; Property -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOnMac"><span class="hs-identifier hs-var hs-var">ignoreOnMac</span></a></span></span><span> </span><span id="local-6989586621679568329"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568329"><span class="hs-identifier hs-var">pName</span></a></span></span><span> </span><span id="local-6989586621679568330"><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568330"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree)
+-&gt; (TestTree -&gt; TestTree) -&gt; Bool -&gt; TestTree -&gt; TestTree
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree -&gt; TestTree
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; TestTree -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-var">ignoreOn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MacOS&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="Testnet.Property.Run.html#isMacOS"><span class="hs-identifier hs-var">isMacOS</span></a></span><span> </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree) -&gt; TestTree -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="file:///nix/store/5nzby6glh211w3yr63jm4s6sjahz34sd-tasty-hedgehog-lib-tasty-hedgehog-1.4.0.2-haddock-doc/share/doc/tasty-hedgehog/html/src/Test.Tasty.Hedgehog.html#testPropertyNamed"><span class="hs-identifier hs-var">H.testPropertyNamed</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568329"><span class="hs-identifier hs-var">pName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; PropertyName
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568329"><span class="hs-identifier hs-var">pName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568330"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOnMacAndWindows"><span class="hs-identifier hs-type">ignoreOnMacAndWindows</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-136"></span><span id="ignoreOnMacAndWindows"><span class="annot"><span class="annottext">ignoreOnMacAndWindows :: String -&gt; Property -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOnMacAndWindows"><span class="hs-identifier hs-var hs-var">ignoreOnMacAndWindows</span></a></span></span><span> </span><span id="local-6989586621679568332"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568332"><span class="hs-identifier hs-var">pName</span></a></span></span><span> </span><span id="local-6989586621679568333"><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568333"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree)
+-&gt; (TestTree -&gt; TestTree) -&gt; Bool -&gt; TestTree -&gt; TestTree
+forall a. a -&gt; a -&gt; Bool -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bool.html#bool"><span class="hs-identifier hs-var">bool</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree -&gt; TestTree
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; TestTree -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-var">ignoreOn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MacOS and Windows&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="Testnet.Property.Run.html#isMacOS"><span class="hs-identifier hs-var">isMacOS</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.OS.html#isWin32"><span class="hs-identifier hs-var">isWin32</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree) -&gt; TestTree -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="file:///nix/store/5nzby6glh211w3yr63jm4s6sjahz34sd-tasty-hedgehog-lib-tasty-hedgehog-1.4.0.2-haddock-doc/share/doc/tasty-hedgehog/html/src/Test.Tasty.Hedgehog.html#testPropertyNamed"><span class="hs-identifier hs-var">H.testPropertyNamed</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568332"><span class="hs-identifier hs-var">pName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; PropertyName
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568332"><span class="hs-identifier hs-var">pName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568333"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Testnet.Property.Run.html#isMacOS"><span class="hs-identifier hs-type">isMacOS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-140"></span><span id="isMacOS"><span class="annot"><span class="annottext">isMacOS :: Bool
+</span><a href="Testnet.Property.Run.html#isMacOS"><span class="hs-identifier hs-var hs-var">isMacOS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#os"><span class="hs-identifier hs-var">SYS.os</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;darwin&quot;</span></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-type">ignoreOn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Property.Run.html#Os"><span class="hs-identifier hs-type">Os</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-143"></span><span id="ignoreOn"><span class="annot"><span class="annottext">ignoreOn :: String -&gt; TestTree -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-var hs-var">ignoreOn</span></a></span></span><span> </span><span id="local-6989586621679568336"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568336"><span class="hs-identifier hs-var">os</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(IO Result -&gt; IO Result) -&gt; TestTree -&gt; TestTree
+</span><a href="file:///nix/store/rmx4zdhya9wadq1fhwgnbzb11p9xwryi-tasty-expected-failure-lib-tasty-expected-failure-0.12.3-haddock-doc/share/doc/tasty-expected-failure/html/src/Test.Tasty.ExpectedFailure.html#wrapTest"><span class="hs-identifier hs-var">wrapTest</span></a></span><span> </span><span class="annot"><span class="annottext">((IO Result -&gt; IO Result) -&gt; TestTree -&gt; TestTree)
+-&gt; (IO Result -&gt; IO Result) -&gt; TestTree -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO Result -&gt; IO Result -&gt; IO Result
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Result -&gt; IO Result -&gt; IO Result)
+-&gt; IO Result -&gt; IO Result -&gt; IO Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Result -&gt; IO Result
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Result -&gt; IO Result) -&gt; Result -&gt; IO Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Result
+</span><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Providers.html#testPassed"><span class="hs-identifier hs-var">testPassed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;IGNORED on &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568336"><span class="hs-identifier hs-var">os</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#resultShortDescription"><span class="hs-identifier hs-var">resultShortDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-string">&quot;IGNORED on &quot;</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-type">&lt;&gt;</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679568336"><span class="hs-identifier hs-type">os</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Testnet.Property.Run.html#disabled"><span class="hs-identifier hs-type">disabled</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-149"></span><span id="disabled"><span class="annot"><span class="annottext">disabled :: String -&gt; Property -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#disabled"><span class="hs-identifier hs-var hs-var">disabled</span></a></span></span><span> </span><span id="local-6989586621679568338"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568338"><span class="hs-identifier hs-var">pName</span></a></span></span><span> </span><span id="local-6989586621679568339"><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568339"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TestTree -&gt; TestTree
+</span><a href="Testnet.Property.Run.html#ignoreOn"><span class="hs-identifier hs-var">ignoreOn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Disabled&quot;</span></span><span> </span><span class="annot"><span class="annottext">(TestTree -&gt; TestTree) -&gt; TestTree -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="file:///nix/store/5nzby6glh211w3yr63jm4s6sjahz34sd-tasty-hedgehog-lib-tasty-hedgehog-1.4.0.2-haddock-doc/share/doc/tasty-hedgehog/html/src/Test.Tasty.Hedgehog.html#testPropertyNamed"><span class="hs-identifier hs-var">H.testPropertyNamed</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568338"><span class="hs-identifier hs-var">pName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; PropertyName
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679568338"><span class="hs-identifier hs-var">pName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679568339"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-150"></span></pre></body></html>

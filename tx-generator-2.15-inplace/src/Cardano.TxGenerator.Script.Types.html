@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-partial-fields -fno-warn-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- |&#160;this module is currently experimental and serves as testing ground</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- for a new script design for the generator.</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.TxGenerator.Script.Types</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Key</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#putStrLn"><span class="hs-identifier">putStrLn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html"><span class="hs-identifier">Data.Yaml</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Yaml</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html#encode"><span class="hs-identifier">encode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">type</span><span> </span><span id="TxGenScript"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#TxGenScript"><span class="hs-identifier hs-var">TxGenScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#RootNode"><span class="hs-identifier hs-type">RootNode</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="RootNode"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#RootNode"><span class="hs-identifier hs-var">RootNode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>    </span><span id="SigningKeys"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#SigningKeys"><span class="hs-identifier hs-var">SigningKeys</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#NamedKey"><span class="hs-identifier hs-type">NamedKey</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Wallets"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#Wallets"><span class="hs-identifier hs-var">Wallets</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Params"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#Params"><span class="hs-identifier hs-var">Params</span></a></span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenTxParams"><span class="hs-identifier hs-type">TxGenTxParams</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Script"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#Script"><span class="hs-identifier hs-var">Script</span></a></span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679912909"><span id="local-6989586621679912911"><span class="annot"><span class="annottext">(forall x. RootNode -&gt; Rep RootNode x)
+-&gt; (forall x. Rep RootNode x -&gt; RootNode) -&gt; Generic RootNode
+forall x. Rep RootNode x -&gt; RootNode
+forall x. RootNode -&gt; Rep RootNode x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. RootNode -&gt; Rep RootNode x
+from :: forall x. RootNode -&gt; Rep RootNode x
+$cto :: forall x. Rep RootNode x -&gt; RootNode
+to :: forall x. Rep RootNode x -&gt; RootNode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="NamedKey"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#NamedKey"><span class="hs-identifier hs-var">NamedKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>    </span><span id="KeyLiteral"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#KeyLiteral"><span class="hs-identifier hs-var">KeyLiteral</span></a></span></span><span>  </span><span class="hs-special">{</span><span> </span><span id="name"><span class="annot"><span class="annottext">NamedKey -&gt; Text
+</span><a href="Cardano.TxGenerator.Script.Types.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span id="base16Cbor"><span class="annot"><span class="annottext">NamedKey -&gt; Text
+</span><a href="Cardano.TxGenerator.Script.Types.html#base16Cbor"><span class="hs-identifier hs-var hs-var">base16Cbor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="KeyFile"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#KeyFile"><span class="hs-identifier hs-var">KeyFile</span></a></span></span><span>     </span><span class="hs-special">{</span><span> </span><span id="name"><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#name"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span id="filePath"><span class="annot"><span class="annottext">NamedKey -&gt; FilePath
+</span><a href="Cardano.TxGenerator.Script.Types.html#filePath"><span class="hs-identifier hs-var hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679912920"><span id="local-6989586621679912922"><span class="annot"><span class="annottext">(forall x. NamedKey -&gt; Rep NamedKey x)
+-&gt; (forall x. Rep NamedKey x -&gt; NamedKey) -&gt; Generic NamedKey
+forall x. Rep NamedKey x -&gt; NamedKey
+forall x. NamedKey -&gt; Rep NamedKey x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. NamedKey -&gt; Rep NamedKey x
+from :: forall x. NamedKey -&gt; Rep NamedKey x
+$cto :: forall x. Rep NamedKey x -&gt; NamedKey
+to :: forall x. Rep NamedKey x -&gt; NamedKey
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-type">jsonOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Options</span></span><span>
+</span><span id="line-38"></span><span id="jsonOptions"><span class="annot"><span class="annottext">jsonOptions :: Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var hs-var">jsonOptions</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options
+</span><span class="hs-identifier hs-var">defaultOptions</span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="hs-identifier hs-var">sumEncoding</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ObjectWithSingleField</span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-var">constructorTagModifier</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">camelTo2</span></span><span> </span><span class="annot"><span class="hs-char">'_'</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-var">omitNothingFields</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-type">True</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679912934"><span id="local-6989586621679912938"><span id="local-6989586621679912941"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#NamedKey"><span class="hs-identifier hs-type">NamedKey</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>    </span><span id="local-6989586621679913096"><span class="annot"><span class="annottext">toJSON :: NamedKey -&gt; Value
+</span><a href="#local-6989586621679913096"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; NamedKey -&gt; Value
+forall a.
+(Generic a, GToJSON' Value Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">genericToJSON</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679913217"><span class="annot"><span class="annottext">toEncoding :: NamedKey -&gt; Encoding
+</span><a href="#local-6989586621679913217"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; NamedKey -&gt; Encoding
+forall a.
+(Generic a, GToJSON' Encoding Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">genericToEncoding</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679913223"><span id="local-6989586621679913226"><span id="local-6989586621679913229"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#RootNode"><span class="hs-identifier hs-type">RootNode</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679913349"><span class="annot"><span class="annottext">toJSON :: RootNode -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; RootNode -&gt; Value
+forall a.
+(Generic a, GToJSON' Value Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">genericToJSON</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679913458"><span class="annot"><span class="annottext">toEncoding :: RootNode -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; RootNode -&gt; Encoding
+forall a.
+(Generic a, GToJSON' Encoding Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">genericToEncoding</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679913460"><span id="local-6989586621679913462"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenTxParams"><span class="hs-identifier hs-type">TxGenTxParams</span></a></span></span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679913467"><span id="local-6989586621679913470"><span id="local-6989586621679913473"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenTxParams"><span class="hs-identifier hs-type">TxGenTxParams</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679913563"><span class="annot"><span class="annottext">toJSON :: TxGenTxParams -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; TxGenTxParams -&gt; Value
+forall a.
+(Generic a, GToJSON' Value Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">genericToJSON</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-identifier hs-var">fieldLabelModifier</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-type">drop</span></a></span><span> </span><span class="annot"><span class="hs-number">7</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679913644"><span class="annot"><span class="annottext">toEncoding :: TxGenTxParams -&gt; Encoding
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Options -&gt; TxGenTxParams -&gt; Encoding
+forall a.
+(Generic a, GToJSON' Encoding Zero (Rep a)) =&gt;
+Options -&gt; a -&gt; Encoding
+</span><span class="hs-identifier hs-var">genericToEncoding</span></span><span> </span><span class="annot"><span class="annottext">Options
+</span><a href="Cardano.TxGenerator.Script.Types.html#jsonOptions"><span class="hs-identifier hs-var">jsonOptions</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-identifier hs-var">fieldLabelModifier</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-type">drop</span></a></span><span> </span><span class="annot"><span class="hs-number">7</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#testRender"><span class="hs-identifier hs-type">testRender</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span id="testRender"><span class="annot"><span class="annottext">testRender :: IO ()
+</span><a href="Cardano.TxGenerator.Script.Types.html#testRender"><span class="hs-identifier hs-var hs-var">testRender</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#putStrLn"><span class="hs-identifier hs-var">BS.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ByteString -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenScript -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html#encode"><span class="hs-identifier hs-var">Yaml.encode</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenScript
+</span><a href="#local-6989586621679913646"><span class="hs-identifier hs-var">testScript</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="#local-6989586621679913646"><span class="hs-identifier hs-type">testScript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Script.Types.html#TxGenScript"><span class="hs-identifier hs-type">TxGenScript</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679913646"><span class="annot"><span class="annottext">testScript :: TxGenScript
+</span><a href="#local-6989586621679913646"><span class="hs-identifier hs-var hs-var">testScript</span></a></span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">[NamedKey] -&gt; RootNode
+</span><a href="Cardano.TxGenerator.Script.Types.html#SigningKeys"><span class="hs-identifier hs-var">SigningKeys</span></a></span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-67"></span><span>              </span><span class="annot"><span class="annottext">Text -&gt; FilePath -&gt; NamedKey
+</span><a href="Cardano.TxGenerator.Script.Types.html#KeyFile"><span class="hs-identifier hs-var">KeyFile</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;key1&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;foo/bar.skey&quot;</span></span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath -&gt; NamedKey
+</span><a href="Cardano.TxGenerator.Script.Types.html#KeyFile"><span class="hs-identifier hs-var">KeyFile</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;key2&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;bar/foo.skey&quot;</span></span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; NamedKey
+</span><a href="Cardano.TxGenerator.Script.Types.html#KeyLiteral"><span class="hs-identifier hs-var">KeyLiteral</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;key3&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;2137d98af79ad87a28&quot;</span></span><span>
+</span><span id="line-70"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxGenTxParams -&gt; RootNode
+</span><a href="Cardano.TxGenerator.Script.Types.html#Params"><span class="hs-identifier hs-var">Params</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="Cardano.TxGenerator.Types.html#defaultTxGenTxParams"><span class="hs-identifier hs-var">defaultTxGenTxParams</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span></pre></body></html>

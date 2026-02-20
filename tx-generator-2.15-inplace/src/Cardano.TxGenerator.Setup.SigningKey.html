@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | This module provides convenience functions when dealing with signing keys.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.TxGenerator.Setup.SigningKey</span><span>
+</span><span id="line-6"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier">parseSigningKeyTE</span></a></span><span>
+</span><span id="line-7"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyBase16"><span class="hs-identifier">parseSigningKeyBase16</span></a></span><span>
+</span><span id="line-8"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#readSigningKeyFile"><span class="hs-identifier">readSigningKeyFile</span></a></span><span>
+</span><span id="line-9"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier">PaymentKey</span></a></span><span>
+</span><span id="line-10"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier">SigningKey</span></a></span><span>
+</span><span id="line-11"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>       </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Type.Common.html"><span class="hs-identifier">Cardano.CLI.Type.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Type.Common.html#SigningKeyFile"><span class="hs-identifier">SigningKeyFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.ByteString.Base16</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Base16</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">decode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier hs-type">parseSigningKeyTE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier hs-type">SigningKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span id="parseSigningKeyTE"><span class="annot"><span class="annottext">parseSigningKeyTE :: TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier hs-var hs-var">parseSigningKeyTE</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TextEnvelopeError -&gt; TxGenError)
+-&gt; Either TextEnvelopeError (SigningKey PaymentKey)
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; TxGenError
+forall e. Error e =&gt; e -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#ApiError"><span class="hs-identifier hs-var">ApiError</span></a></span><span> </span><span class="annot"><span class="annottext">(Either TextEnvelopeError (SigningKey PaymentKey)
+ -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; (TextEnvelope
+    -&gt; Either TextEnvelopeError (SigningKey PaymentKey))
+-&gt; TextEnvelope
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+-&gt; TextEnvelope -&gt; Either TextEnvelopeError (SigningKey PaymentKey)
+forall b.
+[FromSomeType HasTextEnvelope b]
+-&gt; TextEnvelope -&gt; Either TextEnvelopeError b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#deserialiseFromTextEnvelopeAnyOf"><span class="hs-identifier hs-var">deserialiseFromTextEnvelopeAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#acceptedTypes"><span class="hs-identifier hs-var">acceptedTypes</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyBase16"><span class="hs-identifier hs-type">parseSigningKeyBase16</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier hs-type">SigningKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span id="parseSigningKeyBase16"><span class="annot"><span class="annottext">parseSigningKeyBase16 :: ByteString -&gt; Either TxGenError (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyBase16"><span class="hs-identifier hs-var hs-var">parseSigningKeyBase16</span></a></span></span><span> </span><span id="local-6989586621679911173"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679911173"><span class="hs-identifier hs-var">k</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; (ByteString -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; Either String ByteString
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Either TxGenError (SigningKey PaymentKey)
+-&gt; String -&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Either TxGenError (SigningKey PaymentKey)
+ -&gt; String -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; Either TxGenError (SigningKey PaymentKey)
+-&gt; String
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGenError -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; TxGenError -&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-var">TxGenError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;parseSigningKeyBase16: ill-formed base16 encoding&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier hs-var">parseSigningKeyTE</span></a></span><span> </span><span class="annot"><span class="annottext">(TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; (ByteString -&gt; TextEnvelope)
+-&gt; ByteString
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; TextEnvelope
+</span><a href="#local-6989586621679911177"><span class="hs-identifier hs-var">asTE</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String ByteString
+</span><span class="hs-identifier hs-var">Base16.decode</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679911173"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679911177"><span class="annot"><span class="annottext">asTE :: ByteString -&gt; TextEnvelope
+</span><a href="#local-6989586621679911177"><span class="hs-identifier hs-var hs-var">asTE</span></a></span></span><span> </span><span id="local-6989586621679911182"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679911182"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-36"></span><span>          </span><span class="annot"><span class="annottext">teType :: TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teType"><span class="hs-identifier hs-var">teType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeType
+</span><span class="hs-string">&quot;PaymentSigningKeyShelley_ed25519&quot;</span></span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teDescription :: TextEnvelopeDescr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teDescription"><span class="hs-identifier hs-var">teDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeDescr
+</span><span class="hs-string">&quot;Payment Signing Key&quot;</span></span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRawCBOR :: ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teRawCBOR"><span class="hs-identifier hs-var">teRawCBOR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679911182"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#readSigningKeyFile"><span class="hs-identifier hs-type">readSigningKeyFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Type.Common.html#SigningKeyFile"><span class="hs-identifier hs-type">SigningKeyFile</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier hs-type">SigningKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span id="readSigningKeyFile"><span class="annot"><span class="annottext">readSigningKeyFile :: SigningKeyFile 'In
+-&gt; IO (Either TxGenError (SigningKey PaymentKey))
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#readSigningKeyFile"><span class="hs-identifier hs-var hs-var">readSigningKeyFile</span></a></span></span><span> </span><span id="local-6989586621679911187"><span class="annot"><span class="annottext">SigningKeyFile 'In
+</span><a href="#local-6989586621679911187"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FileError TextEnvelopeError -&gt; TxGenError)
+-&gt; Either (FileError TextEnvelopeError) (SigningKey PaymentKey)
+-&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">FileError TextEnvelopeError -&gt; TxGenError
+forall e. Error e =&gt; e -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#ApiError"><span class="hs-identifier hs-var">ApiError</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (FileError TextEnvelopeError) (SigningKey PaymentKey)
+ -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; IO
+     (Either (FileError TextEnvelopeError) (SigningKey PaymentKey))
+-&gt; IO (Either TxGenError (SigningKey PaymentKey))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+-&gt; SigningKeyFile 'In
+-&gt; IO
+     (Either (FileError TextEnvelopeError) (SigningKey PaymentKey))
+forall b content.
+[FromSomeType HasTextEnvelope b]
+-&gt; File content 'In -&gt; IO (Either (FileError TextEnvelopeError) b)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelopeAnyOf"><span class="hs-identifier hs-var">readFileTextEnvelopeAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#acceptedTypes"><span class="hs-identifier hs-var">acceptedTypes</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKeyFile 'In
+</span><a href="#local-6989586621679911187"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html#acceptedTypes"><span class="hs-identifier hs-type">acceptedTypes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier hs-type">SigningKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span id="acceptedTypes"><span class="annot"><span class="annottext">acceptedTypes :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#acceptedTypes"><span class="hs-identifier hs-var hs-var">acceptedTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">AsType (SigningKey GenesisUTxOKey)
+-&gt; (SigningKey GenesisUTxOKey -&gt; SigningKey PaymentKey)
+-&gt; FromSomeType HasTextEnvelope (SigningKey PaymentKey)
+forall (c :: * -&gt; Constraint) a b.
+c a =&gt;
+AsType a -&gt; (a -&gt; b) -&gt; FromSomeType c b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-var">FromSomeType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType GenesisUTxOKey -&gt; AsType (SigningKey GenesisUTxOKey)
+forall a. AsType a -&gt; AsType (SigningKey a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#AsSigningKey"><span class="hs-identifier hs-var">AsSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">AsType GenesisUTxOKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#AsGenesisUTxOKey"><span class="hs-identifier hs-var">AsGenesisUTxOKey</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SigningKey GenesisUTxOKey -&gt; SigningKey PaymentKey
+forall keyroleA keyroleB.
+CastSigningKeyRole keyroleA keyroleB =&gt;
+SigningKey keyroleA -&gt; SigningKey keyroleB
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#castSigningKey"><span class="hs-identifier hs-var">castSigningKey</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AsType (SigningKey PaymentKey)
+-&gt; (SigningKey PaymentKey -&gt; SigningKey PaymentKey)
+-&gt; FromSomeType HasTextEnvelope (SigningKey PaymentKey)
+forall (c :: * -&gt; Constraint) a b.
+c a =&gt;
+AsType a -&gt; (a -&gt; b) -&gt; FromSomeType c b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-var">FromSomeType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType PaymentKey -&gt; AsType (SigningKey PaymentKey)
+forall a. AsType a -&gt; AsType (SigningKey a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#AsSigningKey"><span class="hs-identifier hs-var">AsSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">AsType PaymentKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#AsPaymentKey"><span class="hs-identifier hs-var">AsPaymentKey</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey -&gt; SigningKey PaymentKey
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span></pre></body></html>

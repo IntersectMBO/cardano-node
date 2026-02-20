@@ -1,0 +1,442 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Remote.Monitoring.Prometheus</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry"><span class="hs-identifier">toPrometheusRegistry</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#registerEKGStore"><span class="hs-identifier">registerEKGStore</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier">AdapterOptions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#labels"><span class="hs-identifier">labels</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#namespace"><span class="hs-identifier">namespace</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#samplingFrequency"><span class="hs-identifier">samplingFrequency</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#defaultOptions"><span class="hs-identifier">defaultOptions</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#forkIO"><span class="hs-identifier">forkIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html"><span class="hs-identifier">Control.Monad.Trans.State.Strict</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HMap</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Lens.Micro.TH</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EKG</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Counter</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Counter</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Gauge</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gauge</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Prometheus.MetricId</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Prometheus</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Prometheus.Registry</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Prometheus</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Metrics.Prometheus.RegistryT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RegistryT</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="AdapterOptions"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-var">AdapterOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AdapterOptions"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-var">AdapterOptions</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-33"></span><span>    </span><span id="_labels"><span class="annot"><span class="annottext">AdapterOptions -&gt; Labels
+</span><a href="System.Remote.Monitoring.Prometheus.html#_labels"><span class="hs-identifier hs-var hs-var">_labels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Labels</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_namespace"><span class="annot"><span class="annottext">AdapterOptions -&gt; Maybe Text
+</span><a href="System.Remote.Monitoring.Prometheus.html#_namespace"><span class="hs-identifier hs-var hs-var">_namespace</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_samplingFrequency"><span class="annot"><span class="annottext">AdapterOptions -&gt; Int
+</span><a href="System.Remote.Monitoring.Prometheus.html#_samplingFrequency"><span class="hs-identifier hs-var hs-var">_samplingFrequency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ How often update the registry (in seconds).</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="labels"><span id="namespace"><span id="samplingFrequency"><span class="hs-identifier">makeLenses</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">AdapterOptions</span></span></span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">data</span><span> </span><span id="Metric"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#Metric"><span class="hs-identifier hs-var">Metric</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>    </span><span id="C"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#C"><span class="hs-identifier hs-var">C</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Counter.Counter</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="G"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#G"><span class="hs-identifier hs-var">G</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gauge.Gauge</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">type</span><span> </span><span id="MetricsMap"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-var">MetricsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Name</span></span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#defaultOptions"><span class="hs-identifier hs-type">defaultOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Labels</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span>
+</span><span id="line-50"></span><span id="defaultOptions"><span class="annot"><span class="annottext">defaultOptions :: Labels -&gt; AdapterOptions
+</span><a href="System.Remote.Monitoring.Prometheus.html#defaultOptions"><span class="hs-identifier hs-var hs-var">defaultOptions</span></a></span></span><span> </span><span id="local-6989586621679055323"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679055323"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Labels -&gt; Maybe Text -&gt; Int -&gt; AdapterOptions
+</span><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-var">AdapterOptions</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679055323"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-53"></span><span id="local-6989586621679055160"><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#registerEKGStore"><span class="hs-identifier hs-type">registerEKGStore</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679055160"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Store</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RegistryT</span></span><span> </span><span class="annot"><a href="#local-6989586621679055160"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-54"></span><span id="registerEKGStore"><span class="annot"><span class="annottext">registerEKGStore :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Store -&gt; AdapterOptions -&gt; RegistryT m ()
+</span><a href="System.Remote.Monitoring.Prometheus.html#registerEKGStore"><span class="hs-identifier hs-var hs-var">registerEKGStore</span></a></span></span><span> </span><span id="local-6989586621679055332"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055332"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679055333"><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055333"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateT Registry m () -&gt; RegistryT m ()
+forall (m :: * -&gt; *) a. StateT Registry m a -&gt; RegistryT m a
+</span><span class="hs-identifier hs-var">RegistryT</span></span><span> </span><span class="annot"><span class="annottext">(StateT Registry m () -&gt; RegistryT m ())
+-&gt; StateT Registry m () -&gt; RegistryT m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Registry -&gt; m ((), Registry)) -&gt; StateT Registry m ()
+forall s (m :: * -&gt; *) a. (s -&gt; m (a, s)) -&gt; StateT s m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#StateT"><span class="hs-identifier hs-var">StateT</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry -&gt; m ((), Registry)) -&gt; StateT Registry m ())
+-&gt; (Registry -&gt; m ((), Registry)) -&gt; StateT Registry m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Registry
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679055336"><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055336"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055337"><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055337"><span class="hs-identifier hs-var">mmap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Registry, MetricsMap) -&gt; m (Registry, MetricsMap)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Registry, MetricsMap) -&gt; m (Registry, MetricsMap))
+-&gt; IO (Registry, MetricsMap) -&gt; m (Registry, MetricsMap)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Store -&gt; AdapterOptions -&gt; IO (Registry, MetricsMap)
+</span><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry%27"><span class="hs-identifier hs-var">toPrometheusRegistry'</span></a></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055332"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055333"><span class="hs-identifier hs-var">opts</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">IO ThreadId -&gt; m ThreadId
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ThreadId -&gt; m ThreadId) -&gt; IO ThreadId -&gt; m ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#forkIO"><span class="hs-identifier hs-var">forkIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ThreadId) -&gt; IO () -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679055359"><span class="annot"><span class="annottext">loop :: IO a
+</span><a href="#local-6989586621679055359"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>                 </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdapterOptions -&gt; Int
+</span><a href="System.Remote.Monitoring.Prometheus.html#_samplingFrequency"><span class="hs-identifier hs-var">_samplingFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055333"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="annot"><span class="annottext">Int -&gt; Integer -&gt; Int
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                 </span><span class="annot"><span class="annottext">Store -&gt; AdapterOptions -&gt; MetricsMap -&gt; IO ()
+</span><a href="System.Remote.Monitoring.Prometheus.html#updateMetrics"><span class="hs-identifier hs-var">updateMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055332"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055333"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055337"><span class="hs-identifier hs-var">mmap</span></a></span><span>
+</span><span id="line-60"></span><span>                 </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679055359"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">IO ()
+forall {a}. IO a
+</span><a href="#local-6989586621679055359"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">((), Registry) -&gt; m ((), Registry)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055336"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-65"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry%27"><span class="hs-identifier hs-type">toPrometheusRegistry'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Store</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Registry</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span id="toPrometheusRegistry%27"><span class="annot"><span class="annottext">toPrometheusRegistry' :: Store -&gt; AdapterOptions -&gt; IO (Registry, MetricsMap)
+</span><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry%27"><span class="hs-identifier hs-var hs-var">toPrometheusRegistry'</span></a></span></span><span> </span><span id="local-6989586621679055364"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055364"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679055365"><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055365"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679055366"><span class="annot"><span class="annottext">registry :: Registry
+</span><a href="#local-6989586621679055366"><span class="hs-identifier hs-var hs-var">registry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Registry
+</span><span class="hs-identifier hs-var">Prometheus.new</span></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679055368"><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679055368"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Store -&gt; IO Sample
+</span><span class="hs-identifier hs-var">EKG.sampleAll</span></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055364"><span class="hs-identifier hs-var">store</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">((Registry, MetricsMap)
+ -&gt; (Text, Value) -&gt; IO (Registry, MetricsMap))
+-&gt; (Registry, MetricsMap)
+-&gt; [(Text, Value)]
+-&gt; IO (Registry, MetricsMap)
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdapterOptions
+-&gt; (Registry, MetricsMap)
+-&gt; (Text, Value)
+-&gt; IO (Registry, MetricsMap)
+</span><a href="System.Remote.Monitoring.Prometheus.html#mkMetric"><span class="hs-identifier hs-var">mkMetric</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055365"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055366"><span class="hs-identifier hs-var">registry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricsMap
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Sample -&gt; [(Text, Value)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HMap.toList</span></span><span> </span><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679055368"><span class="hs-identifier hs-var">samples</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-72"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry"><span class="hs-identifier hs-type">toPrometheusRegistry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Store</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Registry</span></span><span>
+</span><span id="line-73"></span><span id="toPrometheusRegistry"><span class="annot"><span class="annottext">toPrometheusRegistry :: Store -&gt; AdapterOptions -&gt; IO Registry
+</span><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry"><span class="hs-identifier hs-var hs-var">toPrometheusRegistry</span></a></span></span><span> </span><span id="local-6989586621679055374"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055374"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679055375"><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055375"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Registry, MetricsMap) -&gt; Registry
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry, MetricsMap) -&gt; Registry)
+-&gt; IO (Registry, MetricsMap) -&gt; IO Registry
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Store -&gt; AdapterOptions -&gt; IO (Registry, MetricsMap)
+</span><a href="System.Remote.Monitoring.Prometheus.html#toPrometheusRegistry%27"><span class="hs-identifier hs-var">toPrometheusRegistry'</span></a></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055374"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055375"><span class="hs-identifier hs-var">opts</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-76"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#mkMetric"><span class="hs-identifier hs-type">mkMetric</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Registry</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Value</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Registry</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span id="mkMetric"><span class="annot"><span class="annottext">mkMetric :: AdapterOptions
+-&gt; (Registry, MetricsMap)
+-&gt; (Text, Value)
+-&gt; IO (Registry, MetricsMap)
+</span><a href="System.Remote.Monitoring.Prometheus.html#mkMetric"><span class="hs-identifier hs-var hs-var">mkMetric</span></a></span></span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span class="hs-special">{</span><span id="local-6989586621679055378"><span id="local-6989586621679055379"><span id="local-6989586621679055380"><span class="annot"><span class="annottext">Int
+Maybe Text
+Labels
+_labels :: AdapterOptions -&gt; Labels
+_namespace :: AdapterOptions -&gt; Maybe Text
+_samplingFrequency :: AdapterOptions -&gt; Int
+_labels :: Labels
+_namespace :: Maybe Text
+_samplingFrequency :: Int
+</span><a href="System.Remote.Monitoring.Prometheus.html#_labels"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055381"><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055381"><span class="hs-identifier hs-var">oldRegistry</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055382"><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055382"><span class="hs-identifier hs-var">mmap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055383"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055383"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055384"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679055384"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679055385"><span class="annot"><span class="annottext">k :: Name
+</span><a href="#local-6989586621679055385"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Name
+</span><a href="System.Remote.Monitoring.Prometheus.html#mkKey"><span class="hs-identifier hs-var">mkKey</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679055379"><span class="hs-identifier hs-var">_namespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055383"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679055384"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-80"></span><span>   </span><span class="annot"><span class="hs-identifier hs-type">EKG.Counter</span></span><span> </span><span id="local-6989586621679055388"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055388"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>     </span><span class="hs-special">(</span><span id="local-6989586621679055389"><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055389"><span class="hs-identifier hs-var">counter</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055390"><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055390"><span class="hs-identifier hs-var">newRegistry</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO (Counter, Registry)
+</span><span class="hs-identifier hs-var">Prometheus.registerCounter</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679055385"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679055378"><span class="hs-identifier hs-var">_labels</span></a></span><span> </span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055381"><span class="hs-identifier hs-var">oldRegistry</span></a></span><span>
+</span><span id="line-82"></span><span>     </span><span class="annot"><span class="annottext">Int -&gt; Counter -&gt; IO ()
+</span><span class="hs-identifier hs-var">Counter.add</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055388"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055389"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-83"></span><span>     </span><span class="annot"><span class="annottext">(Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry, MetricsMap) -&gt; IO (Registry, MetricsMap))
+-&gt; (Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055390"><span class="hs-identifier hs-var">newRegistry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Name -&gt; Metric -&gt; MetricsMap -&gt; MetricsMap
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679055385"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Counter -&gt; Metric
+</span><a href="System.Remote.Monitoring.Prometheus.html#C"><span class="hs-identifier hs-var">C</span></a></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055389"><span class="hs-identifier hs-var">counter</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; MetricsMap) -&gt; MetricsMap -&gt; MetricsMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055382"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>   </span><span class="annot"><span class="hs-identifier hs-type">EKG.Gauge</span></span><span> </span><span id="local-6989586621679055396"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055396"><span class="hs-identifier hs-var">g</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>     </span><span class="hs-special">(</span><span id="local-6989586621679055397"><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679055397"><span class="hs-identifier hs-var">gauge</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055398"><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055398"><span class="hs-identifier hs-var">newRegistry</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO (Gauge, Registry)
+</span><span class="hs-identifier hs-var">Prometheus.registerGauge</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679055385"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679055378"><span class="hs-identifier hs-var">_labels</span></a></span><span> </span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055381"><span class="hs-identifier hs-var">oldRegistry</span></a></span><span>
+</span><span id="line-86"></span><span>     </span><span class="annot"><span class="annottext">Double -&gt; Gauge -&gt; IO ()
+</span><span class="hs-identifier hs-var">Gauge.set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055396"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679055397"><span class="hs-identifier hs-var">gauge</span></a></span><span>
+</span><span id="line-87"></span><span>     </span><span class="annot"><span class="annottext">(Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry, MetricsMap) -&gt; IO (Registry, MetricsMap))
+-&gt; (Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055398"><span class="hs-identifier hs-var">newRegistry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Name -&gt; Metric -&gt; MetricsMap -&gt; MetricsMap
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679055385"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Gauge -&gt; Metric
+</span><a href="System.Remote.Monitoring.Prometheus.html#G"><span class="hs-identifier hs-var">G</span></a></span><span> </span><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679055397"><span class="hs-identifier hs-var">gauge</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; MetricsMap) -&gt; MetricsMap -&gt; MetricsMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055382"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>   </span><span class="annot"><span class="hs-identifier hs-type">EKG.Label</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry, MetricsMap) -&gt; IO (Registry, MetricsMap))
+-&gt; (Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055381"><span class="hs-identifier hs-var">oldRegistry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055382"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>   </span><span class="annot"><span class="hs-identifier hs-type">EKG.Distribution</span></span><span> </span><span class="annot"><span class="annottext">Stats
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((Registry, MetricsMap) -&gt; IO (Registry, MetricsMap))
+-&gt; (Registry, MetricsMap) -&gt; IO (Registry, MetricsMap)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679055381"><span class="hs-identifier hs-var">oldRegistry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055382"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#updateMetrics"><span class="hs-identifier hs-type">updateMetrics</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Store</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span id="updateMetrics"><span class="annot"><span class="annottext">updateMetrics :: Store -&gt; AdapterOptions -&gt; MetricsMap -&gt; IO ()
+</span><a href="System.Remote.Monitoring.Prometheus.html#updateMetrics"><span class="hs-identifier hs-var hs-var">updateMetrics</span></a></span></span><span> </span><span id="local-6989586621679055403"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055403"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679055404"><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055404"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679055405"><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055405"><span class="hs-identifier hs-var">mmap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679055406"><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679055406"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Store -&gt; IO Sample
+</span><span class="hs-identifier hs-var">EKG.sampleAll</span></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679055403"><span class="hs-identifier hs-var">store</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><span class="annottext">() -&gt; MetricsMap -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; ()) -&gt; IO MetricsMap -&gt; IO ()
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; (Text, Value) -&gt; IO MetricsMap)
+-&gt; MetricsMap -&gt; [(Text, Value)] -&gt; IO MetricsMap
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdapterOptions -&gt; MetricsMap -&gt; (Text, Value) -&gt; IO MetricsMap
+</span><a href="System.Remote.Monitoring.Prometheus.html#updateMetric"><span class="hs-identifier hs-var">updateMetric</span></a></span><span> </span><span class="annot"><span class="annottext">AdapterOptions
+</span><a href="#local-6989586621679055404"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055405"><span class="hs-identifier hs-var">mmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Sample -&gt; [(Text, Value)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HMap.toList</span></span><span> </span><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679055406"><span class="hs-identifier hs-var">samples</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-99"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#mkKey"><span class="hs-identifier hs-type">mkKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Prometheus.Name</span></span><span>
+</span><span id="line-100"></span><span id="mkKey"><span class="annot"><span class="annottext">mkKey :: Maybe Text -&gt; Text -&gt; Name
+</span><a href="System.Remote.Monitoring.Prometheus.html#mkKey"><span class="hs-identifier hs-var hs-var">mkKey</span></a></span></span><span> </span><span id="local-6989586621679055409"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679055409"><span class="hs-identifier hs-var">mbNs</span></a></span></span><span> </span><span id="local-6989586621679055410"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055410"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Name
+</span><span class="hs-identifier hs-var">Prometheus.Name</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Name) -&gt; Text -&gt; Name
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; Maybe Text -&gt; Text
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679055413"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055413"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055413"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679055409"><span class="hs-identifier hs-var">mbNs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">T.replace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055410"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-104"></span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#updateMetric"><span class="hs-identifier hs-type">updateMetric</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Value</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#MetricsMap"><span class="hs-identifier hs-type">MetricsMap</span></a></span><span>
+</span><span id="line-105"></span><span id="updateMetric"><span class="annot"><span class="annottext">updateMetric :: AdapterOptions -&gt; MetricsMap -&gt; (Text, Value) -&gt; IO MetricsMap
+</span><a href="System.Remote.Monitoring.Prometheus.html#updateMetric"><span class="hs-identifier hs-var hs-var">updateMetric</span></a></span></span><span> </span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#AdapterOptions"><span class="hs-identifier hs-type">AdapterOptions</span></a></span><span class="hs-special">{</span><span id="local-6989586621679055415"><span id="local-6989586621679055416"><span id="local-6989586621679055417"><span class="annot"><span class="annottext">Int
+Maybe Text
+Labels
+_labels :: AdapterOptions -&gt; Labels
+_namespace :: AdapterOptions -&gt; Maybe Text
+_samplingFrequency :: AdapterOptions -&gt; Int
+_labels :: Labels
+_namespace :: Maybe Text
+_samplingFrequency :: Int
+</span><a href="System.Remote.Monitoring.Prometheus.html#_labels"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679055418"><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055418"><span class="hs-identifier hs-var">mmap</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679055419"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055419"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679055420"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679055420"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679055421"><span class="annot"><span class="annottext">k :: Name
+</span><a href="#local-6989586621679055421"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Name
+</span><a href="System.Remote.Monitoring.Prometheus.html#mkKey"><span class="hs-identifier hs-var">mkKey</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679055416"><span class="hs-identifier hs-var">_namespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679055419"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(Metric -&gt; Value -&gt; (Metric, Value))
+-&gt; Maybe Metric -&gt; Maybe Value -&gt; Maybe (Metric, Value)
+forall (m :: * -&gt; *) a1 a2 r.
+Monad m =&gt;
+(a1 -&gt; a2 -&gt; r) -&gt; m a1 -&gt; m a2 -&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM2"><span class="hs-identifier hs-var">liftM2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name -&gt; MetricsMap -&gt; Maybe Metric
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679055421"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055418"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Maybe Value
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679055420"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span id="local-6989586621679055424"><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055424"><span class="hs-identifier hs-var">counter</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">EKG.Counter</span></span><span> </span><span id="local-6989586621679055425"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055425"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Counter.CounterSample</span></span><span> </span><span id="local-6989586621679055427"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679055427"><span class="hs-identifier hs-var">oldCounterValue</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Counter -&gt; IO CounterSample
+</span><span class="hs-identifier hs-var">Counter.sample</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055424"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679055433"><span class="annot"><span class="annottext">slack :: Int64
+</span><a href="#local-6989586621679055433"><span class="hs-identifier hs-var hs-var">slack</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055425"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Int64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679055427"><span class="hs-identifier hs-var">oldCounterValue</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055433"><span class="hs-identifier hs-var">slack</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Counter -&gt; IO ()
+</span><span class="hs-identifier hs-var">Counter.add</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055433"><span class="hs-identifier hs-var">slack</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679055424"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">MetricsMap -&gt; IO MetricsMap
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; IO MetricsMap) -&gt; MetricsMap -&gt; IO MetricsMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055418"><span class="hs-identifier hs-var">mmap</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Remote.Monitoring.Prometheus.html#G"><span class="hs-identifier hs-type">G</span></a></span><span> </span><span id="local-6989586621679055435"><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679055435"><span class="hs-identifier hs-var">gauge</span></a></span></span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="hs-identifier hs-type">EKG.Gauge</span></span><span> </span><span id="local-6989586621679055436"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055436"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Double -&gt; Gauge -&gt; IO ()
+</span><span class="hs-identifier hs-var">Gauge.set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679055436"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679055435"><span class="hs-identifier hs-var">gauge</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">MetricsMap -&gt; IO MetricsMap
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(MetricsMap -&gt; IO MetricsMap) -&gt; MetricsMap -&gt; IO MetricsMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055418"><span class="hs-identifier hs-var">mmap</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Metric, Value)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MetricsMap -&gt; IO MetricsMap
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsMap
+</span><a href="#local-6989586621679055418"><span class="hs-identifier hs-var">mmap</span></a></span><span>
+</span><span id="line-117"></span></pre></body></html>

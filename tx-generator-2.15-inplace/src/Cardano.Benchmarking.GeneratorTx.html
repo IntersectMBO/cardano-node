@@ -1,0 +1,671 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BlockArguments #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-missed-specialisations #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">{- HLINT ignore &quot;Redundant &lt;$&gt;&quot; -}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.GeneratorTx</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#AsyncBenchmarkControl"><span class="hs-identifier">AsyncBenchmarkControl</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#walletBenchmark"><span class="hs-identifier">walletBenchmark</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-comment">-- , readSigningKey</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#waitBenchmark"><span class="hs-identifier">waitBenchmark</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#txFee"><span class="hs-identifier">txFee</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-b08e3f10ac67686f844490194d42c8b896b967039865fa47c4dab26931493b55/share/doc/html/src/Cardano.Binary.FromCBOR.html#label"><span class="hs-keyword">label</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html"><span class="hs-identifier">Cardano.Benchmarking.GeneratorTx.NodeToNode</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.Submission.html"><span class="hs-identifier">Cardano.Benchmarking.GeneratorTx.Submission</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.SubmissionClient.html"><span class="hs-identifier">Cardano.Benchmarking.GeneratorTx.SubmissionClient</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html"><span class="hs-identifier">Cardano.Benchmarking.LogTypes</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.TpsThrottle.html"><span class="hs-identifier">Cardano.Benchmarking.TpsThrottle</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Types.html"><span class="hs-identifier">Cardano.Benchmarking.Types</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html"><span class="hs-identifier">Cardano.Benchmarking.Wallet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#TxStream"><span class="hs-identifier">TxStream</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-node-10.6.2/doc/html/cardano-node/src/Cardano.Node.Configuration.NodeAddress.html"><span class="hs-identifier">Cardano.Node.Configuration.NodeAddress</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html"><span class="hs-identifier">Cardano.TxGenerator.Setup.NixService</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Nix</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#NodeDescription"><span class="hs-identifier">NodeDescription</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Types.html#NumberOfTxs"><span class="hs-identifier">NumberOfTxs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TPSRate"><span class="hs-identifier">TPSRate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html"><span class="hs-identifier">Control.Concurrent.STM.TMVar</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#newEmptyTMVar"><span class="hs-identifier">newEmptyTMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Monad.STM.html"><span class="hs-identifier">Control.Monad.STM</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unwords"><span class="hs-identifier">unwords</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Clock</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Data.Tuple.Extra.html"><span class="hs-identifier">Data.Tuple.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Data.Tuple.Extra.html#secondM"><span class="hs-identifier">secondM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Conc</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier">labelThread</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- For some reason, stylish-haskell wants to delete this.</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,18,0)
+</span><span class="hs-comment">--- fromMaybe is imported via Cardano.Prelude</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--- However, this configuration actually uses it.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--- import           Data.Maybe (fromMaybe)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html"><span class="hs-identifier">GHC.Conc.Sync</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Conc</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#threadLabel"><span class="hs-identifier">threadLabel</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.html"><span class="hs-identifier">Network.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier">AddrInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfoFlag"><span class="hs-identifier">AddrInfoFlag</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#Family"><span class="hs-identifier">Family</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#SocketType"><span class="hs-identifier">SocketType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#Stream"><span class="hs-identifier">Stream</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>                   </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrFamily"><span class="hs-identifier">addrFamily</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrFlags"><span class="hs-identifier">addrFlags</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrSocketType"><span class="hs-identifier">addrSocketType</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#defaultHints"><span class="hs-identifier">defaultHints</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#getAddrInfo"><span class="hs-identifier">getAddrInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#waitBenchmark"><span class="hs-identifier hs-type">waitBenchmark</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubmit"><span class="hs-identifier hs-type">TraceBenchTxSubmit</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#AsyncBenchmarkControl"><span class="hs-identifier hs-type">AsyncBenchmarkControl</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span id="waitBenchmark"><span class="annot"><span class="annottext">waitBenchmark :: Trace IO (TraceBenchTxSubmit TxId)
+-&gt; AsyncBenchmarkControl -&gt; ExceptT TxGenError IO ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#waitBenchmark"><span class="hs-identifier hs-var hs-var">waitBenchmark</span></a></span></span><span> </span><span id="local-6989586621679927562"><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927562"><span class="hs-identifier hs-var">traceSubmit</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#AsyncBenchmarkControl"><span class="hs-identifier hs-type">AsyncBenchmarkControl</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679927564"><span id="local-6989586621679927565"><span id="local-6989586621679927566"><span id="local-6989586621679927567"><span class="annot"><span class="annottext">[Async ()]
+IO ()
+IO SubmissionSummary
+Async ()
+abcFeeder :: Async ()
+abcWorkers :: [Async ()]
+abcSummary :: IO SubmissionSummary
+abcShutdown :: IO ()
+abcFeeder :: AsyncBenchmarkControl -&gt; Async ()
+abcWorkers :: AsyncBenchmarkControl -&gt; [Async ()]
+abcSummary :: AsyncBenchmarkControl -&gt; IO SubmissionSummary
+abcShutdown :: AsyncBenchmarkControl -&gt; IO ()
+</span><a href="#local-6989586621679927564"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ExceptT TxGenError IO ()
+forall a. IO a -&gt; ExceptT TxGenError IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ExceptT TxGenError IO ())
+-&gt; IO () -&gt; ExceptT TxGenError IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">(Async () -&gt; IO (Either SomeException ())) -&gt; [Async ()] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="annot"><span class="annottext">Async () -&gt; IO (Either SomeException ())
+forall a. Async a -&gt; IO (Either SomeException a)
+</span><span class="hs-identifier hs-var">waitCatch</span></span><span> </span><span class="annot"><span class="annottext">([Async ()] -&gt; IO ()) -&gt; [Async ()] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927564"><span class="hs-identifier hs-var">abcFeeder</span></a></span><span> </span><span class="annot"><span class="annottext">Async () -&gt; [Async ()] -&gt; [Async ()]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Async ()]
+</span><a href="#local-6989586621679927565"><span class="hs-identifier hs-var">abcWorkers</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927562"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceBenchTxSubmit TxId -&gt; IO ())
+-&gt; (SubmissionSummary -&gt; TraceBenchTxSubmit TxId)
+-&gt; SubmissionSummary
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SubmissionSummary -&gt; TraceBenchTxSubmit TxId
+forall txid. SubmissionSummary -&gt; TraceBenchTxSubmit txid
+</span><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubSummary"><span class="hs-identifier hs-var">TraceBenchTxSubSummary</span></a></span><span> </span><span class="annot"><span class="annottext">(SubmissionSummary -&gt; IO ()) -&gt; IO SubmissionSummary -&gt; IO ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO SubmissionSummary
+</span><a href="#local-6989586621679927566"><span class="hs-identifier hs-var">abcSummary</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#lookupNodeAddress"><span class="hs-identifier hs-type">lookupNodeAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-node-10.6.2/doc/html/cardano-node/src/Cardano.Node.Configuration.NodeAddress.html#NodeIPv4Address"><span class="hs-identifier hs-type">NodeIPv4Address</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">AddrInfo</span></a></span><span>
+</span><span id="line-65"></span><span id="lookupNodeAddress"><span class="annot"><span class="annottext">lookupNodeAddress :: NodeIPv4Address -&gt; IO AddrInfo
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#lookupNodeAddress"><span class="hs-identifier hs-var hs-var">lookupNodeAddress</span></a></span></span><span> </span><span id="local-6989586621679927580"><span class="annot"><span class="annottext">NodeIPv4Address
+</span><a href="#local-6989586621679927580"><span class="hs-identifier hs-var">node</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679927581"><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927581"><span class="hs-identifier hs-var">remoteAddr</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[AddrInfo]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe AddrInfo -&gt; Maybe HostName -&gt; Maybe HostName -&gt; IO [AddrInfo]
+forall (t :: * -&gt; *).
+GetAddrInfo t =&gt;
+Maybe AddrInfo
+-&gt; Maybe HostName -&gt; Maybe HostName -&gt; IO (t AddrInfo)
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#getAddrInfo"><span class="hs-identifier hs-var">getAddrInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrInfo -&gt; Maybe AddrInfo
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927582"><span class="hs-identifier hs-var">hints</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; Maybe HostName
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927583"><span class="hs-identifier hs-var">targetNodeHost</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; Maybe HostName
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927584"><span class="hs-identifier hs-var">targetNodePort</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">AddrInfo -&gt; IO AddrInfo
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927581"><span class="hs-identifier hs-var">remoteAddr</span></a></span><span>
+</span><span id="line-68"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679927583"><span class="annot"><span class="annottext">targetNodeHost :: HostName
+</span><a href="#local-6989586621679927583"><span class="hs-identifier hs-var hs-var">targetNodeHost</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IPv4 -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(IPv4 -&gt; HostName)
+-&gt; (NodeHostIPv4Address -&gt; IPv4) -&gt; NodeHostIPv4Address -&gt; HostName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NodeHostIPv4Address -&gt; IPv4
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-node-10.6.2/doc/html/cardano-node/src/Cardano.Node.Configuration.NodeAddress.html#unNodeHostIPv4Address"><span class="hs-identifier hs-var">unNodeHostIPv4Address</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeHostIPv4Address -&gt; HostName)
+-&gt; NodeHostIPv4Address -&gt; HostName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address -&gt; NodeHostIPv4Address
+forall addr. NodeAddress' addr -&gt; addr
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-node-10.6.2/doc/html/cardano-node/src/Cardano.Node.Configuration.NodeAddress.html#naHostAddress"><span class="hs-identifier hs-var">naHostAddress</span></a></span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address
+</span><a href="#local-6989586621679927580"><span class="hs-identifier hs-var">node</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679927584"><span class="annot"><span class="annottext">targetNodePort :: HostName
+</span><a href="#local-6989586621679927584"><span class="hs-identifier hs-var hs-var">targetNodePort</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PortNumber -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(PortNumber -&gt; HostName) -&gt; PortNumber -&gt; HostName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address -&gt; PortNumber
+forall addr. NodeAddress' addr -&gt; PortNumber
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-node-10.6.2/doc/html/cardano-node/src/Cardano.Node.Configuration.NodeAddress.html#naPort"><span class="hs-identifier hs-var">naPort</span></a></span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address
+</span><a href="#local-6989586621679927580"><span class="hs-identifier hs-var">node</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="#local-6989586621679927582"><span class="hs-identifier hs-type">hints</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">AddrInfo</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679927582"><span class="annot"><span class="annottext">hints :: AddrInfo
+</span><a href="#local-6989586621679927582"><span class="hs-identifier hs-var hs-var">hints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#defaultHints"><span class="hs-identifier hs-var">defaultHints</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrFlags"><span class="hs-identifier hs-var">addrFlags</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AI_PASSIVE"><span class="hs-identifier hs-type">AI_PASSIVE</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrFamily"><span class="hs-identifier hs-var">addrFamily</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#AF_INET"><span class="hs-identifier hs-type">AF_INET</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrSocketType"><span class="hs-identifier hs-var">addrSocketType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrCanonName"><span class="hs-identifier hs-var">addrCanonName</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-type">Nothing</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#handleTxSubmissionClientError"><span class="hs-identifier hs-type">handleTxSubmissionClientError</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-80"></span><span>     </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubmit"><span class="hs-identifier hs-type">TraceBenchTxSubmit</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">Network.Socket.AddrInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#ReportRef"><span class="hs-identifier hs-type">ReportRef</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#SubmissionErrorPolicy"><span class="hs-identifier hs-type">SubmissionErrorPolicy</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span id="handleTxSubmissionClientError"><span class="annot"><span class="annottext">handleTxSubmissionClientError :: Trace IO (TraceBenchTxSubmit TxId)
+-&gt; (HostName, AddrInfo)
+-&gt; ReportRef
+-&gt; SubmissionErrorPolicy
+-&gt; SomeException
+-&gt; IO ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#handleTxSubmissionClientError"><span class="hs-identifier hs-var hs-var">handleTxSubmissionClientError</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679927601"><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927601"><span class="hs-identifier hs-var">traceSubmit</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679927602"><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927602"><span class="hs-identifier hs-var">remoteName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679927603"><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927603"><span class="hs-identifier hs-var">remoteAddr</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679927604"><span class="annot"><span class="annottext">ReportRef
+</span><a href="#local-6989586621679927604"><span class="hs-identifier hs-var">reportRef</span></a></span></span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679927605"><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="#local-6989586621679927605"><span class="hs-identifier hs-var">errorPolicy</span></a></span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span> </span><span id="local-6989586621679927617"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679927617"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679927618"><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927618"><span class="hs-identifier hs-var">tid</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_base(4,18,0)
+</span><span>    </span><span id="local-6989586621679927620"><span class="annot"><span class="annottext">Maybe HostName
+</span><a href="#local-6989586621679927620"><span class="hs-keyword hs-var">label</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; IO (Maybe HostName)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#threadLabel"><span class="hs-identifier hs-var">Conc.threadLabel</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927618"><span class="hs-identifier hs-var">tid</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927624"><span class="annot"><span class="annottext">labelStr :: HostName
+</span><a href="#local-6989586621679927624"><span class="hs-identifier hs-var hs-var">labelStr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; Maybe HostName -&gt; HostName
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;(unlabelled)&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe HostName
+</span><a href="#local-6989586621679927620"><span class="hs-keyword hs-var">label</span></a></span><span class="hs-cpp">
+#else
+</span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-identifier">labelStr</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-string">&quot;(base version too low to examine thread labels)&quot;</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927637"><span class="annot"><span class="annottext">errDesc :: HostName
+</span><a href="#local-6989586621679927637"><span class="hs-identifier hs-var hs-var">errDesc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[HostName] -&gt; HostName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unwords"><span class="hs-identifier hs-var">List.unwords</span></a></span><span>
+</span><span id="line-100"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;Thread&quot;</span></span><span>
+</span><span id="line-101"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927618"><span class="hs-identifier hs-var">tid</span></a></span><span>
+</span><span id="line-102"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927624"><span class="hs-identifier hs-var">labelStr</span></a></span><span>
+</span><span id="line-103"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;Exception while talking to peer &quot;</span></span><span>
+</span><span id="line-104"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927602"><span class="hs-identifier hs-var">remoteName</span></a></span><span>
+</span><span id="line-105"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrInfo -&gt; SockAddr
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrAddress"><span class="hs-identifier hs-var">addrAddress</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927603"><span class="hs-identifier hs-var">remoteAddr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;):&quot;</span></span><span>
+</span><span id="line-106"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">e -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679927617"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">ReportRef -&gt; Either HostName SubmissionThreadReport -&gt; IO ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+ReportRef -&gt; Either HostName SubmissionThreadReport -&gt; m ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#submitThreadReport"><span class="hs-identifier hs-var">submitThreadReport</span></a></span><span> </span><span class="annot"><span class="annottext">ReportRef
+</span><a href="#local-6989586621679927604"><span class="hs-identifier hs-var">reportRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; Either HostName SubmissionThreadReport
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927637"><span class="hs-identifier hs-var">errDesc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="#local-6989586621679927605"><span class="hs-identifier hs-var">errorPolicy</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="Cardano.Benchmarking.Types.html#FailOnError"><span class="hs-identifier hs-var">FailOnError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">e -&gt; IO ()
+forall (m :: * -&gt; *) e a. (MonadIO m, Exception e) =&gt; e -&gt; m a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679927617"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="Cardano.Benchmarking.Types.html#LogErrors"><span class="hs-identifier hs-var">LogErrors</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927601"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceBenchTxSubmit TxId -&gt; IO ())
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">Text -&gt; TraceBenchTxSubmit TxId
+forall txid. Text -&gt; TraceBenchTxSubmit txid
+</span><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubError"><span class="hs-identifier hs-var">TraceBenchTxSubError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927637"><span class="hs-identifier hs-var">errDesc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.html#walletBenchmark"><span class="hs-identifier hs-type">walletBenchmark</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679927467"><span class="annot"><a href="#local-6989586621679927467"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927467"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubmit"><span class="hs-identifier hs-type">TraceBenchTxSubmit</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#NodeToNodeSubmissionTrace"><span class="hs-identifier hs-type">NodeToNodeSubmissionTrace</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.GeneratorTx.NodeToNode.html#ConnectClient"><span class="hs-identifier hs-type">ConnectClient</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#NodeDescription"><span class="hs-identifier hs-type">NodeDescription</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TPSRate"><span class="hs-identifier hs-type">TPSRate</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Types.html#SubmissionErrorPolicy"><span class="hs-identifier hs-type">SubmissionErrorPolicy</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927467"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- this is used in newTpsThrottle to limit the tx-count !</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- This should not be needed, the stream should do it itself (but it does not!)</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#NumberOfTxs"><span class="hs-identifier hs-type">NumberOfTxs</span></a></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- This is TxStream is used in a wrong way !</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- It is used multithreaded here ! And every thread gets its own copy of the stream !!</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- This is a BUG it only works by coincidence !</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- Todo: Use the stream behind an MVar !</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#TxStream"><span class="hs-identifier hs-type">TxStream</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679927467"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#AsyncBenchmarkControl"><span class="hs-identifier hs-type">AsyncBenchmarkControl</span></a></span><span>
+</span><span id="line-130"></span><span id="walletBenchmark"><span class="annot"><span class="annottext">walletBenchmark :: forall era.
+IsShelleyBasedEra era =&gt;
+Trace IO (TraceBenchTxSubmit TxId)
+-&gt; Trace IO NodeToNodeSubmissionTrace
+-&gt; ConnectClient
+-&gt; NonEmpty NodeDescription
+-&gt; TPSRate
+-&gt; SubmissionErrorPolicy
+-&gt; AsType era
+-&gt; NumberOfTxs
+-&gt; TxStream IO era
+-&gt; ExceptT TxGenError IO AsyncBenchmarkControl
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#walletBenchmark"><span class="hs-identifier hs-var hs-var">walletBenchmark</span></a></span></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679927705"><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679927706"><span class="annot"><span class="annottext">Trace IO NodeToNodeSubmissionTrace
+</span><a href="#local-6989586621679927706"><span class="hs-identifier hs-var">traceN2N</span></a></span></span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679927707"><span class="annot"><span class="annottext">ConnectClient
+</span><a href="#local-6989586621679927707"><span class="hs-identifier hs-var">connectClient</span></a></span></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679927708"><span class="annot"><span class="annottext">NonEmpty NodeDescription
+</span><a href="#local-6989586621679927708"><span class="hs-identifier hs-var">targets</span></a></span></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679927709"><span class="annot"><span class="annottext">TPSRate
+</span><a href="#local-6989586621679927709"><span class="hs-identifier hs-var">tpsRate</span></a></span></span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621679927710"><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="#local-6989586621679927710"><span class="hs-identifier hs-var">errorPolicy</span></a></span></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679927711"><span class="annot"><span class="annottext">AsType era
+</span><a href="#local-6989586621679927711"><span class="hs-identifier hs-var">_era</span></a></span></span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679927712"><span class="annot"><span class="annottext">NumberOfTxs
+</span><a href="#local-6989586621679927712"><span class="hs-identifier hs-var">count</span></a></span></span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679927713"><span class="annot"><span class="annottext">TxStream IO era
+</span><a href="#local-6989586621679927713"><span class="hs-identifier hs-var">txSource</span></a></span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO AsyncBenchmarkControl
+-&gt; ExceptT TxGenError IO AsyncBenchmarkControl
+forall a. IO a -&gt; ExceptT TxGenError IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO AsyncBenchmarkControl
+ -&gt; ExceptT TxGenError IO AsyncBenchmarkControl)
+-&gt; IO AsyncBenchmarkControl
+-&gt; ExceptT TxGenError IO AsyncBenchmarkControl
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><span class="annottext">HostName -&gt; IO ()
+</span><a href="#local-6989586621679927714"><span class="hs-identifier hs-var">traceDebug</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;******* Tx generator, phase 2: pay to recipients *******&quot;</span></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927719"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679927719"><span class="hs-identifier hs-var">numTargets</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Natural.html#Natural"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NumberOfTxs -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(NumberOfTxs -&gt; Natural) -&gt; NumberOfTxs -&gt; Natural
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeDescription -&gt; NumberOfTxs
+forall a. NonEmpty a -&gt; NumberOfTxs
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html#length"><span class="hs-identifier hs-var">NE.length</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeDescription
+</span><a href="#local-6989586621679927708"><span class="hs-identifier hs-var">targets</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><a href="#local-6989586621679927721"><span class="hs-identifier hs-type">lookupTarget</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#NodeDescription"><span class="hs-identifier hs-type">NodeDescription</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#AddrInfo"><span class="hs-identifier hs-type">AddrInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span id="local-6989586621679927721"><span class="annot"><span class="annottext">lookupTarget :: NodeDescription -&gt; IO (HostName, AddrInfo)
+</span><a href="#local-6989586621679927721"><span class="hs-identifier hs-var hs-var">lookupTarget</span></a></span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NixService.html#NodeDescription"><span class="hs-identifier hs-type">NodeDescription</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679927723"><span id="local-6989586621679927724"><span class="annot"><span class="annottext">HostName
+NodeIPv4Address
+ndAddr :: NodeIPv4Address
+ndName :: HostName
+ndAddr :: NodeDescription -&gt; NodeIPv4Address
+ndName :: NodeDescription -&gt; HostName
+</span><a href="#local-6989586621679927723"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NodeIPv4Address -&gt; IO AddrInfo)
+-&gt; (HostName, NodeIPv4Address) -&gt; IO (HostName, AddrInfo)
+forall (m :: * -&gt; *) b b' a.
+Functor m =&gt;
+(b -&gt; m b') -&gt; (a, b) -&gt; m (a, b')
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Data.Tuple.Extra.html#secondM"><span class="hs-identifier hs-var">secondM</span></a></span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address -&gt; IO AddrInfo
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#lookupNodeAddress"><span class="hs-identifier hs-var">lookupNodeAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927724"><span class="hs-identifier hs-var">ndName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NodeIPv4Address
+</span><a href="#local-6989586621679927723"><span class="hs-identifier hs-var">ndAddr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621679927727"><span class="annot"><span class="annottext">NonEmpty (HostName, AddrInfo)
+</span><a href="#local-6989586621679927727"><span class="hs-identifier hs-var">remoteAddresses</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeDescription
+-&gt; (NodeDescription -&gt; IO (HostName, AddrInfo))
+-&gt; IO (NonEmpty (HostName, AddrInfo))
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m (t b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#forM"><span class="hs-identifier hs-var">forM</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeDescription
+</span><a href="#local-6989586621679927708"><span class="hs-identifier hs-var">targets</span></a></span><span> </span><span class="annot"><span class="annottext">NodeDescription -&gt; IO (HostName, AddrInfo)
+</span><a href="#local-6989586621679927721"><span class="hs-identifier hs-var">lookupTarget</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><span class="annottext">HostName -&gt; IO ()
+</span><a href="#local-6989586621679927714"><span class="hs-identifier hs-var">traceDebug</span></a></span><span> </span><span class="annot"><span class="annottext">(HostName -&gt; IO ()) -&gt; HostName -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;******* Tx generator, launching Tx peers:  &quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">NumberOfTxs -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty (HostName, AddrInfo) -&gt; NumberOfTxs
+forall a. NonEmpty a -&gt; NumberOfTxs
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html#length"><span class="hs-identifier hs-var">NE.length</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (HostName, AddrInfo)
+</span><a href="#local-6989586621679927727"><span class="hs-identifier hs-var">remoteAddresses</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot; of them&quot;</span></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679927729"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679927729"><span class="hs-identifier hs-var">startTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#getCurrentTime"><span class="hs-identifier hs-var">Clock.getCurrentTime</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621679927731"><span class="annot"><span class="annottext">TpsThrottle
+</span><a href="#local-6989586621679927731"><span class="hs-identifier hs-var">tpsThrottle</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NumberOfTxs -&gt; NumberOfTxs -&gt; TPSRate -&gt; IO TpsThrottle
+</span><a href="Cardano.Benchmarking.TpsThrottle.html#newTpsThrottle"><span class="hs-identifier hs-var">newTpsThrottle</span></a></span><span> </span><span class="annot"><span class="annottext">NumberOfTxs
+</span><span class="hs-number">32</span></span><span> </span><span class="annot"><span class="annottext">NumberOfTxs
+</span><a href="#local-6989586621679927712"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">TPSRate
+</span><a href="#local-6989586621679927709"><span class="hs-identifier hs-var">tpsRate</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621679927733"><span class="annot"><span class="annottext">MVar (StreamState (TxStream IO era))
+</span><a href="#local-6989586621679927733"><span class="hs-identifier hs-var">txStreamRef</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamState (TxStream IO era)
+-&gt; IO (MVar (StreamState (TxStream IO era)))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(StreamState (TxStream IO era)
+ -&gt; IO (MVar (StreamState (TxStream IO era))))
+-&gt; StreamState (TxStream IO era)
+-&gt; IO (MVar (StreamState (TxStream IO era)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxStream IO era -&gt; StreamState (TxStream IO era)
+forall x. x -&gt; StreamState x
+</span><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#StreamActive"><span class="hs-identifier hs-var">StreamActive</span></a></span><span> </span><span class="annot"><span class="annottext">TxStream IO era
+</span><a href="#local-6989586621679927713"><span class="hs-identifier hs-var">txSource</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679927736"><span class="annot"><span class="annottext">[ReportRef]
+</span><a href="#local-6989586621679927736"><span class="hs-identifier hs-var">reportRefs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM [ReportRef] -&gt; IO [ReportRef]
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">NumberOfTxs -&gt; STM ReportRef -&gt; STM [ReportRef]
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+NumberOfTxs -&gt; m a -&gt; m [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#replicateM"><span class="hs-identifier hs-var">replicateM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; NumberOfTxs
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679927719"><span class="hs-identifier hs-var">numTargets</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">STM ReportRef
+forall a. STM (TMVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#newEmptyTMVar"><span class="hs-identifier hs-var">STM.newEmptyTMVar</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927738"><span class="annot"><span class="annottext">asyncList :: [(ReportRef, (HostName, AddrInfo))]
+</span><a href="#local-6989586621679927738"><span class="hs-identifier hs-var hs-var">asyncList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ReportRef]
+-&gt; [(HostName, AddrInfo)] -&gt; [(ReportRef, (HostName, AddrInfo))]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="annot"><span class="annottext">[ReportRef]
+</span><a href="#local-6989586621679927736"><span class="hs-identifier hs-var">reportRefs</span></a></span><span> </span><span class="annot"><span class="annottext">([(HostName, AddrInfo)] -&gt; [(ReportRef, (HostName, AddrInfo))])
+-&gt; [(HostName, AddrInfo)] -&gt; [(ReportRef, (HostName, AddrInfo))]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (HostName, AddrInfo) -&gt; [(HostName, AddrInfo)]
+forall a. NonEmpty a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html#toList"><span class="hs-identifier hs-var">NE.toList</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (HostName, AddrInfo)
+</span><a href="#local-6989586621679927727"><span class="hs-identifier hs-var">remoteAddresses</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679927740"><span class="annot"><span class="annottext">[Async ()]
+</span><a href="#local-6989586621679927740"><span class="hs-identifier hs-var">abcWorkers</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(ReportRef, (HostName, AddrInfo))]
+-&gt; ((ReportRef, (HostName, AddrInfo)) -&gt; IO (Async ()))
+-&gt; IO [Async ()]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m (t b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#forM"><span class="hs-identifier hs-var">forM</span></a></span><span> </span><span class="annot"><span class="annottext">[(ReportRef, (HostName, AddrInfo))]
+</span><a href="#local-6989586621679927738"><span class="hs-identifier hs-var">asyncList</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679927741"><span class="annot"><span class="annottext">ReportRef
+</span><a href="#local-6989586621679927741"><span class="hs-identifier hs-var">reportRef</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679927742"><span class="annot"><span class="annottext">remoteInfo :: (HostName, AddrInfo)
+</span><a href="#local-6989586621679927742"><span class="hs-identifier hs-var">remoteInfo</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679927743"><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927743"><span class="hs-identifier hs-var">remoteName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679927744"><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927744"><span class="hs-identifier hs-var">remoteAddrInfo</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927745"><span class="annot"><span class="annottext">errorHandler :: SomeException -&gt; IO ()
+</span><a href="#local-6989586621679927745"><span class="hs-identifier hs-var hs-var">errorHandler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; (HostName, AddrInfo)
+-&gt; ReportRef
+-&gt; SubmissionErrorPolicy
+-&gt; SomeException
+-&gt; IO ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.html#handleTxSubmissionClientError"><span class="hs-identifier hs-var">handleTxSubmissionClientError</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(HostName, AddrInfo)
+</span><a href="#local-6989586621679927742"><span class="hs-identifier hs-var">remoteInfo</span></a></span><span> </span><span class="annot"><span class="annottext">ReportRef
+</span><a href="#local-6989586621679927741"><span class="hs-identifier hs-var">reportRef</span></a></span><span> </span><span class="annot"><span class="annottext">SubmissionErrorPolicy
+</span><a href="#local-6989586621679927710"><span class="hs-identifier hs-var">errorPolicy</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span id="local-6989586621679927753"><span class="annot"><span class="annottext">client :: TxSubmissionClient
+  (GenTxId CardanoBlock) (GenTx CardanoBlock) IO ()
+</span><a href="#local-6989586621679927753"><span class="hs-identifier hs-var hs-var">client</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace IO NodeToNodeSubmissionTrace
+-&gt; Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TxSource era
+-&gt; EndOfProtocolCallback IO
+-&gt; TxSubmissionClient
+     (GenTxId CardanoBlock) (GenTx CardanoBlock) IO ()
+forall (m :: * -&gt; *) era.
+(MonadIO m, MonadFail m, IsShelleyBasedEra era) =&gt;
+Trace m NodeToNodeSubmissionTrace
+-&gt; Trace m (TraceBenchTxSubmit TxId)
+-&gt; TxSource era
+-&gt; EndOfProtocolCallback m
+-&gt; TxSubmissionClient
+     (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.SubmissionClient.html#txSubmissionClient"><span class="hs-identifier hs-var">txSubmissionClient</span></a></span><span>
+</span><span id="line-160"></span><span>                     </span><span class="annot"><span class="annottext">Trace IO NodeToNodeSubmissionTrace
+</span><a href="#local-6989586621679927706"><span class="hs-identifier hs-var">traceN2N</span></a></span><span>
+</span><span id="line-161"></span><span>                     </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span>
+</span><span id="line-162"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar (StreamState (TxStream IO era)) -&gt; TpsThrottle -&gt; TxSource era
+forall era.
+MVar (StreamState (TxStream IO era)) -&gt; TpsThrottle -&gt; TxSource era
+</span><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#txStreamSource"><span class="hs-identifier hs-var">txStreamSource</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (StreamState (TxStream IO era))
+</span><a href="#local-6989586621679927733"><span class="hs-identifier hs-var">txStreamRef</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle
+</span><a href="#local-6989586621679927731"><span class="hs-identifier hs-var">tpsThrottle</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>                     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReportRef -&gt; EndOfProtocolCallback IO
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+ReportRef -&gt; SubmissionThreadStats -&gt; m ()
+</span><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#submitSubmissionThreadStats"><span class="hs-identifier hs-var">submitSubmissionThreadStats</span></a></span><span> </span><span class="annot"><span class="annottext">ReportRef
+</span><a href="#local-6989586621679927741"><span class="hs-identifier hs-var">reportRef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>        </span><span id="local-6989586621679927759"><span class="annot"><span class="annottext">remoteAddrString :: HostName
+</span><a href="#local-6989586621679927759"><span class="hs-identifier hs-var hs-var">remoteAddrString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SockAddr -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(SockAddr -&gt; HostName) -&gt; SockAddr -&gt; HostName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo -&gt; SockAddr
+</span><a href="file:///nix/store/symc7v3bpllnhivv8z1snhl1xnkqyyip-network-lib-network-3.2.8.0-haddock-doc/share/doc/network/html/src/Network.Socket.Info.html#addrAddress"><span class="hs-identifier hs-var">addrAddress</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927744"><span class="hs-identifier hs-var">remoteAddrInfo</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span id="local-6989586621679927760"><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927760"><span class="hs-identifier hs-var">asyncThread</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO (Async ())
+forall a. IO a -&gt; IO (Async a)
+</span><span class="hs-identifier hs-var">async</span></span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall e a. Exception e =&gt; (e -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; IO ()
+</span><a href="#local-6989586621679927745"><span class="hs-identifier hs-var">errorHandler</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectClient
+</span><a href="#local-6989586621679927707"><span class="hs-identifier hs-var">connectClient</span></a></span><span> </span><span class="annot"><span class="annottext">AddrInfo
+</span><a href="#local-6989586621679927744"><span class="hs-identifier hs-var">remoteAddrInfo</span></a></span><span> </span><span class="annot"><span class="annottext">TxSubmissionClient
+  (GenTxId CardanoBlock) (GenTx CardanoBlock) IO ()
+</span><a href="#local-6989586621679927753"><span class="hs-identifier hs-var">client</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927763"><span class="annot"><span class="annottext">tid :: ThreadId
+</span><a href="#local-6989586621679927763"><span class="hs-identifier hs-var hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Async () -&gt; ThreadId
+forall a. Async a -&gt; ThreadId
+</span><span class="hs-identifier hs-var">asyncThreadId</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927760"><span class="hs-identifier hs-var">asyncThread</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">ThreadId -&gt; HostName -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier hs-var">Conc.labelThread</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927763"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">(HostName -&gt; IO ()) -&gt; HostName -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;txSubmissionClient &quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927763"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-168"></span><span>                            </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot; servicing &quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927743"><span class="hs-identifier hs-var">remoteName</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot; (&quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679927759"><span class="hs-identifier hs-var">remoteAddrString</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-169"></span><span>    </span><span class="annot"><span class="annottext">Async () -&gt; IO (Async ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927760"><span class="hs-identifier hs-var">asyncThread</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679927765"><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927765"><span class="hs-identifier hs-var">abcFeeder</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO (Async ())
+forall a. IO a -&gt; IO (Async a)
+</span><span class="hs-identifier hs-var">async</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (Async ())) -&gt; IO () -&gt; IO (Async ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">TpsThrottle -&gt; IO ()
+</span><a href="Cardano.Benchmarking.TpsThrottle.html#startSending"><span class="hs-identifier hs-var">startSending</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle
+</span><a href="#local-6989586621679927731"><span class="hs-identifier hs-var">tpsThrottle</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceBenchTxSubmit TxId -&gt; IO ())
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; TraceBenchTxSubmit TxId
+forall txid. HostName -&gt; TraceBenchTxSubmit txid
+</span><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubDebug"><span class="hs-identifier hs-var">TraceBenchTxSubDebug</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;tpsLimitedFeeder : transmitting done&quot;</span></span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle -&gt; STM ()
+</span><a href="Cardano.Benchmarking.TpsThrottle.html#sendStop"><span class="hs-identifier hs-var">sendStop</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle
+</span><a href="#local-6989586621679927731"><span class="hs-identifier hs-var">tpsThrottle</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceBenchTxSubmit TxId -&gt; IO ())
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; TraceBenchTxSubmit TxId
+forall txid. HostName -&gt; TraceBenchTxSubmit txid
+</span><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubDebug"><span class="hs-identifier hs-var">TraceBenchTxSubDebug</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;tpsLimitedFeeder : shutdown done&quot;</span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927769"><span class="annot"><span class="annottext">tid :: ThreadId
+</span><a href="#local-6989586621679927769"><span class="hs-identifier hs-var hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Async () -&gt; ThreadId
+forall a. Async a -&gt; ThreadId
+</span><span class="hs-identifier hs-var">asyncThreadId</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927765"><span class="hs-identifier hs-var">abcFeeder</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="annot"><span class="annottext">ThreadId -&gt; HostName -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier hs-var">labelThread</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927769"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">(HostName -&gt; IO ()) -&gt; HostName -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><span class="hs-string">&quot;tpsThrottleThread &quot;</span></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; HostName -&gt; HostName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; HostName
+forall a b. (Show a, ConvertText HostName b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679927769"><span class="hs-identifier hs-var">tid</span></a></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679927773"><span class="annot"><span class="annottext">abcShutdown :: IO ()
+</span><a href="#local-6989586621679927773"><span class="hs-identifier hs-var hs-var">abcShutdown</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-180"></span><span>        </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
+forall a. Async a -&gt; IO ()
+</span><span class="hs-identifier hs-var">cancel</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679927765"><span class="hs-identifier hs-var">abcFeeder</span></a></span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; (STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle -&gt; STM ()
+</span><a href="Cardano.Benchmarking.TpsThrottle.html#sendStop"><span class="hs-identifier hs-var">sendStop</span></a></span><span> </span><span class="annot"><span class="annottext">TpsThrottle
+</span><a href="#local-6989586621679927731"><span class="hs-identifier hs-var">tpsThrottle</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><span class="annottext">AsyncBenchmarkControl -&gt; IO AsyncBenchmarkControl
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#AsyncBenchmarkControl"><span class="hs-identifier hs-type">AsyncBenchmarkControl</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">abcSummary :: IO SubmissionSummary
+</span><a href="Cardano.Benchmarking.LogTypes.html#abcSummary"><span class="hs-identifier hs-var">abcSummary</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; [ReportRef] -&gt; IO SubmissionSummary
+</span><a href="Cardano.Benchmarking.GeneratorTx.Submission.html#mkSubmissionSummary"><span class="hs-identifier hs-var">mkSubmissionSummary</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679927729"><span class="hs-identifier hs-var">startTime</span></a></span><span> </span><span class="annot"><span class="annottext">[ReportRef]
+</span><a href="#local-6989586621679927736"><span class="hs-identifier hs-var">reportRefs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Async ()]
+IO ()
+Async ()
+abcFeeder :: Async ()
+abcWorkers :: [Async ()]
+abcShutdown :: IO ()
+abcWorkers :: [Async ()]
+abcFeeder :: Async ()
+abcShutdown :: IO ()
+</span><a href="Cardano.Benchmarking.LogTypes.html#abcFeeder"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-184"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><a href="#local-6989586621679927714"><span class="hs-identifier hs-type">traceDebug</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>  </span><span id="local-6989586621679927714"><span class="annot"><span class="annottext">traceDebug :: HostName -&gt; IO ()
+</span><a href="#local-6989586621679927714"><span class="hs-identifier hs-var hs-var">traceDebug</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>   </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+-&gt; TraceBenchTxSubmit TxId -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO (TraceBenchTxSubmit TxId)
+</span><a href="#local-6989586621679927705"><span class="hs-identifier hs-var">traceSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceBenchTxSubmit TxId -&gt; IO ())
+-&gt; (HostName -&gt; TraceBenchTxSubmit TxId) -&gt; HostName -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HostName -&gt; TraceBenchTxSubmit TxId
+forall txid. HostName -&gt; TraceBenchTxSubmit txid
+</span><a href="Cardano.Benchmarking.LogTypes.html#TraceBenchTxSubDebug"><span class="hs-identifier hs-var">TraceBenchTxSubDebug</span></a></span><span>
+</span><span id="line-187"></span></pre></body></html>

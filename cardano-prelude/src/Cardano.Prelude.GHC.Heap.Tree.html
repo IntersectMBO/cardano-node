@@ -1,0 +1,365 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Module      :  Cardano.Prelude.GHC.Heap.Tree</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- This module exports functions and data types for building and printing GHC</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- heap object trees. Very useful for debugging issues involving the heap</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- representation of Haskell expressions.</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Prelude.GHC.Heap.Tree</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier">ClosureTreeOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TraverseCyclicClosures"><span class="hs-identifier">TraverseCyclicClosures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier">TreeDepth</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildClosureTree"><span class="hs-identifier">buildClosureTree</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildAndRenderClosureTree"><span class="hs-identifier">buildAndRenderClosureTree</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#depth"><span class="hs-identifier">depth</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#isZeroOrNegativeTreeDepth"><span class="hs-identifier">isZeroOrNegativeTreeDepth</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderClosure"><span class="hs-identifier">renderClosure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderTree"><span class="hs-identifier">renderTree</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Prelude.Base.html"><span class="hs-identifier">Cardano.Prelude.Base</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html"><span class="hs-identifier">Data.Tree</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Tree"><span class="hs-identifier">Tree</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#drawTree"><span class="hs-identifier">drawTree</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#levels"><span class="hs-identifier">levels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html"><span class="hs-identifier">GHC.Exts.Heap</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Box"><span class="hs-identifier">Box</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Closure"><span class="hs-identifier">Closure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#allClosures"><span class="hs-identifier">allClosures</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#areBoxesEqual"><span class="hs-identifier">areBoxesEqual</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#asBox"><span class="hs-identifier">asBox</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html#getClosureData"><span class="hs-identifier">getClosureData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html"><span class="hs-identifier">System.Mem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html#performGC"><span class="hs-identifier">performGC</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | The depth of a 'Tree'.</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="TreeDepth"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-var">TreeDepth</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | A specific tree depth bound.</span></span><span>
+</span><span id="line-42"></span><span>    </span><span id="TreeDepth"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-var">TreeDepth</span></a></span></span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | No tree depth bound.</span></span><span>
+</span><span id="line-44"></span><span>    </span><span id="AnyDepth"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#AnyDepth"><span class="hs-identifier hs-var">AnyDepth</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095679"><span id="local-6989586621679095684"><span id="local-6989586621679095688"><span class="annot"><span class="annottext">Int -&gt; TreeDepth -&gt; ShowS
+[TreeDepth] -&gt; ShowS
+TreeDepth -&gt; String
+(Int -&gt; TreeDepth -&gt; ShowS)
+-&gt; (TreeDepth -&gt; String)
+-&gt; ([TreeDepth] -&gt; ShowS)
+-&gt; Show TreeDepth
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TreeDepth -&gt; ShowS
+showsPrec :: Int -&gt; TreeDepth -&gt; ShowS
+$cshow :: TreeDepth -&gt; String
+show :: TreeDepth -&gt; String
+$cshowList :: [TreeDepth] -&gt; ShowS
+showList :: [TreeDepth] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | Whether to traverse cyclic closures in a 'Closure' 'Tree'.</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="TraverseCyclicClosures"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TraverseCyclicClosures"><span class="hs-identifier hs-var">TraverseCyclicClosures</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Traverse cyclic closures.</span></span><span>
+</span><span id="line-50"></span><span>    </span><span id="TraverseCyclicClosures"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TraverseCyclicClosures"><span class="hs-identifier hs-var">TraverseCyclicClosures</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Do not traverse cyclic closures.</span></span><span>
+</span><span id="line-52"></span><span>    </span><span id="NoTraverseCyclicClosures"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#NoTraverseCyclicClosures"><span class="hs-identifier hs-var">NoTraverseCyclicClosures</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095694"><span id="local-6989586621679095696"><span id="local-6989586621679095700"><span class="annot"><span class="annottext">Int -&gt; TraverseCyclicClosures -&gt; ShowS
+[TraverseCyclicClosures] -&gt; ShowS
+TraverseCyclicClosures -&gt; String
+(Int -&gt; TraverseCyclicClosures -&gt; ShowS)
+-&gt; (TraverseCyclicClosures -&gt; String)
+-&gt; ([TraverseCyclicClosures] -&gt; ShowS)
+-&gt; Show TraverseCyclicClosures
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TraverseCyclicClosures -&gt; ShowS
+showsPrec :: Int -&gt; TraverseCyclicClosures -&gt; ShowS
+$cshow :: TraverseCyclicClosures -&gt; String
+show :: TraverseCyclicClosures -&gt; String
+$cshowList :: [TraverseCyclicClosures] -&gt; ShowS
+showList :: [TraverseCyclicClosures] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | Options which detail how a 'Closure' 'Tree' should be constructed.</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">data</span><span> </span><span id="ClosureTreeOptions"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-var">ClosureTreeOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ClosureTreeOptions"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-var">ClosureTreeOptions</span></a></span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ctoMaxDepth"><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#ctoMaxDepth"><span class="hs-identifier hs-var hs-var">ctoMaxDepth</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-type">TreeDepth</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Construct a closure tree given a maximum depth.</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ctoCyclicClosures"><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; TraverseCyclicClosures
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#ctoCyclicClosures"><span class="hs-identifier hs-var hs-var">ctoCyclicClosures</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TraverseCyclicClosures"><span class="hs-identifier hs-type">TraverseCyclicClosures</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Whether to traverse cyclic closures while constructing a closure tree.</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095706"><span id="local-6989586621679095711"><span id="local-6989586621679095715"><span class="annot"><span class="annottext">Int -&gt; ClosureTreeOptions -&gt; ShowS
+[ClosureTreeOptions] -&gt; ShowS
+ClosureTreeOptions -&gt; String
+(Int -&gt; ClosureTreeOptions -&gt; ShowS)
+-&gt; (ClosureTreeOptions -&gt; String)
+-&gt; ([ClosureTreeOptions] -&gt; ShowS)
+-&gt; Show ClosureTreeOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ClosureTreeOptions -&gt; ShowS
+showsPrec :: Int -&gt; ClosureTreeOptions -&gt; ShowS
+$cshow :: ClosureTreeOptions -&gt; String
+show :: ClosureTreeOptions -&gt; String
+$cshowList :: [ClosureTreeOptions] -&gt; ShowS
+showList :: [ClosureTreeOptions] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span id="local-6989586621679095604"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#depth"><span class="hs-identifier hs-type">depth</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095604"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span><span>
+</span><span id="line-65"></span><span id="depth"><span class="annot"><span class="annottext">depth :: forall a. Tree a -&gt; Int
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#depth"><span class="hs-identifier hs-var hs-var">depth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[a]] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">Cardano.Prelude.Base.length</span></a></span><span> </span><span class="annot"><span class="annottext">([[a]] -&gt; Int) -&gt; (Tree a -&gt; [[a]]) -&gt; Tree a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; [[a]]
+forall a. Tree a -&gt; [[a]]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#levels"><span class="hs-identifier hs-var">levels</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#isZeroOrNegativeTreeDepth"><span class="hs-identifier hs-type">isZeroOrNegativeTreeDepth</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-type">TreeDepth</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-68"></span><span id="isZeroOrNegativeTreeDepth"><span class="annot"><span class="annottext">isZeroOrNegativeTreeDepth :: TreeDepth -&gt; Bool
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#isZeroOrNegativeTreeDepth"><span class="hs-identifier hs-var hs-var">isZeroOrNegativeTreeDepth</span></a></span></span><span> </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#AnyDepth"><span class="hs-identifier hs-var">AnyDepth</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#isZeroOrNegativeTreeDepth"><span class="hs-identifier hs-var">isZeroOrNegativeTreeDepth</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-type">TreeDepth</span></a></span><span> </span><span id="local-6989586621679095724"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679095724"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679095724"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderClosure"><span class="hs-identifier hs-type">renderClosure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Closure"><span class="hs-identifier hs-type">Closure</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-74"></span><span id="renderClosure"><span class="annot"><span class="annottext">renderClosure :: Closure -&gt; Text
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderClosure"><span class="hs-identifier hs-var hs-var">renderClosure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (Closure -&gt; String) -&gt; Closure -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Closure -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">Prelude.show</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span id="local-6989586621679095619"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderTree"><span class="hs-identifier hs-type">renderTree</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095619"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095619"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span></span><span>
+</span><span id="line-77"></span><span id="renderTree"><span class="annot"><span class="annottext">renderTree :: forall a. Tree a -&gt; (a -&gt; Text) -&gt; Text
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderTree"><span class="hs-identifier hs-var hs-var">renderTree</span></a></span></span><span> </span><span id="local-6989586621679095731"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679095731"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span id="local-6989586621679095732"><span class="annot"><span class="annottext">a -&gt; Text
+</span><a href="#local-6989586621679095732"><span class="hs-identifier hs-var">renderA</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; String -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tree String -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#drawTree"><span class="hs-identifier hs-var">drawTree</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; String) -&gt; Tree a -&gt; Tree String
+forall a b. (a -&gt; b) -&gt; Tree a -&gt; Tree b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; String) -&gt; (a -&gt; Text) -&gt; a -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Text
+</span><a href="#local-6989586621679095732"><span class="hs-identifier hs-var">renderA</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679095731"><span class="hs-identifier hs-var">tree</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- | Given a Haskell expression, build a 'Tree' which reflects its heap object</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- representation.</span><span>
+</span><span id="line-81"></span><span id="local-6989586621679095627"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildClosureTree"><span class="hs-identifier hs-type">buildClosureTree</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-type">ClosureTreeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095627"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Closure"><span class="hs-identifier hs-type">Closure</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-82"></span><span id="buildClosureTree"><span class="annot"><span class="annottext">buildClosureTree :: forall a. ClosureTreeOptions -&gt; a -&gt; IO (Maybe (Tree Closure))
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildClosureTree"><span class="hs-identifier hs-var hs-var">buildClosureTree</span></a></span></span><span> </span><span id="local-6989586621679095758"><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095758"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679095759"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095759"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html#performGC"><span class="hs-identifier hs-var">performGC</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; [Box] -&gt; Box -&gt; IO (Maybe (Tree Closure))
+</span><a href="#local-6989586621679095760"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095758"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(Box -&gt; IO (Maybe (Tree Closure)))
+-&gt; Box -&gt; IO (Maybe (Tree Closure))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Box
+forall a. a -&gt; Box
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#asBox"><span class="hs-identifier hs-var">asBox</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095759"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="#local-6989586621679095760"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-type">ClosureTreeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Box"><span class="hs-identifier hs-type">Box</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Box"><span class="hs-identifier hs-type">Box</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Tree"><span class="hs-identifier hs-type">Tree</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Closure"><span class="hs-identifier hs-type">Closure</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679095760"><span class="annot"><span class="annottext">go :: ClosureTreeOptions -&gt; [Box] -&gt; Box -&gt; IO (Maybe (Tree Closure))
+</span><a href="#local-6989586621679095760"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-type">ClosureTreeOptions</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679095761"><span class="annot"><span class="annottext">TreeDepth
+ctoMaxDepth :: ClosureTreeOptions -&gt; TreeDepth
+ctoMaxDepth :: TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#ctoMaxDepth"><span class="hs-identifier hs-var hs-var">ctoMaxDepth</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095762"><span class="annot"><span class="annottext">TraverseCyclicClosures
+ctoCyclicClosures :: ClosureTreeOptions -&gt; TraverseCyclicClosures
+ctoCyclicClosures :: TraverseCyclicClosures
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#ctoCyclicClosures"><span class="hs-identifier hs-var hs-var">ctoCyclicClosures</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679095763"><span class="annot"><span class="annottext">[Box]
+</span><a href="#local-6989586621679095763"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span id="local-6989586621679095764"><span class="annot"><span class="annottext">b :: Box
+</span><a href="#local-6989586621679095764"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Box"><span class="hs-identifier hs-type">Box</span></a></span><span> </span><span id="local-6989586621679095766"><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095766"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">TreeDepth -&gt; Bool
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#isZeroOrNegativeTreeDepth"><span class="hs-identifier hs-var">isZeroOrNegativeTreeDepth</span></a></span><span> </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="#local-6989586621679095761"><span class="hs-identifier hs-var">ctoMaxDepth</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Tree Closure) -&gt; IO (Maybe (Tree Closure))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Tree Closure)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-keyword">let</span><span>
+</span><span id="line-91"></span><span>            </span><span id="local-6989586621679095769"><span class="annot"><span class="annottext">nextMaxDepth :: TreeDepth
+</span><a href="#local-6989586621679095769"><span class="hs-identifier hs-var hs-var">nextMaxDepth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="#local-6989586621679095761"><span class="hs-identifier hs-var">ctoMaxDepth</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-92"></span><span>              </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#AnyDepth"><span class="hs-identifier hs-var">AnyDepth</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#AnyDepth"><span class="hs-identifier hs-var">AnyDepth</span></a></span><span>
+</span><span id="line-93"></span><span>              </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-type">TreeDepth</span></a></span><span> </span><span id="local-6989586621679095770"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679095770"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; TreeDepth
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#TreeDepth"><span class="hs-identifier hs-var">TreeDepth</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679095770"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>            </span><span id="local-6989586621679095771"><span class="annot"><span class="annottext">nextOpts :: ClosureTreeOptions
+</span><a href="#local-6989586621679095771"><span class="hs-identifier hs-var hs-var">nextOpts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TreeDepth -&gt; TraverseCyclicClosures -&gt; ClosureTreeOptions
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-var">ClosureTreeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TreeDepth
+</span><a href="#local-6989586621679095769"><span class="hs-identifier hs-var">nextMaxDepth</span></a></span><span> </span><span class="annot"><span class="annottext">TraverseCyclicClosures
+</span><a href="#local-6989586621679095762"><span class="hs-identifier hs-var">ctoCyclicClosures</span></a></span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TraverseCyclicClosures
+</span><a href="#local-6989586621679095762"><span class="hs-identifier hs-var">ctoCyclicClosures</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-96"></span><span>            </span><span class="annot"><span class="annottext">TraverseCyclicClosures
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#NoTraverseCyclicClosures"><span class="hs-identifier hs-var">NoTraverseCyclicClosures</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>              </span><span id="local-6989586621679095772"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095772"><span class="hs-identifier hs-var">isElem</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">([Bool] -&gt; Bool) -&gt; IO [Bool] -&gt; IO Bool
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span> </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#or"><span class="hs-identifier hs-var">or</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [Bool] -&gt; IO Bool) -&gt; IO [Bool] -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Box -&gt; IO Bool) -&gt; [Box] -&gt; IO [Bool]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Box -&gt; Box -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#areBoxesEqual"><span class="hs-identifier hs-var">areBoxesEqual</span></a></span><span> </span><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095764"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Box]
+</span><a href="#local-6989586621679095763"><span class="hs-identifier hs-var">vs</span></a></span><span>
+</span><span id="line-98"></span><span>              </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095772"><span class="hs-identifier hs-var">isElem</span></a></span><span>
+</span><span id="line-99"></span><span>                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe (Tree Closure) -&gt; IO (Maybe (Tree Closure))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Tree Closure)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-100"></span><span>                </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>                  </span><span id="local-6989586621679095776"><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095776"><span class="hs-identifier hs-var">closure</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Any -&gt; IO Closure
+forall a. HasHeapRep a =&gt; a -&gt; IO Closure
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html#getClosureData"><span class="hs-identifier hs-var">getClosureData</span></a></span><span> </span><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095766"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-102"></span><span>                  </span><span id="local-6989586621679095777"><span class="annot"><span class="annottext">[Maybe (Tree Closure)]
+</span><a href="#local-6989586621679095777"><span class="hs-identifier hs-var">subtrees</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Box -&gt; IO (Maybe (Tree Closure)))
+-&gt; [Box] -&gt; IO [Maybe (Tree Closure)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; [Box] -&gt; Box -&gt; IO (Maybe (Tree Closure))
+</span><a href="#local-6989586621679095760"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095771"><span class="hs-identifier hs-var">nextOpts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095764"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Box -&gt; [Box] -&gt; [Box]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Box]
+</span><a href="#local-6989586621679095763"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Closure -&gt; [Box]
+forall b. GenClosure b -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#allClosures"><span class="hs-identifier hs-var">allClosures</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095776"><span class="hs-identifier hs-var">closure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>                  </span><span class="annot"><span class="annottext">Maybe (Tree Closure) -&gt; IO (Maybe (Tree Closure))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tree Closure -&gt; Maybe (Tree Closure)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Closure -&gt; [Tree Closure] -&gt; Tree Closure
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Node"><span class="hs-identifier hs-var">Node</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095776"><span class="hs-identifier hs-var">closure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Maybe (Tree Closure)] -&gt; [Tree Closure]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span> </span><span class="annot"><span class="annottext">[Maybe (Tree Closure)]
+</span><a href="#local-6989586621679095777"><span class="hs-identifier hs-var">subtrees</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>            </span><span class="annot"><span class="annottext">TraverseCyclicClosures
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#TraverseCyclicClosures"><span class="hs-identifier hs-var">TraverseCyclicClosures</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>              </span><span id="local-6989586621679095780"><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095780"><span class="hs-identifier hs-var">closure</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Any -&gt; IO Closure
+forall a. HasHeapRep a =&gt; a -&gt; IO Closure
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html#getClosureData"><span class="hs-identifier hs-var">getClosureData</span></a></span><span> </span><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095766"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-106"></span><span>              </span><span id="local-6989586621679095781"><span class="annot"><span class="annottext">[Maybe (Tree Closure)]
+</span><a href="#local-6989586621679095781"><span class="hs-identifier hs-var">subtrees</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Box -&gt; IO (Maybe (Tree Closure)))
+-&gt; [Box] -&gt; IO [Maybe (Tree Closure)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; [Box] -&gt; Box -&gt; IO (Maybe (Tree Closure))
+</span><a href="#local-6989586621679095760"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095771"><span class="hs-identifier hs-var">nextOpts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095764"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Box -&gt; [Box] -&gt; [Box]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Box]
+</span><a href="#local-6989586621679095763"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Closure -&gt; [Box]
+forall b. GenClosure b -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#allClosures"><span class="hs-identifier hs-var">allClosures</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095780"><span class="hs-identifier hs-var">closure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>              </span><span class="annot"><span class="annottext">Maybe (Tree Closure) -&gt; IO (Maybe (Tree Closure))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tree Closure -&gt; Maybe (Tree Closure)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Closure -&gt; [Tree Closure] -&gt; Tree Closure
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Tree.html#Node"><span class="hs-identifier hs-var">Node</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095780"><span class="hs-identifier hs-var">closure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Maybe (Tree Closure)] -&gt; [Tree Closure]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span> </span><span class="annot"><span class="annottext">[Maybe (Tree Closure)]
+</span><a href="#local-6989586621679095781"><span class="hs-identifier hs-var">subtrees</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | Given a Haskell expression, build a 'Tree' which reflects its heap object</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- representation and render it as 'Text'.</span><span>
+</span><span id="line-111"></span><span id="local-6989586621679095649"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildAndRenderClosureTree"><span class="hs-identifier hs-type">buildAndRenderClosureTree</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Tree.html#ClosureTreeOptions"><span class="hs-identifier hs-type">ClosureTreeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095649"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span></span><span>
+</span><span id="line-112"></span><span id="buildAndRenderClosureTree"><span class="annot"><span class="annottext">buildAndRenderClosureTree :: forall a. ClosureTreeOptions -&gt; a -&gt; IO Text
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildAndRenderClosureTree"><span class="hs-identifier hs-var hs-var">buildAndRenderClosureTree</span></a></span></span><span> </span><span id="local-6989586621679095787"><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095787"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679095788"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095788"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679095789"><span class="annot"><span class="annottext">Maybe (Tree Closure)
+</span><a href="#local-6989586621679095789"><span class="hs-identifier hs-var">mbTr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ClosureTreeOptions -&gt; a -&gt; IO (Maybe (Tree Closure))
+forall a. ClosureTreeOptions -&gt; a -&gt; IO (Maybe (Tree Closure))
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#buildClosureTree"><span class="hs-identifier hs-var">buildClosureTree</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureTreeOptions
+</span><a href="#local-6989586621679095787"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095788"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Tree Closure)
+</span><a href="#local-6989586621679095789"><span class="hs-identifier hs-var">mbTr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Tree Closure)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Text
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679095790"><span class="annot"><span class="annottext">Tree Closure
+</span><a href="#local-6989586621679095790"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Text
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tree Closure -&gt; (Closure -&gt; Text) -&gt; Text
+forall a. Tree a -&gt; (a -&gt; Text) -&gt; Text
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderTree"><span class="hs-identifier hs-var">renderTree</span></a></span><span> </span><span class="annot"><span class="annottext">Tree Closure
+</span><a href="#local-6989586621679095790"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">Closure -&gt; Text
+</span><a href="Cardano.Prelude.GHC.Heap.Tree.html#renderClosure"><span class="hs-identifier hs-var">renderClosure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span></pre></body></html>

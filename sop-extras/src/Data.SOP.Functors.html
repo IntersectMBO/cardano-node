@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.SOP.Functors</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#Flip"><span class="hs-identifier">Flip</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#Product2"><span class="hs-identifier">Product2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#snd2"><span class="hs-identifier">snd2</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Kind.html"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">NoThunks.Class</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#Product2"><span class="hs-identifier hs-type">Product2</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="Product2"><span class="annot"><a href="Data.SOP.Functors.html#Product2"><span class="hs-identifier hs-var">Product2</span></a></span></span><span> </span><span id="local-6989586621679098025"><span class="annot"><a href="#local-6989586621679098025"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679098026"><span class="annot"><a href="#local-6989586621679098026"><span class="hs-identifier hs-type">g</span></a></span></span><span> </span><span id="local-6989586621679098027"><span class="annot"><a href="#local-6989586621679098027"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679098028"><span class="annot"><a href="#local-6989586621679098028"><span class="hs-identifier hs-type">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Pair2"><span class="annot"><a href="Data.SOP.Functors.html#Pair2"><span class="hs-identifier hs-var">Pair2</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679098025"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098027"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098028"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679098026"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098027"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098028"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679098033"><span id="local-6989586621679098037"><span class="annot"><span class="annottext">Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+(Product2 f g x y -&gt; Product2 f g x y -&gt; Bool)
+-&gt; (Product2 f g x y -&gt; Product2 f g x y -&gt; Bool)
+-&gt; Eq (Product2 f g x y)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Eq (f x y), Eq (g x y)) =&gt;
+Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+$c== :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Eq (f x y), Eq (g x y)) =&gt;
+Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+== :: Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+$c/= :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Eq (f x y), Eq (g x y)) =&gt;
+Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+/= :: Product2 f g x y -&gt; Product2 f g x y -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098042"><span id="local-6989586621679098044"><span class="annot"><span class="annottext">(forall x. Product2 f g x y -&gt; Rep (Product2 f g x y) x)
+-&gt; (forall x. Rep (Product2 f g x y) x -&gt; Product2 f g x y)
+-&gt; Generic (Product2 f g x y)
+forall x. Rep (Product2 f g x y) x -&gt; Product2 f g x y
+forall x. Product2 f g x y -&gt; Rep (Product2 f g x y) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y x.
+Rep (Product2 f g x y) x -&gt; Product2 f g x y
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y x.
+Product2 f g x y -&gt; Rep (Product2 f g x y) x
+$cfrom :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y x.
+Product2 f g x y -&gt; Rep (Product2 f g x y) x
+from :: forall x. Product2 f g x y -&gt; Rep (Product2 f g x y) x
+$cto :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y x.
+Rep (Product2 f g x y) x -&gt; Product2 f g x y
+to :: forall x. Rep (Product2 f g x y) x -&gt; Product2 f g x y
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098050"><span id="local-6989586621679098056"><span id="local-6989586621679098060"><span class="annot"><span class="annottext">Int -&gt; Product2 f g x y -&gt; ShowS
+[Product2 f g x y] -&gt; ShowS
+Product2 f g x y -&gt; String
+(Int -&gt; Product2 f g x y -&gt; ShowS)
+-&gt; (Product2 f g x y -&gt; String)
+-&gt; ([Product2 f g x y] -&gt; ShowS)
+-&gt; Show (Product2 f g x y)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+Int -&gt; Product2 f g x y -&gt; ShowS
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+[Product2 f g x y] -&gt; ShowS
+forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+Product2 f g x y -&gt; String
+$cshowsPrec :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+Int -&gt; Product2 f g x y -&gt; ShowS
+showsPrec :: Int -&gt; Product2 f g x y -&gt; ShowS
+$cshow :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+Product2 f g x y -&gt; String
+show :: Product2 f g x y -&gt; String
+$cshowList :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+(Show (f x y), Show (g x y)) =&gt;
+[Product2 f g x y] -&gt; ShowS
+showList :: [Product2 f g x y] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span id="local-6989586621679097957"><span id="local-6989586621679097958"><span id="local-6989586621679097959"><span id="local-6989586621679097960"><span class="annot"><a href="Data.SOP.Functors.html#snd2"><span class="hs-identifier hs-type">snd2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#Product2"><span class="hs-identifier hs-type">Product2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097957"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097958"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097959"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097960"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097958"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097959"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097960"><span class="hs-identifier hs-type">y</span></a></span></span></span></span></span><span>
+</span><span id="line-26"></span><span id="snd2"><span class="annot"><span class="annottext">snd2 :: forall (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) x y.
+Product2 f g x y -&gt; g x y
+</span><a href="Data.SOP.Functors.html#snd2"><span class="hs-identifier hs-var hs-var">snd2</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Functors.html#Pair2"><span class="hs-identifier hs-type">Pair2</span></a></span><span> </span><span class="annot"><span class="annottext">f x y
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679098063"><span class="annot"><span class="annottext">g x y
+</span><a href="#local-6989586621679098063"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">g x y
+</span><a href="#local-6989586621679098063"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Data.SOP.Functors.html#Flip"><span class="hs-identifier hs-type">Flip</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679097965"><span id="local-6989586621679097966"><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679097965"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097966"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097966"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097965"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span></span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">newtype</span><span> </span><span id="Flip"><span class="annot"><a href="Data.SOP.Functors.html#Flip"><span class="hs-identifier hs-var">Flip</span></a></span></span><span> </span><span id="local-6989586621679097967"><span class="annot"><a href="#local-6989586621679097967"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679097968"><span class="annot"><a href="#local-6989586621679097968"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679097969"><span class="annot"><a href="#local-6989586621679097969"><span class="hs-identifier hs-type">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Flip"><span class="annot"><a href="Data.SOP.Functors.html#Flip"><span class="hs-identifier hs-var">Flip</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unFlip"><span class="annot"><span class="annottext">forall x y (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Flip f x y -&gt; f y x
+</span><a href="Data.SOP.Functors.html#unFlip"><span class="hs-identifier hs-var hs-var">unFlip</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679097967"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097969"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097968"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679098068"><span id="local-6989586621679098072"><span class="annot"><span class="annottext">Flip f x y -&gt; Flip f x y -&gt; Bool
+(Flip f x y -&gt; Flip f x y -&gt; Bool)
+-&gt; (Flip f x y -&gt; Flip f x y -&gt; Bool) -&gt; Eq (Flip f x y)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Eq (f y x) =&gt;
+Flip f x y -&gt; Flip f x y -&gt; Bool
+$c== :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Eq (f y x) =&gt;
+Flip f x y -&gt; Flip f x y -&gt; Bool
+== :: Flip f x y -&gt; Flip f x y -&gt; Bool
+$c/= :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Eq (f y x) =&gt;
+Flip f x y -&gt; Flip f x y -&gt; Bool
+/= :: Flip f x y -&gt; Flip f x y -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098077"><span id="local-6989586621679098079"><span class="annot"><span class="annottext">(forall x. Flip f x y -&gt; Rep (Flip f x y) x)
+-&gt; (forall x. Rep (Flip f x y) x -&gt; Flip f x y)
+-&gt; Generic (Flip f x y)
+forall x. Rep (Flip f x y) x -&gt; Flip f x y
+forall x. Flip f x y -&gt; Rep (Flip f x y) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x) x.
+Rep (Flip f x y) x -&gt; Flip f x y
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x) x.
+Flip f x y -&gt; Rep (Flip f x y) x
+$cfrom :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x) x.
+Flip f x y -&gt; Rep (Flip f x y) x
+from :: forall x. Flip f x y -&gt; Rep (Flip f x y) x
+$cto :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x) x.
+Rep (Flip f x y) x -&gt; Flip f x y
+to :: forall x. Rep (Flip f x y) x -&gt; Flip f x y
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098083"><span id="local-6989586621679098087"><span id="local-6989586621679098091"><span class="annot"><span class="annottext">Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+Proxy (Flip f x y) -&gt; String
+(Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (Flip f x y) -&gt; String)
+-&gt; NoThunks (Flip f x y)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+NoThunks (f y x) =&gt;
+Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+NoThunks (f y x) =&gt;
+Proxy (Flip f x y) -&gt; String
+$cnoThunks :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+NoThunks (f y x) =&gt;
+Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+NoThunks (f y x) =&gt;
+Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Flip f x y -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+NoThunks (f y x) =&gt;
+Proxy (Flip f x y) -&gt; String
+showTypeOf :: Proxy (Flip f x y) -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098098"><span id="local-6989586621679098102"><span id="local-6989586621679098106"><span class="annot"><span class="annottext">Int -&gt; Flip f x y -&gt; ShowS
+[Flip f x y] -&gt; ShowS
+Flip f x y -&gt; String
+(Int -&gt; Flip f x y -&gt; ShowS)
+-&gt; (Flip f x y -&gt; String)
+-&gt; ([Flip f x y] -&gt; ShowS)
+-&gt; Show (Flip f x y)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+Int -&gt; Flip f x y -&gt; ShowS
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+[Flip f x y] -&gt; ShowS
+forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+Flip f x y -&gt; String
+$cshowsPrec :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+Int -&gt; Flip f x y -&gt; ShowS
+showsPrec :: Int -&gt; Flip f x y -&gt; ShowS
+$cshow :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+Flip f x y -&gt; String
+show :: Flip f x y -&gt; String
+$cshowList :: forall y x (f :: x -&gt; y -&gt; *) (x :: y) (y :: x).
+Show (f y x) =&gt;
+[Flip f x y] -&gt; ShowS
+showList :: [Flip f x y] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span></pre></body></html>

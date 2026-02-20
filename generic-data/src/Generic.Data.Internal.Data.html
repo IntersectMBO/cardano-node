@@ -1,0 +1,749 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFoldable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | Generic representations as data types.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- === Warning</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- This is an internal module: it is not subject to any versioning policy,</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- breaking changes can happen at any time.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- If something here seems useful, please report it or create a pull request to</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- export it from an external module.</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Generic.Data.Internal.Data</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html"><span class="hs-identifier">Data.Functor.Classes</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html"><span class="hs-identifier">Data.Functor.Contravariant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier">Contravariant</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#phantom"><span class="hs-identifier">phantom</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html"><span class="hs-identifier">Generic.Data.Internal.Enum</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html"><span class="hs-identifier">Generic.Data.Internal.Show</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | Synthetic data type.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- A wrapper to view a generic 'Rep' as the datatype it's supposed to</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- represent, without needing a declaration.</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">newtype</span><span> </span><span id="Data"><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span></span><span> </span><span id="local-6989586621679062003"><span class="annot"><a href="#local-6989586621679062003"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span id="local-6989586621679062004"><span class="annot"><a href="#local-6989586621679062004"><span class="hs-identifier hs-type">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Data"><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unData"><span class="annot"><span class="annottext">forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var hs-var">unData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679062003"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062004"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679062271"><span id="local-6989586621679062275"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Data r a -&gt; Data r b)
+-&gt; (forall a b. a -&gt; Data r b -&gt; Data r a) -&gt; Functor (Data r)
+forall a b. a -&gt; Data r b -&gt; Data r a
+forall a b. (a -&gt; b) -&gt; Data r a -&gt; Data r b
+forall (r :: * -&gt; *) a b. Functor r =&gt; a -&gt; Data r b -&gt; Data r a
+forall (r :: * -&gt; *) a b.
+Functor r =&gt;
+(a -&gt; b) -&gt; Data r a -&gt; Data r b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall (r :: * -&gt; *) a b.
+Functor r =&gt;
+(a -&gt; b) -&gt; Data r a -&gt; Data r b
+fmap :: forall a b. (a -&gt; b) -&gt; Data r a -&gt; Data r b
+$c&lt;$ :: forall (r :: * -&gt; *) a b. Functor r =&gt; a -&gt; Data r b -&gt; Data r a
+&lt;$ :: forall a b. a -&gt; Data r b -&gt; Data r a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062284"><span id="local-6989586621679062292"><span id="local-6989586621679062300"><span id="local-6989586621679062306"><span id="local-6989586621679062310"><span id="local-6989586621679062314"><span id="local-6989586621679062318"><span id="local-6989586621679062322"><span id="local-6989586621679062326"><span id="local-6989586621679062330"><span id="local-6989586621679062334"><span id="local-6989586621679062338"><span id="local-6989586621679062344"><span id="local-6989586621679062352"><span id="local-6989586621679062360"><span id="local-6989586621679062368"><span id="local-6989586621679062376"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Data r m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Data r a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Data r a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Data r a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Data r a -&gt; a)
+-&gt; (forall a. Data r a -&gt; [a])
+-&gt; (forall a. Data r a -&gt; Bool)
+-&gt; (forall a. Data r a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Data r a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Data r a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Data r a -&gt; a)
+-&gt; (forall a. Num a =&gt; Data r a -&gt; a)
+-&gt; (forall a. Num a =&gt; Data r a -&gt; a)
+-&gt; Foldable (Data r)
+forall a. Eq a =&gt; a -&gt; Data r a -&gt; Bool
+forall a. Num a =&gt; Data r a -&gt; a
+forall a. Ord a =&gt; Data r a -&gt; a
+forall m. Monoid m =&gt; Data r m -&gt; m
+forall a. Data r a -&gt; Bool
+forall a. Data r a -&gt; Int
+forall a. Data r a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Data r a -&gt; m
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+forall (r :: * -&gt; *) a. (Foldable r, Eq a) =&gt; a -&gt; Data r a -&gt; Bool
+forall (r :: * -&gt; *) a. (Foldable r, Num a) =&gt; Data r a -&gt; a
+forall (r :: * -&gt; *) a. (Foldable r, Ord a) =&gt; Data r a -&gt; a
+forall (r :: * -&gt; *) m. (Foldable r, Monoid m) =&gt; Data r m -&gt; m
+forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; Bool
+forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; Int
+forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; [a]
+forall (r :: * -&gt; *) a.
+Foldable r =&gt;
+(a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+forall (r :: * -&gt; *) m a.
+(Foldable r, Monoid m) =&gt;
+(a -&gt; m) -&gt; Data r a -&gt; m
+forall (r :: * -&gt; *) b a.
+Foldable r =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+forall (r :: * -&gt; *) a b.
+Foldable r =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall (r :: * -&gt; *) m. (Foldable r, Monoid m) =&gt; Data r m -&gt; m
+fold :: forall m. Monoid m =&gt; Data r m -&gt; m
+$cfoldMap :: forall (r :: * -&gt; *) m a.
+(Foldable r, Monoid m) =&gt;
+(a -&gt; m) -&gt; Data r a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Data r a -&gt; m
+$cfoldMap' :: forall (r :: * -&gt; *) m a.
+(Foldable r, Monoid m) =&gt;
+(a -&gt; m) -&gt; Data r a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Data r a -&gt; m
+$cfoldr :: forall (r :: * -&gt; *) a b.
+Foldable r =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+$cfoldr' :: forall (r :: * -&gt; *) a b.
+Foldable r =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+$cfoldl :: forall (r :: * -&gt; *) b a.
+Foldable r =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+$cfoldl' :: forall (r :: * -&gt; *) b a.
+Foldable r =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Data r a -&gt; b
+$cfoldr1 :: forall (r :: * -&gt; *) a.
+Foldable r =&gt;
+(a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+$cfoldl1 :: forall (r :: * -&gt; *) a.
+Foldable r =&gt;
+(a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Data r a -&gt; a
+$ctoList :: forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; [a]
+toList :: forall a. Data r a -&gt; [a]
+$cnull :: forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; Bool
+null :: forall a. Data r a -&gt; Bool
+$clength :: forall (r :: * -&gt; *) a. Foldable r =&gt; Data r a -&gt; Int
+length :: forall a. Data r a -&gt; Int
+$celem :: forall (r :: * -&gt; *) a. (Foldable r, Eq a) =&gt; a -&gt; Data r a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Data r a -&gt; Bool
+$cmaximum :: forall (r :: * -&gt; *) a. (Foldable r, Ord a) =&gt; Data r a -&gt; a
+maximum :: forall a. Ord a =&gt; Data r a -&gt; a
+$cminimum :: forall (r :: * -&gt; *) a. (Foldable r, Ord a) =&gt; Data r a -&gt; a
+minimum :: forall a. Ord a =&gt; Data r a -&gt; a
+$csum :: forall (r :: * -&gt; *) a. (Foldable r, Num a) =&gt; Data r a -&gt; a
+sum :: forall a. Num a =&gt; Data r a -&gt; a
+$cproduct :: forall (r :: * -&gt; *) a. (Foldable r, Num a) =&gt; Data r a -&gt; a
+product :: forall a. Num a =&gt; Data r a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062391"><span id="local-6989586621679062398"><span id="local-6989586621679062404"><span id="local-6989586621679062409"><span class="annot"><span class="annottext">Functor (Data r)
+Foldable (Data r)
+(Functor (Data r), Foldable (Data r)) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Data r a -&gt; f (Data r b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Data r (f a) -&gt; f (Data r a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Data r a -&gt; m (Data r b))
+-&gt; (forall (m :: * -&gt; *) a.
+    Monad m =&gt;
+    Data r (m a) -&gt; m (Data r a))
+-&gt; Traversable (Data r)
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (r :: * -&gt; *). Traversable r =&gt; Functor (Data r)
+forall (r :: * -&gt; *). Traversable r =&gt; Foldable (Data r)
+forall (r :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable r, Monad m) =&gt;
+Data r (m a) -&gt; m (Data r a)
+forall (r :: * -&gt; *) (f :: * -&gt; *) a.
+(Traversable r, Applicative f) =&gt;
+Data r (f a) -&gt; f (Data r a)
+forall (r :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable r, Monad m) =&gt;
+(a -&gt; m b) -&gt; Data r a -&gt; m (Data r b)
+forall (r :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable r, Applicative f) =&gt;
+(a -&gt; f b) -&gt; Data r a -&gt; f (Data r b)
+forall (m :: * -&gt; *) a. Monad m =&gt; Data r (m a) -&gt; m (Data r a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Data r (f a) -&gt; f (Data r a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Data r a -&gt; m (Data r b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Data r a -&gt; f (Data r b)
+$ctraverse :: forall (r :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable r, Applicative f) =&gt;
+(a -&gt; f b) -&gt; Data r a -&gt; f (Data r b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Data r a -&gt; f (Data r b)
+$csequenceA :: forall (r :: * -&gt; *) (f :: * -&gt; *) a.
+(Traversable r, Applicative f) =&gt;
+Data r (f a) -&gt; f (Data r a)
+sequenceA :: forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+Data r (f a) -&gt; f (Data r a)
+$cmapM :: forall (r :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable r, Monad m) =&gt;
+(a -&gt; m b) -&gt; Data r a -&gt; m (Data r b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Data r a -&gt; m (Data r b)
+$csequence :: forall (r :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable r, Monad m) =&gt;
+Data r (m a) -&gt; m (Data r a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Data r (m a) -&gt; m (Data r a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062422"><span id="local-6989586621679062426"><span id="local-6989586621679062430"><span id="local-6989586621679062434"><span id="local-6989586621679062438"><span class="annot"><span class="annottext">Functor (Data r)
+Functor (Data r) =&gt;
+(forall a. a -&gt; Data r a)
+-&gt; (forall a b. Data r (a -&gt; b) -&gt; Data r a -&gt; Data r b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; Data r a -&gt; Data r b -&gt; Data r c)
+-&gt; (forall a b. Data r a -&gt; Data r b -&gt; Data r b)
+-&gt; (forall a b. Data r a -&gt; Data r b -&gt; Data r a)
+-&gt; Applicative (Data r)
+forall a. a -&gt; Data r a
+forall a b. Data r a -&gt; Data r b -&gt; Data r a
+forall a b. Data r a -&gt; Data r b -&gt; Data r b
+forall a b. Data r (a -&gt; b) -&gt; Data r a -&gt; Data r b
+forall a b c. (a -&gt; b -&gt; c) -&gt; Data r a -&gt; Data r b -&gt; Data r c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+forall (r :: * -&gt; *). Applicative r =&gt; Functor (Data r)
+forall (r :: * -&gt; *) a. Applicative r =&gt; a -&gt; Data r a
+forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r a -&gt; Data r b -&gt; Data r a
+forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r a -&gt; Data r b -&gt; Data r b
+forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r (a -&gt; b) -&gt; Data r a -&gt; Data r b
+forall (r :: * -&gt; *) a b c.
+Applicative r =&gt;
+(a -&gt; b -&gt; c) -&gt; Data r a -&gt; Data r b -&gt; Data r c
+$cpure :: forall (r :: * -&gt; *) a. Applicative r =&gt; a -&gt; Data r a
+pure :: forall a. a -&gt; Data r a
+$c&lt;*&gt; :: forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r (a -&gt; b) -&gt; Data r a -&gt; Data r b
+&lt;*&gt; :: forall a b. Data r (a -&gt; b) -&gt; Data r a -&gt; Data r b
+$cliftA2 :: forall (r :: * -&gt; *) a b c.
+Applicative r =&gt;
+(a -&gt; b -&gt; c) -&gt; Data r a -&gt; Data r b -&gt; Data r c
+liftA2 :: forall a b c. (a -&gt; b -&gt; c) -&gt; Data r a -&gt; Data r b -&gt; Data r c
+$c*&gt; :: forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r a -&gt; Data r b -&gt; Data r b
+*&gt; :: forall a b. Data r a -&gt; Data r b -&gt; Data r b
+$c&lt;* :: forall (r :: * -&gt; *) a b.
+Applicative r =&gt;
+Data r a -&gt; Data r b -&gt; Data r a
+&lt;* :: forall a b. Data r a -&gt; Data r b -&gt; Data r a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062448"><span id="local-6989586621679062452"><span id="local-6989586621679062456"><span id="local-6989586621679062460"><span class="annot"><span class="annottext">Applicative (Data r)
+Applicative (Data r) =&gt;
+(forall a. Data r a)
+-&gt; (forall a. Data r a -&gt; Data r a -&gt; Data r a)
+-&gt; (forall a. Data r a -&gt; Data r [a])
+-&gt; (forall a. Data r a -&gt; Data r [a])
+-&gt; Alternative (Data r)
+forall a. Data r a
+forall a. Data r a -&gt; Data r [a]
+forall a. Data r a -&gt; Data r a -&gt; Data r a
+forall (f :: * -&gt; *).
+Applicative f =&gt;
+(forall a. f a)
+-&gt; (forall a. f a -&gt; f a -&gt; f a)
+-&gt; (forall a. f a -&gt; f [a])
+-&gt; (forall a. f a -&gt; f [a])
+-&gt; Alternative f
+forall (r :: * -&gt; *). Alternative r =&gt; Applicative (Data r)
+forall (r :: * -&gt; *) a. Alternative r =&gt; Data r a
+forall (r :: * -&gt; *) a. Alternative r =&gt; Data r a -&gt; Data r [a]
+forall (r :: * -&gt; *) a.
+Alternative r =&gt;
+Data r a -&gt; Data r a -&gt; Data r a
+$cempty :: forall (r :: * -&gt; *) a. Alternative r =&gt; Data r a
+empty :: forall a. Data r a
+$c&lt;|&gt; :: forall (r :: * -&gt; *) a.
+Alternative r =&gt;
+Data r a -&gt; Data r a -&gt; Data r a
+&lt;|&gt; :: forall a. Data r a -&gt; Data r a -&gt; Data r a
+$csome :: forall (r :: * -&gt; *) a. Alternative r =&gt; Data r a -&gt; Data r [a]
+some :: forall a. Data r a -&gt; Data r [a]
+$cmany :: forall (r :: * -&gt; *) a. Alternative r =&gt; Data r a -&gt; Data r [a]
+many :: forall a. Data r a -&gt; Data r [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Alternative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Alternative</span></a></span></span></span></span></span><span>
+</span><span id="line-38"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062471"><span id="local-6989586621679062475"><span id="local-6989586621679062479"><span class="annot"><span class="annottext">Applicative (Data r)
+Applicative (Data r) =&gt;
+(forall a b. Data r a -&gt; (a -&gt; Data r b) -&gt; Data r b)
+-&gt; (forall a b. Data r a -&gt; Data r b -&gt; Data r b)
+-&gt; (forall a. a -&gt; Data r a)
+-&gt; Monad (Data r)
+forall a. a -&gt; Data r a
+forall a b. Data r a -&gt; Data r b -&gt; Data r b
+forall a b. Data r a -&gt; (a -&gt; Data r b) -&gt; Data r b
+forall (r :: * -&gt; *). Monad r =&gt; Applicative (Data r)
+forall (r :: * -&gt; *) a. Monad r =&gt; a -&gt; Data r a
+forall (r :: * -&gt; *) a b.
+Monad r =&gt;
+Data r a -&gt; Data r b -&gt; Data r b
+forall (r :: * -&gt; *) a b.
+Monad r =&gt;
+Data r a -&gt; (a -&gt; Data r b) -&gt; Data r b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall (r :: * -&gt; *) a b.
+Monad r =&gt;
+Data r a -&gt; (a -&gt; Data r b) -&gt; Data r b
+&gt;&gt;= :: forall a b. Data r a -&gt; (a -&gt; Data r b) -&gt; Data r b
+$c&gt;&gt; :: forall (r :: * -&gt; *) a b.
+Monad r =&gt;
+Data r a -&gt; Data r b -&gt; Data r b
+&gt;&gt; :: forall a b. Data r a -&gt; Data r b -&gt; Data r b
+$creturn :: forall (r :: * -&gt; *) a. Monad r =&gt; a -&gt; Data r a
+return :: forall a. a -&gt; Data r a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062493"><span id="local-6989586621679062497"><span class="annot"><span class="annottext">Monad (Data r)
+Alternative (Data r)
+(Alternative (Data r), Monad (Data r)) =&gt;
+(forall a. Data r a)
+-&gt; (forall a. Data r a -&gt; Data r a -&gt; Data r a)
+-&gt; MonadPlus (Data r)
+forall a. Data r a
+forall a. Data r a -&gt; Data r a -&gt; Data r a
+forall (r :: * -&gt; *). MonadPlus r =&gt; Monad (Data r)
+forall (r :: * -&gt; *). MonadPlus r =&gt; Alternative (Data r)
+forall (r :: * -&gt; *) a. MonadPlus r =&gt; Data r a
+forall (r :: * -&gt; *) a.
+MonadPlus r =&gt;
+Data r a -&gt; Data r a -&gt; Data r a
+forall (m :: * -&gt; *).
+(Alternative m, Monad m) =&gt;
+(forall a. m a) -&gt; (forall a. m a -&gt; m a -&gt; m a) -&gt; MonadPlus m
+$cmzero :: forall (r :: * -&gt; *) a. MonadPlus r =&gt; Data r a
+mzero :: forall a. Data r a
+$cmplus :: forall (r :: * -&gt; *) a.
+MonadPlus r =&gt;
+Data r a -&gt; Data r a -&gt; Data r a
+mplus :: forall a. Data r a -&gt; Data r a -&gt; Data r a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#MonadPlus"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadPlus</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062506"><span id="local-6989586621679062510"><span class="annot"><span class="annottext">(forall a' a. (a' -&gt; a) -&gt; Data r a -&gt; Data r a')
+-&gt; (forall b a. b -&gt; Data r b -&gt; Data r a)
+-&gt; Contravariant (Data r)
+forall b a. b -&gt; Data r b -&gt; Data r a
+forall a' a. (a' -&gt; a) -&gt; Data r a -&gt; Data r a'
+forall (r :: * -&gt; *) b a.
+Contravariant r =&gt;
+b -&gt; Data r b -&gt; Data r a
+forall (r :: * -&gt; *) a' a.
+Contravariant r =&gt;
+(a' -&gt; a) -&gt; Data r a -&gt; Data r a'
+forall (f :: * -&gt; *).
+(forall a' a. (a' -&gt; a) -&gt; f a -&gt; f a')
+-&gt; (forall b a. b -&gt; f b -&gt; f a) -&gt; Contravariant f
+$ccontramap :: forall (r :: * -&gt; *) a' a.
+Contravariant r =&gt;
+(a' -&gt; a) -&gt; Data r a -&gt; Data r a'
+contramap :: forall a' a. (a' -&gt; a) -&gt; Data r a -&gt; Data r a'
+$c&gt;$ :: forall (r :: * -&gt; *) b a.
+Contravariant r =&gt;
+b -&gt; Data r b -&gt; Data r a
+&gt;$ :: forall b a. b -&gt; Data r b -&gt; Data r a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Contravariant</span></a></span></span></span><span>
+</span><span id="line-39"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062517"><span id="local-6989586621679062521"><span class="annot"><span class="annottext">Data r p -&gt; Data r p -&gt; Bool
+(Data r p -&gt; Data r p -&gt; Bool)
+-&gt; (Data r p -&gt; Data r p -&gt; Bool) -&gt; Eq (Data r p)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (r :: * -&gt; *) p. Eq (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+$c== :: forall (r :: * -&gt; *) p. Eq (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+== :: Data r p -&gt; Data r p -&gt; Bool
+$c/= :: forall (r :: * -&gt; *) p. Eq (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+/= :: Data r p -&gt; Data r p -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062531"><span id="local-6989586621679062535"><span id="local-6989586621679062539"><span id="local-6989586621679062543"><span id="local-6989586621679062547"><span id="local-6989586621679062551"><span id="local-6989586621679062555"><span class="annot"><span class="annottext">Eq (Data r p)
+Eq (Data r p) =&gt;
+(Data r p -&gt; Data r p -&gt; Ordering)
+-&gt; (Data r p -&gt; Data r p -&gt; Bool)
+-&gt; (Data r p -&gt; Data r p -&gt; Bool)
+-&gt; (Data r p -&gt; Data r p -&gt; Bool)
+-&gt; (Data r p -&gt; Data r p -&gt; Bool)
+-&gt; (Data r p -&gt; Data r p -&gt; Data r p)
+-&gt; (Data r p -&gt; Data r p -&gt; Data r p)
+-&gt; Ord (Data r p)
+Data r p -&gt; Data r p -&gt; Bool
+Data r p -&gt; Data r p -&gt; Ordering
+Data r p -&gt; Data r p -&gt; Data r p
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall (r :: * -&gt; *) p. Ord (r p) =&gt; Eq (Data r p)
+forall (r :: * -&gt; *) p. Ord (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+forall (r :: * -&gt; *) p.
+Ord (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Ordering
+forall (r :: * -&gt; *) p.
+Ord (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+$ccompare :: forall (r :: * -&gt; *) p.
+Ord (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Ordering
+compare :: Data r p -&gt; Data r p -&gt; Ordering
+$c&lt; :: forall (r :: * -&gt; *) p. Ord (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+&lt; :: Data r p -&gt; Data r p -&gt; Bool
+$c&lt;= :: forall (r :: * -&gt; *) p. Ord (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+&lt;= :: Data r p -&gt; Data r p -&gt; Bool
+$c&gt; :: forall (r :: * -&gt; *) p. Ord (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+&gt; :: Data r p -&gt; Data r p -&gt; Bool
+$c&gt;= :: forall (r :: * -&gt; *) p. Ord (r p) =&gt; Data r p -&gt; Data r p -&gt; Bool
+&gt;= :: Data r p -&gt; Data r p -&gt; Bool
+$cmax :: forall (r :: * -&gt; *) p.
+Ord (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+max :: Data r p -&gt; Data r p -&gt; Data r p
+$cmin :: forall (r :: * -&gt; *) p.
+Ord (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+min :: Data r p -&gt; Data r p -&gt; Data r p
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062565"><span class="annot"><span class="annottext">(forall a. Eq a =&gt; Eq (Data r a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Bool) -&gt; Data r a -&gt; Data r b -&gt; Bool)
+-&gt; Eq1 (Data r)
+forall a. Eq a =&gt; Eq (Data r a)
+forall a b. (a -&gt; b -&gt; Bool) -&gt; Data r a -&gt; Data r b -&gt; Bool
+forall (r :: * -&gt; *) a. (Eq1 r, Eq a) =&gt; Eq (Data r a)
+forall (r :: * -&gt; *) a b.
+Eq1 r =&gt;
+(a -&gt; b -&gt; Bool) -&gt; Data r a -&gt; Data r b -&gt; Bool
+forall (f :: * -&gt; *).
+(forall a. Eq a =&gt; Eq (f a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool) -&gt; Eq1 f
+$cliftEq :: forall (r :: * -&gt; *) a b.
+Eq1 r =&gt;
+(a -&gt; b -&gt; Bool) -&gt; Data r a -&gt; Data r b -&gt; Bool
+liftEq :: forall a b. (a -&gt; b -&gt; Bool) -&gt; Data r a -&gt; Data r b -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">Eq1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062579"><span class="annot"><span class="annottext">Eq1 (Data r)
+(Eq1 (Data r), forall a. Ord a =&gt; Ord (Data r a)) =&gt;
+(forall a b.
+ (a -&gt; b -&gt; Ordering) -&gt; Data r a -&gt; Data r b -&gt; Ordering)
+-&gt; Ord1 (Data r)
+forall a. Ord a =&gt; Ord (Data r a)
+forall a b.
+(a -&gt; b -&gt; Ordering) -&gt; Data r a -&gt; Data r b -&gt; Ordering
+forall (r :: * -&gt; *). Ord1 r =&gt; Eq1 (Data r)
+forall (r :: * -&gt; *) a. (Ord1 r, Ord a) =&gt; Ord (Data r a)
+forall (r :: * -&gt; *) a b.
+Ord1 r =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; Data r a -&gt; Data r b -&gt; Ordering
+forall (f :: * -&gt; *).
+(Eq1 f, forall a. Ord a =&gt; Ord (f a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Ordering) -&gt; f a -&gt; f b -&gt; Ordering)
+-&gt; Ord1 f
+$cliftCompare :: forall (r :: * -&gt; *) a b.
+Ord1 r =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; Data r a -&gt; Data r b -&gt; Ordering
+liftCompare :: forall a b.
+(a -&gt; b -&gt; Ordering) -&gt; Data r a -&gt; Data r b -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Ord1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062589"><span id="local-6989586621679062593"><span id="local-6989586621679062599"><span class="annot"><span class="annottext">NonEmpty (Data r p) -&gt; Data r p
+Data r p -&gt; Data r p -&gt; Data r p
+(Data r p -&gt; Data r p -&gt; Data r p)
+-&gt; (NonEmpty (Data r p) -&gt; Data r p)
+-&gt; (forall b. Integral b =&gt; b -&gt; Data r p -&gt; Data r p)
+-&gt; Semigroup (Data r p)
+forall b. Integral b =&gt; b -&gt; Data r p -&gt; Data r p
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+forall (r :: * -&gt; *) p.
+Semigroup (r p) =&gt;
+NonEmpty (Data r p) -&gt; Data r p
+forall (r :: * -&gt; *) p.
+Semigroup (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+forall (r :: * -&gt; *) p b.
+(Semigroup (r p), Integral b) =&gt;
+b -&gt; Data r p -&gt; Data r p
+$c&lt;&gt; :: forall (r :: * -&gt; *) p.
+Semigroup (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+&lt;&gt; :: Data r p -&gt; Data r p -&gt; Data r p
+$csconcat :: forall (r :: * -&gt; *) p.
+Semigroup (r p) =&gt;
+NonEmpty (Data r p) -&gt; Data r p
+sconcat :: NonEmpty (Data r p) -&gt; Data r p
+$cstimes :: forall (r :: * -&gt; *) p b.
+(Semigroup (r p), Integral b) =&gt;
+b -&gt; Data r p -&gt; Data r p
+stimes :: forall b. Integral b =&gt; b -&gt; Data r p -&gt; Data r p
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679062611"><span id="local-6989586621679062615"><span id="local-6989586621679062619"><span class="annot"><span class="annottext">Semigroup (Data r p)
+Data r p
+Semigroup (Data r p) =&gt;
+Data r p
+-&gt; (Data r p -&gt; Data r p -&gt; Data r p)
+-&gt; ([Data r p] -&gt; Data r p)
+-&gt; Monoid (Data r p)
+[Data r p] -&gt; Data r p
+Data r p -&gt; Data r p -&gt; Data r p
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+forall (r :: * -&gt; *) p. Monoid (r p) =&gt; Semigroup (Data r p)
+forall (r :: * -&gt; *) p. Monoid (r p) =&gt; Data r p
+forall (r :: * -&gt; *) p. Monoid (r p) =&gt; [Data r p] -&gt; Data r p
+forall (r :: * -&gt; *) p.
+Monoid (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+$cmempty :: forall (r :: * -&gt; *) p. Monoid (r p) =&gt; Data r p
+mempty :: Data r p
+$cmappend :: forall (r :: * -&gt; *) p.
+Monoid (r p) =&gt;
+Data r p -&gt; Data r p -&gt; Data r p
+mappend :: Data r p -&gt; Data r p -&gt; Data r p
+$cmconcat :: forall (r :: * -&gt; *) p. Monoid (r p) =&gt; [Data r p] -&gt; Data r p
+mconcat :: [Data r p] -&gt; Data r p
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Conversion between a generic type and the synthetic type made using its</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- representation. Inverse of 'fromData'.</span><span>
+</span><span id="line-43"></span><span id="local-6989586621679062195"><span id="local-6989586621679062196"><span class="annot"><a href="Generic.Data.Internal.Data.html#toData"><span class="hs-identifier hs-type">toData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062195"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679062195"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Rep"><span class="hs-identifier hs-type">Rep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062195"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679062196"><span class="hs-identifier hs-type">p</span></a></span></span></span><span>
+</span><span id="line-44"></span><span id="toData"><span class="annot"><span class="annottext">toData :: forall a p. Generic a =&gt; a -&gt; Data (Rep a) p
+</span><a href="Generic.Data.Internal.Data.html#toData"><span class="hs-identifier hs-var hs-var">toData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rep a p -&gt; Data (Rep a) p
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">(Rep a p -&gt; Data (Rep a) p)
+-&gt; (a -&gt; Rep a p) -&gt; a -&gt; Data (Rep a) p
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Rep a p
+forall x. a -&gt; Rep a x
+forall a x. Generic a =&gt; a -&gt; Rep a x
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#from"><span class="hs-identifier hs-var">from</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | Inverse of 'toData'.</span></span><span>
+</span><span id="line-47"></span><span id="local-6989586621679062204"><span id="local-6989586621679062205"><span class="annot"><a href="Generic.Data.Internal.Data.html#fromData"><span class="hs-identifier hs-type">fromData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062204"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Rep"><span class="hs-identifier hs-type">Rep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062204"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679062205"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679062204"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-48"></span><span id="fromData"><span class="annot"><span class="annottext">fromData :: forall a p. Generic a =&gt; Data (Rep a) p -&gt; a
+</span><a href="Generic.Data.Internal.Data.html#fromData"><span class="hs-identifier hs-var hs-var">fromData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rep a p -&gt; a
+forall a x. Generic a =&gt; Rep a x -&gt; a
+forall x. Rep a x -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">(Rep a p -&gt; a)
+-&gt; (Data (Rep a) p -&gt; Rep a p) -&gt; Data (Rep a) p -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data (Rep a) p -&gt; Rep a p
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062211"><span id="local-6989586621679062212"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062211"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier hs-type">Contravariant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062211"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062211"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062212"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Rep"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Rep"><span class="hs-identifier hs-var">Rep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062211"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062212"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679062211"><span class="hs-identifier hs-type">r</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679062642"><span class="annot"><span class="annottext">to :: forall x. Rep (Data r p) x -&gt; Data r p
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#to"><span class="hs-identifier hs-var hs-var hs-var hs-var">to</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r p -&gt; Data r p
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">(r p -&gt; Data r p) -&gt; (r x -&gt; r p) -&gt; r x -&gt; Data r p
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">r x -&gt; r p
+forall (f :: * -&gt; *) a b.
+(Functor f, Contravariant f) =&gt;
+f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#phantom"><span class="hs-identifier hs-var">phantom</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679062645"><span class="annot"><span class="annottext">from :: forall x. Data r p -&gt; Rep (Data r p) x
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#from"><span class="hs-identifier hs-var hs-var hs-var hs-var">from</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r p -&gt; r x
+forall (f :: * -&gt; *) a b.
+(Functor f, Contravariant f) =&gt;
+f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#phantom"><span class="hs-identifier hs-var">phantom</span></a></span><span> </span><span class="annot"><span class="annottext">(r p -&gt; r x) -&gt; (Data r p -&gt; r p) -&gt; Data r p -&gt; r x
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data r p -&gt; r p
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062223"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic1"><span class="hs-identifier hs-type">Generic1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062223"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Rep1"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Rep1"><span class="hs-identifier hs-var">Rep1</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062223"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679062223"><span class="hs-identifier hs-type">r</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679062650"><span class="annot"><span class="annottext">to1 :: forall a. Rep1 (Data r) a -&gt; Data r a
+</span><a href="#local-6989586621679062650"><span class="hs-identifier hs-var hs-var hs-var hs-var">to1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r a -&gt; Data r a
+Rep1 (Data r) a -&gt; Data r a
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679062652"><span class="annot"><span class="annottext">from1 :: forall a. Data r a -&gt; Rep1 (Data r) a
+</span><a href="#local-6989586621679062652"><span class="hs-identifier hs-var hs-var hs-var hs-var">from1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data r a -&gt; r a
+Data r a -&gt; Rep1 (Data r) a
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062231"><span id="local-6989586621679062232"><span id="local-6989586621679062658"><span id="local-6989586621679062662"><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Show.html#GShow1"><span class="hs-identifier hs-type">GShow1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062231"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062232"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062231"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062232"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679062668"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Data r p -&gt; ShowS
+</span><a href="#local-6989586621679062668"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Data r p -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r p -&gt; ShowS
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; p -&gt; ShowS) -&gt; ([p] -&gt; ShowS) -&gt; r p -&gt; Int -&gt; ShowS
+forall (f :: * -&gt; *) a.
+GShow1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; f a -&gt; Int -&gt; ShowS
+</span><a href="Generic.Data.Internal.Show.html#gLiftPrecShows"><span class="hs-identifier hs-var">gLiftPrecShows</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; p -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">[p] -&gt; ShowS
+forall a. Show a =&gt; [a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showList"><span class="hs-identifier hs-var">showList</span></a></span><span> </span><span class="annot"><span class="annottext">(r p -&gt; Int -&gt; ShowS)
+-&gt; (Data r p -&gt; r p) -&gt; Data r p -&gt; Int -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data r p -&gt; r p
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062244"><span id="local-6989586621679062678"><span class="annot"><a href="Generic.Data.Internal.Show.html#GShow1"><span class="hs-identifier hs-type">GShow1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062244"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062244"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679062686"><span class="annot"><span class="annottext">liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS
+</span><a href="#local-6989586621679062686"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftShowsPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+ -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+-&gt; ((Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+-&gt; (Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; Int
+-&gt; Data r a
+-&gt; ShowS
+forall a b.
+(a -&gt; b) -&gt; ((Int -&gt; a -&gt; ShowS) -&gt; a) -&gt; (Int -&gt; a -&gt; ShowS) -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(((([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+  -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+ -&gt; ((Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+ -&gt; (Int -&gt; a -&gt; ShowS)
+ -&gt; ([a] -&gt; ShowS)
+ -&gt; Int
+ -&gt; Data r a
+ -&gt; ShowS)
+-&gt; (((r a -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+    -&gt; (([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+    -&gt; ([a] -&gt; ShowS)
+    -&gt; Int
+    -&gt; Data r a
+    -&gt; ShowS)
+-&gt; ((r a -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+-&gt; ((Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+-&gt; (Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; Int
+-&gt; Data r a
+-&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((r a -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+-&gt; (([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; Int
+-&gt; Data r a
+-&gt; ShowS
+forall a b.
+(a -&gt; b) -&gt; (([a] -&gt; ShowS) -&gt; a) -&gt; ([a] -&gt; ShowS) -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Data r a -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">((Data r a -&gt; Int -&gt; ShowS) -&gt; Int -&gt; Data r a -&gt; ShowS)
+-&gt; ((r a -&gt; Int -&gt; ShowS) -&gt; Data r a -&gt; Int -&gt; ShowS)
+-&gt; (r a -&gt; Int -&gt; ShowS)
+-&gt; Int
+-&gt; Data r a
+-&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(r a -&gt; Int -&gt; ShowS)
+-&gt; (Data r a -&gt; r a) -&gt; Data r a -&gt; Int -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data r a -&gt; r a
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; r a -&gt; Int -&gt; ShowS
+forall (f :: * -&gt; *) a.
+GShow1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; f a -&gt; Int -&gt; ShowS
+</span><a href="Generic.Data.Internal.Show.html#gLiftPrecShows"><span class="hs-identifier hs-var">gLiftPrecShows</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062252"><span id="local-6989586621679062253"><span id="local-6989586621679062690"><span id="local-6989586621679062694"><span id="local-6989586621679062699"><span id="local-6989586621679062702"><span id="local-6989586621679062705"><span id="local-6989586621679062708"><span class="annot"><a href="Generic.Data.Internal.Enum.html#GEnum"><span class="hs-identifier hs-type">GEnum</span></a></span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#StandardEnum"><span class="hs-identifier hs-type">StandardEnum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062252"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-type">Enum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062252"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062253"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679062712"><span class="annot"><span class="annottext">toEnum :: Int -&gt; Data r p
+</span><a href="#local-6989586621679062712"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEnum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r p -&gt; Data r p
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">(r p -&gt; Data r p) -&gt; (Int -&gt; r p) -&gt; Int -&gt; Data r p
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall opts (f :: * -&gt; *) p. GEnum opts f =&gt; Int -&gt; f p
+</span><a href="Generic.Data.Internal.Enum.html#gToEnum"><span class="hs-identifier hs-var">gToEnum</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Generic.Data.Internal.Enum.html#StandardEnum"><span class="hs-identifier hs-type">StandardEnum</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679062716"><span class="annot"><span class="annottext">fromEnum :: Data r p -&gt; Int
+</span><a href="#local-6989586621679062716"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromEnum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall opts (f :: * -&gt; *) p. GEnum opts f =&gt; f p -&gt; Int
+</span><a href="Generic.Data.Internal.Enum.html#gFromEnum"><span class="hs-identifier hs-var">gFromEnum</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Generic.Data.Internal.Enum.html#StandardEnum"><span class="hs-identifier hs-type">StandardEnum</span></a></span><span> </span><span class="annot"><span class="annottext">(r p -&gt; Int) -&gt; (Data r p -&gt; r p) -&gt; Data r p -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Data r p -&gt; r p
+forall (r :: * -&gt; *) p. Data r p -&gt; r p
+</span><a href="Generic.Data.Internal.Data.html#unData"><span class="hs-identifier hs-var">unData</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679062262"><span id="local-6989586621679062263"><span class="annot"><a href="Generic.Data.Internal.Enum.html#GBounded"><span class="hs-identifier hs-type">GBounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062262"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062262"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679062263"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679062725"><span class="annot"><span class="annottext">minBound :: Data r p
+</span><a href="#local-6989586621679062725"><span class="hs-identifier hs-var hs-var hs-var hs-var">minBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r p -&gt; Data r p
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">r p
+forall p. r p
+forall (f :: * -&gt; *) p. GBounded f =&gt; f p
+</span><a href="Generic.Data.Internal.Enum.html#gMinBound"><span class="hs-identifier hs-var">gMinBound</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679062729"><span class="annot"><span class="annottext">maxBound :: Data r p
+</span><a href="#local-6989586621679062729"><span class="hs-identifier hs-var hs-var hs-var hs-var">maxBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">r p -&gt; Data r p
+forall (r :: * -&gt; *) p. r p -&gt; Data r p
+</span><a href="Generic.Data.Internal.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">r p
+forall p. r p
+forall (f :: * -&gt; *) p. GBounded f =&gt; f p
+</span><a href="Generic.Data.Internal.Enum.html#gMaxBound"><span class="hs-identifier hs-var">gMaxBound</span></a></span><span>
+</span><span id="line-73"></span></pre></body></html>

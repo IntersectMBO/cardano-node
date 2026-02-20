@@ -1,0 +1,425 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Metrics.Prometheus.MetricId</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isDigit"><span class="hs-identifier">isDigit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier">Monoid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier">Semigroup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier">null</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- | Construct with 'makeName' to ensure that names use only valid characters</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">newtype</span><span> </span><span id="Name"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-var">Name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Name"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-var">Name</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unName"><span class="annot"><span class="annottext">Name -&gt; Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#unName"><span class="hs-identifier hs-var hs-var">unName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679073793"><span id="local-6989586621679073799"><span id="local-6989586621679073803"><span class="annot"><span class="annottext">Int -&gt; Name -&gt; ShowS
+[Name] -&gt; ShowS
+Name -&gt; String
+(Int -&gt; Name -&gt; ShowS)
+-&gt; (Name -&gt; String) -&gt; ([Name] -&gt; ShowS) -&gt; Show Name
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Name -&gt; ShowS
+showsPrec :: Int -&gt; Name -&gt; ShowS
+$cshow :: Name -&gt; String
+show :: Name -&gt; String
+$cshowList :: [Name] -&gt; ShowS
+showList :: [Name] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073807"><span id="local-6989586621679073811"><span class="annot"><span class="annottext">Name -&gt; Name -&gt; Bool
+(Name -&gt; Name -&gt; Bool) -&gt; (Name -&gt; Name -&gt; Bool) -&gt; Eq Name
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Name -&gt; Name -&gt; Bool
+== :: Name -&gt; Name -&gt; Bool
+$c/= :: Name -&gt; Name -&gt; Bool
+/= :: Name -&gt; Name -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073819"><span id="local-6989586621679073823"><span id="local-6989586621679073827"><span id="local-6989586621679073831"><span id="local-6989586621679073835"><span id="local-6989586621679073839"><span id="local-6989586621679073843"><span class="annot"><span class="annottext">Eq Name
+Eq Name =&gt;
+(Name -&gt; Name -&gt; Ordering)
+-&gt; (Name -&gt; Name -&gt; Bool)
+-&gt; (Name -&gt; Name -&gt; Bool)
+-&gt; (Name -&gt; Name -&gt; Bool)
+-&gt; (Name -&gt; Name -&gt; Bool)
+-&gt; (Name -&gt; Name -&gt; Name)
+-&gt; (Name -&gt; Name -&gt; Name)
+-&gt; Ord Name
+Name -&gt; Name -&gt; Bool
+Name -&gt; Name -&gt; Ordering
+Name -&gt; Name -&gt; Name
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Name -&gt; Name -&gt; Ordering
+compare :: Name -&gt; Name -&gt; Ordering
+$c&lt; :: Name -&gt; Name -&gt; Bool
+&lt; :: Name -&gt; Name -&gt; Bool
+$c&lt;= :: Name -&gt; Name -&gt; Bool
+&lt;= :: Name -&gt; Name -&gt; Bool
+$c&gt; :: Name -&gt; Name -&gt; Bool
+&gt; :: Name -&gt; Name -&gt; Bool
+$c&gt;= :: Name -&gt; Name -&gt; Bool
+&gt;= :: Name -&gt; Name -&gt; Bool
+$cmax :: Name -&gt; Name -&gt; Name
+max :: Name -&gt; Name -&gt; Name
+$cmin :: Name -&gt; Name -&gt; Name
+min :: Name -&gt; Name -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073852"><span id="local-6989586621679073857"><span id="local-6989586621679073861"><span class="annot"><span class="annottext">Semigroup Name
+Name
+Semigroup Name =&gt;
+Name -&gt; (Name -&gt; Name -&gt; Name) -&gt; ([Name] -&gt; Name) -&gt; Monoid Name
+[Name] -&gt; Name
+Name -&gt; Name -&gt; Name
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: Name
+mempty :: Name
+$cmappend :: Name -&gt; Name -&gt; Name
+mappend :: Name -&gt; Name -&gt; Name
+$cmconcat :: [Name] -&gt; Name
+mconcat :: [Name] -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073867"><span id="local-6989586621679073871"><span id="local-6989586621679073877"><span class="annot"><span class="annottext">NonEmpty Name -&gt; Name
+Name -&gt; Name -&gt; Name
+(Name -&gt; Name -&gt; Name)
+-&gt; (NonEmpty Name -&gt; Name)
+-&gt; (forall b. Integral b =&gt; b -&gt; Name -&gt; Name)
+-&gt; Semigroup Name
+forall b. Integral b =&gt; b -&gt; Name -&gt; Name
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: Name -&gt; Name -&gt; Name
+&lt;&gt; :: Name -&gt; Name -&gt; Name
+$csconcat :: NonEmpty Name -&gt; Name
+sconcat :: NonEmpty Name -&gt; Name
+$cstimes :: forall b. Integral b =&gt; b -&gt; Name -&gt; Name
+stimes :: forall b. Integral b =&gt; b -&gt; Name -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679073886"><span class="annot"><span class="annottext">fromString :: String -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Name
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeName"><span class="hs-identifier hs-var">makeName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Name) -&gt; (String -&gt; Text) -&gt; String -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">newtype</span><span> </span><span id="Labels"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-var">Labels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Labels"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-var">Labels</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unLabels"><span class="annot"><span class="annottext">Labels -&gt; Map Text Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#unLabels"><span class="hs-identifier hs-var hs-var">unLabels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679073892"><span id="local-6989586621679073899"><span id="local-6989586621679073903"><span class="annot"><span class="annottext">Int -&gt; Labels -&gt; ShowS
+[Labels] -&gt; ShowS
+Labels -&gt; String
+(Int -&gt; Labels -&gt; ShowS)
+-&gt; (Labels -&gt; String) -&gt; ([Labels] -&gt; ShowS) -&gt; Show Labels
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Labels -&gt; ShowS
+showsPrec :: Int -&gt; Labels -&gt; ShowS
+$cshow :: Labels -&gt; String
+show :: Labels -&gt; String
+$cshowList :: [Labels] -&gt; ShowS
+showList :: [Labels] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073906"><span id="local-6989586621679073911"><span class="annot"><span class="annottext">Labels -&gt; Labels -&gt; Bool
+(Labels -&gt; Labels -&gt; Bool)
+-&gt; (Labels -&gt; Labels -&gt; Bool) -&gt; Eq Labels
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Labels -&gt; Labels -&gt; Bool
+== :: Labels -&gt; Labels -&gt; Bool
+$c/= :: Labels -&gt; Labels -&gt; Bool
+/= :: Labels -&gt; Labels -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073918"><span id="local-6989586621679073923"><span id="local-6989586621679073927"><span id="local-6989586621679073931"><span id="local-6989586621679073935"><span id="local-6989586621679073939"><span id="local-6989586621679073943"><span class="annot"><span class="annottext">Eq Labels
+Eq Labels =&gt;
+(Labels -&gt; Labels -&gt; Ordering)
+-&gt; (Labels -&gt; Labels -&gt; Bool)
+-&gt; (Labels -&gt; Labels -&gt; Bool)
+-&gt; (Labels -&gt; Labels -&gt; Bool)
+-&gt; (Labels -&gt; Labels -&gt; Bool)
+-&gt; (Labels -&gt; Labels -&gt; Labels)
+-&gt; (Labels -&gt; Labels -&gt; Labels)
+-&gt; Ord Labels
+Labels -&gt; Labels -&gt; Bool
+Labels -&gt; Labels -&gt; Ordering
+Labels -&gt; Labels -&gt; Labels
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Labels -&gt; Labels -&gt; Ordering
+compare :: Labels -&gt; Labels -&gt; Ordering
+$c&lt; :: Labels -&gt; Labels -&gt; Bool
+&lt; :: Labels -&gt; Labels -&gt; Bool
+$c&lt;= :: Labels -&gt; Labels -&gt; Bool
+&lt;= :: Labels -&gt; Labels -&gt; Bool
+$c&gt; :: Labels -&gt; Labels -&gt; Bool
+&gt; :: Labels -&gt; Labels -&gt; Bool
+$c&gt;= :: Labels -&gt; Labels -&gt; Bool
+&gt;= :: Labels -&gt; Labels -&gt; Bool
+$cmax :: Labels -&gt; Labels -&gt; Labels
+max :: Labels -&gt; Labels -&gt; Labels
+$cmin :: Labels -&gt; Labels -&gt; Labels
+min :: Labels -&gt; Labels -&gt; Labels
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073951"><span id="local-6989586621679073956"><span id="local-6989586621679073960"><span class="annot"><span class="annottext">Semigroup Labels
+Labels
+Semigroup Labels =&gt;
+Labels
+-&gt; (Labels -&gt; Labels -&gt; Labels)
+-&gt; ([Labels] -&gt; Labels)
+-&gt; Monoid Labels
+[Labels] -&gt; Labels
+Labels -&gt; Labels -&gt; Labels
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: Labels
+mempty :: Labels
+$cmappend :: Labels -&gt; Labels -&gt; Labels
+mappend :: Labels -&gt; Labels -&gt; Labels
+$cmconcat :: [Labels] -&gt; Labels
+mconcat :: [Labels] -&gt; Labels
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073965"><span id="local-6989586621679073970"><span id="local-6989586621679073976"><span class="annot"><span class="annottext">NonEmpty Labels -&gt; Labels
+Labels -&gt; Labels -&gt; Labels
+(Labels -&gt; Labels -&gt; Labels)
+-&gt; (NonEmpty Labels -&gt; Labels)
+-&gt; (forall b. Integral b =&gt; b -&gt; Labels -&gt; Labels)
+-&gt; Semigroup Labels
+forall b. Integral b =&gt; b -&gt; Labels -&gt; Labels
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: Labels -&gt; Labels -&gt; Labels
+&lt;&gt; :: Labels -&gt; Labels -&gt; Labels
+$csconcat :: NonEmpty Labels -&gt; Labels
+sconcat :: NonEmpty Labels -&gt; Labels
+$cstimes :: forall b. Integral b =&gt; b -&gt; Labels -&gt; Labels
+stimes :: forall b. Integral b =&gt; b -&gt; Labels -&gt; Labels
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="MetricId"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-var">MetricId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MetricId"><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-var">MetricId</span></a></span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="name"><span class="annot"><span class="annottext">MetricId -&gt; Name
+</span><a href="System.Metrics.Prometheus.MetricId.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="labels"><span class="annot"><span class="annottext">MetricId -&gt; Labels
+</span><a href="System.Metrics.Prometheus.MetricId.html#labels"><span class="hs-identifier hs-var hs-var">labels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679073985"><span id="local-6989586621679073989"><span class="annot"><span class="annottext">MetricId -&gt; MetricId -&gt; Bool
+(MetricId -&gt; MetricId -&gt; Bool)
+-&gt; (MetricId -&gt; MetricId -&gt; Bool) -&gt; Eq MetricId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: MetricId -&gt; MetricId -&gt; Bool
+== :: MetricId -&gt; MetricId -&gt; Bool
+$c/= :: MetricId -&gt; MetricId -&gt; Bool
+/= :: MetricId -&gt; MetricId -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073995"><span id="local-6989586621679073999"><span id="local-6989586621679074003"><span id="local-6989586621679074007"><span id="local-6989586621679074010"><span id="local-6989586621679074013"><span id="local-6989586621679074016"><span class="annot"><span class="annottext">Eq MetricId
+Eq MetricId =&gt;
+(MetricId -&gt; MetricId -&gt; Ordering)
+-&gt; (MetricId -&gt; MetricId -&gt; Bool)
+-&gt; (MetricId -&gt; MetricId -&gt; Bool)
+-&gt; (MetricId -&gt; MetricId -&gt; Bool)
+-&gt; (MetricId -&gt; MetricId -&gt; Bool)
+-&gt; (MetricId -&gt; MetricId -&gt; MetricId)
+-&gt; (MetricId -&gt; MetricId -&gt; MetricId)
+-&gt; Ord MetricId
+MetricId -&gt; MetricId -&gt; Bool
+MetricId -&gt; MetricId -&gt; Ordering
+MetricId -&gt; MetricId -&gt; MetricId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: MetricId -&gt; MetricId -&gt; Ordering
+compare :: MetricId -&gt; MetricId -&gt; Ordering
+$c&lt; :: MetricId -&gt; MetricId -&gt; Bool
+&lt; :: MetricId -&gt; MetricId -&gt; Bool
+$c&lt;= :: MetricId -&gt; MetricId -&gt; Bool
+&lt;= :: MetricId -&gt; MetricId -&gt; Bool
+$c&gt; :: MetricId -&gt; MetricId -&gt; Bool
+&gt; :: MetricId -&gt; MetricId -&gt; Bool
+$c&gt;= :: MetricId -&gt; MetricId -&gt; Bool
+&gt;= :: MetricId -&gt; MetricId -&gt; Bool
+$cmax :: MetricId -&gt; MetricId -&gt; MetricId
+max :: MetricId -&gt; MetricId -&gt; MetricId
+$cmin :: MetricId -&gt; MetricId -&gt; MetricId
+min :: MetricId -&gt; MetricId -&gt; MetricId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074019"><span id="local-6989586621679074024"><span id="local-6989586621679074028"><span class="annot"><span class="annottext">Int -&gt; MetricId -&gt; ShowS
+[MetricId] -&gt; ShowS
+MetricId -&gt; String
+(Int -&gt; MetricId -&gt; ShowS)
+-&gt; (MetricId -&gt; String) -&gt; ([MetricId] -&gt; ShowS) -&gt; Show MetricId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; MetricId -&gt; ShowS
+showsPrec :: Int -&gt; MetricId -&gt; ShowS
+$cshow :: MetricId -&gt; String
+show :: MetricId -&gt; String
+$cshowList :: [MetricId] -&gt; ShowS
+showList :: [MetricId] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#addLabel"><span class="hs-identifier hs-type">addLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span>
+</span><span id="line-37"></span><span id="addLabel"><span class="annot"><span class="annottext">addLabel :: Text -&gt; Text -&gt; Labels -&gt; Labels
+</span><a href="System.Metrics.Prometheus.MetricId.html#addLabel"><span class="hs-identifier hs-var hs-var">addLabel</span></a></span></span><span> </span><span id="local-6989586621679074031"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074031"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679074032"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074032"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Text Text -&gt; Labels
+</span><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-var">Labels</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text Text -&gt; Labels)
+-&gt; (Labels -&gt; Map Text Text) -&gt; Labels -&gt; Labels
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Map Text Text -&gt; Map Text Text
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-var">makeValid</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074031"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074032"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text Text -&gt; Map Text Text)
+-&gt; (Labels -&gt; Map Text Text) -&gt; Labels -&gt; Map Text Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Labels -&gt; Map Text Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#unLabels"><span class="hs-identifier hs-var">unLabels</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#fromList"><span class="hs-identifier hs-type">fromList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span>
+</span><span id="line-41"></span><span id="fromList"><span class="annot"><span class="annottext">fromList :: [(Text, Text)] -&gt; Labels
+</span><a href="System.Metrics.Prometheus.MetricId.html#fromList"><span class="hs-identifier hs-var hs-var">fromList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Text Text -&gt; Labels
+</span><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-var">Labels</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text Text -&gt; Labels)
+-&gt; ([(Text, Text)] -&gt; Map Text Text) -&gt; [(Text, Text)] -&gt; Labels
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Map Text Text
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(Text, Text)] -&gt; Map Text Text)
+-&gt; ([(Text, Text)] -&gt; [(Text, Text)])
+-&gt; [(Text, Text)]
+-&gt; Map Text Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Text, Text) -&gt; (Text, Text)) -&gt; [(Text, Text)] -&gt; [(Text, Text)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text, Text) -&gt; (Text, Text)
+forall a b c. (a -&gt; b) -&gt; (a, c) -&gt; (b, c)
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-var">makeValid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#toList"><span class="hs-identifier hs-type">toList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span id="toList"><span class="annot"><span class="annottext">toList :: Labels -&gt; [(Text, Text)]
+</span><a href="System.Metrics.Prometheus.MetricId.html#toList"><span class="hs-identifier hs-var hs-var">toList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Text Text -&gt; [(Text, Text)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text Text -&gt; [(Text, Text)])
+-&gt; (Labels -&gt; Map Text Text) -&gt; Labels -&gt; [(Text, Text)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Labels -&gt; Map Text Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#unLabels"><span class="hs-identifier hs-var">unLabels</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#null"><span class="hs-identifier hs-type">null</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-49"></span><span id="null"><span class="annot"><span class="annottext">null :: Labels -&gt; Bool
+</span><a href="System.Metrics.Prometheus.MetricId.html#null"><span class="hs-identifier hs-var hs-var">null</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Text Text -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Text Text -&gt; Bool)
+-&gt; (Labels -&gt; Map Text Text) -&gt; Labels -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Labels -&gt; Map Text Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#unLabels"><span class="hs-identifier hs-var">unLabels</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | Make the input match the regex @[a-zA-Z_][a-zA-Z0-9_]@ which</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- defines valid metric and label names, according to</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- &lt;https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels&gt;</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Replace invalid characters with @_@ and add a leading @_@ if the</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- first character is only valid as a later character.</span><span>
+</span><span id="line-57"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-type">makeValid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-58"></span><span id="makeValid"><span class="annot"><span class="annottext">makeValid :: Text -&gt; Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-var hs-var">makeValid</span></a></span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-var">makeValid</span></a></span><span> </span><span id="local-6989586621679074041"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074041"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074042"><span class="hs-identifier hs-var">prefix_</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#map"><span class="hs-identifier hs-var">Text.map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679074044"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074044"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="#local-6989586621679074045"><span class="hs-identifier hs-var">allowedChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074044"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074044"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074041"><span class="hs-identifier hs-var">txt</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679074042"><span class="annot"><span class="annottext">prefix_ :: Text
+</span><a href="#local-6989586621679074042"><span class="hs-identifier hs-var hs-var">prefix_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isDigit"><span class="hs-identifier hs-var">isDigit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Char
+Text -&gt; Char
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#head"><span class="hs-identifier hs-var">Text.head</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679074041"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><a href="#local-6989586621679074045"><span class="hs-identifier hs-type">allowedChar</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679074045"><span class="annot"><span class="annottext">allowedChar :: Char -&gt; Bool
+</span><a href="#local-6989586621679074045"><span class="hs-identifier hs-var hs-var">allowedChar</span></a></span></span><span> </span><span id="local-6989586621679074051"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'a'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'z'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'A'</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'Z'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isDigit"><span class="hs-identifier hs-var">isDigit</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679074051"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | Construct a 'Name', replacing disallowed characters.</span></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#makeName"><span class="hs-identifier hs-type">makeName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-68"></span><span id="makeName"><span class="annot"><span class="annottext">makeName :: Text -&gt; Name
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeName"><span class="hs-identifier hs-var hs-var">makeName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Name
+</span><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-var">Name</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Name) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="System.Metrics.Prometheus.MetricId.html#makeValid"><span class="hs-identifier hs-var">makeValid</span></a></span><span>
+</span><span id="line-69"></span></pre></body></html>

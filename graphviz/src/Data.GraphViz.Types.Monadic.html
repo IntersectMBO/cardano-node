@@ -1,0 +1,652 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP, FlexibleInstances, MultiParamTypeClasses #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Types.Monadic
+   Description : A monadic interface for making Dot graphs.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This module is based upon the /dotgen/ library by Andy Gill:
+   &lt;http://hackage.haskell.org/package/dotgen&gt;
+
+   It provides a monadic interface for constructing generalised Dot
+   graphs.  Note that this does /not/ have an instance for @DotRepr@
+   (e.g. what would be the point of the @fromCanonical@ function, as
+   you can't do anything with the result): it is purely for
+   construction purposes.  Use the generalised Dot graph instance for
+   printing, etc.
+
+   Note that the generalised Dot graph types are /not/ re-exported, in
+   case it causes a clash with other modules you may choose to import.
+
+   The example graph in &quot;Data.GraphViz.Types&quot; can be written as:
+
+   &gt; digraph (Str &quot;G&quot;) $ do
+   &gt;
+   &gt;    cluster (Int 0) $ do
+   &gt;        graphAttrs [style filled, color LightGray]
+   &gt;        nodeAttrs [style filled, color White]
+   &gt;        &quot;a0&quot; --&gt; &quot;a1&quot;
+   &gt;        &quot;a1&quot; --&gt; &quot;a2&quot;
+   &gt;        &quot;a2&quot; --&gt; &quot;a3&quot;
+   &gt;        graphAttrs [textLabel &quot;process #1&quot;]
+   &gt;
+   &gt;    cluster (Int 1) $ do
+   &gt;        nodeAttrs [style filled]
+   &gt;        &quot;b0&quot; --&gt; &quot;b1&quot;
+   &gt;        &quot;b1&quot; --&gt; &quot;b2&quot;
+   &gt;        &quot;b2&quot; --&gt; &quot;b3&quot;
+   &gt;        graphAttrs [textLabel &quot;process #2&quot;, color Blue]
+   &gt;
+   &gt;    &quot;start&quot; --&gt; &quot;a0&quot;
+   &gt;    &quot;start&quot; --&gt; &quot;b0&quot;
+   &gt;    &quot;a1&quot; --&gt; &quot;b3&quot;
+   &gt;    &quot;b2&quot; --&gt; &quot;a3&quot;
+   &gt;    &quot;a3&quot; --&gt; &quot;end&quot;
+   &gt;    &quot;b3&quot; --&gt; &quot;end&quot;
+   &gt;
+   &gt;    node &quot;start&quot; [shape MDiamond]
+   &gt;    node &quot;end&quot; [shape MSquare]
+
+ -}</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Types.Monadic</span><span>
+</span><span id="line-54"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier">Dot</span></a></span><span>
+</span><span id="line-55"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier">DotM</span></a></span><span>
+</span><span id="line-56"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier">GraphID</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>         </span><span class="annot"><span class="hs-comment">-- * Creating a generalised DotGraph.</span></span><span>
+</span><span id="line-58"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#digraph"><span class="hs-identifier">digraph</span></a></span><span>
+</span><span id="line-59"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#digraph%27"><span class="hs-identifier">digraph'</span></a></span><span>
+</span><span id="line-60"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graph"><span class="hs-identifier">graph</span></a></span><span>
+</span><span id="line-61"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graph%27"><span class="hs-identifier">graph'</span></a></span><span>
+</span><span id="line-62"></span><span>         </span><span class="annot"><span class="hs-comment">-- * Adding global attributes.</span></span><span>
+</span><span id="line-63"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graphAttrs"><span class="hs-identifier">graphAttrs</span></a></span><span>
+</span><span id="line-64"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#nodeAttrs"><span class="hs-identifier">nodeAttrs</span></a></span><span>
+</span><span id="line-65"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#edgeAttrs"><span class="hs-identifier">edgeAttrs</span></a></span><span>
+</span><span id="line-66"></span><span>         </span><span class="annot"><span class="hs-comment">-- * Adding items to the graph.</span></span><span>
+</span><span id="line-67"></span><span>         </span><span class="annot"><span class="hs-comment">-- ** Subgraphs and clusters</span></span><span>
+</span><span id="line-68"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#subgraph"><span class="hs-identifier">subgraph</span></a></span><span>
+</span><span id="line-69"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#anonSubgraph"><span class="hs-identifier">anonSubgraph</span></a></span><span>
+</span><span id="line-70"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#cluster"><span class="hs-identifier">cluster</span></a></span><span>
+</span><span id="line-71"></span><span>         </span><span class="annot"><span class="hs-comment">-- ** Nodes</span></span><span>
+</span><span id="line-72"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#node"><span class="hs-identifier">node</span></a></span><span>
+</span><span id="line-73"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#node%27"><span class="hs-identifier">node'</span></a></span><span>
+</span><span id="line-74"></span><span>         </span><span class="annot"><span class="hs-comment">-- ** Edges</span></span><span>
+</span><span id="line-75"></span><span>         </span><span class="annot"><span class="hs-comment">-- $edges</span></span><span>
+</span><span id="line-76"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#edge"><span class="hs-identifier">edge</span></a></span><span>
+</span><span id="line-77"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#--%3E"><span class="hs-operator">(--&gt;)</span></a></span><span>
+</span><span id="line-78"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#%3C-%3E"><span class="hs-operator">(&lt;-&gt;)</span></a></span><span>
+</span><span id="line-79"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.html"><span class="hs-identifier">Data.GraphViz.Attributes</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier">Attributes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html"><span class="hs-identifier">Data.GraphViz.Types.Generalised</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.DList</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">DList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.DList</span></span><span>    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DL</span></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.html"><span class="hs-identifier">Data.Sequence</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-cpp">
+
+#if !(MIN_VERSION_base (4,8,0))
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control.Applicative</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Applicative</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span>         </span><span class="hs-special">(</span><span class="hs-identifier">Monoid</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_base (4,9,0) &amp;&amp; !MIN_VERSION_base (4,13,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Semigroup</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Semigroup</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html"><span class="hs-identifier">Control.Monad.Fix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#MonadFix"><span class="hs-identifier">MonadFix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier">mfix</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- The Dot monad.</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><span class="hs-comment">-- | The monadic representation of a Dot graph.</span></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">type</span><span> </span><span id="Dot"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span></span><span> </span><span id="local-6989586621679227980"><span class="annot"><a href="#local-6989586621679227980"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227980"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | The actual monad; as with 'Dot' but allows you to return a value</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--   within the do-block.  The actual implementation is based upon the</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--   Writer monad.</span><span>
+</span><span id="line-108"></span><span class="hs-keyword">newtype</span><span> </span><span id="DotM"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span></span><span> </span><span id="local-6989586621679227794"><span class="annot"><a href="#local-6989586621679227794"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679227795"><span class="annot"><a href="#local-6989586621679227795"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DotM"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="runDot"><span class="annot"><span class="annottext">forall n a. DotM n a -&gt; (a, DotStmts n)
+</span><a href="Data.GraphViz.Types.Monadic.html#runDot"><span class="hs-identifier hs-var hs-var">runDot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679227795"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmts"><span class="hs-identifier hs-type">DotStmts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227794"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679227800"><span id="local-6989586621679227801"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#execDot"><span class="hs-identifier hs-type">execDot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227800"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227801"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmts"><span class="hs-identifier hs-type">DotStmts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227800"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-111"></span><span id="execDot"><span class="annot"><span class="annottext">execDot :: forall n a. DotM n a -&gt; DotStmts n
+</span><a href="Data.GraphViz.Types.Monadic.html#execDot"><span class="hs-identifier hs-var hs-var">execDot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotStmts n
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((a, DotStmts n) -&gt; DotStmts n)
+-&gt; (DotM n a -&gt; (a, DotStmts n)) -&gt; DotM n a -&gt; DotStmts n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotM n a -&gt; (a, DotStmts n)
+forall n a. DotM n a -&gt; (a, DotStmts n)
+</span><a href="Data.GraphViz.Types.Monadic.html#runDot"><span class="hs-identifier hs-var">runDot</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227815"><span id="local-6989586621679227988"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227815"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679227992"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; DotM n a -&gt; DotM n b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679227993"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679227993"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679227994"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679227994"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679227995"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679227995"><span class="hs-identifier hs-var">stmts</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b, DotStmts n) -&gt; DotM n b
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679227993"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679227994"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679227995"><span class="hs-identifier hs-var">stmts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227830"><span id="local-6989586621679228001"><span id="local-6989586621679228005"><span id="local-6989586621679228008"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227830"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621679228011"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotM n a
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="annot"><span class="annottext">((a, DotStmts n) -&gt; DotM n a)
+-&gt; (a -&gt; (a, DotStmts n)) -&gt; a -&gt; DotM n a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; DotStmts n -&gt; (a, DotStmts n))
+-&gt; DotStmts n -&gt; a -&gt; (a, DotStmts n)
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DotStmts n
+forall a. DList a
+</span><span class="hs-identifier hs-var">DL.empty</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679228014"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679228014"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679228015"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228015"><span class="hs-identifier hs-var">stmts1</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679228016"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. DotM n (a -&gt; b) -&gt; DotM n a -&gt; DotM n b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679228017"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228017"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679228018"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228018"><span class="hs-identifier hs-var">stmts2</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b, DotStmts n) -&gt; DotM n b
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679228014"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228017"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228015"><span class="hs-identifier hs-var">stmts1</span></a></span><span> </span><span class="annot"><span class="annottext">DotStmts n -&gt; DotStmts n -&gt; DotStmts n
+forall a. DList a -&gt; DList a -&gt; DList a
+</span><span class="hs-operator hs-var">`DL.append`</span></span><span> </span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228018"><span class="hs-identifier hs-var">stmts2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227849"><span id="local-6989586621679228024"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227849"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679228030"><span class="annot"><span class="annottext">return :: forall a. a -&gt; DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; DotM n a
+forall a. a -&gt; DotM n a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679228031"><span class="annot"><span class="annottext">DotM n a
+</span><a href="#local-6989586621679228031"><span class="hs-identifier hs-var">dt</span></a></span></span><span> </span><span id="local-6989586621679228032"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. DotM n a -&gt; (a -&gt; DotM n b) -&gt; DotM n b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679228033"><span class="annot"><span class="annottext">a -&gt; DotM n b
+</span><a href="#local-6989586621679228033"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b, DotStmts n) -&gt; DotM n b
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span>
+</span><span id="line-125"></span><span>             </span><span class="annot"><span class="annottext">((b, DotStmts n) -&gt; DotM n b) -&gt; (b, DotStmts n) -&gt; DotM n b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679228034"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228034"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679228035"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228035"><span class="hs-identifier hs-var">stmts</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotM n a -&gt; (a, DotStmts n)
+forall n a. DotM n a -&gt; (a, DotStmts n)
+</span><a href="Data.GraphViz.Types.Monadic.html#runDot"><span class="hs-identifier hs-var">runDot</span></a></span><span> </span><span class="annot"><span class="annottext">DotM n a
+</span><a href="#local-6989586621679228031"><span class="hs-identifier hs-var">dt</span></a></span><span>
+</span><span id="line-126"></span><span>                   </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679228036"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679228036"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679228037"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228037"><span class="hs-identifier hs-var">stmts'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotM n b -&gt; (b, DotStmts n)
+forall n a. DotM n a -&gt; (a, DotStmts n)
+</span><a href="Data.GraphViz.Types.Monadic.html#runDot"><span class="hs-identifier hs-var">runDot</span></a></span><span> </span><span class="annot"><span class="annottext">(DotM n b -&gt; (b, DotStmts n)) -&gt; DotM n b -&gt; (b, DotStmts n)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; DotM n b
+</span><a href="#local-6989586621679228033"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228034"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-127"></span><span>               </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679228036"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228035"><span class="hs-identifier hs-var">stmts</span></a></span><span> </span><span class="annot"><span class="annottext">DotStmts n -&gt; DotStmts n -&gt; DotStmts n
+forall a. DList a -&gt; DList a -&gt; DList a
+</span><span class="hs-operator hs-var">`DL.append`</span></span><span> </span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228037"><span class="hs-identifier hs-var">stmts'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227859"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#MonadFix"><span class="hs-identifier hs-type">MonadFix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227859"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679228043"><span class="annot"><span class="annottext">mfix :: forall a. (a -&gt; DotM n a) -&gt; DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier hs-var hs-var hs-var hs-var">mfix</span></a></span></span><span> </span><span id="local-6989586621679228044"><span class="annot"><span class="annottext">a -&gt; DotM n a
+</span><a href="#local-6989586621679228044"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679228045"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228045"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679228046"><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228046"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotM n a -&gt; (a, DotStmts n)
+forall n a. DotM n a -&gt; (a, DotStmts n)
+</span><a href="Data.GraphViz.Types.Monadic.html#runDot"><span class="hs-identifier hs-var">runDot</span></a></span><span> </span><span class="annot"><span class="annottext">(DotM n a -&gt; (a, DotStmts n)) -&gt; DotM n a -&gt; (a, DotStmts n)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; DotM n a
+</span><a href="#local-6989586621679228044"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228045"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-131"></span><span>           </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotM n a
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679228045"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">DotStmts n
+</span><a href="#local-6989586621679228046"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if MIN_VERSION_base (4,9,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227866"><span id="local-6989586621679227867"><span id="local-6989586621679228050"><span id="local-6989586621679228054"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227866"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227867"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227866"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span id="local-6989586621679228063"><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228063"><span class="hs-identifier hs-var">x1</span></a></span></span><span> </span><span id="local-6989586621679228064"><span class="annot"><span class="annottext">&lt;&gt; :: DotM n a -&gt; DotM n a -&gt; DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span id="local-6989586621679228065"><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228065"><span class="hs-identifier hs-var">x2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotM n a
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228063"><span class="hs-identifier hs-var">x1</span></a></span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; (a, DotStmts n) -&gt; (a, DotStmts n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228065"><span class="hs-identifier hs-var">x2</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679227874"><span id="local-6989586621679227875"><span id="local-6989586621679228073"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227874"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227875"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227874"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679228082"><span class="annot"><span class="annottext">mappend :: DotM n a -&gt; DotM n a -&gt; DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span id="local-6989586621679228083"><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228083"><span class="hs-identifier hs-var">x1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span id="local-6989586621679228084"><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228084"><span class="hs-identifier hs-var">x2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotM n a
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; (a, DotStmts n) -&gt; (a, DotStmts n)
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228083"><span class="hs-identifier hs-var">x1</span></a></span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n)
+</span><a href="#local-6989586621679228084"><span class="hs-identifier hs-var">x2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621679228087"><span class="annot"><span class="annottext">mempty :: DotM n a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n) -&gt; DotM n a
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="annot"><span class="annottext">(a, DotStmts n)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span id="local-6989586621679227879"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#tell"><span class="hs-identifier hs-type">tell</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmts"><span class="hs-identifier hs-type">DotStmts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227879"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227879"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-143"></span><span id="tell"><span class="annot"><span class="annottext">tell :: forall n. DotStmts n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tell"><span class="hs-identifier hs-var hs-var">tell</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((), DotStmts n) -&gt; DotM n ()
+forall n a. (a, DotStmts n) -&gt; DotM n a
+</span><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-var">DotM</span></a></span><span> </span><span class="annot"><span class="annottext">(((), DotStmts n) -&gt; DotM n ())
+-&gt; (DotStmts n -&gt; ((), DotStmts n)) -&gt; DotStmts n -&gt; DotM n ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span id="local-6989586621679227882"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-type">tellStmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmt"><span class="hs-identifier hs-type">DotStmt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227882"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227882"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-146"></span><span id="tellStmt"><span class="annot"><span class="annottext">tellStmt :: forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var hs-var">tellStmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmts n -&gt; Dot n
+forall n. DotStmts n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tell"><span class="hs-identifier hs-var">tell</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmts n -&gt; Dot n)
+-&gt; (DotStmt n -&gt; DotStmts n) -&gt; DotStmt n -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; DotStmts n
+forall a. a -&gt; DList a
+</span><span class="hs-identifier hs-var">DL.singleton</span></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- Creating the DotGraph</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="annot"><span class="hs-comment">-- | Create a directed dot graph with the specified graph ID.</span></span><span>
+</span><span id="line-152"></span><span id="local-6989586621679227887"><span id="local-6989586621679227888"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#digraph"><span class="hs-identifier hs-type">digraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227887"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227888"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227887"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-153"></span><span id="digraph"><span class="annot"><span class="annottext">digraph :: forall n a. GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#digraph"><span class="hs-identifier hs-var hs-var">digraph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-var">mkGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe GraphID -&gt; DotM n a -&gt; DotGraph n)
+-&gt; (GraphID -&gt; Maybe GraphID) -&gt; GraphID -&gt; DotM n a -&gt; DotGraph n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GraphID -&gt; Maybe GraphID
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><span class="hs-comment">-- | Create a directed dot graph with no graph ID.</span></span><span>
+</span><span id="line-156"></span><span id="local-6989586621679227894"><span id="local-6989586621679227895"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#digraph%27"><span class="hs-identifier hs-type">digraph'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227894"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227895"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227894"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-157"></span><span id="digraph%27"><span class="annot"><span class="annottext">digraph' :: forall n a. DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#digraph%27"><span class="hs-identifier hs-var hs-var">digraph'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-var">mkGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="annot"><span class="hs-comment">-- | Create a undirected dot graph with the specified graph ID.</span></span><span>
+</span><span id="line-160"></span><span id="local-6989586621679228092"><span id="local-6989586621679228093"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graph"><span class="hs-identifier hs-type">graph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228092"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228093"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228092"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-161"></span><span id="graph"><span class="annot"><span class="annottext">graph :: forall n a. GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#graph"><span class="hs-identifier hs-var hs-var">graph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-var">mkGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe GraphID -&gt; DotM n a -&gt; DotGraph n)
+-&gt; (GraphID -&gt; Maybe GraphID) -&gt; GraphID -&gt; DotM n a -&gt; DotGraph n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GraphID -&gt; Maybe GraphID
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="annot"><span class="hs-comment">-- | Create a undirected dot graph with no graph ID.</span></span><span>
+</span><span id="line-164"></span><span id="local-6989586621679228094"><span id="local-6989586621679228095"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graph%27"><span class="hs-identifier hs-type">graph'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228094"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228095"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228094"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-165"></span><span id="graph%27"><span class="annot"><span class="annottext">graph' :: forall n a. DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#graph%27"><span class="hs-identifier hs-var hs-var">graph'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-var">mkGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span id="local-6989586621679227892"><span id="local-6989586621679227893"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-type">mkGraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227892"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227893"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227892"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-168"></span><span id="mkGraph"><span class="annot"><span class="annottext">mkGraph :: forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; DotGraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#mkGraph"><span class="hs-identifier hs-var hs-var">mkGraph</span></a></span></span><span> </span><span id="local-6989586621679228096"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679228096"><span class="hs-identifier hs-var">isDir</span></a></span></span><span> </span><span id="local-6989586621679228097"><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679228097"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span id="local-6989586621679228098"><span class="annot"><span class="annottext">DotM n a
+</span><a href="#local-6989586621679228098"><span class="hs-identifier hs-var">dot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotGraph"><span class="hs-identifier hs-type">DotGraph</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strictGraph :: Bool
+</span><a href="Data.GraphViz.Types.Generalised.html#strictGraph"><span class="hs-identifier hs-var">strictGraph</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-169"></span><span>                                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">directedGraph :: Bool
+</span><a href="Data.GraphViz.Types.Generalised.html#directedGraph"><span class="hs-identifier hs-var">directedGraph</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679228096"><span class="hs-identifier hs-var">isDir</span></a></span><span>
+</span><span id="line-170"></span><span>                                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">graphID :: Maybe GraphID
+</span><a href="Data.GraphViz.Types.Generalised.html#graphID"><span class="hs-identifier hs-var">graphID</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679228097"><span class="hs-identifier hs-var">mid</span></a></span><span>
+</span><span id="line-171"></span><span>                                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">graphStatements :: DotStatements n
+</span><a href="Data.GraphViz.Types.Generalised.html#graphStatements"><span class="hs-identifier hs-var">graphStatements</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotM n a -&gt; DotStatements n
+forall n a. DotM n a -&gt; DotStatements n
+</span><a href="Data.GraphViz.Types.Monadic.html#execStmts"><span class="hs-identifier hs-var">execStmts</span></a></span><span> </span><span class="annot"><span class="annottext">DotM n a
+</span><a href="#local-6989586621679228098"><span class="hs-identifier hs-var">dot</span></a></span><span>
+</span><span id="line-172"></span><span>                                 </span><span class="hs-special">}</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- Statements</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-keyword">type</span><span> </span><span id="DotStmts"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmts"><span class="hs-identifier hs-var">DotStmts</span></a></span></span><span> </span><span id="local-6989586621679228105"><span class="annot"><a href="#local-6989586621679228105"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmt"><span class="hs-identifier hs-type">DotStmt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228105"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span id="local-6989586621679227905"><span id="local-6989586621679227906"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#execStmts"><span class="hs-identifier hs-type">execStmts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227905"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227906"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotStatements"><span class="hs-identifier hs-type">DotStatements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227905"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-180"></span><span id="execStmts"><span class="annot"><span class="annottext">execStmts :: forall n a. DotM n a -&gt; DotStatements n
+</span><a href="Data.GraphViz.Types.Monadic.html#execStmts"><span class="hs-identifier hs-var hs-var">execStmts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmts n -&gt; DotStatements n
+forall n. DotStmts n -&gt; DotStatements n
+</span><a href="Data.GraphViz.Types.Monadic.html#convertStatements"><span class="hs-identifier hs-var">convertStatements</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmts n -&gt; DotStatements n)
+-&gt; (DotM n a -&gt; DotStmts n) -&gt; DotM n a -&gt; DotStatements n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotM n a -&gt; DotStmts n
+forall n a. DotM n a -&gt; DotStmts n
+</span><a href="Data.GraphViz.Types.Monadic.html#execDot"><span class="hs-identifier hs-var">execDot</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span id="local-6989586621679227908"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#convertStatements"><span class="hs-identifier hs-type">convertStatements</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmts"><span class="hs-identifier hs-type">DotStmts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227908"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotStatements"><span class="hs-identifier hs-type">DotStatements</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227908"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-183"></span><span id="convertStatements"><span class="annot"><span class="annottext">convertStatements :: forall n. DotStmts n -&gt; DotStatements n
+</span><a href="Data.GraphViz.Types.Monadic.html#convertStatements"><span class="hs-identifier hs-var hs-var">convertStatements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[DotStatement n] -&gt; Seq (DotStatement n)
+forall a. [a] -&gt; Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#fromList"><span class="hs-identifier hs-var">Seq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([DotStatement n] -&gt; Seq (DotStatement n))
+-&gt; (DotStmts n -&gt; [DotStatement n])
+-&gt; DotStmts n
+-&gt; Seq (DotStatement n)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; DotStatement n) -&gt; [DotStmt n] -&gt; [DotStatement n]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; DotStatement n
+forall n. DotStmt n -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-var">convertStatement</span></a></span><span> </span><span class="annot"><span class="annottext">([DotStmt n] -&gt; [DotStatement n])
+-&gt; (DotStmts n -&gt; [DotStmt n]) -&gt; DotStmts n -&gt; [DotStatement n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotStmts n -&gt; [DotStmt n]
+forall a. DList a -&gt; [a]
+</span><span class="hs-identifier hs-var">DL.toList</span></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-keyword">data</span><span> </span><span id="DotStmt"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmt"><span class="hs-identifier hs-var">DotStmt</span></a></span></span><span> </span><span id="local-6989586621679227930"><span class="annot"><a href="#local-6989586621679227930"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MA"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MA"><span class="hs-identifier hs-var">MA</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GlobalAttributes"><span class="hs-identifier hs-type">GlobalAttributes</span></a></span><span>
+</span><span id="line-186"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="MS"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MS"><span class="hs-identifier hs-var">MS</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Subgraph"><span class="hs-identifier hs-type">Subgraph</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227930"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="MN"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MN"><span class="hs-identifier hs-var">MN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-type">DotNode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227930"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>               </span><span class="hs-glyph">|</span><span> </span><span id="ME"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#ME"><span class="hs-identifier hs-var">ME</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-type">DotEdge</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227930"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span id="local-6989586621679227916"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-type">convertStatement</span></a></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotStmt"><span class="hs-identifier hs-type">DotStmt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227916"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Generalised.html#DotStatement"><span class="hs-identifier hs-type">DotStatement</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227916"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-191"></span><span id="convertStatement"><span class="annot"><span class="annottext">convertStatement :: forall n. DotStmt n -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-var hs-var">convertStatement</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MA"><span class="hs-identifier hs-type">MA</span></a></span><span> </span><span id="local-6989586621679228114"><span class="annot"><span class="annottext">GlobalAttributes
+</span><a href="#local-6989586621679228114"><span class="hs-identifier hs-var">gas</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GlobalAttributes -&gt; DotStatement n
+forall n. GlobalAttributes -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Generalised.html#GA"><span class="hs-identifier hs-var">GA</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes
+</span><a href="#local-6989586621679228114"><span class="hs-identifier hs-var">gas</span></a></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-var">convertStatement</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MS"><span class="hs-identifier hs-type">MS</span></a></span><span> </span><span id="local-6989586621679228116"><span class="annot"><span class="annottext">Subgraph n
+</span><a href="#local-6989586621679228116"><span class="hs-identifier hs-var">sg</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotSubGraph n -&gt; DotStatement n
+forall n. DotSubGraph n -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Generalised.html#SG"><span class="hs-identifier hs-var">SG</span></a></span><span> </span><span class="annot"><span class="annottext">(DotSubGraph n -&gt; DotStatement n)
+-&gt; (DotM n () -&gt; DotSubGraph n) -&gt; DotM n () -&gt; DotStatement n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotStatements n -&gt; DotSubGraph n
+forall n. Bool -&gt; Maybe GraphID -&gt; DotStatements n -&gt; DotSubGraph n
+</span><a href="Data.GraphViz.Types.Generalised.html#DotSG"><span class="hs-identifier hs-var">DotSG</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Subgraph n -&gt; Bool
+forall n. Subgraph n -&gt; Bool
+</span><a href="Data.GraphViz.Types.Monadic.html#sgIsClust"><span class="hs-identifier hs-var">sgIsClust</span></a></span><span> </span><span class="annot"><span class="annottext">Subgraph n
+</span><a href="#local-6989586621679228116"><span class="hs-identifier hs-var">sg</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Subgraph n -&gt; Maybe GraphID
+forall n. Subgraph n -&gt; Maybe GraphID
+</span><a href="Data.GraphViz.Types.Monadic.html#sgID"><span class="hs-identifier hs-var">sgID</span></a></span><span> </span><span class="annot"><span class="annottext">Subgraph n
+</span><a href="#local-6989586621679228116"><span class="hs-identifier hs-var">sg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>                                 </span><span class="annot"><span class="annottext">(DotStatements n -&gt; DotSubGraph n)
+-&gt; (DotM n () -&gt; DotStatements n) -&gt; DotM n () -&gt; DotSubGraph n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotM n () -&gt; DotStatements n
+forall n a. DotM n a -&gt; DotStatements n
+</span><a href="Data.GraphViz.Types.Monadic.html#execStmts"><span class="hs-identifier hs-var">execStmts</span></a></span><span> </span><span class="annot"><span class="annottext">(DotM n () -&gt; DotStatement n) -&gt; DotM n () -&gt; DotStatement n
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Subgraph n -&gt; DotM n ()
+forall n. Subgraph n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#sgStmts"><span class="hs-identifier hs-var">sgStmts</span></a></span><span> </span><span class="annot"><span class="annottext">Subgraph n
+</span><a href="#local-6989586621679228116"><span class="hs-identifier hs-var">sg</span></a></span><span>
+</span><span id="line-194"></span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-var">convertStatement</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#MN"><span class="hs-identifier hs-type">MN</span></a></span><span> </span><span id="local-6989586621679228122"><span class="annot"><span class="annottext">DotNode n
+</span><a href="#local-6989586621679228122"><span class="hs-identifier hs-var">dn</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotNode n -&gt; DotStatement n
+forall n. DotNode n -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Generalised.html#DN"><span class="hs-identifier hs-var">DN</span></a></span><span> </span><span class="annot"><span class="annottext">DotNode n
+</span><a href="#local-6989586621679228122"><span class="hs-identifier hs-var">dn</span></a></span><span>
+</span><span id="line-195"></span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#convertStatement"><span class="hs-identifier hs-var">convertStatement</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#ME"><span class="hs-identifier hs-type">ME</span></a></span><span> </span><span id="local-6989586621679228124"><span class="annot"><span class="annottext">DotEdge n
+</span><a href="#local-6989586621679228124"><span class="hs-identifier hs-var">de</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotEdge n -&gt; DotStatement n
+forall n. DotEdge n -&gt; DotStatement n
+</span><a href="Data.GraphViz.Types.Generalised.html#DE"><span class="hs-identifier hs-var">DE</span></a></span><span> </span><span class="annot"><span class="annottext">DotEdge n
+</span><a href="#local-6989586621679228124"><span class="hs-identifier hs-var">de</span></a></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- Global Attributes</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="annot"><span class="hs-comment">-- | Add graph\/sub-graph\/cluster attributes.</span></span><span>
+</span><span id="line-201"></span><span id="local-6989586621679227928"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#graphAttrs"><span class="hs-identifier hs-type">graphAttrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227928"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-202"></span><span id="graphAttrs"><span class="annot"><span class="annottext">graphAttrs :: forall n. Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#graphAttrs"><span class="hs-identifier hs-var hs-var">graphAttrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (Attributes -&gt; DotStmt n) -&gt; Attributes -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes -&gt; DotStmt n
+forall n. GlobalAttributes -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#MA"><span class="hs-identifier hs-var">MA</span></a></span><span> </span><span class="annot"><span class="annottext">(GlobalAttributes -&gt; DotStmt n)
+-&gt; (Attributes -&gt; GlobalAttributes) -&gt; Attributes -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GlobalAttributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#GraphAttrs"><span class="hs-identifier hs-var">GraphAttrs</span></a></span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span class="annot"><span class="hs-comment">-- | Add global node attributes.</span></span><span>
+</span><span id="line-205"></span><span id="local-6989586621679228127"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#nodeAttrs"><span class="hs-identifier hs-type">nodeAttrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228127"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-206"></span><span id="nodeAttrs"><span class="annot"><span class="annottext">nodeAttrs :: forall n. Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#nodeAttrs"><span class="hs-identifier hs-var hs-var">nodeAttrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (Attributes -&gt; DotStmt n) -&gt; Attributes -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes -&gt; DotStmt n
+forall n. GlobalAttributes -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#MA"><span class="hs-identifier hs-var">MA</span></a></span><span> </span><span class="annot"><span class="annottext">(GlobalAttributes -&gt; DotStmt n)
+-&gt; (Attributes -&gt; GlobalAttributes) -&gt; Attributes -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GlobalAttributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#NodeAttrs"><span class="hs-identifier hs-var">NodeAttrs</span></a></span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="annot"><span class="hs-comment">-- | Add global edge attributes</span></span><span>
+</span><span id="line-209"></span><span id="local-6989586621679228129"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#edgeAttrs"><span class="hs-identifier hs-type">edgeAttrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228129"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-210"></span><span id="edgeAttrs"><span class="annot"><span class="annottext">edgeAttrs :: forall n. Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#edgeAttrs"><span class="hs-identifier hs-var hs-var">edgeAttrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (Attributes -&gt; DotStmt n) -&gt; Attributes -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GlobalAttributes -&gt; DotStmt n
+forall n. GlobalAttributes -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#MA"><span class="hs-identifier hs-var">MA</span></a></span><span> </span><span class="annot"><span class="annottext">(GlobalAttributes -&gt; DotStmt n)
+-&gt; (Attributes -&gt; GlobalAttributes) -&gt; Attributes -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes -&gt; GlobalAttributes
+</span><a href="Data.GraphViz.Types.Internal.Common.html#EdgeAttrs"><span class="hs-identifier hs-var">EdgeAttrs</span></a></span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- Subgraphs (including Clusters)</span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-keyword">data</span><span> </span><span id="Subgraph"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Subgraph"><span class="hs-identifier hs-var">Subgraph</span></a></span></span><span> </span><span id="local-6989586621679227924"><span class="annot"><a href="#local-6989586621679227924"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Sg"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Sg"><span class="hs-identifier hs-var">Sg</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="sgIsClust"><span class="annot"><span class="annottext">forall n. Subgraph n -&gt; Bool
+</span><a href="Data.GraphViz.Types.Monadic.html#sgIsClust"><span class="hs-identifier hs-var hs-var">sgIsClust</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-216"></span><span>                     </span><span class="hs-special">,</span><span> </span><span id="sgID"><span class="annot"><span class="annottext">forall n. Subgraph n -&gt; Maybe GraphID
+</span><a href="Data.GraphViz.Types.Monadic.html#sgID"><span class="hs-identifier hs-var hs-var">sgID</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span>
+</span><span id="line-217"></span><span>                     </span><span class="hs-special">,</span><span> </span><span id="sgStmts"><span class="annot"><span class="annottext">forall n. Subgraph n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#sgStmts"><span class="hs-identifier hs-var hs-var">sgStmts</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227924"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-218"></span><span>                     </span><span class="hs-special">}</span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="annot"><span class="hs-comment">-- | Add a named subgraph to the graph.</span></span><span>
+</span><span id="line-221"></span><span id="local-6989586621679227936"><span id="local-6989586621679227937"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#subgraph"><span class="hs-identifier hs-type">subgraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227936"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227937"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227936"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-222"></span><span id="subgraph"><span class="annot"><span class="annottext">subgraph :: forall n a. GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#subgraph"><span class="hs-identifier hs-var hs-var">subgraph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe GraphID -&gt; DotM n a -&gt; Dot n
+forall n a. Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#nonClust"><span class="hs-identifier hs-var">nonClust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe GraphID -&gt; DotM n a -&gt; Dot n)
+-&gt; (GraphID -&gt; Maybe GraphID) -&gt; GraphID -&gt; DotM n a -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GraphID -&gt; Maybe GraphID
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- | Add an anonymous subgraph to the graph.</span><span>
+</span><span id="line-225"></span><span class="hs-comment">--</span><span>
+</span><span id="line-226"></span><span class="hs-comment">--   It is highly recommended you use 'subgraph' instead.</span><span>
+</span><span id="line-227"></span><span id="local-6989586621679227942"><span id="local-6989586621679227943"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#anonSubgraph"><span class="hs-identifier hs-type">anonSubgraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227942"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227943"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227942"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-228"></span><span id="anonSubgraph"><span class="annot"><span class="annottext">anonSubgraph :: forall n a. DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#anonSubgraph"><span class="hs-identifier hs-var hs-var">anonSubgraph</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe GraphID -&gt; DotM n a -&gt; Dot n
+forall n a. Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#nonClust"><span class="hs-identifier hs-var">nonClust</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span id="local-6989586621679227940"><span id="local-6989586621679227941"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#nonClust"><span class="hs-identifier hs-type">nonClust</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227940"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227941"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227940"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-231"></span><span id="nonClust"><span class="annot"><span class="annottext">nonClust :: forall n a. Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#nonClust"><span class="hs-identifier hs-var hs-var">nonClust</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; Dot n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#createSubGraph"><span class="hs-identifier hs-var">createSubGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span id="local-6989586621679227948"><span id="local-6989586621679227949"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#createSubGraph"><span class="hs-identifier hs-type">createSubGraph</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227948"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227949"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227948"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-234"></span><span id="createSubGraph"><span class="annot"><span class="annottext">createSubGraph :: forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#createSubGraph"><span class="hs-identifier hs-var hs-var">createSubGraph</span></a></span></span><span> </span><span id="local-6989586621679228136"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679228136"><span class="hs-identifier hs-var">isCl</span></a></span></span><span> </span><span id="local-6989586621679228137"><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679228137"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (DotM n a -&gt; DotStmt n) -&gt; DotM n a -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Subgraph n -&gt; DotStmt n
+forall n. Subgraph n -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#MS"><span class="hs-identifier hs-var">MS</span></a></span><span> </span><span class="annot"><span class="annottext">(Subgraph n -&gt; DotStmt n)
+-&gt; (DotM n a -&gt; Subgraph n) -&gt; DotM n a -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; Dot n -&gt; Subgraph n
+forall n. Bool -&gt; Maybe GraphID -&gt; Dot n -&gt; Subgraph n
+</span><a href="Data.GraphViz.Types.Monadic.html#Sg"><span class="hs-identifier hs-var">Sg</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679228136"><span class="hs-identifier hs-var">isCl</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GraphID
+</span><a href="#local-6989586621679228137"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">(Dot n -&gt; Subgraph n)
+-&gt; (DotM n a -&gt; Dot n) -&gt; DotM n a -&gt; Subgraph n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DotM n a -&gt; Dot n -&gt; Dot n
+forall a b. DotM n a -&gt; DotM n b -&gt; DotM n b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; Dot n
+forall a. a -&gt; DotM n a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span class="annot"><span class="hs-comment">-- | Add a named cluster to the graph.</span></span><span>
+</span><span id="line-237"></span><span id="local-6989586621679228138"><span id="local-6989586621679228139"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#cluster"><span class="hs-identifier hs-type">cluster</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Internal.Common.html#GraphID"><span class="hs-identifier hs-type">GraphID</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#DotM"><span class="hs-identifier hs-type">DotM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228138"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228139"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228138"><span class="hs-identifier hs-type">n</span></a></span></span></span><span>
+</span><span id="line-238"></span><span id="cluster"><span class="annot"><span class="annottext">cluster :: forall n a. GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#cluster"><span class="hs-identifier hs-var hs-var">cluster</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; Dot n
+forall n a. Bool -&gt; Maybe GraphID -&gt; DotM n a -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#createSubGraph"><span class="hs-identifier hs-var">createSubGraph</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe GraphID -&gt; DotM n a -&gt; Dot n)
+-&gt; (GraphID -&gt; Maybe GraphID) -&gt; GraphID -&gt; DotM n a -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GraphID -&gt; Maybe GraphID
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- Nodes</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="annot"><span class="hs-comment">-- | Add a node to the graph.</span></span><span>
+</span><span id="line-244"></span><span id="local-6989586621679227954"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#node"><span class="hs-identifier hs-type">node</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679227954"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227954"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-245"></span><span id="node"><span class="annot"><span class="annottext">node :: forall n. n -&gt; Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#node"><span class="hs-identifier hs-var hs-var">node</span></a></span></span><span> </span><span id="local-6989586621679228140"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228140"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (Attributes -&gt; DotStmt n) -&gt; Attributes -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotNode n -&gt; DotStmt n
+forall n. DotNode n -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#MN"><span class="hs-identifier hs-var">MN</span></a></span><span> </span><span class="annot"><span class="annottext">(DotNode n -&gt; DotStmt n)
+-&gt; (Attributes -&gt; DotNode n) -&gt; Attributes -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; Attributes -&gt; DotNode n
+forall n. n -&gt; Attributes -&gt; DotNode n
+</span><a href="Data.GraphViz.Types.Internal.Common.html#DotNode"><span class="hs-identifier hs-var">DotNode</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228140"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-246"></span><span>
+</span><span id="line-247"></span><span class="annot"><span class="hs-comment">-- | Add a node with no attributes to the graph.</span></span><span>
+</span><span id="line-248"></span><span id="local-6989586621679227957"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#node%27"><span class="hs-identifier hs-type">node'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679227957"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227957"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-249"></span><span id="node%27"><span class="annot"><span class="annottext">node' :: forall n. n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#node%27"><span class="hs-identifier hs-var hs-var">node'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n -&gt; Attributes -&gt; Dot n
+forall n. n -&gt; Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#node"><span class="hs-operator hs-var">`node`</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- Edges</span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="annot"><span class="hs-comment">{- $edges
+
+   If you wish to use something analogous to Dot's ability to write
+   multiple edges with in-line subgraphs such as:
+
+   &gt; {a b c} -&gt; {d e f}
+
+   Then you can use '--&gt;' and '&lt;-&gt;' in combination with monadic
+   traversal functions such as @traverse_@, @for_@, @mapM_@, @forM_@
+   and @zipWithM_@; for example:
+
+   &gt; (&quot;a&quot; --&gt;) `traverse_` [&quot;d&quot;, &quot;e&quot;, &quot;f&quot;]
+   &gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;] `for_` (--&gt; &quot;d&quot;)
+   &gt; zipWithM_ (--&gt;) [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;] [&quot;d&quot;, &quot;e&quot;, &quot;f&quot;]
+
+ -}</span></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span class="annot"><span class="hs-comment">-- | Add an edge to the graph.</span></span><span>
+</span><span id="line-272"></span><span id="local-6989586621679227959"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#edge"><span class="hs-identifier hs-type">edge</span></a></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679227959"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679227959"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227959"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-273"></span><span id="edge"><span class="annot"><span class="annottext">edge :: forall n. n -&gt; n -&gt; Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#edge"><span class="hs-identifier hs-var hs-var">edge</span></a></span></span><span> </span><span id="local-6989586621679228142"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228142"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679228143"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228143"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DotStmt n -&gt; Dot n
+forall n. DotStmt n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#tellStmt"><span class="hs-identifier hs-var">tellStmt</span></a></span><span> </span><span class="annot"><span class="annottext">(DotStmt n -&gt; Dot n)
+-&gt; (Attributes -&gt; DotStmt n) -&gt; Attributes -&gt; Dot n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DotEdge n -&gt; DotStmt n
+forall n. DotEdge n -&gt; DotStmt n
+</span><a href="Data.GraphViz.Types.Monadic.html#ME"><span class="hs-identifier hs-var">ME</span></a></span><span> </span><span class="annot"><span class="annottext">(DotEdge n -&gt; DotStmt n)
+-&gt; (Attributes -&gt; DotEdge n) -&gt; Attributes -&gt; DotStmt n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Attributes -&gt; DotEdge n
+forall n. n -&gt; n -&gt; Attributes -&gt; DotEdge n
+</span><a href="Data.GraphViz.Types.Internal.Common.html#DotEdge"><span class="hs-identifier hs-var">DotEdge</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228142"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228143"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span class="annot"><span class="hs-comment">-- | Add an edge with no attributes.</span></span><span>
+</span><span id="line-276"></span><span id="local-6989586621679227962"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#--%3E"><span class="hs-operator hs-type">(--&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679227962"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679227962"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679227962"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-277"></span><span id="local-6989586621679228145"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228145"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="--%3E"><span class="annot"><span class="annottext">--&gt; :: forall n. n -&gt; n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#--%3E"><span class="hs-operator hs-var hs-var">--&gt;</span></a></span></span><span> </span><span id="local-6989586621679228146"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228146"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Attributes -&gt; Dot n
+forall n. n -&gt; n -&gt; Attributes -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#edge"><span class="hs-identifier hs-var">edge</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228145"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679228146"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-278"></span><span>
+</span><span id="line-279"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">9</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#--%3E"><span class="hs-operator hs-type">--&gt;</span></a></span><span>
+</span><span id="line-280"></span><span>
+</span><span id="line-281"></span><span class="annot"><span class="hs-comment">-- | An alias for '--&gt;' to make edges look more undirected.</span></span><span>
+</span><span id="line-282"></span><span id="local-6989586621679228147"><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#%3C-%3E"><span class="hs-operator hs-type">(&lt;-&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679228147"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228147"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#Dot"><span class="hs-identifier hs-type">Dot</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228147"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-283"></span><span id="%3C-%3E"><span class="annot"><span class="annottext">&lt;-&gt; :: forall n. n -&gt; n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#%3C-%3E"><span class="hs-operator hs-var hs-var">(&lt;-&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Dot n
+forall n. n -&gt; n -&gt; Dot n
+</span><a href="Data.GraphViz.Types.Monadic.html#--%3E"><span class="hs-operator hs-var">(--&gt;)</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">9</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.Monadic.html#%3C-%3E"><span class="hs-operator hs-type">&lt;-&gt;</span></a></span><span>
+</span><span id="line-286"></span><span>
+</span><span id="line-287"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-288"></span></pre></body></html>

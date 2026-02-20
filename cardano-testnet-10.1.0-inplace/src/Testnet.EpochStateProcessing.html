@@ -1,0 +1,572 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Testnet.EpochStateProcessing</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier">maybeExtractGovernanceActionIndex</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier">waitForGovActionVotes</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier">GovActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier">newEpochStateGovStateL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier">Word16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#to"><span class="hs-identifier">to</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Components.Query.html"><span class="hs-identifier">Testnet.Components.Query</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Components.Query.html#EpochStateView"><span class="hs-identifier">EpochStateView</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Components.Query.html#watchEpochStateUpdate"><span class="hs-identifier">watchEpochStateUpdate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.html"><span class="hs-identifier">Hedgehog.Extras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.MonadAssertion.html#MonadAssertion"><span class="hs-identifier">MonadAssertion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.html"><span class="hs-identifier">Hedgehog.Extras</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier hs-type">maybeExtractGovernanceActionIndex</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ transaction id searched for</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-39"></span><span id="maybeExtractGovernanceActionIndex"><span class="annot"><span class="annottext">maybeExtractGovernanceActionIndex :: HasCallStack =&gt; TxId -&gt; AnyNewEpochState -&gt; Maybe Word16
+</span><a href="Testnet.EpochStateProcessing.html#maybeExtractGovernanceActionIndex"><span class="hs-identifier hs-var hs-var">maybeExtractGovernanceActionIndex</span></a></span></span><span> </span><span id="local-6989586621679574592"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679574592"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span> </span><span id="local-6989586621679574594"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679574594"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621679574595"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574595"><span class="hs-identifier hs-var">newEpochState</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerTables (LedgerState (CardanoBlock StandardCrypto)) ValuesMK
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; Maybe Word16)
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayEraOnwards era -&gt; Maybe Word16)
+-&gt; ShelleyBasedEra era
+-&gt; Maybe Word16
+forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Word16 -&gt; ShelleyToBabbageEra era -&gt; Maybe Word16
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Word16 -&gt; ShelleyToBabbageEra era -&gt; Maybe Word16)
+-&gt; Maybe Word16 -&gt; ShelleyToBabbageEra era -&gt; Maybe Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Maybe Word16
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Governance actions only available in Conway era onwards&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679574606"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621679574606"><span class="hs-identifier hs-var">ceo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; (ConwayEraOnwardsConstraints era =&gt; Maybe Word16)
+-&gt; Maybe Word16
+forall era a.
+ConwayEraOnwards era -&gt; (ConwayEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#conwayEraOnwardsConstraints"><span class="hs-identifier hs-var">conwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621679574606"><span class="hs-identifier hs-var">ceo</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwardsConstraints era =&gt; Maybe Word16) -&gt; Maybe Word16)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; Maybe Word16)
+-&gt; Maybe Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679574613"><span class="annot"><span class="annottext">proposals :: Proposals (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574613"><span class="hs-identifier hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574595"><span class="hs-identifier hs-var">newEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+-&gt; Getting
+     (Proposals (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+     (Proposals (ShelleyLedgerEra era))
+-&gt; Proposals (ShelleyLedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(GovState (ShelleyLedgerEra era)
+ -&gt; Const
+      (Proposals (ShelleyLedgerEra era))
+      (GovState (ShelleyLedgerEra era)))
+-&gt; NewEpochState (ShelleyLedgerEra era)
+-&gt; Const
+     (Proposals (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+(ConwayGovState (ShelleyLedgerEra era)
+ -&gt; Const
+      (Proposals (ShelleyLedgerEra era))
+      (ConwayGovState (ShelleyLedgerEra era)))
+-&gt; NewEpochState (ShelleyLedgerEra era)
+-&gt; Const
+     (Proposals (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">L.newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGovState (ShelleyLedgerEra era)
+  -&gt; Const
+       (Proposals (ShelleyLedgerEra era))
+       (ConwayGovState (ShelleyLedgerEra era)))
+ -&gt; NewEpochState (ShelleyLedgerEra era)
+ -&gt; Const
+      (Proposals (ShelleyLedgerEra era))
+      (NewEpochState (ShelleyLedgerEra era)))
+-&gt; ((Proposals (ShelleyLedgerEra era)
+     -&gt; Const
+          (Proposals (ShelleyLedgerEra era))
+          (Proposals (ShelleyLedgerEra era)))
+    -&gt; ConwayGovState (ShelleyLedgerEra era)
+    -&gt; Const
+         (Proposals (ShelleyLedgerEra era))
+         (ConwayGovState (ShelleyLedgerEra era)))
+-&gt; Getting
+     (Proposals (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+     (Proposals (ShelleyLedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals (ShelleyLedgerEra era)
+ -&gt; Const
+      (Proposals (ShelleyLedgerEra era))
+      (Proposals (ShelleyLedgerEra era)))
+-&gt; GovState (ShelleyLedgerEra era)
+-&gt; Const
+     (Proposals (ShelleyLedgerEra era))
+     (GovState (ShelleyLedgerEra era))
+(Proposals (ShelleyLedgerEra era)
+ -&gt; Const
+      (Proposals (ShelleyLedgerEra era))
+      (Proposals (ShelleyLedgerEra era)))
+-&gt; ConwayGovState (ShelleyLedgerEra era)
+-&gt; Const
+     (Proposals (ShelleyLedgerEra era))
+     (ConwayGovState (ShelleyLedgerEra era))
+forall era.
+ConwayEraGov era =&gt;
+Lens' (GovState era) (Proposals era)
+Lens'
+  (GovState (ShelleyLedgerEra era))
+  (Proposals (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.html#proposalsGovStateL"><span class="hs-identifier hs-var">L.proposalsGovStateL</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><span class="annottext">(Maybe Word16
+ -&gt; GovActionId
+ -&gt; GovActionState (ShelleyLedgerEra era)
+ -&gt; Maybe Word16)
+-&gt; Maybe Word16
+-&gt; Map GovActionId (GovActionState (ShelleyLedgerEra era))
+-&gt; Maybe Word16
+forall a k b. (a -&gt; k -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#foldlWithKey%27"><span class="hs-identifier hs-var">Map.foldlWithKey'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId
+-&gt; Maybe Word16
+-&gt; GovActionId
+-&gt; GovActionState (ShelleyLedgerEra era)
+-&gt; Maybe Word16
+forall {p}.
+TxId -&gt; Maybe Word16 -&gt; GovActionId -&gt; p -&gt; Maybe Word16
+</span><a href="#local-6989586621679574617"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679574592"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proposals (ShelleyLedgerEra era)
+-&gt; Map GovActionId (GovActionState (ShelleyLedgerEra era))
+forall era. Proposals era -&gt; Map GovActionId (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActionsMap"><span class="hs-identifier hs-var">L.proposalsActionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574613"><span class="hs-identifier hs-var">proposals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679574594"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679574617"><span class="annot"><span class="annottext">compareWithTxId :: TxId -&gt; Maybe Word16 -&gt; GovActionId -&gt; p -&gt; Maybe Word16
+</span><a href="#local-6989586621679574617"><span class="hs-identifier hs-var hs-var">compareWithTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621679574622"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679574622"><span class="hs-identifier hs-var">ti1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">L.TxId</span></a></span><span> </span><span id="local-6989586621679574625"><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679574625"><span class="hs-identifier hs-var">ti2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionIx"><span class="hs-identifier hs-type">L.GovActionIx</span></a></span><span> </span><span id="local-6989586621679574627"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574627"><span class="hs-identifier hs-var">gai</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679574622"><span class="hs-identifier hs-var">ti1</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+-&gt; Hash HASH EraIndependentTxBody -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">L.extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679574625"><span class="hs-identifier hs-var">ti2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Maybe Word16
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574627"><span class="hs-identifier hs-var">gai</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="#local-6989586621679574617"><span class="hs-identifier hs-var">compareWithTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679574629"><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="#local-6989586621679574629"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+</span><a href="#local-6989586621679574629"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><span class="hs-comment">-- | Wait for the last gov action proposal in the list to have DRep or SPO votes.</span></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier hs-type">waitForGovActionVotes</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679574528"><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.MonadAssertion.html#MonadAssertion"><span class="hs-identifier hs-type">MonadAssertion</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Testnet.Components.Query.html#EpochStateView"><span class="hs-identifier hs-type">EpochStateView</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-type">EpochInterval</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The maximum wait time in epochs.</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span id="waitForGovActionVotes"><span class="annot"><span class="annottext">waitForGovActionVotes :: forall (m :: * -&gt; *).
+(HasCallStack, MonadAssertion m, MonadTest m, MonadIO m) =&gt;
+EpochStateView -&gt; EpochInterval -&gt; m ()
+</span><a href="Testnet.EpochStateProcessing.html#waitForGovActionVotes"><span class="hs-identifier hs-var hs-var">waitForGovActionVotes</span></a></span></span><span> </span><span id="local-6989586621679574640"><span class="annot"><span class="annottext">EpochStateView
+</span><a href="#local-6989586621679574640"><span class="hs-identifier hs-var">epochStateView</span></a></span></span><span> </span><span id="local-6989586621679574641"><span class="annot"><span class="annottext">EpochInterval
+</span><a href="#local-6989586621679574641"><span class="hs-identifier hs-var">maxWait</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679574656"><span class="annot"><span class="annottext">Maybe ()
+</span><a href="#local-6989586621679574656"><span class="hs-identifier hs-var">mResult</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EpochStateView
+-&gt; EpochInterval
+-&gt; ((AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ()))
+-&gt; m (Maybe ())
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadIO m, MonadTest m, MonadAssertion m) =&gt;
+EpochStateView
+-&gt; EpochInterval
+-&gt; ((AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe a))
+-&gt; m (Maybe a)
+</span><a href="Testnet.Components.Query.html#watchEpochStateUpdate"><span class="hs-identifier hs-var">watchEpochStateUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">EpochStateView
+</span><a href="#local-6989586621679574640"><span class="hs-identifier hs-var">epochStateView</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInterval
+</span><a href="#local-6989586621679574641"><span class="hs-identifier hs-var">maxWait</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; (AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+(AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+</span><a href="#local-6989586621679574657"><span class="hs-identifier hs-var">checkForVotes</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe () -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isNothing"><span class="hs-identifier hs-var">isNothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ()
+</span><a href="#local-6989586621679574656"><span class="hs-identifier hs-var">mResult</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">CallStack -&gt; [Char] -&gt; m ()
+forall (m :: * -&gt; *) a. MonadTest m =&gt; CallStack -&gt; [Char] -&gt; m a
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Prim.html#failMessage"><span class="hs-identifier hs-var">H.failMessage</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">callStack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;waitForGovActionVotes: No votes appeared before timeout.&quot;</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="#local-6989586621679574657"><span class="hs-identifier hs-type">checkForVotes</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Block.html#BlockNo"><span class="hs-identifier hs-type">BlockNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679574528"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679574657"><span class="annot"><span class="annottext">checkForVotes :: HasCallStack =&gt; (AnyNewEpochState, SlotNo, BlockNo) -&gt; m (Maybe ())
+</span><a href="#local-6989586621679574657"><span class="hs-identifier hs-var hs-var">checkForVotes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.LedgerState.html#AnyNewEpochState"><span class="hs-identifier hs-type">AnyNewEpochState</span></a></span><span> </span><span id="local-6989586621679574665"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679574665"><span class="hs-identifier hs-var">actualEra</span></a></span></span><span> </span><span id="local-6989586621679574666"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574666"><span class="hs-identifier hs-var">newEpochState</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerTables (LedgerState (CardanoBlock StandardCrypto)) ValuesMK
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockNo
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ())
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ()))
+-&gt; (HasCallStack =&gt; m (Maybe ())) -&gt; m (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; m (Maybe ()))
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayEraOnwards era -&gt; m (Maybe ()))
+-&gt; ShelleyBasedEra era
+-&gt; m (Maybe ())
+forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m (Maybe ()) -&gt; ShelleyToBabbageEra era -&gt; m (Maybe ())
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Maybe ()) -&gt; ShelleyToBabbageEra era -&gt; m (Maybe ()))
+-&gt; m (Maybe ()) -&gt; ShelleyToBabbageEra era -&gt; m (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; m ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; [Char] -&gt; m ()
+</span><a href="file:///nix/store/9km72v0dfd4hnk27zcy7w4jl469npzkx-hedgehog-extras-lib-hedgehog-extras-0.10.0.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Only Conway era onwards is supported&quot;</span></span><span> </span><span class="annot"><span class="annottext">m () -&gt; m (Maybe ()) -&gt; m (Maybe ())
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (Maybe ())
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><a href="file:///nix/store/1cx8nimpccks2w0g1yr46il044kswyia-hedgehog-lib-hedgehog-1.7-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679574705"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621679574705"><span class="hs-identifier hs-var">ceo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679574706"><span class="annot"><span class="annottext">govState :: ConwayGovState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574706"><span class="hs-identifier hs-var hs-var">govState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayGovState (ShelleyLedgerEra era))
+-&gt; ConwayGovState (ShelleyLedgerEra era)
+forall era a.
+ConwayEraOnwards era -&gt; (ConwayEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#conwayEraOnwardsConstraints"><span class="hs-identifier hs-var">conwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621679574705"><span class="hs-identifier hs-var">ceo</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwardsConstraints era =&gt;
+  ConwayGovState (ShelleyLedgerEra era))
+ -&gt; ConwayGovState (ShelleyLedgerEra era))
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayGovState (ShelleyLedgerEra era))
+-&gt; ConwayGovState (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574666"><span class="hs-identifier hs-var">newEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+-&gt; Getting
+     (ConwayGovState (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+     (ConwayGovState (ShelleyLedgerEra era))
+-&gt; ConwayGovState (ShelleyLedgerEra era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(GovState (ShelleyLedgerEra era)
+ -&gt; Const
+      (ConwayGovState (ShelleyLedgerEra era))
+      (GovState (ShelleyLedgerEra era)))
+-&gt; NewEpochState (ShelleyLedgerEra era)
+-&gt; Const
+     (ConwayGovState (ShelleyLedgerEra era))
+     (NewEpochState (ShelleyLedgerEra era))
+Getting
+  (ConwayGovState (ShelleyLedgerEra era))
+  (NewEpochState (ShelleyLedgerEra era))
+  (ConwayGovState (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span>
+</span><span id="line-75"></span><span>              </span><span id="local-6989586621679574709"><span class="annot"><span class="annottext">proposals :: [GovActionState (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621679574709"><span class="hs-identifier hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayGovState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574706"><span class="hs-identifier hs-var">govState</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGovState (ShelleyLedgerEra era)
+-&gt; Getting
+     [GovActionState (ShelleyLedgerEra era)]
+     (ConwayGovState (ShelleyLedgerEra era))
+     [GovActionState (ShelleyLedgerEra era)]
+-&gt; [GovActionState (ShelleyLedgerEra era)]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals (ShelleyLedgerEra era)
+ -&gt; Const
+      [GovActionState (ShelleyLedgerEra era)]
+      (Proposals (ShelleyLedgerEra era)))
+-&gt; ConwayGovState (ShelleyLedgerEra era)
+-&gt; Const
+     [GovActionState (ShelleyLedgerEra era)]
+     (ConwayGovState (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Proposals era -&gt; f (Proposals era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.html#cgsProposalsL"><span class="hs-identifier hs-var">L.cgsProposalsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Proposals (ShelleyLedgerEra era)
+  -&gt; Const
+       [GovActionState (ShelleyLedgerEra era)]
+       (Proposals (ShelleyLedgerEra era)))
+ -&gt; ConwayGovState (ShelleyLedgerEra era)
+ -&gt; Const
+      [GovActionState (ShelleyLedgerEra era)]
+      (ConwayGovState (ShelleyLedgerEra era)))
+-&gt; (([GovActionState (ShelleyLedgerEra era)]
+     -&gt; Const
+          [GovActionState (ShelleyLedgerEra era)]
+          [GovActionState (ShelleyLedgerEra era)])
+    -&gt; Proposals (ShelleyLedgerEra era)
+    -&gt; Const
+         [GovActionState (ShelleyLedgerEra era)]
+         (Proposals (ShelleyLedgerEra era)))
+-&gt; Getting
+     [GovActionState (ShelleyLedgerEra era)]
+     (ConwayGovState (ShelleyLedgerEra era))
+     [GovActionState (ShelleyLedgerEra era)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+ -&gt; Const
+      [GovActionState (ShelleyLedgerEra era)]
+      (OMap GovActionId (GovActionState (ShelleyLedgerEra era))))
+-&gt; Proposals (ShelleyLedgerEra era)
+-&gt; Const
+     [GovActionState (ShelleyLedgerEra era)]
+     (Proposals (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(OMap GovActionId (GovActionState era)
+ -&gt; f (OMap GovActionId (GovActionState era)))
+-&gt; Proposals era -&gt; f (Proposals era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Proposals.html#pPropsL"><span class="hs-identifier hs-var">L.pPropsL</span></a></span><span> </span><span class="annot"><span class="annottext">((OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+  -&gt; Const
+       [GovActionState (ShelleyLedgerEra era)]
+       (OMap GovActionId (GovActionState (ShelleyLedgerEra era))))
+ -&gt; Proposals (ShelleyLedgerEra era)
+ -&gt; Const
+      [GovActionState (ShelleyLedgerEra era)]
+      (Proposals (ShelleyLedgerEra era)))
+-&gt; (([GovActionState (ShelleyLedgerEra era)]
+     -&gt; Const
+          [GovActionState (ShelleyLedgerEra era)]
+          [GovActionState (ShelleyLedgerEra era)])
+    -&gt; OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+    -&gt; Const
+         [GovActionState (ShelleyLedgerEra era)]
+         (OMap GovActionId (GovActionState (ShelleyLedgerEra era))))
+-&gt; ([GovActionState (ShelleyLedgerEra era)]
+    -&gt; Const
+         [GovActionState (ShelleyLedgerEra era)]
+         [GovActionState (ShelleyLedgerEra era)])
+-&gt; Proposals (ShelleyLedgerEra era)
+-&gt; Const
+     [GovActionState (ShelleyLedgerEra era)]
+     (Proposals (ShelleyLedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+ -&gt; [GovActionState (ShelleyLedgerEra era)])
+-&gt; SimpleGetter
+     (OMap GovActionId (GovActionState (ShelleyLedgerEra era)))
+     [GovActionState (ShelleyLedgerEra era)]
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+-&gt; [Item
+      (OMap GovActionId (GovActionState (ShelleyLedgerEra era)))]
+OMap GovActionId (GovActionState (ShelleyLedgerEra era))
+-&gt; [GovActionState (ShelleyLedgerEra era)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[GovActionState (ShelleyLedgerEra era)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionState (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621679574709"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe () -&gt; m (Maybe ())
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ()
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679574713"><span class="annot"><span class="annottext">lastProposal :: GovActionState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574713"><span class="hs-identifier hs-var hs-var">lastProposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[GovActionState (ShelleyLedgerEra era)]
+-&gt; GovActionState (ShelleyLedgerEra era)
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#last"><span class="hs-identifier hs-var">last</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionState (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621679574709"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-80"></span><span>                  </span><span id="local-6989586621679574715"><span class="annot"><span class="annottext">gaDRepVotes :: [(Credential 'DRepRole, Vote)]
+</span><a href="#local-6989586621679574715"><span class="hs-identifier hs-var hs-var">gaDRepVotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GovActionState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574713"><span class="hs-identifier hs-var">lastProposal</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (ShelleyLedgerEra era)
+-&gt; Getting
+     [(Credential 'DRepRole, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+     [(Credential 'DRepRole, Vote)]
+-&gt; [(Credential 'DRepRole, Vote)]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'DRepRole) Vote
+ -&gt; Const
+      [(Credential 'DRepRole, Vote)] (Map (Credential 'DRepRole) Vote))
+-&gt; GovActionState (ShelleyLedgerEra era)
+-&gt; Const
+     [(Credential 'DRepRole, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'DRepRole) Vote
+ -&gt; f (Map (Credential 'DRepRole) Vote))
+-&gt; GovActionState era -&gt; f (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasDRepVotesL"><span class="hs-identifier hs-var">L.gasDRepVotesL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (Credential 'DRepRole) Vote
+  -&gt; Const
+       [(Credential 'DRepRole, Vote)] (Map (Credential 'DRepRole) Vote))
+ -&gt; GovActionState (ShelleyLedgerEra era)
+ -&gt; Const
+      [(Credential 'DRepRole, Vote)]
+      (GovActionState (ShelleyLedgerEra era)))
+-&gt; (([(Credential 'DRepRole, Vote)]
+     -&gt; Const
+          [(Credential 'DRepRole, Vote)] [(Credential 'DRepRole, Vote)])
+    -&gt; Map (Credential 'DRepRole) Vote
+    -&gt; Const
+         [(Credential 'DRepRole, Vote)] (Map (Credential 'DRepRole) Vote))
+-&gt; Getting
+     [(Credential 'DRepRole, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+     [(Credential 'DRepRole, Vote)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'DRepRole) Vote -&gt; [(Credential 'DRepRole, Vote)])
+-&gt; SimpleGetter
+     (Map (Credential 'DRepRole) Vote) [(Credential 'DRepRole, Vote)]
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Vote -&gt; [(Credential 'DRepRole, Vote)]
+Map (Credential 'DRepRole) Vote
+-&gt; [Item (Map (Credential 'DRepRole) Vote)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-81"></span><span>                  </span><span id="local-6989586621679574717"><span class="annot"><span class="annottext">gaSpoVotes :: [(KeyHash 'StakePool, Vote)]
+</span><a href="#local-6989586621679574717"><span class="hs-identifier hs-var hs-var">gaSpoVotes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GovActionState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621679574713"><span class="hs-identifier hs-var">lastProposal</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState (ShelleyLedgerEra era)
+-&gt; Getting
+     [(KeyHash 'StakePool, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+     [(KeyHash 'StakePool, Vote)]
+-&gt; [(KeyHash 'StakePool, Vote)]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) Vote
+ -&gt; Const
+      [(KeyHash 'StakePool, Vote)] (Map (KeyHash 'StakePool) Vote))
+-&gt; GovActionState (ShelleyLedgerEra era)
+-&gt; Const
+     [(KeyHash 'StakePool, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (KeyHash 'StakePool) Vote
+ -&gt; f (Map (KeyHash 'StakePool) Vote))
+-&gt; GovActionState era -&gt; f (GovActionState era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasStakePoolVotesL"><span class="hs-identifier hs-var">L.gasStakePoolVotesL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (KeyHash 'StakePool) Vote
+  -&gt; Const
+       [(KeyHash 'StakePool, Vote)] (Map (KeyHash 'StakePool) Vote))
+ -&gt; GovActionState (ShelleyLedgerEra era)
+ -&gt; Const
+      [(KeyHash 'StakePool, Vote)]
+      (GovActionState (ShelleyLedgerEra era)))
+-&gt; (([(KeyHash 'StakePool, Vote)]
+     -&gt; Const [(KeyHash 'StakePool, Vote)] [(KeyHash 'StakePool, Vote)])
+    -&gt; Map (KeyHash 'StakePool) Vote
+    -&gt; Const
+         [(KeyHash 'StakePool, Vote)] (Map (KeyHash 'StakePool) Vote))
+-&gt; Getting
+     [(KeyHash 'StakePool, Vote)]
+     (GovActionState (ShelleyLedgerEra era))
+     [(KeyHash 'StakePool, Vote)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) Vote -&gt; [(KeyHash 'StakePool, Vote)])
+-&gt; SimpleGetter
+     (Map (KeyHash 'StakePool) Vote) [(KeyHash 'StakePool, Vote)]
+forall s a. (s -&gt; a) -&gt; SimpleGetter s a
+</span><a href="file:///nix/store/pr3gsnf6gwhg0ysni5rzaldq8iwaxg3f-microlens-lib-microlens-0.4.13.1-haddock-doc/share/doc/microlens/html/src/Lens.Micro.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Vote -&gt; [(KeyHash 'StakePool, Vote)]
+Map (KeyHash 'StakePool) Vote
+-&gt; [Item (Map (KeyHash 'StakePool) Vote)]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-82"></span><span>              </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[(Credential 'DRepRole, Vote)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential 'DRepRole, Vote)]
+</span><a href="#local-6989586621679574715"><span class="hs-identifier hs-var">gaDRepVotes</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[(KeyHash 'StakePool, Vote)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[(KeyHash 'StakePool, Vote)]
+</span><a href="#local-6989586621679574717"><span class="hs-identifier hs-var">gaSpoVotes</span></a></span><span>
+</span><span id="line-83"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe () -&gt; m (Maybe ())
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ()
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-84"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe () -&gt; m (Maybe ())
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe () -&gt; m (Maybe ())) -&gt; Maybe () -&gt; m (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; Maybe ()
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621679574665"><span class="hs-identifier hs-var">actualEra</span></a></span><span>
+</span><span id="line-87"></span></pre></body></html>

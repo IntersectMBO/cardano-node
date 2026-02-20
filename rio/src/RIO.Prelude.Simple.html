@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- | Provide a @`SimpleApp`@ datatype, for providing a basic @App@-like</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- environment with common functionality built in. This is intended to</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- make it easier to, e.g., use rio's logging and process code from</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- within short scripts.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @since 0.1.3.0</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">RIO.Prelude.Simple</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier">SimpleApp</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#mkSimpleApp"><span class="hs-identifier">mkSimpleApp</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#runSimpleApp"><span class="hs-identifier">runSimpleApp</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Reexports.html"><span class="hs-identifier">RIO.Prelude.Reexports</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Logger.html"><span class="hs-identifier">RIO.Prelude.Logger</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Lens.html"><span class="hs-identifier">RIO.Prelude.Lens</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html"><span class="hs-identifier">RIO.Prelude.RIO</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Process.html"><span class="hs-identifier">RIO.Process</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html"><span class="hs-identifier">System.Environment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html#lookupEnv"><span class="hs-identifier">lookupEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | A simple, non-customizable environment type for @RIO@, which</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- provides common functionality. If it's insufficient for your needs,</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- define your own, custom @App@ data type.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- @since 0.1.3.0</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="SimpleApp"><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-var">SimpleApp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SimpleApp"><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-var">SimpleApp</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="saLogFunc"><span class="annot"><span class="annottext">SimpleApp -&gt; LogFunc
+</span><a href="RIO.Prelude.Simple.html#saLogFunc"><span class="hs-identifier hs-var hs-var">saLogFunc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="RIO.Prelude.Logger.html#LogFunc"><span class="hs-identifier hs-type">LogFunc</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="saProcessContext"><span class="annot"><span class="annottext">SimpleApp -&gt; ProcessContext
+</span><a href="RIO.Prelude.Simple.html#saProcessContext"><span class="hs-identifier hs-var hs-var">saProcessContext</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="RIO.Process.html#ProcessContext"><span class="hs-identifier hs-type">ProcessContext</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="RIO.Prelude.Logger.html#HasLogFunc"><span class="hs-identifier hs-type">HasLogFunc</span></a></span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679102038"><span class="annot"><span class="annottext">logFuncL :: Lens' SimpleApp LogFunc
+</span><a href="#local-6989586621679102038"><span class="hs-identifier hs-var hs-var hs-var hs-var">logFuncL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SimpleApp -&gt; LogFunc)
+-&gt; (SimpleApp -&gt; LogFunc -&gt; SimpleApp) -&gt; Lens' SimpleApp LogFunc
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">lens</span></span><span> </span><span class="annot"><span class="annottext">SimpleApp -&gt; LogFunc
+</span><a href="RIO.Prelude.Simple.html#saLogFunc"><span class="hs-identifier hs-var">saLogFunc</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679102041"><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102041"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679102042"><span class="annot"><span class="annottext">LogFunc
+</span><a href="#local-6989586621679102042"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102041"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#saLogFunc"><span class="hs-identifier hs-var">saLogFunc</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679102042"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="RIO.Process.html#HasProcessContext"><span class="hs-identifier hs-type">HasProcessContext</span></a></span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679102048"><span class="annot"><span class="annottext">processContextL :: Lens' SimpleApp ProcessContext
+</span><a href="#local-6989586621679102048"><span class="hs-identifier hs-var hs-var hs-var hs-var">processContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SimpleApp -&gt; ProcessContext)
+-&gt; (SimpleApp -&gt; ProcessContext -&gt; SimpleApp)
+-&gt; Lens' SimpleApp ProcessContext
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><span class="hs-identifier hs-var">lens</span></span><span> </span><span class="annot"><span class="annottext">SimpleApp -&gt; ProcessContext
+</span><a href="RIO.Prelude.Simple.html#saProcessContext"><span class="hs-identifier hs-var">saProcessContext</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679102050"><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102050"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679102051"><span class="annot"><span class="annottext">ProcessContext
+</span><a href="#local-6989586621679102051"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102050"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#saProcessContext"><span class="hs-identifier hs-var">saProcessContext</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679102051"><span class="hs-identifier hs-type">y</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Constructor for `SimpleApp`. In case when `ProcessContext` is not supplied</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- `mkDefaultProcessContext` will be used to create it.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @since 0.1.14.0</span><span>
+</span><span id="line-40"></span><span id="local-6989586621679101994"><span class="annot"><a href="RIO.Prelude.Simple.html#mkSimpleApp"><span class="hs-identifier hs-type">mkSimpleApp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101994"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.Logger.html#LogFunc"><span class="hs-identifier hs-type">LogFunc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="RIO.Process.html#ProcessContext"><span class="hs-identifier hs-type">ProcessContext</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101994"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a></span></span><span>
+</span><span id="line-41"></span><span id="mkSimpleApp"><span class="annot"><span class="annottext">mkSimpleApp :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+LogFunc -&gt; Maybe ProcessContext -&gt; m SimpleApp
+</span><a href="RIO.Prelude.Simple.html#mkSimpleApp"><span class="hs-identifier hs-var hs-var">mkSimpleApp</span></a></span></span><span> </span><span id="local-6989586621679102062"><span class="annot"><span class="annottext">LogFunc
+</span><a href="#local-6989586621679102062"><span class="hs-identifier hs-var">logFunc</span></a></span></span><span> </span><span id="local-6989586621679102063"><span class="annot"><span class="annottext">Maybe ProcessContext
+</span><a href="#local-6989586621679102063"><span class="hs-identifier hs-var">mProcessContext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679102064"><span class="annot"><span class="annottext">ProcessContext
+</span><a href="#local-6989586621679102064"><span class="hs-identifier hs-var">processContext</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ProcessContext
+-&gt; (ProcessContext -&gt; m ProcessContext)
+-&gt; Maybe ProcessContext
+-&gt; m ProcessContext
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">m ProcessContext
+forall (m :: * -&gt; *). MonadIO m =&gt; m ProcessContext
+</span><a href="RIO.Process.html#mkDefaultProcessContext"><span class="hs-identifier hs-var">mkDefaultProcessContext</span></a></span><span> </span><span class="annot"><span class="annottext">ProcessContext -&gt; m ProcessContext
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProcessContext
+</span><a href="#local-6989586621679102063"><span class="hs-identifier hs-var">mProcessContext</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">SimpleApp -&gt; m SimpleApp
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(SimpleApp -&gt; m SimpleApp) -&gt; SimpleApp -&gt; m SimpleApp
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">saLogFunc :: LogFunc
+</span><a href="RIO.Prelude.Simple.html#saLogFunc"><span class="hs-identifier hs-var">saLogFunc</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogFunc
+</span><a href="#local-6989586621679102062"><span class="hs-identifier hs-var">logFunc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">saProcessContext :: ProcessContext
+</span><a href="RIO.Prelude.Simple.html#saProcessContext"><span class="hs-identifier hs-var">saProcessContext</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProcessContext
+</span><a href="#local-6989586621679102064"><span class="hs-identifier hs-var">processContext</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Run with a default configured @SimpleApp@, consisting of:</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- * Logging to stderr</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- * If the @RIO_VERBOSE@ environment variable is set, turns on</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   verbose logging</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- * Default process context</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- @since 0.1.3.0</span><span>
+</span><span id="line-56"></span><span id="local-6989586621679102007"><span id="local-6989586621679102008"><span class="annot"><a href="RIO.Prelude.Simple.html#runSimpleApp"><span class="hs-identifier hs-type">runSimpleApp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102007"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102008"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679102007"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679102008"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-57"></span><span id="runSimpleApp"><span class="annot"><span class="annottext">runSimpleApp :: forall (m :: * -&gt; *) a. MonadIO m =&gt; RIO SimpleApp a -&gt; m a
+</span><a href="RIO.Prelude.Simple.html#runSimpleApp"><span class="hs-identifier hs-var hs-var">runSimpleApp</span></a></span></span><span> </span><span id="local-6989586621679102080"><span class="annot"><span class="annottext">RIO SimpleApp a
+</span><a href="#local-6989586621679102080"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; m a) -&gt; IO a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679102082"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679102082"><span class="hs-identifier hs-var">verbose</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe String -&gt; Bool) -&gt; IO (Maybe String) -&gt; IO Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Maybe String)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html#lookupEnv"><span class="hs-identifier hs-var">lookupEnv</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RIO_VERBOSE&quot;</span></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679102085"><span class="annot"><span class="annottext">LogOptions
+</span><a href="#local-6989586621679102085"><span class="hs-identifier hs-var">lo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; Bool -&gt; IO LogOptions
+forall (m :: * -&gt; *). MonadIO m =&gt; Handle -&gt; Bool -&gt; m LogOptions
+</span><a href="RIO.Prelude.Logger.html#logOptionsHandle"><span class="hs-identifier hs-var">logOptionsHandle</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679102082"><span class="hs-identifier hs-var">verbose</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">LogOptions -&gt; (LogFunc -&gt; IO a) -&gt; IO a
+forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+LogOptions -&gt; (LogFunc -&gt; m a) -&gt; m a
+</span><a href="RIO.Prelude.Logger.html#withLogFunc"><span class="hs-identifier hs-var">withLogFunc</span></a></span><span> </span><span class="annot"><span class="annottext">LogOptions
+</span><a href="#local-6989586621679102085"><span class="hs-identifier hs-var">lo</span></a></span><span> </span><span class="annot"><span class="annottext">((LogFunc -&gt; IO a) -&gt; IO a) -&gt; (LogFunc -&gt; IO a) -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679102089"><span class="annot"><span class="annottext">LogFunc
+</span><a href="#local-6989586621679102089"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679102090"><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102090"><span class="hs-identifier hs-var">simpleApp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">LogFunc -&gt; Maybe ProcessContext -&gt; IO SimpleApp
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+LogFunc -&gt; Maybe ProcessContext -&gt; m SimpleApp
+</span><a href="RIO.Prelude.Simple.html#mkSimpleApp"><span class="hs-identifier hs-var">mkSimpleApp</span></a></span><span> </span><span class="annot"><span class="annottext">LogFunc
+</span><a href="#local-6989586621679102089"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProcessContext
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">SimpleApp -&gt; RIO SimpleApp a -&gt; IO a
+forall (m :: * -&gt; *) env a. MonadIO m =&gt; env -&gt; RIO env a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-var">runRIO</span></a></span><span> </span><span class="annot"><span class="annottext">SimpleApp
+</span><a href="#local-6989586621679102090"><span class="hs-identifier hs-var">simpleApp</span></a></span><span> </span><span class="annot"><span class="annottext">RIO SimpleApp a
+</span><a href="#local-6989586621679102080"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-63"></span></pre></body></html>

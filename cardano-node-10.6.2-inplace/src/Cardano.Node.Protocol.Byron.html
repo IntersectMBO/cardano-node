@@ -1,0 +1,680 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Protocol.Byron</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#mkSomeConsensusProtocolByron"><span class="hs-identifier">mkSomeConsensusProtocolByron</span></a></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Errors</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier">ByronProtocolInstantiationError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Reusable parts</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier">readGenesis</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier">readLeaderCredentials</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.html"><span class="hs-identifier">Cardano.Api.Byron</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Consensus.html"><span class="hs-identifier">Cardano.Api.Consensus</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Monad.Error.html"><span class="hs-identifier">Cardano.Api.Monad.Error</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Genesis</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Update.html"><span class="hs-identifier">Cardano.Chain.Update</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Update</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UTxO</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.2-dc24b8c0f258427fc3a42e732bc38d1450a38847c26bc2889a808cfb2c9d46b9/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Crypto</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0-566bbace3edc09a5f8f5a501bab6f6d6429d6a03531c93e24571d47c5ac4bcf6/share/doc/html/src/Cardano.Crypto.Hashing.html"><span class="hs-identifier">Cardano.Crypto.Hashing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron.Crypto</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0-566bbace3edc09a5f8f5a501bab6f6d6429d6a03531c93e24571d47c5ac4bcf6/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html"><span class="hs-identifier">Cardano.Crypto.ProtocolMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0-566bbace3edc09a5f8f5a501bab6f6d6429d6a03531c93e24571d47c5ac4bcf6/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html#RequiresNetworkMagic"><span class="hs-identifier">RequiresNetworkMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Protocol.Types.html"><span class="hs-identifier">Cardano.Node.Protocol.Types</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Tracing.Era.Byron.html"><span class="hs-identifier">Cardano.Node.Tracing.Era.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Tracing.Era.HardFork.html"><span class="hs-identifier">Cardano.Node.Tracing.Era.HardFork</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ChainDB.html"><span class="hs-identifier">Cardano.Node.Tracing.Tracers.ChainDB</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Node</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Json.Canonical.html#canonicalDecodePretty"><span class="hs-identifier">canonicalDecodePretty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Byron.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.HardFork.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.HardFork</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Shelley.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LB</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier">fromMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Byron protocol</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- | Make 'SomeConsensusProtocol' using the Byron instance.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- This lets us handle multiple protocols in a generic way.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- This also serves a purpose as a sanity check that we have all the necessary</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- type class instances available.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#mkSomeConsensusProtocolByron"><span class="hs-identifier hs-type">mkSomeConsensusProtocolByron</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeByronProtocolConfiguration"><span class="hs-identifier hs-type">NodeByronProtocolConfiguration</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Types.html#SomeConsensusProtocol"><span class="hs-identifier hs-type">SomeConsensusProtocol</span></a></span><span>
+</span><span id="line-59"></span><span id="mkSomeConsensusProtocolByron"><span class="annot"><span class="annottext">mkSomeConsensusProtocolByron :: NodeByronProtocolConfiguration
+-&gt; Maybe ProtocolFilepaths
+-&gt; ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
+</span><a href="Cardano.Node.Protocol.Byron.html#mkSomeConsensusProtocolByron"><span class="hs-identifier hs-var hs-var">mkSomeConsensusProtocolByron</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeByronProtocolConfiguration"><span class="hs-identifier hs-type">NodeByronProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-60"></span><span>                           </span><span id="local-6989586621681723793"><span class="annot"><span class="annottext">GenesisFile
+npcByronGenesisFile :: GenesisFile
+npcByronGenesisFile :: NodeByronProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621681723793"><span class="hs-identifier hs-var hs-var">npcByronGenesisFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>                           </span><span id="local-6989586621681723795"><span class="annot"><span class="annottext">Maybe GenesisHash
+npcByronGenesisFileHash :: Maybe GenesisHash
+npcByronGenesisFileHash :: NodeByronProtocolConfiguration -&gt; Maybe GenesisHash
+</span><a href="#local-6989586621681723795"><span class="hs-identifier hs-var hs-var">npcByronGenesisFileHash</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>                           </span><span id="local-6989586621681723797"><span class="annot"><span class="annottext">RequiresNetworkMagic
+npcByronReqNetworkMagic :: RequiresNetworkMagic
+npcByronReqNetworkMagic :: NodeByronProtocolConfiguration -&gt; RequiresNetworkMagic
+</span><a href="#local-6989586621681723797"><span class="hs-identifier hs-var hs-var">npcByronReqNetworkMagic</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>                           </span><span id="local-6989586621681723799"><span class="annot"><span class="annottext">Maybe Double
+npcByronPbftSignatureThresh :: Maybe Double
+npcByronPbftSignatureThresh :: NodeByronProtocolConfiguration -&gt; Maybe Double
+</span><a href="#local-6989586621681723799"><span class="hs-identifier hs-var hs-var">npcByronPbftSignatureThresh</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>                           </span><span id="local-6989586621681723801"><span class="annot"><span class="annottext">Word16
+npcByronSupportedProtocolVersionMajor :: Word16
+npcByronSupportedProtocolVersionMajor :: NodeByronProtocolConfiguration -&gt; Word16
+</span><a href="#local-6989586621681723801"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionMajor</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>                           </span><span id="local-6989586621681723803"><span class="annot"><span class="annottext">Word16
+npcByronSupportedProtocolVersionMinor :: Word16
+npcByronSupportedProtocolVersionMinor :: NodeByronProtocolConfiguration -&gt; Word16
+</span><a href="#local-6989586621681723803"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionMinor</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>                           </span><span id="local-6989586621681723805"><span class="annot"><span class="annottext">Word8
+npcByronSupportedProtocolVersionAlt :: Word8
+npcByronSupportedProtocolVersionAlt :: NodeByronProtocolConfiguration -&gt; Word8
+</span><a href="#local-6989586621681723805"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionAlt</span></a></span></span><span>
+</span><span id="line-67"></span><span>                         </span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span>                         </span><span id="local-6989586621681723807"><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="#local-6989586621681723807"><span class="hs-identifier hs-var">files</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621681723808"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681723808"><span class="hs-identifier hs-var">genesisConfig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; RequiresNetworkMagic
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+</span><a href="Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier hs-var">readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681723793"><span class="hs-identifier hs-var">npcByronGenesisFile</span></a></span><span>
+</span><span id="line-70"></span><span>                                 </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681723795"><span class="hs-identifier hs-var">npcByronGenesisFileHash</span></a></span><span>
+</span><span id="line-71"></span><span>                                 </span><span class="annot"><span class="annottext">RequiresNetworkMagic
+</span><a href="#local-6989586621681723797"><span class="hs-identifier hs-var">npcByronReqNetworkMagic</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621681723809"><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+</span><a href="#local-6989586621681723809"><span class="hs-identifier hs-var">optionalLeaderCredentials</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Config
+-&gt; Maybe ProtocolFilepaths
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+</span><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier hs-var">readLeaderCredentials</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681723808"><span class="hs-identifier hs-var">genesisConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="#local-6989586621681723807"><span class="hs-identifier hs-var">files</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">SomeConsensusProtocol
+-&gt; ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
+forall a. a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeConsensusProtocol
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO SomeConsensusProtocol)
+-&gt; SomeConsensusProtocol
+-&gt; ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">BlockType (HardForkBlock '[ByronBlock])
+-&gt; ProtocolInfoArgs (HardForkBlock '[ByronBlock])
+-&gt; SomeConsensusProtocol
+forall blk.
+(Protocol IO blk, HasKESMetricsData blk, HasKESInfo blk,
+ TraceConstraints blk) =&gt;
+BlockType blk -&gt; ProtocolInfoArgs blk -&gt; SomeConsensusProtocol
+</span><a href="Cardano.Node.Protocol.Types.html#SomeConsensusProtocol"><span class="hs-identifier hs-var">SomeConsensusProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">BlockType (HardForkBlock '[ByronBlock])
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Consensus.Internal.Protocol.html#ByronBlockType"><span class="hs-identifier hs-var">ByronBlockType</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolInfoArgs (HardForkBlock '[ByronBlock])
+ -&gt; SomeConsensusProtocol)
+-&gt; ProtocolInfoArgs (HardForkBlock '[ByronBlock])
+-&gt; SomeConsensusProtocol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParamsByron
+-&gt; ProtocolInfoArgs (HardForkBlock '[ByronBlock])
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Consensus.Internal.Protocol.html#ProtocolInfoArgsByron"><span class="hs-identifier hs-var">ProtocolInfoArgsByron</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolParamsByron
+ -&gt; ProtocolInfoArgs (HardForkBlock '[ByronBlock]))
+-&gt; ProtocolParamsByron
+-&gt; ProtocolInfoArgs (HardForkBlock '[ByronBlock])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#ProtocolParamsByron"><span class="hs-identifier hs-type">Consensus.ProtocolParamsByron</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">$sel:byronGenesis:ProtocolParamsByron :: Config
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronGenesis%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681723808"><span class="hs-identifier hs-var">genesisConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">$sel:byronPbftSignatureThreshold:ProtocolParamsByron :: Maybe PBftSignatureThreshold
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronPbftSignatureThreshold%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronPbftSignatureThreshold</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><span class="annottext">Double -&gt; PBftSignatureThreshold
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Protocol.PBFT.html#PBftSignatureThreshold"><span class="hs-identifier hs-var">PBftSignatureThreshold</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; PBftSignatureThreshold)
+-&gt; Maybe Double -&gt; Maybe PBftSignatureThreshold
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Double
+</span><a href="#local-6989586621681723799"><span class="hs-identifier hs-var">npcByronPbftSignatureThresh</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">$sel:byronProtocolVersion:ProtocolParamsByron :: ProtocolVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronProtocolVersion%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>          </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word8 -&gt; ProtocolVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-var">Update.ProtocolVersion</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681723801"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionMajor</span></a></span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681723803"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionMinor</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621681723805"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionAlt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">$sel:byronSoftwareVersion:ProtocolParamsByron :: SoftwareVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronSoftwareVersion%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronSoftwareVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SoftwareVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Proposal.html#softwareVersion"><span class="hs-identifier hs-var">softwareVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">$sel:byronLeaderCredentials:ProtocolParamsByron :: Maybe ByronLeaderCredentials
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronLeaderCredentials%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronLeaderCredentials</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-86"></span><span>          </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+</span><a href="#local-6989586621681723809"><span class="hs-identifier hs-var">optionalLeaderCredentials</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier hs-type">readGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisFile"><span class="hs-identifier hs-type">GenesisFile</span></a></span><span>
+</span><span id="line-90"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">Node.GenesisHash</span></a></span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0-566bbace3edc09a5f8f5a501bab6f6d6429d6a03531c93e24571d47c5ac4bcf6/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html#RequiresNetworkMagic"><span class="hs-identifier hs-type">RequiresNetworkMagic</span></a></span><span>
+</span><span id="line-92"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-93"></span><span>                       </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">Genesis.Config</span></a></span><span>
+</span><span id="line-94"></span><span id="readGenesis"><span class="annot"><span class="annottext">readGenesis :: GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; RequiresNetworkMagic
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+</span><a href="Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier hs-var hs-var">readGenesis</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Types.html#GenesisFile"><span class="hs-identifier hs-type">GenesisFile</span></a></span><span> </span><span id="local-6989586621681723823"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723823"><span class="hs-identifier hs-var">file</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681723824"><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681723824"><span class="hs-identifier hs-var">mbExpectedGenesisHash</span></a></span></span><span> </span><span id="local-6989586621681723825"><span class="annot"><span class="annottext">RequiresNetworkMagic
+</span><a href="#local-6989586621681723825"><span class="hs-identifier hs-var">ncReqNetworkMagic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621681723826"><span class="annot"><span class="annottext">GenesisData
+</span><a href="#local-6989586621681723826"><span class="hs-identifier hs-var">genesisData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681723827"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723827"><span class="hs-identifier hs-var">genesisHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(GenesisDataError -&gt; ByronProtocolInstantiationError)
+-&gt; ExceptT GenesisDataError IO (GenesisData, GenesisHash)
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (GenesisData, GenesisHash)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; GenesisDataError -&gt; ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#GenesisReadError"><span class="hs-identifier hs-var">GenesisReadError</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723823"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ExceptT GenesisDataError IO (GenesisData, GenesisHash)
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO (GenesisData, GenesisHash))
+-&gt; ExceptT GenesisDataError IO (GenesisData, GenesisHash)
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (GenesisData, GenesisHash)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-96"></span><span>                                  </span><span class="annot"><span class="annottext">FilePath -&gt; ExceptT GenesisDataError IO (GenesisData, GenesisHash)
+forall (m :: * -&gt; *).
+(MonadError GenesisDataError m, MonadIO m) =&gt;
+FilePath -&gt; m (GenesisData, GenesisHash)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Data.html#readGenesisData"><span class="hs-identifier hs-var">Genesis.readGenesisData</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723823"><span class="hs-identifier hs-var">file</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">GenesisHash -&gt; ExceptT ByronProtocolInstantiationError IO ()
+</span><a href="#local-6989586621681723831"><span class="hs-identifier hs-var">checkExpectedGenesisHash</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723827"><span class="hs-identifier hs-var">genesisHash</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">Config -&gt; ExceptT ByronProtocolInstantiationError IO Config
+forall a. a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">Genesis.Config</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">configGenesisData :: GenesisData
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#configGenesisData"><span class="hs-identifier hs-var">Genesis.configGenesisData</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisData
+</span><a href="#local-6989586621681723826"><span class="hs-identifier hs-var">genesisData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">configGenesisHash :: GenesisHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#configGenesisHash"><span class="hs-identifier hs-var">Genesis.configGenesisHash</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723827"><span class="hs-identifier hs-var">genesisHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">configReqNetMagic :: RequiresNetworkMagic
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#configReqNetMagic"><span class="hs-identifier hs-var">Genesis.configReqNetMagic</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RequiresNetworkMagic
+</span><a href="#local-6989586621681723825"><span class="hs-identifier hs-var">ncReqNetworkMagic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">configUTxOConfiguration :: UTxOConfiguration
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#configUTxOConfiguration"><span class="hs-identifier hs-var">Genesis.configUTxOConfiguration</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxOConfiguration
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.UTxO.UTxOConfiguration.html#defaultUTxOConfiguration"><span class="hs-identifier hs-var">UTxO.defaultUTxOConfiguration</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-comment">--TODO: add config support for the UTxOConfiguration if needed</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="#local-6989586621681723831"><span class="hs-identifier hs-type">checkExpectedGenesisHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-type">Genesis.GenesisHash</span></a></span><span>
+</span><span id="line-107"></span><span>                             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621681723831"><span class="annot"><span class="annottext">checkExpectedGenesisHash :: GenesisHash -&gt; ExceptT ByronProtocolInstantiationError IO ()
+</span><a href="#local-6989586621681723831"><span class="hs-identifier hs-var hs-var">checkExpectedGenesisHash</span></a></span></span><span> </span><span id="local-6989586621681723838"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723838"><span class="hs-identifier hs-var">actual'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681723824"><span class="hs-identifier hs-var">mbExpectedGenesisHash</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681723839"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723839"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723840"><span class="hs-identifier hs-var">actual</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash -&gt; GenesisHash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723839"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-111"></span><span>            </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; ExceptT ByronProtocolInstantiationError IO ()
+forall a.
+ByronProtocolInstantiationError
+-&gt; ExceptT ByronProtocolInstantiationError IO a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Error.Class.html#throwError"><span class="hs-identifier hs-var">throwError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenesisHash -&gt; GenesisHash -&gt; ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#GenesisHashMismatch"><span class="hs-identifier hs-var">GenesisHashMismatch</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723840"><span class="hs-identifier hs-var">actual</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723839"><span class="hs-identifier hs-var">expected</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>            </span><span id="local-6989586621681723840"><span class="annot"><span class="annottext">actual :: GenesisHash
+</span><a href="#local-6989586621681723840"><span class="hs-identifier hs-var hs-var">actual</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisHash -&gt; GenesisHash
+</span><a href="#local-6989586621681723844"><span class="hs-identifier hs-var">fromByronGenesisHash</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723838"><span class="hs-identifier hs-var">actual'</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; ExceptT ByronProtocolInstantiationError IO ()
+forall a. a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621681723844"><span class="hs-identifier hs-type">fromByronGenesisHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-type">Genesis.GenesisHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">Node.GenesisHash</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621681723844"><span class="annot"><span class="annottext">fromByronGenesisHash :: GenesisHash -&gt; GenesisHash
+</span><a href="#local-6989586621681723844"><span class="hs-identifier hs-var hs-var">fromByronGenesisHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-type">Genesis.GenesisHash</span></a></span><span> </span><span id="local-6989586621681723846"><span class="annot"><span class="annottext">Hash Raw
+</span><a href="#local-6989586621681723846"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>        </span><span class="annot"><span class="annottext">Hash Blake2b_256 ByteString -&gt; GenesisHash
+</span><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-var">Node.GenesisHash</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">(Hash Blake2b_256 ByteString -&gt; GenesisHash)
+-&gt; (Hash Raw -&gt; Hash Blake2b_256 ByteString)
+-&gt; Hash Raw
+-&gt; GenesisHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Hash Blake2b_256 ByteString
+-&gt; Maybe (Hash Blake2b_256 ByteString)
+-&gt; Hash Blake2b_256 ByteString
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Hash Blake2b_256 ByteString
+forall {a}. a
+</span><a href="#local-6989586621681723849"><span class="hs-identifier hs-var">impossible</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">(Maybe (Hash Blake2b_256 ByteString)
+ -&gt; Hash Blake2b_256 ByteString)
+-&gt; (Hash Raw -&gt; Maybe (Hash Blake2b_256 ByteString))
+-&gt; Hash Raw
+-&gt; Hash Blake2b_256 ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash Blake2b_256 ByteString)
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.2-dc24b8c0f258427fc3a42e732bc38d1450a38847c26bc2889a808cfb2c9d46b9/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">Crypto.hashFromBytes</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe (Hash Blake2b_256 ByteString))
+-&gt; (Hash Raw -&gt; ByteString)
+-&gt; Hash Raw
+-&gt; Maybe (Hash Blake2b_256 ByteString)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Hash Raw -&gt; ByteString
+forall algo a. AbstractHash algo a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0-566bbace3edc09a5f8f5a501bab6f6d6429d6a03531c93e24571d47c5ac4bcf6/share/doc/html/src/Cardano.Crypto.Hashing.html#hashToBytes"><span class="hs-identifier hs-var">Byron.Crypto.hashToBytes</span></a></span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">(Hash Raw -&gt; GenesisHash) -&gt; Hash Raw -&gt; GenesisHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Hash Raw
+</span><a href="#local-6989586621681723846"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>        </span><span id="local-6989586621681723849"><span class="annot"><span class="annottext">impossible :: a
+</span><a href="#local-6989586621681723849"><span class="hs-identifier hs-var hs-var">impossible</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>          </span><span class="annot"><span class="annottext">FilePath -&gt; a
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;fromByronGenesisHash: old and new crypto libs disagree on hash size&quot;</span></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier hs-type">readLeaderCredentials</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">Genesis.Config</span></a></span><span>
+</span><span id="line-131"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span>
+</span><span id="line-132"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-133"></span><span>                                 </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#ByronLeaderCredentials"><span class="hs-identifier hs-type">ByronLeaderCredentials</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span id="readLeaderCredentials"><span class="annot"><span class="annottext">readLeaderCredentials :: Config
+-&gt; Maybe ProtocolFilepaths
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+</span><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier hs-var hs-var">readLeaderCredentials</span></a></span></span><span> </span><span class="annot"><span class="annottext">Config
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall a. a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier hs-var">readLeaderCredentials</span></a></span><span> </span><span id="local-6989586621681723855"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681723855"><span class="hs-identifier hs-var">genesisConfig</span></a></span></span><span>
+</span><span id="line-136"></span><span>                      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-137"></span><span>                        </span><span id="local-6989586621681723857"><span class="annot"><span class="annottext">Maybe FilePath
+byronCertFile :: Maybe FilePath
+byronCertFile :: ProtocolFilepaths -&gt; Maybe FilePath
+</span><a href="#local-6989586621681723857"><span class="hs-identifier hs-var hs-var">byronCertFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>                        </span><span id="local-6989586621681723859"><span class="annot"><span class="annottext">Maybe FilePath
+byronKeyFile :: Maybe FilePath
+byronKeyFile :: ProtocolFilepaths -&gt; Maybe FilePath
+</span><a href="#local-6989586621681723859"><span class="hs-identifier hs-var hs-var">byronKeyFile</span></a></span></span><span>
+</span><span id="line-139"></span><span>                      </span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621681723857"><span class="hs-identifier hs-var">byronCertFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621681723859"><span class="hs-identifier hs-var">byronKeyFile</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall a. a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#left"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#SigningKeyFilepathNotSpecified"><span class="hs-identifier hs-var">SigningKeyFilepathNotSpecified</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#left"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#DelegationCertificateFilepathNotSpecified"><span class="hs-identifier hs-var">DelegationCertificateFilepathNotSpecified</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681723864"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723864"><span class="hs-identifier hs-var">delegCertFile</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681723865"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723865"><span class="hs-identifier hs-var">signingKeyFile</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>         </span><span id="local-6989586621681723866"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681723866"><span class="hs-identifier hs-var">signingKeyFileBytes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ByteString
+-&gt; ExceptT ByronProtocolInstantiationError IO ByteString
+forall a. IO a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ByteString
+ -&gt; ExceptT ByronProtocolInstantiationError IO ByteString)
+-&gt; IO ByteString
+-&gt; ExceptT ByronProtocolInstantiationError IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LB.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723865"><span class="hs-identifier hs-var">signingKeyFile</span></a></span><span>
+</span><span id="line-147"></span><span>         </span><span id="local-6989586621681723869"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681723869"><span class="hs-identifier hs-var">delegCertFileBytes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ByteString
+-&gt; ExceptT ByronProtocolInstantiationError IO ByteString
+forall a. IO a -&gt; ExceptT ByronProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO ByteString
+ -&gt; ExceptT ByronProtocolInstantiationError IO ByteString)
+-&gt; IO ByteString
+-&gt; ExceptT ByronProtocolInstantiationError IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LB.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723864"><span class="hs-identifier hs-var">delegCertFile</span></a></span><span>
+</span><span id="line-148"></span><span>         </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Key.html#ByronSigningKey"><span class="hs-identifier hs-type">ByronSigningKey</span></a></span><span> </span><span id="local-6989586621681723871"><span class="annot"><span class="annottext">SigningKey
+</span><a href="#local-6989586621681723871"><span class="hs-identifier hs-var">signingKey</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(SerialiseAsRawBytesError -&gt; ByronProtocolInstantiationError)
+-&gt; ExceptT SerialiseAsRawBytesError IO (SigningKey ByronKey)
+-&gt; ExceptT ByronProtocolInstantiationError IO (SigningKey ByronKey)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; SerialiseAsRawBytesError -&gt; ByronProtocolInstantiationError
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#SigningKeyDeserialiseFailure"><span class="hs-identifier hs-var">SigningKeyDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723865"><span class="hs-identifier hs-var">signingKeyFile</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>                         </span><span class="annot"><span class="annottext">(ExceptT SerialiseAsRawBytesError IO (SigningKey ByronKey)
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO (SigningKey ByronKey))
+-&gt; (Either SerialiseAsRawBytesError (SigningKey ByronKey)
+    -&gt; ExceptT SerialiseAsRawBytesError IO (SigningKey ByronKey))
+-&gt; Either SerialiseAsRawBytesError (SigningKey ByronKey)
+-&gt; ExceptT ByronProtocolInstantiationError IO (SigningKey ByronKey)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Either SerialiseAsRawBytesError (SigningKey ByronKey)
+-&gt; ExceptT SerialiseAsRawBytesError IO (SigningKey ByronKey)
+forall (m :: * -&gt; *) x a. Monad m =&gt; Either x a -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#hoistEither"><span class="hs-identifier hs-var">hoistEither</span></a></span><span>
+</span><span id="line-150"></span><span>                         </span><span class="annot"><span class="annottext">(Either SerialiseAsRawBytesError (SigningKey ByronKey)
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO (SigningKey ByronKey))
+-&gt; Either SerialiseAsRawBytesError (SigningKey ByronKey)
+-&gt; ExceptT ByronProtocolInstantiationError IO (SigningKey ByronKey)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (SigningKey ByronKey)
+-&gt; ByteString
+-&gt; Either SerialiseAsRawBytesError (SigningKey ByronKey)
+forall a.
+SerialiseAsRawBytes a =&gt;
+AsType a -&gt; ByteString -&gt; Either SerialiseAsRawBytesError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.Raw.html#deserialiseFromRawBytes"><span class="hs-identifier hs-var">deserialiseFromRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType ByronKey -&gt; AsType (SigningKey ByronKey)
+forall a. AsType a -&gt; AsType (SigningKey a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#AsSigningKey"><span class="hs-identifier hs-var">AsSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">AsType ByronKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Key.html#AsByronKey"><span class="hs-identifier hs-var">AsByronKey</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString
+ -&gt; Either SerialiseAsRawBytesError (SigningKey ByronKey))
+-&gt; ByteString
+-&gt; Either SerialiseAsRawBytesError (SigningKey ByronKey)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LB.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681723866"><span class="hs-identifier hs-var">signingKeyFileBytes</span></a></span><span>
+</span><span id="line-151"></span><span>         </span><span id="local-6989586621681723879"><span class="annot"><span class="annottext">Certificate
+</span><a href="#local-6989586621681723879"><span class="hs-identifier hs-var">delegCert</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByronProtocolInstantiationError)
+-&gt; ExceptT Text IO Certificate
+-&gt; ExceptT ByronProtocolInstantiationError IO Certificate
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Text -&gt; ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#CanonicalDecodeFailure"><span class="hs-identifier hs-var">CanonicalDecodeFailure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723864"><span class="hs-identifier hs-var">delegCertFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>                         </span><span class="annot"><span class="annottext">(ExceptT Text IO Certificate
+ -&gt; ExceptT ByronProtocolInstantiationError IO Certificate)
+-&gt; (Either Text Certificate -&gt; ExceptT Text IO Certificate)
+-&gt; Either Text Certificate
+-&gt; ExceptT ByronProtocolInstantiationError IO Certificate
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Either Text Certificate -&gt; ExceptT Text IO Certificate
+forall (m :: * -&gt; *) x a. Monad m =&gt; Either x a -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#hoistEither"><span class="hs-identifier hs-var">hoistEither</span></a></span><span>
+</span><span id="line-153"></span><span>                         </span><span class="annot"><span class="annottext">(Either Text Certificate
+ -&gt; ExceptT ByronProtocolInstantiationError IO Certificate)
+-&gt; Either Text Certificate
+-&gt; ExceptT ByronProtocolInstantiationError IO Certificate
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either Text Certificate
+forall a.
+FromJSON (Either SchemaError) a =&gt;
+ByteString -&gt; Either Text a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Json.Canonical.html#canonicalDecodePretty"><span class="hs-identifier hs-var">canonicalDecodePretty</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681723869"><span class="hs-identifier hs-var">delegCertFileBytes</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span>         </span><span class="annot"><span class="annottext">(ByronLeaderCredentialsError -&gt; ByronProtocolInstantiationError)
+-&gt; (ByronLeaderCredentials -&gt; Maybe ByronLeaderCredentials)
+-&gt; ExceptT ByronLeaderCredentialsError IO ByronLeaderCredentials
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall (m :: * -&gt; *) x y a b.
+Functor m =&gt;
+(x -&gt; y) -&gt; (a -&gt; b) -&gt; ExceptT x m a -&gt; ExceptT y m b
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#bimapExceptT"><span class="hs-identifier hs-var">bimapExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">ByronLeaderCredentialsError -&gt; ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#CredentialsError"><span class="hs-identifier hs-var">CredentialsError</span></a></span><span> </span><span class="annot"><span class="annottext">ByronLeaderCredentials -&gt; Maybe ByronLeaderCredentials
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-156"></span><span>           </span><span class="annot"><span class="annottext">(ExceptT ByronLeaderCredentialsError IO ByronLeaderCredentials
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials))
+-&gt; (Either ByronLeaderCredentialsError ByronLeaderCredentials
+    -&gt; ExceptT ByronLeaderCredentialsError IO ByronLeaderCredentials)
+-&gt; Either ByronLeaderCredentialsError ByronLeaderCredentials
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Either ByronLeaderCredentialsError ByronLeaderCredentials
+-&gt; ExceptT ByronLeaderCredentialsError IO ByronLeaderCredentials
+forall (m :: * -&gt; *) x a. Monad m =&gt; Either x a -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#hoistEither"><span class="hs-identifier hs-var">hoistEither</span></a></span><span>
+</span><span id="line-157"></span><span>           </span><span class="annot"><span class="annottext">(Either ByronLeaderCredentialsError ByronLeaderCredentials
+ -&gt; ExceptT
+      ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials))
+-&gt; Either ByronLeaderCredentialsError ByronLeaderCredentials
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+-&gt; SigningKey
+-&gt; Certificate
+-&gt; Text
+-&gt; Either ByronLeaderCredentialsError ByronLeaderCredentials
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#mkByronLeaderCredentials"><span class="hs-identifier hs-var">mkByronLeaderCredentials</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681723855"><span class="hs-identifier hs-var">genesisConfig</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey
+</span><a href="#local-6989586621681723871"><span class="hs-identifier hs-var">signingKey</span></a></span><span> </span><span class="annot"><span class="annottext">Certificate
+</span><a href="#local-6989586621681723879"><span class="hs-identifier hs-var">delegCert</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Byron&quot;</span></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">data</span><span> </span><span id="ByronProtocolInstantiationError"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-var">ByronProtocolInstantiationError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>    </span><span id="CanonicalDecodeFailure"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#CanonicalDecodeFailure"><span class="hs-identifier hs-var">CanonicalDecodeFailure</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisHashMismatch"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisHashMismatch"><span class="hs-identifier hs-var">GenesisHashMismatch</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">Node.GenesisHash</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">Node.GenesisHash</span></a></span><span> </span><span class="hs-comment">-- actual, expected</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DelegationCertificateFilepathNotSpecified"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#DelegationCertificateFilepathNotSpecified"><span class="hs-identifier hs-var">DelegationCertificateFilepathNotSpecified</span></a></span></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisConfigurationError"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisConfigurationError"><span class="hs-identifier hs-var">GenesisConfigurationError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Config.html#ConfigurationError"><span class="hs-identifier hs-type">Genesis.ConfigurationError</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisReadError"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisReadError"><span class="hs-identifier hs-var">GenesisReadError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Genesis.Data.html#GenesisDataError"><span class="hs-identifier hs-type">Genesis.GenesisDataError</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CredentialsError"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#CredentialsError"><span class="hs-identifier hs-var">CredentialsError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#ByronLeaderCredentialsError"><span class="hs-identifier hs-type">ByronLeaderCredentialsError</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SigningKeyDeserialiseFailure"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#SigningKeyDeserialiseFailure"><span class="hs-identifier hs-var">SigningKeyDeserialiseFailure</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SigningKeyFilepathNotSpecified"><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#SigningKeyFilepathNotSpecified"><span class="hs-identifier hs-var">SigningKeyFilepathNotSpecified</span></a></span></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681723886"><span id="local-6989586621681723912"><span id="local-6989586621681723916"><span class="annot"><span class="annottext">Int -&gt; ByronProtocolInstantiationError -&gt; ShowS
+[ByronProtocolInstantiationError] -&gt; ShowS
+ByronProtocolInstantiationError -&gt; FilePath
+(Int -&gt; ByronProtocolInstantiationError -&gt; ShowS)
+-&gt; (ByronProtocolInstantiationError -&gt; FilePath)
+-&gt; ([ByronProtocolInstantiationError] -&gt; ShowS)
+-&gt; Show ByronProtocolInstantiationError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ByronProtocolInstantiationError -&gt; ShowS
+showsPrec :: Int -&gt; ByronProtocolInstantiationError -&gt; ShowS
+$cshow :: ByronProtocolInstantiationError -&gt; FilePath
+show :: ByronProtocolInstantiationError -&gt; FilePath
+$cshowList :: [ByronProtocolInstantiationError] -&gt; ShowS
+showList :: [ByronProtocolInstantiationError] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681723925"><span id="local-6989586621681723929"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621681723935"><span class="annot"><span class="annottext">displayException :: ByronProtocolInstantiationError -&gt; FilePath
+</span><a href="#local-6989586621681723935"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; FilePath
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; FilePath)
+-&gt; (ByronProtocolInstantiationError -&gt; Doc AnsiStyle)
+-&gt; ByronProtocolInstantiationError
+-&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError -&gt; Doc AnsiStyle
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. ByronProtocolInstantiationError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">ByronProtocolInstantiationError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621681723982"><span class="annot"><span class="annottext">prettyError :: forall ann. ByronProtocolInstantiationError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#CanonicalDecodeFailure"><span class="hs-identifier hs-type">CanonicalDecodeFailure</span></a></span><span> </span><span id="local-6989586621681723983"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723983"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681723984"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681723984"><span class="hs-identifier hs-var">failure</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Canonical decode failure in &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723983"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-176"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; Canonical failure: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681723984"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisHashMismatch"><span class="hs-identifier hs-type">GenesisHashMismatch</span></a></span><span> </span><span id="local-6989586621681723986"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723986"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span id="local-6989586621681723987"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723987"><span class="hs-identifier hs-var">expected</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Wrong Byron genesis file: the actual hash is &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723986"><span class="hs-identifier hs-var">actual</span></a></span><span>
+</span><span id="line-179"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;, but the expected Byron genesis hash given in the node configuration &quot;</span></span><span>
+</span><span id="line-180"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;file is &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681723987"><span class="hs-identifier hs-var">expected</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#DelegationCertificateFilepathNotSpecified"><span class="hs-identifier hs-var">DelegationCertificateFilepathNotSpecified</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-182"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Delegation certificate filepath not specified&quot;</span></span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-comment">--TODO: Implement configuration error render function in cardano-ledger</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisConfigurationError"><span class="hs-identifier hs-type">GenesisConfigurationError</span></a></span><span> </span><span id="local-6989586621681723988"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723988"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681723989"><span class="annot"><span class="annottext">ConfigurationError
+</span><a href="#local-6989586621681723989"><span class="hs-identifier hs-var">genesisConfigError</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-185"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Genesis configuration error in: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723988"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-186"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigurationError -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigurationError
+</span><a href="#local-6989586621681723989"><span class="hs-identifier hs-var">genesisConfigError</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#GenesisReadError"><span class="hs-identifier hs-type">GenesisReadError</span></a></span><span> </span><span id="local-6989586621681723990"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723990"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681723991"><span class="annot"><span class="annottext">GenesisDataError
+</span><a href="#local-6989586621681723991"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-188"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;There was an error parsing the genesis file: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723990"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-189"></span><span>     </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisDataError -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisDataError
+</span><a href="#local-6989586621681723991"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-comment">-- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network</span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#CredentialsError"><span class="hs-identifier hs-type">CredentialsError</span></a></span><span> </span><span id="local-6989586621681723992"><span class="annot"><span class="annottext">ByronLeaderCredentialsError
+</span><a href="#local-6989586621681723992"><span class="hs-identifier hs-var">byronLeaderCredentialsError</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-192"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Byron leader credentials error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByronLeaderCredentialsError -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">ByronLeaderCredentialsError
+</span><a href="#local-6989586621681723992"><span class="hs-identifier hs-var">byronLeaderCredentialsError</span></a></span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#SigningKeyDeserialiseFailure"><span class="hs-identifier hs-type">SigningKeyDeserialiseFailure</span></a></span><span> </span><span id="local-6989586621681723993"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723993"><span class="hs-identifier hs-var">fp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Signing key deserialisation error in: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621681723993"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Byron.html#SigningKeyFilepathNotSpecified"><span class="hs-identifier hs-var">SigningKeyFilepathNotSpecified</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-196"></span><span>        </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Signing key filepath not specified&quot;</span></span><span>
+</span><span id="line-197"></span></pre></body></html>

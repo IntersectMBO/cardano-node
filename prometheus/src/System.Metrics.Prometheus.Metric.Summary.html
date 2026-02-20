@@ -1,0 +1,30 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Metrics.Prometheus.Metric.Summary</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">data</span><span> </span><span id="SummarySample"><span class="annot"><a href="System.Metrics.Prometheus.Metric.Summary.html#SummarySample"><span class="hs-identifier hs-var">SummarySample</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SummarySample"><span class="annot"><a href="System.Metrics.Prometheus.Metric.Summary.html#SummarySample"><span class="hs-identifier hs-var">SummarySample</span></a></span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="sumQuantiles"><span class="annot"><span class="annottext">SummarySample -&gt; Map Double Int
+</span><a href="System.Metrics.Prometheus.Metric.Summary.html#sumQuantiles"><span class="hs-identifier hs-var hs-var">sumQuantiles</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="sumSum"><span class="annot"><span class="annottext">SummarySample -&gt; Int
+</span><a href="System.Metrics.Prometheus.Metric.Summary.html#sumSum"><span class="hs-identifier hs-var hs-var">sumSum</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="sumCount"><span class="annot"><span class="annottext">SummarySample -&gt; Int
+</span><a href="System.Metrics.Prometheus.Metric.Summary.html#sumCount"><span class="hs-identifier hs-var hs-var">sumCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679073672"><span id="local-6989586621679073682"><span id="local-6989586621679073686"><span class="annot"><span class="annottext">Int -&gt; SummarySample -&gt; ShowS
+[SummarySample] -&gt; ShowS
+SummarySample -&gt; String
+(Int -&gt; SummarySample -&gt; ShowS)
+-&gt; (SummarySample -&gt; String)
+-&gt; ([SummarySample] -&gt; ShowS)
+-&gt; Show SummarySample
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SummarySample -&gt; ShowS
+showsPrec :: Int -&gt; SummarySample -&gt; ShowS
+$cshow :: SummarySample -&gt; String
+show :: SummarySample -&gt; String
+$cshowList :: [SummarySample] -&gt; ShowS
+showList :: [SummarySample] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-12"></span></pre></body></html>

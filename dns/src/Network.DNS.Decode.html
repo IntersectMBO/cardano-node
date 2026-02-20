@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | DNS message decoders.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- When in doubt, use the 'decodeAt' or 'decodeManyAt' functions, which</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- correctly handle /circle-arithmetic/ DNS timestamps, e.g., in @RRSIG@</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- resource records.  The 'decode', and 'decodeMany' functions are only</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- appropriate in pure contexts when the current time is not available, and</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @RRSIG@ records are not expected or desired.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- The 'decodeMany' and 'decodeManyAt' functions decode a buffer holding one or</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- more messages, each preceded by 16-bit length in network byte order.  This</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- encoding is generally only appropriate for DNS TCP, and because TCP does not</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- preserve message boundaries, the decode is prepared to return a trailing</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- message fragment to be completed and retried when more input arrives from</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- network.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.DNS.Decode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Decoding a single DNS message</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier">decodeAt</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html#decode"><span class="hs-identifier">decode</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Decoding multple length-encoded DNS messages,</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-comment">-- e.g., from TCP traffic.</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html#decodeManyAt"><span class="hs-identifier">decodeManyAt</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html#decodeMany"><span class="hs-identifier">decodeMany</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Decode.Parsers</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Imports</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.StateBinary</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Types.Internal</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Decode an input buffer containing a single encoded DNS message.  If the</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- input buffer has excess content beyond the end of the message an error is</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- returned.  DNS /circle-arithmetic/ timestamps (e.g. in RRSIG records) are</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- interpreted at the supplied epoch time.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-type">decodeAt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span>                      </span><span class="annot"><span class="hs-comment">-- ^ current epoch time</span></span><span>
+</span><span id="line-41"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>                 </span><span class="annot"><span class="hs-comment">-- ^ encoded input buffer</span></span><span>
+</span><span id="line-42"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ decoded message or error</span></span><span>
+</span><span id="line-43"></span><span id="decodeAt"><span class="annot"><span class="annottext">decodeAt :: Int64 -&gt; ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-var hs-var">decodeAt</span></a></span></span><span> </span><span id="local-6989586621679073738"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073738"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679073739"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073739"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DNSMessage, PState) -&gt; DNSMessage
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((DNSMessage, PState) -&gt; DNSMessage)
+-&gt; Either DNSError (DNSMessage, PState)
+-&gt; Either DNSError DNSMessage
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+-&gt; SGet DNSMessage
+-&gt; ByteString
+-&gt; Either DNSError (DNSMessage, PState)
+forall a.
+Int64 -&gt; SGet a -&gt; ByteString -&gt; Either DNSError (a, PState)
+</span><span class="hs-identifier hs-var">runSGetAt</span></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073738"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; SGet DNSMessage -&gt; SGet DNSMessage
+forall a. Int -&gt; SGet a -&gt; SGet a
+</span><span class="hs-identifier hs-var">fitSGet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">B.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073739"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SGet DNSMessage
+</span><span class="hs-identifier hs-var">getResponse</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073739"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Decode an input buffer containing a single encoded DNS message.  If the</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- input buffer has excess content beyond the end of the message an error is</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- returned.  DNS /circle-arithmetic/ timestamps (e.g. in RRSIG records) are</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- interpreted based on a nominal time in the year 2073 chosen to maximize</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- the time range for which this gives correct translations of 32-bit epoch</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- times to absolute 64-bit epoch times.  This will yield incorrect results</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- starting circa 2141.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Network.DNS.Decode.html#decode"><span class="hs-identifier hs-type">decode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>                 </span><span class="annot"><span class="hs-comment">-- ^ encoded input buffer</span></span><span>
+</span><span id="line-54"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ decoded message or error</span></span><span>
+</span><span id="line-55"></span><span id="decode"><span class="annot"><span class="annottext">decode :: ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decode"><span class="hs-identifier hs-var hs-var">decode</span></a></span></span><span> </span><span id="local-6989586621679073746"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073746"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DNSMessage, PState) -&gt; DNSMessage
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((DNSMessage, PState) -&gt; DNSMessage)
+-&gt; Either DNSError (DNSMessage, PState)
+-&gt; Either DNSError DNSMessage
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SGet DNSMessage
+-&gt; ByteString -&gt; Either DNSError (DNSMessage, PState)
+forall a. SGet a -&gt; ByteString -&gt; Either DNSError (a, PState)
+</span><span class="hs-identifier hs-var">runSGet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; SGet DNSMessage -&gt; SGet DNSMessage
+forall a. Int -&gt; SGet a -&gt; SGet a
+</span><span class="hs-identifier hs-var">fitSGet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">B.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073746"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SGet DNSMessage
+</span><span class="hs-identifier hs-var">getResponse</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073746"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- | Decode a buffer containing multiple encoded DNS messages each preceded by</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- a 16-bit length in network byte order.  Any left-over bytes of a partial</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- message after the last complete message are returned as the second element</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- of the result tuple.  DNS /circle-arithmetic/ timestamps (e.g. in RRSIG</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- records) are interpreted at the supplied epoch time.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Network.DNS.Decode.html#decodeManyAt"><span class="hs-identifier hs-type">decodeManyAt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ current epoch time</span></span><span>
+</span><span id="line-64"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ encoded input buffer</span></span><span>
+</span><span id="line-65"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>                           </span><span class="hs-comment">-- ^ decoded messages and left-over partial message</span><span>
+</span><span id="line-67"></span><span>                           </span><span class="hs-comment">-- or error if any complete message fails to parse.</span><span>
+</span><span id="line-68"></span><span id="decodeManyAt"><span class="annot"><span class="annottext">decodeManyAt :: Int64 -&gt; ByteString -&gt; Either DNSError ([DNSMessage], ByteString)
+</span><a href="Network.DNS.Decode.html#decodeManyAt"><span class="hs-identifier hs-var hs-var">decodeManyAt</span></a></span></span><span> </span><span id="local-6989586621679073748"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073748"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679073749"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073749"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DNSError DNSMessage)
+-&gt; ByteString -&gt; Either DNSError ([DNSMessage], ByteString)
+</span><a href="Network.DNS.Decode.html#decodeMParse"><span class="hs-identifier hs-var">decodeMParse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-var">decodeAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073748"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073749"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Decode a buffer containing multiple encoded DNS messages each preceded by</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- a 16-bit length in network byte order.  Any left-over bytes of a partial</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- message after the last complete message are returned as the second element</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- of the result tuple.  DNS /circle-arithmetic/ timestamps (e.g. in RRSIG</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- records) are interpreted based on a nominal time in the year 2078 chosen to</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- give correct dates for DNS timestamps over a 136 year time range from the</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- date the root zone was signed on the 15th of July 2010 until the 21st of</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- August in 2146.  Outside this date range the output is off by some non-zero</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- multiple 2\^32 seconds.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Network.DNS.Decode.html#decodeMany"><span class="hs-identifier hs-type">decodeMany</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ encoded input buffer</span></span><span>
+</span><span id="line-81"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>                         </span><span class="hs-comment">-- ^ decoded messages and left-over partial message</span><span>
+</span><span id="line-83"></span><span>                         </span><span class="hs-comment">-- or error if any complete message fails to parse.</span><span>
+</span><span id="line-84"></span><span id="decodeMany"><span class="annot"><span class="annottext">decodeMany :: ByteString -&gt; Either DNSError ([DNSMessage], ByteString)
+</span><a href="Network.DNS.Decode.html#decodeMany"><span class="hs-identifier hs-var hs-var">decodeMany</span></a></span></span><span> </span><span id="local-6989586621679073751"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073751"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DNSError DNSMessage)
+-&gt; ByteString -&gt; Either DNSError ([DNSMessage], ByteString)
+</span><a href="Network.DNS.Decode.html#decodeMParse"><span class="hs-identifier hs-var">decodeMParse</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073751"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Decode multiple messages using the given parser.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Network.DNS.Decode.html#decodeMParse"><span class="hs-identifier hs-type">decodeMParse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>                </span><span class="annot"><span class="hs-comment">-- ^ message decoder</span></span><span>
+</span><span id="line-91"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-92"></span><span>                </span><span class="annot"><span class="hs-comment">-- ^ enoded input buffer</span></span><span>
+</span><span id="line-93"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>                </span><span class="hs-comment">-- ^ decoded messages and left-over partial message</span><span>
+</span><span id="line-95"></span><span>                </span><span class="hs-comment">-- or error if any complete message fails to parse.</span><span>
+</span><span id="line-96"></span><span id="decodeMParse"><span class="annot"><span class="annottext">decodeMParse :: (ByteString -&gt; Either DNSError DNSMessage)
+-&gt; ByteString -&gt; Either DNSError ([DNSMessage], ByteString)
+</span><a href="Network.DNS.Decode.html#decodeMParse"><span class="hs-identifier hs-var hs-var">decodeMParse</span></a></span></span><span> </span><span id="local-6989586621679073752"><span class="annot"><span class="annottext">ByteString -&gt; Either DNSError DNSMessage
+</span><a href="#local-6989586621679073752"><span class="hs-identifier hs-var">decoder</span></a></span></span><span> </span><span id="local-6989586621679073753"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073753"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679073754"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679073754"><span class="hs-identifier hs-var">bss</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PState
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073755"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073755"><span class="hs-identifier hs-var">leftovers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SGet [ByteString]
+-&gt; ByteString
+-&gt; Either DNSError (([ByteString], PState), ByteString)
+forall a.
+SGet a -&gt; ByteString -&gt; Either DNSError ((a, PState), ByteString)
+</span><span class="hs-identifier hs-var">runSGetWithLeftovers</span></span><span> </span><span class="annot"><span class="annottext">SGet [ByteString]
+</span><a href="#local-6989586621679073757"><span class="hs-identifier hs-var">lengthEncoded</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073753"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679073758"><span class="annot"><span class="annottext">[DNSMessage]
+</span><a href="#local-6989586621679073758"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DNSError DNSMessage)
+-&gt; [ByteString] -&gt; Either DNSError [DNSMessage]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either DNSError DNSMessage
+</span><a href="#local-6989586621679073752"><span class="hs-identifier hs-var">decoder</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679073754"><span class="hs-identifier hs-var">bss</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">([DNSMessage], ByteString)
+-&gt; Either DNSError ([DNSMessage], ByteString)
+forall a. a -&gt; Either DNSError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[DNSMessage]
+</span><a href="#local-6989586621679073758"><span class="hs-identifier hs-var">msgs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073755"><span class="hs-identifier hs-var">leftovers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- Read a list of length-encoded bytestrings</span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><a href="#local-6989586621679073757"><span class="hs-identifier hs-type">lengthEncoded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SGet</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679073757"><span class="annot"><span class="annottext">lengthEncoded :: SGet [ByteString]
+</span><a href="#local-6989586621679073757"><span class="hs-identifier hs-var hs-var">lengthEncoded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateT PState (Parser ByteString) ByteString -&gt; SGet [ByteString]
+forall a.
+StateT PState (Parser ByteString) a
+-&gt; StateT PState (Parser ByteString) [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">(StateT PState (Parser ByteString) ByteString -&gt; SGet [ByteString])
+-&gt; StateT PState (Parser ByteString) ByteString
+-&gt; SGet [ByteString]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SGet Int
+</span><span class="hs-identifier hs-var">getInt16</span></span><span> </span><span class="annot"><span class="annottext">SGet Int
+-&gt; (Int -&gt; StateT PState (Parser ByteString) ByteString)
+-&gt; StateT PState (Parser ByteString) ByteString
+forall a b.
+StateT PState (Parser ByteString) a
+-&gt; (a -&gt; StateT PState (Parser ByteString) b)
+-&gt; StateT PState (Parser ByteString) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; StateT PState (Parser ByteString) ByteString
+</span><span class="hs-identifier hs-var">getNByteString</span></span><span>
+</span><span id="line-104"></span></pre></body></html>

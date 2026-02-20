@@ -1,0 +1,359 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Newtypes with special instances for deriving.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- === Warning</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- This is an internal module: it is not subject to any versioning policy,</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- breaking changes can happen at any time.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- If something here seems useful, please report it or create a pull request to</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- export it from an external module.</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Generic.Data.Internal.Resolvers</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html"><span class="hs-identifier">Data.Functor.Classes</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-identifier">on</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Read.html"><span class="hs-identifier">Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier">Read</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Compat.html"><span class="hs-identifier">Generic.Data.Internal.Compat</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#readPrec1"><span class="hs-identifier">readPrec1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- | A newtype whose instances for simple classes ('Eq', 'Ord', 'Read', 'Show')</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- use higher-kinded class instances for @f@ (`Eq1`, `Ord1`, `Read1`, `Show1`).</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">newtype</span><span> </span><span id="Id1"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-var">Id1</span></a></span></span><span> </span><span id="local-6989586621679060519"><span class="annot"><a href="#local-6989586621679060519"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679060520"><span class="annot"><a href="#local-6989586621679060520"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Id1"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-var">Id1</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unId1"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Id1 f a -&gt; f a
+</span><a href="Generic.Data.Internal.Resolvers.html#unId1"><span class="hs-identifier hs-var hs-var">unId1</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679060519"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060520"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679060666"><span class="annot"><span class="annottext">(forall a. Eq a =&gt; Eq (Id1 f a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Bool) -&gt; Id1 f a -&gt; Id1 f b -&gt; Bool)
+-&gt; Eq1 (Id1 f)
+forall a. Eq a =&gt; Eq (Id1 f a)
+forall a b. (a -&gt; b -&gt; Bool) -&gt; Id1 f a -&gt; Id1 f b -&gt; Bool
+forall (f :: * -&gt; *) a. (Eq1 f, Eq a) =&gt; Eq (Id1 f a)
+forall (f :: * -&gt; *) a b.
+Eq1 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; Id1 f a -&gt; Id1 f b -&gt; Bool
+forall (f :: * -&gt; *).
+(forall a. Eq a =&gt; Eq (f a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool) -&gt; Eq1 f
+$cliftEq :: forall (f :: * -&gt; *) a b.
+Eq1 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; Id1 f a -&gt; Id1 f b -&gt; Bool
+liftEq :: forall a b. (a -&gt; b -&gt; Bool) -&gt; Id1 f a -&gt; Id1 f b -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">Eq1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679060678"><span class="annot"><span class="annottext">Eq1 (Id1 f)
+(Eq1 (Id1 f), forall a. Ord a =&gt; Ord (Id1 f a)) =&gt;
+(forall a b.
+ (a -&gt; b -&gt; Ordering) -&gt; Id1 f a -&gt; Id1 f b -&gt; Ordering)
+-&gt; Ord1 (Id1 f)
+forall a. Ord a =&gt; Ord (Id1 f a)
+forall a b. (a -&gt; b -&gt; Ordering) -&gt; Id1 f a -&gt; Id1 f b -&gt; Ordering
+forall (f :: * -&gt; *). Ord1 f =&gt; Eq1 (Id1 f)
+forall (f :: * -&gt; *) a. (Ord1 f, Ord a) =&gt; Ord (Id1 f a)
+forall (f :: * -&gt; *) a b.
+Ord1 f =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; Id1 f a -&gt; Id1 f b -&gt; Ordering
+forall (f :: * -&gt; *).
+(Eq1 f, forall a. Ord a =&gt; Ord (f a)) =&gt;
+(forall a b. (a -&gt; b -&gt; Ordering) -&gt; f a -&gt; f b -&gt; Ordering)
+-&gt; Ord1 f
+$cliftCompare :: forall (f :: * -&gt; *) a b.
+Ord1 f =&gt;
+(a -&gt; b -&gt; Ordering) -&gt; Id1 f a -&gt; Id1 f b -&gt; Ordering
+liftCompare :: forall a b. (a -&gt; b -&gt; Ordering) -&gt; Id1 f a -&gt; Id1 f b -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Ord1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679060688"><span id="local-6989586621679060692"><span id="local-6989586621679060696"><span id="local-6989586621679060700"><span class="annot"><span class="annottext">(forall a. Read a =&gt; Read (Id1 f a)) =&gt;
+(forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (Id1 f a))
+-&gt; (forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Id1 f a])
+-&gt; (forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Id1 f a))
+-&gt; (forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Id1 f a])
+-&gt; Read1 (Id1 f)
+forall a. Read a =&gt; Read (Id1 f a)
+forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Id1 f a]
+forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Id1 f a)
+forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (Id1 f a)
+forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Id1 f a]
+forall (f :: * -&gt; *) a. (Read1 f, Read a) =&gt; Read (Id1 f a)
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Id1 f a]
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Id1 f a)
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (Id1 f a)
+forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Id1 f a]
+forall (f :: * -&gt; *).
+(forall a. Read a =&gt; Read (f a)) =&gt;
+(forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (f a))
+-&gt; (forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [f a])
+-&gt; (forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (f a))
+-&gt; (forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [f a])
+-&gt; Read1 f
+$cliftReadsPrec :: forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (Id1 f a)
+liftReadsPrec :: forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; Int -&gt; ReadS (Id1 f a)
+$cliftReadList :: forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+(Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Id1 f a]
+liftReadList :: forall a. (Int -&gt; ReadS a) -&gt; ReadS [a] -&gt; ReadS [Id1 f a]
+$cliftReadPrec :: forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Id1 f a)
+liftReadPrec :: forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec (Id1 f a)
+$cliftReadListPrec :: forall (f :: * -&gt; *) a.
+Read1 f =&gt;
+ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Id1 f a]
+liftReadListPrec :: forall a. ReadPrec a -&gt; ReadPrec [a] -&gt; ReadPrec [Id1 f a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Read1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read1</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679060709"><span id="local-6989586621679060713"><span class="annot"><span class="annottext">(forall a. Show a =&gt; Show (Id1 f a)) =&gt;
+(forall a.
+ (Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Id1 f a -&gt; ShowS)
+-&gt; (forall a.
+    (Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [Id1 f a] -&gt; ShowS)
+-&gt; Show1 (Id1 f)
+forall a. Show a =&gt; Show (Id1 f a)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Id1 f a -&gt; ShowS
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [Id1 f a] -&gt; ShowS
+forall (f :: * -&gt; *) a. (Show1 f, Show a) =&gt; Show (Id1 f a)
+forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Id1 f a -&gt; ShowS
+forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [Id1 f a] -&gt; ShowS
+forall (f :: * -&gt; *).
+(forall a. Show a =&gt; Show (f a)) =&gt;
+(forall a.
+ (Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; f a -&gt; ShowS)
+-&gt; (forall a.
+    (Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [f a] -&gt; ShowS)
+-&gt; Show1 f
+$cliftShowsPrec :: forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Id1 f a -&gt; ShowS
+liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Id1 f a -&gt; ShowS
+$cliftShowList :: forall (f :: * -&gt; *) a.
+Show1 f =&gt;
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [Id1 f a] -&gt; ShowS
+liftShowList :: forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; [Id1 f a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show1</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060573"><span id="local-6989586621679060574"><span id="local-6989586621679060722"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060573"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060574"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-type">Id1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060573"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060574"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679060728"><span class="annot"><span class="annottext">== :: Id1 f a -&gt; Id1 f a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(==)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f a -&gt; f a -&gt; Bool
+forall (f :: * -&gt; *) a. (Eq1 f, Eq a) =&gt; f a -&gt; f a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#eq1"><span class="hs-identifier hs-var">eq1</span></a></span><span> </span><span class="annot"><span class="annottext">(f a -&gt; f a -&gt; Bool)
+-&gt; (Id1 f a -&gt; f a) -&gt; Id1 f a -&gt; Id1 f a -&gt; Bool
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">Id1 f a -&gt; f a
+forall (f :: * -&gt; *) a. Id1 f a -&gt; f a
+</span><a href="Generic.Data.Internal.Resolvers.html#unId1"><span class="hs-identifier hs-var">unId1</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060583"><span id="local-6989586621679060584"><span id="local-6989586621679060738"><span id="local-6989586621679060742"><span id="local-6989586621679060745"><span id="local-6989586621679060748"><span id="local-6989586621679060751"><span id="local-6989586621679060754"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060583"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060584"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-type">Id1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060583"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060584"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679060760"><span class="annot"><span class="annottext">compare :: Id1 f a -&gt; Id1 f a -&gt; Ordering
+</span><a href="#local-6989586621679060760"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">f a -&gt; f a -&gt; Ordering
+forall (f :: * -&gt; *) a. (Ord1 f, Ord a) =&gt; f a -&gt; f a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#compare1"><span class="hs-identifier hs-var">compare1</span></a></span><span> </span><span class="annot"><span class="annottext">(f a -&gt; f a -&gt; Ordering)
+-&gt; (Id1 f a -&gt; f a) -&gt; Id1 f a -&gt; Id1 f a -&gt; Ordering
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">Id1 f a -&gt; f a
+forall (f :: * -&gt; *) a. Id1 f a -&gt; f a
+</span><a href="Generic.Data.Internal.Resolvers.html#unId1"><span class="hs-identifier hs-var">unId1</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060590"><span id="local-6989586621679060591"><span id="local-6989586621679060767"><span id="local-6989586621679060772"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Read1"><span class="hs-identifier hs-type">Read1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060590"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060591"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-type">Id1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060590"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060591"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679060784"><span class="annot"><span class="annottext">readsPrec :: Int -&gt; ReadS (Id1 f a)
+</span><a href="#local-6989586621679060784"><span class="hs-identifier hs-var hs-var hs-var hs-var">readsPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((String -&gt; [(f a, String)]) -&gt; ReadS (Id1 f a))
+-&gt; (Int -&gt; String -&gt; [(f a, String)]) -&gt; Int -&gt; ReadS (Id1 f a)
+forall a b. (a -&gt; b) -&gt; (Int -&gt; a) -&gt; Int -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(((String -&gt; [(f a, String)]) -&gt; ReadS (Id1 f a))
+ -&gt; (Int -&gt; String -&gt; [(f a, String)]) -&gt; Int -&gt; ReadS (Id1 f a))
+-&gt; ((f a -&gt; Id1 f a)
+    -&gt; (String -&gt; [(f a, String)]) -&gt; ReadS (Id1 f a))
+-&gt; (f a -&gt; Id1 f a)
+-&gt; (Int -&gt; String -&gt; [(f a, String)])
+-&gt; Int
+-&gt; ReadS (Id1 f a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">([(f a, String)] -&gt; [(Id1 f a, String)])
+-&gt; (String -&gt; [(f a, String)]) -&gt; ReadS (Id1 f a)
+forall a b. (a -&gt; b) -&gt; (String -&gt; a) -&gt; String -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(([(f a, String)] -&gt; [(Id1 f a, String)])
+ -&gt; (String -&gt; [(f a, String)]) -&gt; ReadS (Id1 f a))
+-&gt; ((f a -&gt; Id1 f a) -&gt; [(f a, String)] -&gt; [(Id1 f a, String)])
+-&gt; (f a -&gt; Id1 f a)
+-&gt; (String -&gt; [(f a, String)])
+-&gt; ReadS (Id1 f a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((f a, String) -&gt; (Id1 f a, String))
+-&gt; [(f a, String)] -&gt; [(Id1 f a, String)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(((f a, String) -&gt; (Id1 f a, String))
+ -&gt; [(f a, String)] -&gt; [(Id1 f a, String)])
+-&gt; ((f a -&gt; Id1 f a) -&gt; (f a, String) -&gt; (Id1 f a, String))
+-&gt; (f a -&gt; Id1 f a)
+-&gt; [(f a, String)]
+-&gt; [(Id1 f a, String)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(f a -&gt; Id1 f a) -&gt; (f a, String) -&gt; (Id1 f a, String)
+forall a b c. (a -&gt; b) -&gt; (a, c) -&gt; (b, c)
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f a -&gt; Id1 f a
+forall (f :: * -&gt; *) a. f a -&gt; Id1 f a
+</span><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-var">Id1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; [(f a, String)]
+forall (f :: * -&gt; *) a. (Read1 f, Read a) =&gt; Int -&gt; ReadS (f a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#readsPrec1"><span class="hs-identifier hs-var">readsPrec1</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679060792"><span class="annot"><span class="annottext">readPrec :: ReadPrec (Id1 f a)
+</span><a href="#local-6989586621679060792"><span class="hs-identifier hs-var hs-var hs-var hs-var">readPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f a -&gt; Id1 f a) -&gt; ReadPrec (f a) -&gt; ReadPrec (Id1 f a)
+forall a b. (a -&gt; b) -&gt; ReadPrec a -&gt; ReadPrec b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">f a -&gt; Id1 f a
+forall (f :: * -&gt; *) a. f a -&gt; Id1 f a
+</span><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-var">Id1</span></a></span><span> </span><span class="annot"><span class="annottext">ReadPrec (f a)
+forall (f :: * -&gt; *) a. (Read1 f, Read a) =&gt; ReadPrec (f a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#readPrec1"><span class="hs-identifier hs-var">readPrec1</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060611"><span id="local-6989586621679060612"><span id="local-6989586621679060798"><span id="local-6989586621679060802"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060611"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060612"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier hs-type">Id1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060611"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060612"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679060807"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Id1 f a -&gt; ShowS
+</span><a href="#local-6989586621679060807"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span id="local-6989586621679060809"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679060809"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; f a -&gt; ShowS
+forall (f :: * -&gt; *) a. (Show1 f, Show a) =&gt; Int -&gt; f a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#showsPrec1"><span class="hs-identifier hs-var">showsPrec1</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679060809"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">(f a -&gt; ShowS) -&gt; (Id1 f a -&gt; f a) -&gt; Id1 f a -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Id1 f a -&gt; f a
+forall (f :: * -&gt; *) a. Id1 f a -&gt; f a
+</span><a href="Generic.Data.Internal.Resolvers.html#unId1"><span class="hs-identifier hs-var">unId1</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | A newtype with trivial instances, that considers</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- every value equivalent to every other one,</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- and shows as just @&quot;_&quot;@.</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">newtype</span><span> </span><span id="Opaque"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-var">Opaque</span></a></span></span><span> </span><span id="local-6989586621679060615"><span class="annot"><a href="#local-6989586621679060615"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Opaque"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-var">Opaque</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unOpaque"><span class="annot"><span class="annottext">forall a. Opaque a -&gt; a
+</span><a href="Generic.Data.Internal.Resolvers.html#unOpaque"><span class="hs-identifier hs-var hs-var">unOpaque</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679060615"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060619"><span id="local-6989586621679060815"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060619"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679060818"><span class="annot"><span class="annottext">== :: Opaque a -&gt; Opaque a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(==)</span></a></span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060621"><span id="local-6989586621679060823"><span id="local-6989586621679060827"><span id="local-6989586621679060830"><span id="local-6989586621679060833"><span id="local-6989586621679060836"><span id="local-6989586621679060839"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060621"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679060841"><span class="annot"><span class="annottext">compare :: Opaque a -&gt; Opaque a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Shown as @&quot;_&quot;@.</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060623"><span id="local-6989586621679060844"><span id="local-6989586621679060848"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060623"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679060850"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Opaque a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679060856"><span class="annot"><span class="annottext">liftEq :: forall a b. (a -&gt; b -&gt; Bool) -&gt; Opaque a -&gt; Opaque b -&gt; Bool
+</span><a href="#local-6989586621679060856"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftEq</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679060864"><span class="annot"><span class="annottext">liftCompare :: forall a b.
+(a -&gt; b -&gt; Ordering) -&gt; Opaque a -&gt; Opaque b -&gt; Ordering
+</span><a href="#local-6989586621679060864"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftCompare</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | Shown as @&quot;_&quot;@.</span></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060870"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier hs-type">Opaque</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679060873"><span class="annot"><span class="annottext">liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Opaque a -&gt; ShowS
+</span><a href="#local-6989586621679060873"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftShowsPrec</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><span class="hs-comment">-- | A higher-kinded version of 'Opaque'.</span></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">newtype</span><span> </span><span id="Opaque1"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-var">Opaque1</span></a></span></span><span> </span><span id="local-6989586621679060629"><span class="annot"><a href="#local-6989586621679060629"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679060630"><span class="annot"><a href="#local-6989586621679060630"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Opaque1"><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-var">Opaque1</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unOpaque1"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Opaque1 f a -&gt; f a
+</span><a href="Generic.Data.Internal.Resolvers.html#unOpaque1"><span class="hs-identifier hs-var hs-var">unOpaque1</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679060629"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060630"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060636"><span id="local-6989586621679060637"><span id="local-6989586621679060879"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060636"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060637"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679060882"><span class="annot"><span class="annottext">== :: Opaque1 f a -&gt; Opaque1 f a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(==)</span></a></span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060640"><span id="local-6989586621679060641"><span id="local-6989586621679060887"><span id="local-6989586621679060891"><span id="local-6989586621679060894"><span id="local-6989586621679060897"><span id="local-6989586621679060900"><span id="local-6989586621679060903"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060640"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060641"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679060905"><span class="annot"><span class="annottext">compare :: Opaque1 f a -&gt; Opaque1 f a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><span class="hs-comment">-- | Shown as @&quot;_&quot;@.</span></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060644"><span id="local-6989586621679060645"><span id="local-6989586621679060908"><span id="local-6989586621679060912"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060644"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060645"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679060914"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Opaque1 f a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060647"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060647"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679060919"><span class="annot"><span class="annottext">liftEq :: forall a b. (a -&gt; b -&gt; Bool) -&gt; Opaque1 f a -&gt; Opaque1 f b -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftEq"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftEq</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><span class="hs-comment">-- | All equal.</span></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060651"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060651"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679060926"><span class="annot"><span class="annottext">liftCompare :: forall a b.
+(a -&gt; b -&gt; Ordering) -&gt; Opaque1 f a -&gt; Opaque1 f b -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftCompare"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftCompare</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Shown as @&quot;_&quot;@.</span></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679060655"><span id="local-6989586621679060931"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier hs-type">Opaque1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679060655"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679060934"><span class="annot"><span class="annottext">liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Opaque1 f a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftShowsPrec"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftShowsPrec</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Opaque1 f a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span>
+</span><span id="line-95"></span></pre></body></html>

@@ -1,0 +1,578 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.FrequencyLimiter</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#limitFrequency"><span class="hs-identifier">limitFrequency</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#LimiterSpec"><span class="hs-identifier">LimiterSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Trace.html"><span class="hs-identifier">Cardano.Logging.Trace</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html"><span class="hs-identifier">Cardano.Logging.TraceDispatcherMessage</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/20l60m3xgxymfhdw8lx2xy8nak8k3jf2-unliftio-core-lib-unliftio-core-0.2.1.0-haddock-doc/share/doc/unliftio-core/html/src/Control.Monad.IO.Unlift.html"><span class="hs-identifier">Control.Monad.IO.Unlift</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html"><span class="hs-identifier">Data.Time.Clock.System</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- | Threshold for starting and stopping of the limiter</span></span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-type">budgetLimit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-20"></span><span id="budgetLimit"><span class="annot"><span class="annottext">budgetLimit :: Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-var hs-var">budgetLimit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">30.0</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="annot"><span class="hs-comment">-- | After how many seconds a reminder message is send</span></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#reminderPeriod"><span class="hs-identifier hs-type">reminderPeriod</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-24"></span><span id="reminderPeriod"><span class="annot"><span class="annottext">reminderPeriod :: Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#reminderPeriod"><span class="hs-identifier hs-var hs-var">reminderPeriod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10.0</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="MaybeTuple%27"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#MaybeTuple%27"><span class="hs-identifier hs-var">MaybeTuple'</span></a></span></span><span> </span><span id="local-6989586621679145408"><span class="annot"><a href="#local-6989586621679145408"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679145409"><span class="annot"><a href="#local-6989586621679145409"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Nothing%27"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Nothing%27"><span class="hs-identifier hs-var">Nothing'</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Just%27"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Just%27"><span class="hs-identifier hs-var">Just'</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679145408"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679145409"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-27"></span><span>     </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679145448"><span id="local-6989586621679145454"><span id="local-6989586621679145458"><span class="annot"><span class="annottext">Int -&gt; MaybeTuple' a b -&gt; ShowS
+[MaybeTuple' a b] -&gt; ShowS
+MaybeTuple' a b -&gt; String
+(Int -&gt; MaybeTuple' a b -&gt; ShowS)
+-&gt; (MaybeTuple' a b -&gt; String)
+-&gt; ([MaybeTuple' a b] -&gt; ShowS)
+-&gt; Show (MaybeTuple' a b)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall a b. (Show a, Show b) =&gt; Int -&gt; MaybeTuple' a b -&gt; ShowS
+forall a b. (Show a, Show b) =&gt; [MaybeTuple' a b] -&gt; ShowS
+forall a b. (Show a, Show b) =&gt; MaybeTuple' a b -&gt; String
+$cshowsPrec :: forall a b. (Show a, Show b) =&gt; Int -&gt; MaybeTuple' a b -&gt; ShowS
+showsPrec :: Int -&gt; MaybeTuple' a b -&gt; ShowS
+$cshow :: forall a b. (Show a, Show b) =&gt; MaybeTuple' a b -&gt; String
+show :: MaybeTuple' a b -&gt; String
+$cshowList :: forall a b. (Show a, Show b) =&gt; [MaybeTuple' a b] -&gt; ShowS
+showList :: [MaybeTuple' a b] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="LimiterSpec"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#LimiterSpec"><span class="hs-identifier hs-var">LimiterSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LimiterSpec"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#LimiterSpec"><span class="hs-identifier hs-var">LimiterSpec</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-30"></span><span>    </span><span id="lsNs"><span class="annot"><span class="annottext">LimiterSpec -&gt; [Text]
+</span><a href="Cardano.Logging.FrequencyLimiter.html#lsNs"><span class="hs-identifier hs-var hs-var">lsNs</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="lsName"><span class="annot"><span class="annottext">LimiterSpec -&gt; Text
+</span><a href="Cardano.Logging.FrequencyLimiter.html#lsName"><span class="hs-identifier hs-var hs-var">lsName</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="lsFrequency"><span class="annot"><span class="annottext">LimiterSpec -&gt; Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#lsFrequency"><span class="hs-identifier hs-var hs-var">lsFrequency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">data</span><span> </span><span id="FrequencyRec"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-var">FrequencyRec</span></a></span></span><span> </span><span id="local-6989586621679145371"><span class="annot"><a href="#local-6989586621679145371"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FrequencyRec"><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-var">FrequencyRec</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-36"></span><span>    </span><span id="frMessage"><span class="annot"><span class="annottext">forall a. FrequencyRec a -&gt; Maybe a
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var hs-var">frMessage</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145371"><span class="hs-identifier hs-type">a</span></a></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ The message to pass</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frLastTime"><span class="annot"><span class="annottext">forall a. FrequencyRec a -&gt; Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var hs-var">frLastTime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The time since the last message did arrive in seconds</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frLastRem"><span class="annot"><span class="annottext">forall a. FrequencyRec a -&gt; Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frLastRem"><span class="hs-identifier hs-var hs-var">frLastRem</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The time since the last limiting remainder was send</span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frBudget"><span class="annot"><span class="annottext">forall a. FrequencyRec a -&gt; Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var hs-var">frBudget</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>    </span><span class="hs-comment">-- ^ A budget which is used to decide when to start limiting</span><span>
+</span><span id="line-40"></span><span>                              </span><span class="hs-comment">--   and stop limiting. When messages arrive in shorter frequency then</span><span>
+</span><span id="line-41"></span><span>                              </span><span class="hs-comment">--   by the given thresholdFrequency budget is earned, and if they</span><span>
+</span><span id="line-42"></span><span>                              </span><span class="hs-comment">--   arrive in a longer period budget is spend.</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frActive"><span class="annot"><span class="annottext">forall a. FrequencyRec a -&gt; MaybeTuple' Int Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frActive"><span class="hs-identifier hs-var hs-var">frActive</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#MaybeTuple%27"><span class="hs-identifier hs-type">MaybeTuple'</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>                              </span><span class="hs-comment">-- ^ Just is active and carries the number</span><span>
+</span><span id="line-45"></span><span>                              </span><span class="hs-comment">--   of suppressed messages and the time of last send message</span><span>
+</span><span id="line-46"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679145473"><span id="local-6989586621679145484"><span id="local-6989586621679145488"><span class="annot"><span class="annottext">Int -&gt; FrequencyRec a -&gt; ShowS
+[FrequencyRec a] -&gt; ShowS
+FrequencyRec a -&gt; String
+(Int -&gt; FrequencyRec a -&gt; ShowS)
+-&gt; (FrequencyRec a -&gt; String)
+-&gt; ([FrequencyRec a] -&gt; ShowS)
+-&gt; Show (FrequencyRec a)
+forall a. Show a =&gt; Int -&gt; FrequencyRec a -&gt; ShowS
+forall a. Show a =&gt; [FrequencyRec a] -&gt; ShowS
+forall a. Show a =&gt; FrequencyRec a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; FrequencyRec a -&gt; ShowS
+showsPrec :: Int -&gt; FrequencyRec a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; FrequencyRec a -&gt; String
+show :: FrequencyRec a -&gt; String
+$cshowList :: forall a. Show a =&gt; [FrequencyRec a] -&gt; ShowS
+showList :: [FrequencyRec a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- | Limits the frequency of messages to nMsg which is given per minute.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- If the limiter detects more messages, it traces randomly selected</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- messages with the given frequency on the 'vtracer' until the</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- frequency falls under the threshold long enough.(see below)</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- Before this the 'ltracer' gets a 'StartLimiting' message.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- In-between you receive 'ContinueLimiting' messages on the 'ltracer'</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- every 'reminderPeriod' seconds, with the number of suppressed messages.</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- Finally it sends a 'StopLimiting' message on the 'ltracer' and traces all</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- messages on the 'vtracer' again.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- A budget is used to decide when to start limiting and stop limiting,</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- so that the limiter does not get activated if few messages are send in</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- high frequency, and doesn't get deactivated if their are only few messages</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- which come with low frequency.  When messages arrive in shorter frequency then</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- by the given 'thresholdFrequency' budget is earned, and if they</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- arrive in a longer period budget is spend. If budget is gets higher</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- then 'budgetLimit', the limiter starts, and if it falls below minus 'budgetLimit'</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- the limiter stops.</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- The budget is calculated by 'thresholdPeriod' / 'elapsedTime', which says how</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- many times too quick the message arrives. A value less then 1.0 means the message is</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- arriving slower then threshold. This value gets then normalized, so that</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- (0.0-10.0) means message arrive quicker then threshold and (0.0..-10.0)</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- means that messages arrive slower then threshold.</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#limitFrequency"><span class="hs-identifier hs-type">limitFrequency</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679145385"><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679145381"><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/20l60m3xgxymfhdw8lx2xy8nak8k3jf2-unliftio-core-lib-unliftio-core-0.2.1.0-haddock-doc/share/doc/unliftio-core/html/src/Control.Monad.IO.Unlift.html#MonadUnliftIO"><span class="hs-identifier hs-type">MonadUnliftIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>   </span><span class="hs-comment">-- messages per second</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>     </span><span class="hs-comment">-- name of this limiter</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TraceDispatcherMessage"><span class="hs-identifier hs-type">TraceDispatcherMessage</span></a></span><span> </span><span class="hs-comment">-- the limiters messages</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-comment">-- the limited trace</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- the original trace</span><span>
+</span><span id="line-83"></span><span id="limitFrequency"><span class="annot"><span class="annottext">limitFrequency :: forall a (m :: * -&gt; *).
+MonadUnliftIO m =&gt;
+Double
+-&gt; Text
+-&gt; Trace m TraceDispatcherMessage
+-&gt; Trace m a
+-&gt; m (Trace m a)
+</span><a href="Cardano.Logging.FrequencyLimiter.html#limitFrequency"><span class="hs-identifier hs-var hs-var">limitFrequency</span></a></span></span><span> </span><span id="local-6989586621679145565"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145565"><span class="hs-identifier hs-var">thresholdFrequency</span></a></span></span><span> </span><span id="local-6989586621679145566"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679145566"><span class="hs-identifier hs-var">limiterName</span></a></span></span><span> </span><span id="local-6989586621679145567"><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage
+</span><a href="#local-6989586621679145567"><span class="hs-identifier hs-var">ltracer</span></a></span></span><span> </span><span id="local-6989586621679145568"><span class="annot"><span class="annottext">Trace m a
+</span><a href="#local-6989586621679145568"><span class="hs-identifier hs-var">vtracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679145569"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145569"><span class="hs-identifier hs-var">timeNow</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SystemTime -&gt; Double
+</span><a href="#local-6989586621679145570"><span class="hs-identifier hs-var">systemTimeToSeconds</span></a></span><span> </span><span class="annot"><span class="annottext">(SystemTime -&gt; Double) -&gt; m SystemTime -&gt; m Double
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO SystemTime -&gt; m SystemTime
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO SystemTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier hs-var">getSystemTime</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">(FrequencyRec a -&gt; LoggingContext -&gt; a -&gt; m (FrequencyRec a))
+-&gt; FrequencyRec a
+-&gt; Trace m (Folding a (FrequencyRec a))
+-&gt; m (Trace m a)
+forall a acc (m :: * -&gt; *).
+MonadUnliftIO m =&gt;
+(acc -&gt; LoggingContext -&gt; a -&gt; m acc)
+-&gt; acc -&gt; Trace m (Folding a acc) -&gt; m (Trace m a)
+</span><a href="Cardano.Logging.Trace.html#foldTraceM"><span class="hs-identifier hs-var">foldTraceM</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+-&gt; FrequencyRec a -&gt; LoggingContext -&gt; a -&gt; m (FrequencyRec a)
+</span><a href="#local-6989586621679145575"><span class="hs-identifier hs-var">checkLimiting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145565"><span class="hs-identifier hs-var">thresholdFrequency</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a
+-&gt; Double
+-&gt; Double
+-&gt; Double
+-&gt; MaybeTuple' Int Double
+-&gt; FrequencyRec a
+forall a.
+Maybe a
+-&gt; Double
+-&gt; Double
+-&gt; Double
+-&gt; MaybeTuple' Int Double
+-&gt; FrequencyRec a
+</span><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-var">FrequencyRec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145569"><span class="hs-identifier hs-var">timeNow</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span> </span><span class="annot"><span class="annottext">MaybeTuple' Int Double
+forall a b. MaybeTuple' a b
+</span><a href="Cardano.Logging.FrequencyLimiter.html#Nothing%27"><span class="hs-identifier hs-var">Nothing'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tracer
+  m
+  (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+-&gt; Trace m (Folding a (FrequencyRec a))
+forall (m :: * -&gt; *) a.
+Tracer m (LoggingContext, Either TraceControl a) -&gt; Trace m a
+</span><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-var">Trace</span></a></span><span> </span><span class="annot"><span class="annottext">(Tracer
+   m
+   (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+ -&gt; Trace m (Folding a (FrequencyRec a)))
+-&gt; Tracer
+     m
+     (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+-&gt; Trace m (Folding a (FrequencyRec a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+ -&gt; (LoggingContext, Either TraceControl (Maybe a)))
+-&gt; Tracer m (LoggingContext, Either TraceControl (Maybe a))
+-&gt; Tracer
+     m
+     (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+forall a' a. (a' -&gt; a) -&gt; Tracer m a -&gt; Tracer m a'
+forall (f :: * -&gt; *) a' a.
+Contravariant f =&gt;
+(a' -&gt; a) -&gt; f a -&gt; f a'
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#contramap"><span class="hs-identifier hs-var">T.contramap</span></a></span><span> </span><span class="annot"><span class="annottext">(LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+-&gt; (LoggingContext, Either TraceControl (Maybe a))
+</span><a href="#local-6989586621679145579"><span class="hs-identifier hs-var">unfoldTrace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace m (Maybe a)
+-&gt; Tracer m (LoggingContext, Either TraceControl (Maybe a))
+forall (m :: * -&gt; *) a.
+Trace m a -&gt; Tracer m (LoggingContext, Either TraceControl a)
+</span><a href="Cardano.Logging.Types.html#unpackTrace"><span class="hs-identifier hs-var">unpackTrace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace m a -&gt; Trace m (Maybe a)
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; Trace m (Maybe a)
+</span><a href="Cardano.Logging.Trace.html#filterTraceMaybe"><span class="hs-identifier hs-var">filterTraceMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Trace m a
+</span><a href="#local-6989586621679145568"><span class="hs-identifier hs-var">vtracer</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="#local-6989586621679145575"><span class="hs-identifier hs-type">checkLimiting</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-91"></span><span>         </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-type">FrequencyRec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679145381"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-type">FrequencyRec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679145575"><span class="annot"><span class="annottext">checkLimiting :: Double
+-&gt; FrequencyRec a -&gt; LoggingContext -&gt; a -&gt; m (FrequencyRec a)
+</span><a href="#local-6989586621679145575"><span class="hs-identifier hs-var hs-var">checkLimiting</span></a></span></span><span> </span><span id="local-6989586621679145582"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145582"><span class="hs-identifier hs-var">thresholdPeriod</span></a></span></span><span> </span><span id="local-6989586621679145583"><span class="annot"><span class="annottext">fs :: FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-type">FrequencyRec</span></a></span><span class="hs-special">{</span><span id="local-6989586621679145584"><span id="local-6989586621679145585"><span id="local-6989586621679145586"><span id="local-6989586621679145587"><span id="local-6989586621679145588"><span class="annot"><span class="annottext">Double
+Maybe a
+MaybeTuple' Int Double
+frMessage :: forall a. FrequencyRec a -&gt; Maybe a
+frLastTime :: forall a. FrequencyRec a -&gt; Double
+frLastRem :: forall a. FrequencyRec a -&gt; Double
+frBudget :: forall a. FrequencyRec a -&gt; Double
+frActive :: forall a. FrequencyRec a -&gt; MaybeTuple' Int Double
+frMessage :: Maybe a
+frLastTime :: Double
+frLastRem :: Double
+frBudget :: Double
+frActive :: MaybeTuple' Int Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679145589"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145589"><span class="hs-identifier hs-var">lc</span></a></span></span><span> </span><span id="local-6989586621679145590"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679145590"><span class="hs-identifier hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>      </span><span id="local-6989586621679145591"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145591"><span class="hs-identifier hs-var">timeNow</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Double -&gt; m Double
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Double -&gt; m Double) -&gt; IO Double -&gt; m Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SystemTime -&gt; Double
+</span><a href="#local-6989586621679145570"><span class="hs-identifier hs-var">systemTimeToSeconds</span></a></span><span> </span><span class="annot"><span class="annottext">(SystemTime -&gt; Double) -&gt; IO SystemTime -&gt; IO Double
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO SystemTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier hs-var">getSystemTime</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145593"><span class="annot"><span class="annottext">elapsedTime :: Double
+</span><a href="#local-6989586621679145593"><span class="hs-identifier hs-var hs-var">elapsedTime</span></a></span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145591"><span class="hs-identifier hs-var">timeNow</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145585"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-comment">-- How many times too quick does the message arrive (thresholdPeriod / elapsedTime)</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-comment">-- A value less then 1.0 means the message is</span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-comment">-- arriving slower then threshold</span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145599"><span class="annot"><span class="annottext">rawSpendReward :: Double
+</span><a href="#local-6989586621679145599"><span class="hs-identifier hs-var hs-var">rawSpendReward</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145593"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span>
+</span><span id="line-103"></span><span>                                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10.0</span></span><span>
+</span><span id="line-104"></span><span>                                </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145582"><span class="hs-identifier hs-var">thresholdPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145593"><span class="hs-identifier hs-var">elapsedTime</span></a></span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145610"><span class="annot"><span class="annottext">spendReward :: Double
+</span><a href="#local-6989586621679145610"><span class="hs-identifier hs-var hs-var">spendReward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145599"><span class="hs-identifier hs-var">rawSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145599"><span class="hs-identifier hs-var">rawSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.0</span></span><span>
+</span><span id="line-106"></span><span>                                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145599"><span class="hs-identifier hs-var">rawSpendReward</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>                                </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145599"><span class="hs-identifier hs-var">rawSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0</span></span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-comment">-- Normalize so that (0.0-10.0) means message</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- arrive quicker then threshold</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-comment">-- and (0.0..-10.0) means that messages arrive</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-comment">-- slower then threshold</span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145619"><span class="annot"><span class="annottext">normaSpendReward :: Double
+</span><a href="#local-6989586621679145619"><span class="hs-identifier hs-var hs-var">normaSpendReward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10.0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10.0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145610"><span class="hs-identifier hs-var">spendReward</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145626"><span class="annot"><span class="annottext">newBudget :: Double
+</span><a href="#local-6989586621679145626"><span class="hs-identifier hs-var hs-var">newBudget</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-var">budgetLimit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-var">budgetLimit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>                                  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145619"><span class="hs-identifier hs-var">normaSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145587"><span class="hs-identifier hs-var">frBudget</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MaybeTuple' Int Double
+</span><a href="#local-6989586621679145588"><span class="hs-identifier hs-var">frActive</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><span class="annottext">MaybeTuple' Int Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#Nothing%27"><span class="hs-identifier hs-var">Nothing'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-comment">-- limiter not active</span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145619"><span class="hs-identifier hs-var">normaSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145587"><span class="hs-identifier hs-var">frBudget</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-var">budgetLimit</span></a></span><span>
+</span><span id="line-118"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>  </span><span class="hs-comment">-- start limiting</span><span>
+</span><span id="line-119"></span><span>              </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage -&gt; TraceDispatcherMessage -&gt; m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span>
+</span><span id="line-120"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a. Monad m =&gt; [Text] -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#appendPrefixNames"><span class="hs-identifier hs-var">appendPrefixNames</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Reflection&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>                                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeverityS
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SeverityS -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#setSeverity"><span class="hs-identifier hs-var">setSeverity</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+LoggingContext -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#withLoggingContext"><span class="hs-identifier hs-var">withLoggingContext</span></a></span><span> </span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145589"><span class="hs-identifier hs-var">lc</span></a></span><span> </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage
+</span><a href="#local-6989586621679145567"><span class="hs-identifier hs-var">ltracer</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; TraceDispatcherMessage
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-var">StartLimiting</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679145566"><span class="hs-identifier hs-var">limiterName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>              </span><span class="annot"><span class="annottext">FrequencyRec a -&gt; m (FrequencyRec a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var">frMessage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145590"><span class="hs-identifier hs-type">message</span></a></span><span>
+</span><span id="line-124"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-125"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastRem"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-126"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var">frBudget</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145626"><span class="hs-identifier hs-type">newBudget</span></a></span><span>
+</span><span id="line-127"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frActive"><span class="hs-identifier hs-var">frActive</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Just%27"><span class="hs-identifier hs-type">Just'</span></a></span><span> </span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-128"></span><span>                       </span><span class="hs-special">}</span><span>
+</span><span id="line-129"></span><span>            </span><span class="hs-keyword">else</span><span>  </span><span class="hs-comment">-- continue without limiting</span><span>
+</span><span id="line-130"></span><span>              </span><span class="annot"><span class="annottext">FrequencyRec a -&gt; m (FrequencyRec a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var">frMessage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145590"><span class="hs-identifier hs-type">message</span></a></span><span>
+</span><span id="line-131"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-132"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastRem"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0.0</span></span><span>
+</span><span id="line-133"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var">frBudget</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145626"><span class="hs-identifier hs-type">newBudget</span></a></span><span>
+</span><span id="line-134"></span><span>                       </span><span class="hs-special">}</span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Just%27"><span class="hs-identifier hs-type">Just'</span></a></span><span> </span><span id="local-6989586621679145633"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679145633"><span class="hs-identifier hs-var">nSuppressed</span></a></span></span><span> </span><span id="local-6989586621679145634"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145634"><span class="hs-identifier hs-var">lastTimeSend</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-comment">-- is active</span><span>
+</span><span id="line-136"></span><span>           </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145619"><span class="hs-identifier hs-var">normaSpendReward</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145587"><span class="hs-identifier hs-var">frBudget</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#budgetLimit"><span class="hs-identifier hs-var">budgetLimit</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- stop limiting</span><span>
+</span><span id="line-138"></span><span>              </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage -&gt; TraceDispatcherMessage -&gt; m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span>
+</span><span id="line-139"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a. Monad m =&gt; [Text] -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#appendPrefixNames"><span class="hs-identifier hs-var">appendPrefixNames</span></a></span><span>  </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Reflection&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-140"></span><span>                                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeverityS
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SeverityS -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#setSeverity"><span class="hs-identifier hs-var">setSeverity</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+LoggingContext -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#withLoggingContext"><span class="hs-identifier hs-var">withLoggingContext</span></a></span><span> </span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145589"><span class="hs-identifier hs-var">lc</span></a></span><span> </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage
+</span><a href="#local-6989586621679145567"><span class="hs-identifier hs-var">ltracer</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; TraceDispatcherMessage
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-var">StopLimiting</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679145566"><span class="hs-identifier hs-var">limiterName</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679145633"><span class="hs-identifier hs-var">nSuppressed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>              </span><span class="annot"><span class="annottext">FrequencyRec a -&gt; m (FrequencyRec a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var">frMessage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145590"><span class="hs-identifier hs-type">message</span></a></span><span>
+</span><span id="line-143"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-144"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var">frBudget</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145626"><span class="hs-identifier hs-type">newBudget</span></a></span><span>
+</span><span id="line-145"></span><span>                       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frActive"><span class="hs-identifier hs-var">frActive</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Nothing%27"><span class="hs-identifier hs-type">Nothing'</span></a></span><span>
+</span><span id="line-146"></span><span>                       </span><span class="hs-special">}</span><span>
+</span><span id="line-147"></span><span>            </span><span class="hs-keyword">else</span><span>
+</span><span id="line-148"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679145637"><span class="annot"><span class="annottext">lastPeriod :: Double
+</span><a href="#local-6989586621679145637"><span class="hs-identifier hs-var hs-var">lastPeriod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145591"><span class="hs-identifier hs-var">timeNow</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145634"><span class="hs-identifier hs-var">lastTimeSend</span></a></span><span>
+</span><span id="line-149"></span><span>                  </span><span id="local-6989586621679145639"><span class="annot"><span class="annottext">lastReminder :: Double
+</span><a href="#local-6989586621679145639"><span class="hs-identifier hs-var hs-var">lastReminder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145591"><span class="hs-identifier hs-var">timeNow</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145586"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>
+</span><span id="line-150"></span><span>              </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-151"></span><span>                </span><span id="local-6989586621679145640"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145640"><span class="hs-identifier hs-var">newFrLastRem</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145639"><span class="hs-identifier hs-var">lastReminder</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#reminderPeriod"><span class="hs-identifier hs-var">reminderPeriod</span></a></span><span>
+</span><span id="line-152"></span><span>                                  </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-153"></span><span>                                    </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage -&gt; TraceDispatcherMessage -&gt; m ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span>
+</span><span id="line-154"></span><span>                                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a. Monad m =&gt; [Text] -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#appendPrefixNames"><span class="hs-identifier hs-var">appendPrefixNames</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Reflection&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-155"></span><span>                                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SeverityS
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+SeverityS -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#setSeverity"><span class="hs-identifier hs-var">setSeverity</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span>
+</span><span id="line-156"></span><span>                                          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+-&gt; Trace m TraceDispatcherMessage -&gt; Trace m TraceDispatcherMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+LoggingContext -&gt; Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#withLoggingContext"><span class="hs-identifier hs-var">withLoggingContext</span></a></span><span> </span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145589"><span class="hs-identifier hs-var">lc</span></a></span><span> </span><span class="annot"><span class="annottext">Trace m TraceDispatcherMessage
+</span><a href="#local-6989586621679145567"><span class="hs-identifier hs-var">ltracer</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>                                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; TraceDispatcherMessage
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-var">RememberLimiting</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679145566"><span class="hs-identifier hs-var">limiterName</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679145633"><span class="hs-identifier hs-var">nSuppressed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>                                    </span><span class="annot"><span class="annottext">Double -&gt; m Double
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145591"><span class="hs-identifier hs-var">timeNow</span></a></span><span>
+</span><span id="line-159"></span><span>                                  </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Double -&gt; m Double
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145586"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>
+</span><span id="line-160"></span><span>                </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145637"><span class="hs-identifier hs-var">lastPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679145582"><span class="hs-identifier hs-var">thresholdPeriod</span></a></span><span>
+</span><span id="line-161"></span><span>                  </span><span class="hs-keyword">then</span><span> </span><span class="hs-comment">-- send</span><span>
+</span><span id="line-162"></span><span>                    </span><span class="annot"><span class="annottext">FrequencyRec a -&gt; m (FrequencyRec a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var">frMessage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145590"><span class="hs-identifier hs-type">message</span></a></span><span>
+</span><span id="line-163"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-164"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastRem"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145640"><span class="hs-identifier hs-type">newFrLastRem</span></a></span><span>
+</span><span id="line-165"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var">frBudget</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145626"><span class="hs-identifier hs-type">newBudget</span></a></span><span>
+</span><span id="line-166"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frActive"><span class="hs-identifier hs-var">frActive</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Just%27"><span class="hs-identifier hs-type">Just'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145633"><span class="hs-identifier hs-type">nSuppressed</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-167"></span><span>                             </span><span class="hs-special">}</span><span>
+</span><span id="line-168"></span><span>                  </span><span class="hs-keyword">else</span><span>  </span><span class="hs-comment">-- suppress</span><span>
+</span><span id="line-169"></span><span>                    </span><span class="annot"><span class="annottext">FrequencyRec a -&gt; m (FrequencyRec a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FrequencyRec a
+</span><a href="#local-6989586621679145583"><span class="hs-identifier hs-var">fs</span></a></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-identifier hs-var">frMessage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-type">Nothing</span></a></span><span>
+</span><span id="line-170"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastTime"><span class="hs-identifier hs-var">frLastTime</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145591"><span class="hs-identifier hs-type">timeNow</span></a></span><span>
+</span><span id="line-171"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frLastRem"><span class="hs-identifier hs-var">frLastRem</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145640"><span class="hs-identifier hs-type">newFrLastRem</span></a></span><span>
+</span><span id="line-172"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frBudget"><span class="hs-identifier hs-var">frBudget</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679145626"><span class="hs-identifier hs-type">newBudget</span></a></span><span>
+</span><span id="line-173"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#frActive"><span class="hs-identifier hs-var">frActive</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#Just%27"><span class="hs-identifier hs-type">Just'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679145633"><span class="hs-identifier hs-type">nSuppressed</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-type">+</span></a></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679145634"><span class="hs-identifier hs-type">lastTimeSend</span></a></span><span>
+</span><span id="line-174"></span><span>                             </span><span class="hs-special">}</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><a href="#local-6989586621679145579"><span class="hs-identifier hs-type">unfoldTrace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-176"></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceControl"><span class="hs-identifier hs-type">TraceControl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Folding"><span class="hs-identifier hs-type">Folding</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-type">FrequencyRec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceControl"><span class="hs-identifier hs-type">TraceControl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145385"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>    </span><span id="local-6989586621679145579"><span class="annot"><span class="annottext">unfoldTrace :: (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+-&gt; (LoggingContext, Either TraceControl (Maybe a))
+</span><a href="#local-6989586621679145579"><span class="hs-identifier hs-var hs-var">unfoldTrace</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679145642"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145642"><span class="hs-identifier hs-var">lc</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Folding"><span class="hs-identifier hs-type">Folding</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.FrequencyLimiter.html#FrequencyRec"><span class="hs-identifier hs-type">FrequencyRec</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679145644"><span id="local-6989586621679145645"><span id="local-6989586621679145646"><span id="local-6989586621679145647"><span id="local-6989586621679145648"><span class="annot"><span class="annottext">Double
+Maybe a
+MaybeTuple' Int Double
+frMessage :: forall a. FrequencyRec a -&gt; Maybe a
+frLastTime :: forall a. FrequencyRec a -&gt; Double
+frLastRem :: forall a. FrequencyRec a -&gt; Double
+frBudget :: forall a. FrequencyRec a -&gt; Double
+frActive :: forall a. FrequencyRec a -&gt; MaybeTuple' Int Double
+frMessage :: Maybe a
+frLastTime :: Double
+frLastRem :: Double
+frBudget :: Double
+frActive :: MaybeTuple' Int Double
+</span><a href="Cardano.Logging.FrequencyLimiter.html#frMessage"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145642"><span class="hs-identifier hs-var">lc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Either TraceControl (Maybe a)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679145644"><span class="hs-identifier hs-var">frMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><a href="#local-6989586621679145579"><span class="hs-identifier hs-var">unfoldTrace</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679145649"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145649"><span class="hs-identifier hs-var">lc</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679145650"><span class="annot"><span class="annottext">TraceControl
+</span><a href="#local-6989586621679145650"><span class="hs-identifier hs-var">ctrl</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679145649"><span class="hs-identifier hs-var">lc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TraceControl -&gt; Either TraceControl (Maybe a)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceControl
+</span><a href="#local-6989586621679145650"><span class="hs-identifier hs-var">ctrl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><a href="#local-6989586621679145570"><span class="hs-identifier hs-type">systemTimeToSeconds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#SystemTime"><span class="hs-identifier hs-type">SystemTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679145570"><span class="annot"><span class="annottext">systemTimeToSeconds :: SystemTime -&gt; Double
+</span><a href="#local-6989586621679145570"><span class="hs-identifier hs-var hs-var">systemTimeToSeconds</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#MkSystemTime"><span class="hs-identifier hs-type">MkSystemTime</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679145652"><span id="local-6989586621679145653"><span class="annot"><span class="annottext">Int64
+Word32
+systemSeconds :: Int64
+systemNanoseconds :: Word32
+systemSeconds :: SystemTime -&gt; Int64
+systemNanoseconds :: SystemTime -&gt; Word32
+</span><a href="#local-6989586621679145652"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-184"></span><span>      </span><span class="annot"><span class="annottext">Int64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679145652"><span class="hs-identifier hs-var">systemSeconds</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679145653"><span class="hs-identifier hs-var">systemNanoseconds</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.0E-9</span></span><span>
+</span><span id="line-185"></span></pre></body></html>

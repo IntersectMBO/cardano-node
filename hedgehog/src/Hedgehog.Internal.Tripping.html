@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Tripping</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier">tripping</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Property.html"><span class="hs-identifier">Hedgehog.Internal.Property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier">MonadTest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#Diff"><span class="hs-identifier">Diff</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#success"><span class="hs-identifier">success</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier">failWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Show.html"><span class="hs-identifier">Hedgehog.Internal.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier">valueDiff</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier">mkValue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier">showPretty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Source.html"><span class="hs-identifier">Hedgehog.Internal.Source</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier">withFrozenCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | Test that a pair of encode / decode functions are compatible.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Given a printer from some type @a -&gt; b@, and a parser with a</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- potential failure case @b -&gt; f a@. Ensure that a valid @a@ round</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- trips through the &quot;print&quot; and &quot;parse&quot; to yield the same @a@.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- For example, types /should/ have tripping 'Read' and 'Show'</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- instances:</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- trippingShowRead :: (Show a, Read a, Eq a, MonadTest m) =&gt; a -&gt; m ()</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- trippingShowRead a = tripping a show readEither</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-24"></span><span id="local-6989586621679487245"><span id="local-6989586621679487247"><span id="local-6989586621679487248"><span id="local-6989586621679487249"><span class="annot"><a href="Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier hs-type">tripping</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-25"></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487247"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487248"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679487247"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487249"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679487247"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487249"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679487249"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679487249"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679487248"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679487248"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679487247"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679487249"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679487245"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-30"></span><span id="tripping"><span class="annot"><span class="annottext">tripping :: forall (m :: * -&gt; *) (f :: * -&gt; *) b a.
+(MonadTest m, Applicative f, Show b, Show (f a), Eq (f a),
+ HasCallStack) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><a href="Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier hs-var hs-var">tripping</span></a></span></span><span> </span><span id="local-6989586621679487303"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679487303"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679487304"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679487304"><span class="hs-identifier hs-var">encode</span></a></span></span><span> </span><span id="local-6989586621679487305"><span class="annot"><span class="annottext">b -&gt; f a
+</span><a href="#local-6989586621679487305"><span class="hs-identifier hs-var">decode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621679487308"><span class="annot"><span class="annottext">mx :: f a
+</span><a href="#local-6989586621679487308"><span class="hs-identifier hs-var hs-var">mx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; f a
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679487303"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679487309"><span class="annot"><span class="annottext">i :: b
+</span><a href="#local-6989586621679487309"><span class="hs-identifier hs-var hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679487304"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679487303"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621679487310"><span class="annot"><span class="annottext">my :: f a
+</span><a href="#local-6989586621679487310"><span class="hs-identifier hs-var hs-var">my</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">b -&gt; f a
+</span><a href="#local-6989586621679487305"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679487309"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487308"><span class="hs-identifier hs-var">mx</span></a></span><span> </span><span class="annot"><span class="annottext">f a -&gt; f a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487310"><span class="hs-identifier hs-var">my</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). MonadTest m =&gt; m ()
+</span><a href="Hedgehog.Internal.Property.html#success"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">else</span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; ValueDiff)
+-&gt; Maybe Value -&gt; Maybe (Value -&gt; ValueDiff)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">f a -&gt; Maybe Value
+forall a. Show a =&gt; a -&gt; Maybe Value
+</span><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-var">mkValue</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487308"><span class="hs-identifier hs-var">mx</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Value -&gt; ValueDiff) -&gt; Maybe Value -&gt; Maybe ValueDiff
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">f a -&gt; Maybe Value
+forall a. Show a =&gt; a -&gt; Maybe Value
+</span><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-var">mkValue</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487310"><span class="hs-identifier hs-var">my</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">Maybe ValueDiff
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>          </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">Maybe Diff -&gt; String -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack) =&gt;
+Maybe Diff -&gt; String -&gt; m a
+</span><a href="Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier hs-var">failWith</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Diff
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-48"></span><span>                </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; Original &#9473;&#9473;&#9473;&quot;</span></span><span>
+</span><span id="line-49"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">f a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487308"><span class="hs-identifier hs-var">mx</span></a></span><span>
+</span><span id="line-50"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; Intermediate &#9473;&#9473;&#9473;&quot;</span></span><span>
+</span><span id="line-51"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679487309"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-52"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; Roundtrip &#9473;&#9473;&#9473;&quot;</span></span><span>
+</span><span id="line-53"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">f a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679487310"><span class="hs-identifier hs-var">my</span></a></span><span>
+</span><span id="line-54"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679487320"><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679487320"><span class="hs-identifier hs-var">diff</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>          </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>            </span><span class="annot"><span class="annottext">Maybe Diff -&gt; String -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack) =&gt;
+Maybe Diff -&gt; String -&gt; m a
+</span><a href="Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier hs-var">failWith</span></a></span><span>
+</span><span id="line-59"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Diff -&gt; Maybe Diff
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Diff -&gt; Maybe Diff) -&gt; Diff -&gt; Maybe Diff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-60"></span><span>                </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; String -&gt; String -&gt; ValueDiff -&gt; Diff
+</span><a href="Hedgehog.Internal.Property.html#Diff"><span class="hs-identifier hs-var">Diff</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;- Original&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;) (&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;+ Roundtrip&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &#9473;&#9473;&#9473;&quot;</span></span><span> </span><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679487320"><span class="hs-identifier hs-var">diff</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-62"></span><span>                  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; Intermediate &#9473;&#9473;&#9473;&quot;</span></span><span>
+</span><span id="line-63"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679487309"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-64"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span></pre></body></html>

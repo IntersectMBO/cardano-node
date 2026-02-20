@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Version</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html"><span class="hs-identifier">Cardano.Git.Rev</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html#gitRev"><span class="hs-identifier">gitRev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html"><span class="hs-identifier">Data.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier">showVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html"><span class="hs-identifier">System.Info</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#arch"><span class="hs-identifier">arch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#compilerName"><span class="hs-identifier">compilerName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#compilerVersion"><span class="hs-identifier">compilerVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#os"><span class="hs-identifier">os</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Paths_tx_generator.html"><span class="hs-identifier">Paths_tx_generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Paths_tx_generator.html#version"><span class="hs-identifier">version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">data</span><span> </span><span id="Version"><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-var">Version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Version"><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-var">Version</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="_package"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_package"><span class="hs-identifier hs-var hs-var">_package</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_os"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_os"><span class="hs-identifier hs-var hs-var">_os</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_arch"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_arch"><span class="hs-identifier hs-var hs-var">_arch</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_compilerName"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerName"><span class="hs-identifier hs-var hs-var">_compilerName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_compilerVersion"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerVersion"><span class="hs-identifier hs-var hs-var">_compilerVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="_gitRev"><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_gitRev"><span class="hs-identifier hs-var hs-var">_gitRev</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679924208"><span id="local-6989586621679924219"><span id="local-6989586621679924223"><span class="annot"><span class="annottext">Int -&gt; Version -&gt; ShowS
+[Version] -&gt; ShowS
+Version -&gt; String
+(Int -&gt; Version -&gt; ShowS)
+-&gt; (Version -&gt; String) -&gt; ([Version] -&gt; ShowS) -&gt; Show Version
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Version -&gt; ShowS
+showsPrec :: Int -&gt; Version -&gt; ShowS
+$cshow :: Version -&gt; String
+show :: Version -&gt; String
+$cshowList :: [Version] -&gt; ShowS
+showList :: [Version] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.Benchmarking.Version.html#txGeneratorVersion"><span class="hs-identifier hs-type">txGeneratorVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-26"></span><span id="txGeneratorVersion"><span class="annot"><span class="annottext">txGeneratorVersion :: Version
+</span><a href="Cardano.Benchmarking.Version.html#txGeneratorVersion"><span class="hs-identifier hs-var hs-var">txGeneratorVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_package :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_package"><span class="hs-identifier hs-var">_package</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="#local-6989586621679924227"><span class="hs-identifier hs-var">renderVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Paths_tx_generator.html#version"><span class="hs-identifier hs-var">version</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_os :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_os"><span class="hs-identifier hs-var">_os</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#os"><span class="hs-identifier hs-var">os</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_arch :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_arch"><span class="hs-identifier hs-var">_arch</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#arch"><span class="hs-identifier hs-var">arch</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_compilerName :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerName"><span class="hs-identifier hs-var">_compilerName</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#compilerName"><span class="hs-identifier hs-var">compilerName</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_compilerVersion :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerVersion"><span class="hs-identifier hs-var">_compilerVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="#local-6989586621679924227"><span class="hs-identifier hs-var">renderVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Info.html#compilerVersion"><span class="hs-identifier hs-var">compilerVersion</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_gitRev :: Text
+</span><a href="Cardano.Benchmarking.Version.html#_gitRev"><span class="hs-identifier hs-var">_gitRev</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/m86b2khwpwwbrw3ij3pjyifc9nd5fw6q-cardano-git-rev-lib-cardano-git-rev-0.2.2.1-haddock-doc/share/doc/cardano-git-rev/html/src/Cardano.Git.Rev.html#gitRev"><span class="hs-identifier hs-type">gitRev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679924227"><span class="annot"><span class="annottext">renderVersion :: Version -&gt; Text
+</span><a href="#local-6989586621679924227"><span class="hs-identifier hs-var hs-var">renderVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (Version -&gt; String) -&gt; Version -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier hs-var">showVersion</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Benchmarking.Version.html#multilineVersionMsg"><span class="hs-identifier hs-type">multilineVersionMsg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-38"></span><span id="multilineVersionMsg"><span class="annot"><span class="annottext">multilineVersionMsg :: Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#multilineVersionMsg"><span class="hs-identifier hs-var hs-var">multilineVersionMsg</span></a></span></span><span> </span><span id="local-6989586621679924235"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;tx-generator &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_package"><span class="hs-identifier hs-var">_package</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; - &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_os"><span class="hs-identifier hs-var">_os</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_arch"><span class="hs-identifier hs-var">_arch</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; - &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerName"><span class="hs-identifier hs-var">_compilerName</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerVersion"><span class="hs-identifier hs-var">_compilerVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\ngit rev &quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_gitRev"><span class="hs-identifier hs-var">_gitRev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924235"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.Benchmarking.Version.html#toJsonLogMsg"><span class="hs-identifier hs-type">toJsonLogMsg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">A.Object</span></span><span>
+</span><span id="line-47"></span><span id="toJsonLogMsg"><span class="annot"><span class="annottext">toJsonLogMsg :: Version -&gt; Object
+</span><a href="Cardano.Benchmarking.Version.html#toJsonLogMsg"><span class="hs-identifier hs-var hs-var">toJsonLogMsg</span></a></span></span><span> </span><span id="local-6989586621679924237"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;package&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_package"><span class="hs-identifier hs-var">_package</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;os&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_os"><span class="hs-identifier hs-var">_os</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;arch&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_arch"><span class="hs-identifier hs-var">_arch</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;compilerName&quot;</span></span><span>    </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerName"><span class="hs-identifier hs-var">_compilerName</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;compilerVersion&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_compilerVersion"><span class="hs-identifier hs-var">_compilerVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;gitRev&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">A.String</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Text
+</span><a href="Cardano.Benchmarking.Version.html#_gitRev"><span class="hs-identifier hs-var">_gitRev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679924237"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span></pre></body></html>

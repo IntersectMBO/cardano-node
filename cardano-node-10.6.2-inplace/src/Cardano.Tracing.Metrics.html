@@ -1,0 +1,311 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DisambiguateRecordFields #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracing.Metrics</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier">ForgingStats</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier">ForgeThreadStats</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats"><span class="hs-identifier">mapForgingCurrentThreadStats</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats_"><span class="hs-identifier">mapForgingCurrentThreadStats_</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingStatsTxsProcessed"><span class="hs-identifier">mapForgingStatsTxsProcessed</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mkForgingStats"><span class="hs-identifier">mkForgingStats</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#threadStatsProjection"><span class="hs-identifier">threadStatsProjection</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#ThreadId"><span class="hs-identifier">ThreadId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier">myThreadId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier">join</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier">Int64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier">IORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#atomicModifyIORef%27"><span class="hs-identifier">atomicModifyIORef'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier">newIORef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- | This structure stores counters of blockchain-related events,</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   per individual forge thread.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--   These counters are driven by traces.</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="ForgingStats"><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ForgingStats"><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="fsTxsProcessedNum"><span class="annot"><span class="annottext">ForgingStats -&gt; IORef Int
+</span><a href="Cardano.Tracing.Metrics.html#fsTxsProcessedNum"><span class="hs-identifier hs-var hs-var">fsTxsProcessedNum</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Transactions removed from mempool.</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsState"><span class="annot"><span class="annottext">ForgingStats -&gt; TVar (Map ThreadId (TVar ForgeThreadStats))
+</span><a href="Cardano.Tracing.Metrics.html#fsState"><span class="hs-identifier hs-var hs-var">fsState</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#ThreadId"><span class="hs-identifier hs-type">ThreadId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fsBlocksUncoupled"><span class="annot"><span class="annottext">ForgingStats -&gt; TVar Int64
+</span><a href="Cardano.Tracing.Metrics.html#fsBlocksUncoupled"><span class="hs-identifier hs-var hs-var">fsBlocksUncoupled</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Blocks forged since last restart not on the current chain</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | Per-forging-thread statistics.</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="ForgeThreadStats"><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ForgeThreadStats"><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ftsNodeCannotForgeNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Tracing.Metrics.html#ftsNodeCannotForgeNum"><span class="hs-identifier hs-var hs-var">ftsNodeCannotForgeNum</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsNodeIsLeaderNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Tracing.Metrics.html#ftsNodeIsLeaderNum"><span class="hs-identifier hs-var hs-var">ftsNodeIsLeaderNum</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsBlocksForgedNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Tracing.Metrics.html#ftsBlocksForgedNum"><span class="hs-identifier hs-var hs-var">ftsBlocksForgedNum</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsSlotsMissedNum"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Tracing.Metrics.html#ftsSlotsMissedNum"><span class="hs-identifier hs-var hs-var">ftsSlotsMissedNum</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">-- ^ Potentially missed slots.  Note that this is not the same as the number</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- of missed blocks, since this includes all occurrences of not reaching a</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- leadership check decision, whether or not leadership was possible or not.</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">-- Also note that when the aggregate total for this metric is reported in the</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- multi-pool case, it can be much larger than the actual number of slots</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- occurring since node start, for it is a sum total for all threads.</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ftsLastSlot"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; Int
+</span><a href="Cardano.Tracing.Metrics.html#ftsLastSlot"><span class="hs-identifier hs-var hs-var">ftsLastSlot</span></a></span></span><span>                  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mkForgingStats"><span class="hs-identifier hs-type">mkForgingStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-63"></span><span id="mkForgingStats"><span class="annot"><span class="annottext">mkForgingStats :: IO ForgingStats
+</span><a href="Cardano.Tracing.Metrics.html#mkForgingStats"><span class="hs-identifier hs-var hs-var">mkForgingStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">IORef Int
+-&gt; TVar (Map ThreadId (TVar ForgeThreadStats))
+-&gt; TVar Int64
+-&gt; ForgingStats
+</span><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-var">ForgingStats</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">(IORef Int
+ -&gt; TVar (Map ThreadId (TVar ForgeThreadStats))
+ -&gt; TVar Int64
+ -&gt; ForgingStats)
+-&gt; IO (IORef Int)
+-&gt; IO
+     (TVar (Map ThreadId (TVar ForgeThreadStats))
+      -&gt; TVar Int64 -&gt; ForgingStats)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (IORef Int)
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">IO
+  (TVar (Map ThreadId (TVar ForgeThreadStats))
+   -&gt; TVar Int64 -&gt; ForgingStats)
+-&gt; IO (TVar (Map ThreadId (TVar ForgeThreadStats)))
+-&gt; IO (TVar Int64 -&gt; ForgingStats)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+-&gt; IO (TVar (Map ThreadId (TVar ForgeThreadStats)))
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">IO (TVar Int64 -&gt; ForgingStats)
+-&gt; IO (TVar Int64) -&gt; IO ForgingStats
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; IO (TVar Int64)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingStatsTxsProcessed"><span class="hs-identifier hs-type">mapForgingStatsTxsProcessed</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-70"></span><span>     </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-73"></span><span id="mapForgingStatsTxsProcessed"><span class="annot"><span class="annottext">mapForgingStatsTxsProcessed :: ForgingStats -&gt; (Int -&gt; Int) -&gt; IO Int
+</span><a href="Cardano.Tracing.Metrics.html#mapForgingStatsTxsProcessed"><span class="hs-identifier hs-var hs-var">mapForgingStatsTxsProcessed</span></a></span></span><span> </span><span id="local-6989586621681680768"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680768"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621681680769"><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621681680769"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">IORef Int -&gt; (Int -&gt; (Int, Int)) -&gt; IO Int
+forall a b. IORef a -&gt; (a -&gt; (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#atomicModifyIORef%27"><span class="hs-identifier hs-var">atomicModifyIORef'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats -&gt; IORef Int
+</span><a href="Cardano.Tracing.Metrics.html#fsTxsProcessedNum"><span class="hs-identifier hs-var">fsTxsProcessedNum</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680768"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Int -&gt; (Int, Int)) -&gt; IO Int) -&gt; (Int -&gt; (Int, Int)) -&gt; IO Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-glyph">\</span><span id="local-6989586621681680770"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681680770"><span class="hs-identifier hs-var">txCount</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; (Int, Int)) -&gt; Int -&gt; (Int, Int)
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; (Int, Int)) -&gt; Int -&gt; (Int, Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621681680769"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681680770"><span class="hs-identifier hs-var">txCount</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621681680701"><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats"><span class="hs-identifier hs-type">mapForgingCurrentThreadStats</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-78"></span><span>     </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621681680701"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680701"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-81"></span><span id="mapForgingCurrentThreadStats"><span class="annot"><span class="annottext">mapForgingCurrentThreadStats :: forall a.
+ForgingStats -&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, a)) -&gt; IO a
+</span><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats"><span class="hs-identifier hs-var hs-var">mapForgingCurrentThreadStats</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621681680785"><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+fsState :: ForgingStats -&gt; TVar (Map ThreadId (TVar ForgeThreadStats))
+fsState :: TVar (Map ThreadId (TVar ForgeThreadStats))
+</span><a href="Cardano.Tracing.Metrics.html#fsState"><span class="hs-identifier hs-var hs-var">fsState</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621681680786"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; (ForgeThreadStats, a)
+</span><a href="#local-6989586621681680786"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621681680787"><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621681680787"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621681680788"><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+</span><a href="#local-6989586621681680788"><span class="hs-identifier hs-var">allStats</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+-&gt; IO (Map ThreadId (TVar ForgeThreadStats))
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+</span><a href="#local-6989586621681680785"><span class="hs-identifier hs-var">fsState</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621681680790"><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680790"><span class="hs-identifier hs-var">varStats</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ThreadId
+-&gt; Map ThreadId (TVar ForgeThreadStats)
+-&gt; Maybe (TVar ForgeThreadStats)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621681680787"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+</span><a href="#local-6989586621681680788"><span class="hs-identifier hs-var">allStats</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Maybe (TVar ForgeThreadStats)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621681680792"><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680792"><span class="hs-identifier hs-var">varStats</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; IO (TVar ForgeThreadStats)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">(ForgeThreadStats -&gt; IO (TVar ForgeThreadStats))
+-&gt; ForgeThreadStats -&gt; IO (TVar ForgeThreadStats)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int -&gt; Int -&gt; Int -&gt; ForgeThreadStats
+</span><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-var">ForgeThreadStats</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+-&gt; (Map ThreadId (TVar ForgeThreadStats)
+    -&gt; Map ThreadId (TVar ForgeThreadStats))
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar"><span class="hs-identifier hs-var">modifyTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+</span><a href="#local-6989586621681680785"><span class="hs-identifier hs-var">fsState</span></a></span><span> </span><span class="annot"><span class="annottext">((Map ThreadId (TVar ForgeThreadStats)
+  -&gt; Map ThreadId (TVar ForgeThreadStats))
+ -&gt; STM ())
+-&gt; (Map ThreadId (TVar ForgeThreadStats)
+    -&gt; Map ThreadId (TVar ForgeThreadStats))
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+-&gt; TVar ForgeThreadStats
+-&gt; Map ThreadId (TVar ForgeThreadStats)
+-&gt; Map ThreadId (TVar ForgeThreadStats)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621681680787"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680792"><span class="hs-identifier hs-var">varStats</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">TVar ForgeThreadStats -&gt; IO (TVar ForgeThreadStats)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680792"><span class="hs-identifier hs-var">varStats</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681680796"><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680796"><span class="hs-identifier hs-var">varStats</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">TVar ForgeThreadStats -&gt; IO (TVar ForgeThreadStats)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680796"><span class="hs-identifier hs-var">varStats</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">STM a -&gt; IO a
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM a -&gt; IO a) -&gt; STM a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621681680797"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681680797"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats -&gt; STM ForgeThreadStats
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680790"><span class="hs-identifier hs-var">varStats</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621681680799"><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681680799"><span class="hs-identifier hs-var">stats'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681680800"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681680800"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; (ForgeThreadStats, a)
+</span><a href="#local-6989586621681680786"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681680797"><span class="hs-identifier hs-var">stats</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">TVar ForgeThreadStats -&gt; ForgeThreadStats -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats
+</span><a href="#local-6989586621681680790"><span class="hs-identifier hs-var">varStats</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats
+</span><a href="#local-6989586621681680799"><span class="hs-identifier hs-var">stats'</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; STM a
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681680800"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats_"><span class="hs-identifier hs-type">mapForgingCurrentThreadStats_</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>     </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span id="mapForgingCurrentThreadStats_"><span class="annot"><span class="annottext">mapForgingCurrentThreadStats_ :: ForgingStats -&gt; (ForgeThreadStats -&gt; ForgeThreadStats) -&gt; IO ()
+</span><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats_"><span class="hs-identifier hs-var hs-var">mapForgingCurrentThreadStats_</span></a></span></span><span> </span><span id="local-6989586621681680802"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680802"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621681680803"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; ForgeThreadStats
+</span><a href="#local-6989586621681680803"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+-&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, ())) -&gt; IO ()
+forall a.
+ForgingStats -&gt; (ForgeThreadStats -&gt; (ForgeThreadStats, a)) -&gt; IO a
+</span><a href="Cardano.Tracing.Metrics.html#mapForgingCurrentThreadStats"><span class="hs-identifier hs-var">mapForgingCurrentThreadStats</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680802"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ForgeThreadStats -&gt; (ForgeThreadStats, ()))
+-&gt; (ForgeThreadStats -&gt; ForgeThreadStats)
+-&gt; ForgeThreadStats
+-&gt; (ForgeThreadStats, ())
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; ForgeThreadStats
+</span><a href="#local-6989586621681680803"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621681680720"><span class="annot"><a href="Cardano.Tracing.Metrics.html#threadStatsProjection"><span class="hs-identifier hs-type">threadStatsProjection</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-105"></span><span>     </span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgingStats"><span class="hs-identifier hs-type">ForgingStats</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracing.Metrics.html#ForgeThreadStats"><span class="hs-identifier hs-type">ForgeThreadStats</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681680720"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621681680720"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-108"></span><span id="threadStatsProjection"><span class="annot"><span class="annottext">threadStatsProjection :: forall a. ForgingStats -&gt; (ForgeThreadStats -&gt; a) -&gt; IO [a]
+</span><a href="Cardano.Tracing.Metrics.html#threadStatsProjection"><span class="hs-identifier hs-var hs-var">threadStatsProjection</span></a></span></span><span> </span><span id="local-6989586621681680811"><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680811"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621681680812"><span class="annot"><span class="annottext">ForgeThreadStats -&gt; a
+</span><a href="#local-6989586621681680812"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM [a] -&gt; IO [a]
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM [a] -&gt; IO [a]) -&gt; STM [a] -&gt; IO [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621681680813"><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+</span><a href="#local-6989586621681680813"><span class="hs-identifier hs-var">allStats</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar (Map ThreadId (TVar ForgeThreadStats))
+-&gt; STM (Map ThreadId (TVar ForgeThreadStats))
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForgingStats -&gt; TVar (Map ThreadId (TVar ForgeThreadStats))
+</span><a href="Cardano.Tracing.Metrics.html#fsState"><span class="hs-identifier hs-var">fsState</span></a></span><span> </span><span class="annot"><span class="annottext">ForgingStats
+</span><a href="#local-6989586621681680811"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">(TVar ForgeThreadStats -&gt; STM a)
+-&gt; [TVar ForgeThreadStats] -&gt; STM [a]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ForgeThreadStats -&gt; a) -&gt; STM ForgeThreadStats -&gt; STM a
+forall a b. (a -&gt; b) -&gt; STM a -&gt; STM b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ForgeThreadStats -&gt; a
+</span><a href="#local-6989586621681680812"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(STM ForgeThreadStats -&gt; STM a)
+-&gt; (TVar ForgeThreadStats -&gt; STM ForgeThreadStats)
+-&gt; TVar ForgeThreadStats
+-&gt; STM a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TVar ForgeThreadStats -&gt; STM ForgeThreadStats
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([TVar ForgeThreadStats] -&gt; STM [a])
+-&gt; [TVar ForgeThreadStats] -&gt; STM [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats) -&gt; [TVar ForgeThreadStats]
+forall k a. Map k a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#elems"><span class="hs-identifier hs-var">Map.elems</span></a></span><span> </span><span class="annot"><span class="annottext">Map ThreadId (TVar ForgeThreadStats)
+</span><a href="#local-6989586621681680813"><span class="hs-identifier hs-var">allStats</span></a></span><span>
+</span><span id="line-111"></span></pre></body></html>

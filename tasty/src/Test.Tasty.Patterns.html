@@ -1,0 +1,260 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Test patterns</span></span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE CPP, DeriveDataTypeable, TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Patterns</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier">TestPattern</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#parseExpr"><span class="hs-identifier">parseExpr</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#parseTestPattern"><span class="hs-identifier">parseTestPattern</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#noPattern"><span class="hs-identifier">noPattern</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Eval.html#Path"><span class="hs-identifier">Path</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#exprMatches"><span class="hs-identifier">exprMatches</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#testPatternMatches"><span class="hs-identifier">testPatternMatches</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html"><span class="hs-identifier">Test.Tasty.Options</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Types.html"><span class="hs-identifier">Test.Tasty.Patterns.Types</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Parser.html"><span class="hs-identifier">Test.Tasty.Patterns.Parser</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Eval.html"><span class="hs-identifier">Test.Tasty.Patterns.Eval</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Coerce.html"><span class="hs-identifier">Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#coerce"><span class="hs-identifier">coerce</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html#nonEmpty"><span class="hs-identifier">nonEmpty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier">catMaybes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Success</span></span><span class="hs-special">)</span><span class="hs-cpp">
+#if !MIN_VERSION_base(4,11,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | @since 1.0</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">newtype</span><span> </span><span id="TestPattern"><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-var">TestPattern</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="hs-comment">-- | @since 1.1</span></span><span>
+</span><span id="line-33"></span><span>  </span><span id="TestPattern"><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-var">TestPattern</span></a></span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Types.html#Expr"><span class="hs-identifier hs-type">Expr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093449"><span id="local-6989586621679093456"><span id="local-6989586621679093460"><span class="annot"><span class="annottext">Int -&gt; TestPattern -&gt; ShowS
+[TestPattern] -&gt; ShowS
+TestPattern -&gt; String
+(Int -&gt; TestPattern -&gt; ShowS)
+-&gt; (TestPattern -&gt; String)
+-&gt; ([TestPattern] -&gt; ShowS)
+-&gt; Show TestPattern
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TestPattern -&gt; ShowS
+showsPrec :: Int -&gt; TestPattern -&gt; ShowS
+$cshow :: TestPattern -&gt; String
+show :: TestPattern -&gt; String
+$cshowList :: [TestPattern] -&gt; ShowS
+showList :: [TestPattern] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ @since 1.1</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093465"><span id="local-6989586621679093471"><span class="annot"><span class="annottext">TestPattern -&gt; TestPattern -&gt; Bool
+(TestPattern -&gt; TestPattern -&gt; Bool)
+-&gt; (TestPattern -&gt; TestPattern -&gt; Bool) -&gt; Eq TestPattern
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TestPattern -&gt; TestPattern -&gt; Bool
+== :: TestPattern -&gt; TestPattern -&gt; Bool
+$c/= :: TestPattern -&gt; TestPattern -&gt; Bool
+/= :: TestPattern -&gt; TestPattern -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ @since 1.1</span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- | @since 1.0</span></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Test.Tasty.Patterns.html#noPattern"><span class="hs-identifier hs-type">noPattern</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span>
+</span><span id="line-43"></span><span id="noPattern"><span class="annot"><span class="annottext">noPattern :: TestPattern
+</span><a href="Test.Tasty.Patterns.html#noPattern"><span class="hs-identifier hs-var hs-var">noPattern</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Expr -&gt; TestPattern
+</span><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-var">TestPattern</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Expr
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Since tasty-1.5, this option can be specified multiple times on the</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- command line. Only the tests matching all given patterns will be selected.</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679093485"><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679093490"><span class="annot"><span class="annottext">defaultValue :: TestPattern
+</span><a href="#local-6989586621679093490"><span class="hs-identifier hs-var hs-var hs-var hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestPattern
+</span><a href="Test.Tasty.Patterns.html#noPattern"><span class="hs-identifier hs-var">noPattern</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679093492"><span class="annot"><span class="annottext">parseValue :: String -&gt; Maybe TestPattern
+</span><a href="#local-6989586621679093492"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe TestPattern
+</span><a href="Test.Tasty.Patterns.html#parseTestPattern"><span class="hs-identifier hs-var">parseTestPattern</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679093496"><span class="annot"><span class="annottext">optionName :: Tagged TestPattern String
+</span><a href="#local-6989586621679093496"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged TestPattern String
+forall a. a -&gt; Tagged TestPattern a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pattern&quot;</span></span><span class="hs-cpp">
+#if !defined(mingw32_HOST_OS)
+</span><span>  </span><span id="local-6989586621679093499"><span class="annot"><span class="annottext">optionHelp :: Tagged TestPattern String
+</span><a href="#local-6989586621679093499"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionHelp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged TestPattern String
+forall a. a -&gt; Tagged TestPattern a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Select only tests which satisfy a pattern or awk expression.&quot;</span></span><span class="hs-cpp">
+#else
+</span><span>  </span><span class="hs-identifier">optionHelp</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">return</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">unwords</span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-string">&quot;Select only tests which satisfy a pattern or awk expression.&quot;</span><span>
+</span><span id="line-56"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;Consider using `MSYS_NO_PATHCONV=1` or `MSYS2_ARG_CONV_EXCL=*`&quot;</span><span>
+</span><span id="line-57"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="hs-string">&quot;to prevent pattern mangling.&quot;</span><span>
+</span><span id="line-58"></span><span>              </span><span class="hs-special">]</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span id="local-6989586621679093516"><span class="annot"><span class="annottext">optionCLParser :: Parser TestPattern
+</span><a href="#local-6989586621679093516"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionCLParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">([TestPattern] -&gt; TestPattern)
+-&gt; Parser [TestPattern] -&gt; Parser TestPattern
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Expr -&gt; TestPattern
+</span><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-var">TestPattern</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Expr -&gt; TestPattern)
+-&gt; ([TestPattern] -&gt; Maybe Expr) -&gt; [TestPattern] -&gt; TestPattern
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty Expr -&gt; Expr) -&gt; Maybe (NonEmpty Expr) -&gt; Maybe Expr
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Expr -&gt; Expr -&gt; Expr) -&gt; NonEmpty Expr -&gt; Expr
+forall a. (a -&gt; a -&gt; a) -&gt; NonEmpty a -&gt; a
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr1"><span class="hs-identifier hs-var">foldr1</span></a></span><span> </span><span class="annot"><span class="annottext">Expr -&gt; Expr -&gt; Expr
+</span><a href="Test.Tasty.Patterns.Types.html#And"><span class="hs-identifier hs-var">And</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (NonEmpty Expr) -&gt; Maybe Expr)
+-&gt; ([TestPattern] -&gt; Maybe (NonEmpty Expr))
+-&gt; [TestPattern]
+-&gt; Maybe Expr
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Expr] -&gt; Maybe (NonEmpty Expr)
+forall a. [a] -&gt; Maybe (NonEmpty a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html#nonEmpty"><span class="hs-identifier hs-var">nonEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">([Expr] -&gt; Maybe (NonEmpty Expr))
+-&gt; ([TestPattern] -&gt; [Expr])
+-&gt; [TestPattern]
+-&gt; Maybe (NonEmpty Expr)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Maybe Expr] -&gt; [Expr]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span> </span><span class="annot"><span class="annottext">([Maybe Expr] -&gt; [Expr])
+-&gt; ([TestPattern] -&gt; [Maybe Expr]) -&gt; [TestPattern] -&gt; [Expr]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. Coercible a b =&gt; a -&gt; b
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#coerce"><span class="hs-identifier hs-var">coerce</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser [TestPattern] -&gt; Parser TestPattern)
+-&gt; (Parser TestPattern -&gt; Parser [TestPattern])
+-&gt; Parser TestPattern
+-&gt; Parser TestPattern
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TestPattern -&gt; Parser [TestPattern]
+forall a. Parser a -&gt; Parser [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#some"><span class="hs-identifier hs-var">some</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser TestPattern -&gt; Parser TestPattern)
+-&gt; Parser TestPattern -&gt; Parser TestPattern
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields TestPattern -&gt; Parser TestPattern
+forall v. IsOption v =&gt; Mod OptionFields v -&gt; Parser v
+</span><a href="Test.Tasty.Options.html#mkOptionCLParser"><span class="hs-identifier hs-var">mkOptionCLParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields TestPattern
+forall (f :: * -&gt; *) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'p'</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields TestPattern
+-&gt; Mod OptionFields TestPattern -&gt; Mod OptionFields TestPattern
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields TestPattern
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PATTERN&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><span class="hs-comment">-- | @since 1.2</span></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Test.Tasty.Patterns.html#parseExpr"><span class="hs-identifier hs-type">parseExpr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Types.html#Expr"><span class="hs-identifier hs-type">Expr</span></a></span><span>
+</span><span id="line-66"></span><span id="parseExpr"><span class="annot"><span class="annottext">parseExpr :: String -&gt; Maybe Expr
+</span><a href="Test.Tasty.Patterns.html#parseExpr"><span class="hs-identifier hs-var hs-var">parseExpr</span></a></span></span><span> </span><span id="local-6989586621679093525"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093525"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; String -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679093527"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679093527"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isAlphaNum"><span class="hs-identifier hs-var">isAlphaNum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679093527"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679093527"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;._- &quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093525"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Expr -&gt; Maybe Expr
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Expr -&gt; Maybe Expr) -&gt; Expr -&gt; Maybe Expr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Expr
+</span><a href="Test.Tasty.Patterns.Types.html#ERE"><span class="hs-identifier hs-var">ERE</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093525"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe Expr
+</span><a href="Test.Tasty.Patterns.Parser.html#parseAwkExpr"><span class="hs-identifier hs-var">parseAwkExpr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093525"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><span class="hs-comment">-- | @since 1.0</span></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Test.Tasty.Patterns.html#parseTestPattern"><span class="hs-identifier hs-type">parseTestPattern</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span>
+</span><span id="line-73"></span><span id="parseTestPattern"><span class="annot"><span class="annottext">parseTestPattern :: String -&gt; Maybe TestPattern
+</span><a href="Test.Tasty.Patterns.html#parseTestPattern"><span class="hs-identifier hs-var hs-var">parseTestPattern</span></a></span></span><span> </span><span id="local-6989586621679093533"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093533"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093533"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestPattern -&gt; Maybe TestPattern
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TestPattern
+</span><a href="Test.Tasty.Patterns.html#noPattern"><span class="hs-identifier hs-var">noPattern</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Expr -&gt; TestPattern
+</span><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-var">TestPattern</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Expr -&gt; TestPattern)
+-&gt; (Expr -&gt; Maybe Expr) -&gt; Expr -&gt; TestPattern
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Expr -&gt; Maybe Expr
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Expr -&gt; TestPattern) -&gt; Maybe Expr -&gt; Maybe TestPattern
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe Expr
+</span><a href="Test.Tasty.Patterns.html#parseExpr"><span class="hs-identifier hs-var">parseExpr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093533"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><span class="hs-comment">-- | @since 1.2</span></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Test.Tasty.Patterns.html#exprMatches"><span class="hs-identifier hs-type">exprMatches</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Types.html#Expr"><span class="hs-identifier hs-type">Expr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Eval.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-79"></span><span id="exprMatches"><span class="annot"><span class="annottext">exprMatches :: Expr -&gt; Path -&gt; Bool
+</span><a href="Test.Tasty.Patterns.html#exprMatches"><span class="hs-identifier hs-var hs-var">exprMatches</span></a></span></span><span> </span><span id="local-6989586621679093536"><span class="annot"><span class="annottext">Expr
+</span><a href="#local-6989586621679093536"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621679093537"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679093537"><span class="hs-identifier hs-var">fields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Path -&gt; M Bool -&gt; Either String Bool
+forall a. Path -&gt; M a -&gt; Either String a
+</span><a href="Test.Tasty.Patterns.Eval.html#withFields"><span class="hs-identifier hs-var">withFields</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679093537"><span class="hs-identifier hs-var">fields</span></a></span><span> </span><span class="annot"><span class="annottext">(M Bool -&gt; Either String Bool) -&gt; M Bool -&gt; Either String Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; M Bool
+</span><a href="Test.Tasty.Patterns.Eval.html#asB"><span class="hs-identifier hs-var">asB</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; M Bool) -&gt; ReaderT Path (Either String) Value -&gt; M Bool
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Expr -&gt; ReaderT Path (Either String) Value
+</span><a href="Test.Tasty.Patterns.Eval.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">Expr
+</span><a href="#local-6989586621679093536"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679093542"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093542"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093542"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679093544"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679093544"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679093544"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><span class="hs-comment">-- | @since 1.0</span></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Test.Tasty.Patterns.html#testPatternMatches"><span class="hs-identifier hs-type">testPatternMatches</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.Eval.html#Path"><span class="hs-identifier hs-type">Path</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-86"></span><span id="testPatternMatches"><span class="annot"><span class="annottext">testPatternMatches :: TestPattern -&gt; Path -&gt; Bool
+</span><a href="Test.Tasty.Patterns.html#testPatternMatches"><span class="hs-identifier hs-var hs-var">testPatternMatches</span></a></span></span><span> </span><span id="local-6989586621679093545"><span class="annot"><span class="annottext">TestPattern
+</span><a href="#local-6989586621679093545"><span class="hs-identifier hs-var">pat</span></a></span></span><span> </span><span id="local-6989586621679093546"><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679093546"><span class="hs-identifier hs-var">fields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TestPattern
+</span><a href="#local-6989586621679093545"><span class="hs-identifier hs-var">pat</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Expr
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679093547"><span class="annot"><span class="annottext">Expr
+</span><a href="#local-6989586621679093547"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Expr -&gt; Path -&gt; Bool
+</span><a href="Test.Tasty.Patterns.html#exprMatches"><span class="hs-identifier hs-var">exprMatches</span></a></span><span> </span><span class="annot"><span class="annottext">Expr
+</span><a href="#local-6989586621679093547"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Path
+</span><a href="#local-6989586621679093546"><span class="hs-identifier hs-var">fields</span></a></span><span>
+</span><span id="line-90"></span></pre></body></html>

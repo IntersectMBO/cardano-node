@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# language OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">-- | Migrations support based on @migrant-core@.</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Database.Sqlite.Easy.Migrant</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Database.Migrant.Driver.Class</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Migrant.html#migrate"><span class="hs-identifier">migrate</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Database.Migrant</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Migrant</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Database.Migrant.Driver.Class</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Database.Migrant.MigrationName</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html"><span class="hs-identifier">Database.Sqlite.Easy.Internal</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Sqlite</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Database.SQLite3</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Direct</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | Execute a migration against the database.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   A wrapper around migrant's 'Migrant.migrate' for SQLite.</span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Database.Sqlite.Easy.Migrant.html#migrate"><span class="hs-identifier hs-type">migrate</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">MigrationName</span></span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MigrationName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQLite"><span class="hs-identifier hs-type">Sqlite.SQLite</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MigrationName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQLite"><span class="hs-identifier hs-type">Sqlite.SQLite</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQLite"><span class="hs-identifier hs-type">Sqlite.SQLite</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span id="migrate"><span class="annot"><span class="annottext">migrate :: [MigrationName]
+-&gt; (MigrationName -&gt; SQLite ())
+-&gt; (MigrationName -&gt; SQLite ())
+-&gt; SQLite ()
+</span><a href="Database.Sqlite.Easy.Migrant.html#migrate"><span class="hs-identifier hs-var hs-var">migrate</span></a></span></span><span> </span><span id="local-6989586621679061558"><span class="annot"><span class="annottext">[MigrationName]
+</span><a href="#local-6989586621679061558"><span class="hs-identifier hs-var">migrations</span></a></span></span><span> </span><span id="local-6989586621679061559"><span class="annot"><span class="annottext">MigrationName -&gt; SQLite ()
+</span><a href="#local-6989586621679061559"><span class="hs-identifier hs-var">migrateUp</span></a></span></span><span> </span><span id="local-6989586621679061560"><span class="annot"><span class="annottext">MigrationName -&gt; SQLite ()
+</span><a href="#local-6989586621679061560"><span class="hs-identifier hs-var">migrateDown</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SQLiteStuff -&gt; IO ()) -&gt; SQLite ()
+forall a. (SQLiteStuff -&gt; IO a) -&gt; SQLite a
+</span><a href="Database.Sqlite.Easy.Internal.html#SQLite"><span class="hs-identifier hs-var">Sqlite.SQLite</span></a></span><span> </span><span class="annot"><span class="annottext">((SQLiteStuff -&gt; IO ()) -&gt; SQLite ())
+-&gt; (SQLiteStuff -&gt; IO ()) -&gt; SQLite ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQLiteStuff"><span class="hs-identifier hs-type">Sqlite.SQLiteStuff</span></a></span><span> </span><span id="local-6989586621679061563"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061563"><span class="hs-identifier hs-var">database</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">[MigrationName]
+-&gt; (MigrationName -&gt; Database -&gt; IO ())
+-&gt; (MigrationName -&gt; Database -&gt; IO ())
+-&gt; Database
+-&gt; IO ()
+forall d.
+Driver d =&gt;
+[MigrationName]
+-&gt; (MigrationName -&gt; d -&gt; IO ())
+-&gt; (MigrationName -&gt; d -&gt; IO ())
+-&gt; d
+-&gt; IO ()
+</span><span class="hs-identifier hs-var">Migrant.migrate</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">[MigrationName]
+</span><a href="#local-6989586621679061558"><span class="hs-identifier hs-var">migrations</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679061564"><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061564"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679061565"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061565"><span class="hs-identifier hs-var">db</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SQLite () -&gt; SQLiteStuff -&gt; IO ()
+forall a. SQLite a -&gt; SQLiteStuff -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#unSQLite"><span class="hs-identifier hs-var">Sqlite.unSQLite</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite () -&gt; SQLiteStuff -&gt; IO ())
+-&gt; SQLite () -&gt; SQLiteStuff -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName -&gt; SQLite ()
+</span><a href="#local-6989586621679061559"><span class="hs-identifier hs-var">migrateUp</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061564"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Database -&gt; Maybe Int -&gt; SQLiteStuff
+</span><a href="Database.Sqlite.Easy.Internal.html#SQLiteStuff"><span class="hs-identifier hs-var">Sqlite.SQLiteStuff</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061565"><span class="hs-identifier hs-var">db</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679061567"><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061567"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679061568"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061568"><span class="hs-identifier hs-var">db</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SQLite () -&gt; SQLiteStuff -&gt; IO ()
+forall a. SQLite a -&gt; SQLiteStuff -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#unSQLite"><span class="hs-identifier hs-var">Sqlite.unSQLite</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite () -&gt; SQLiteStuff -&gt; IO ())
+-&gt; SQLite () -&gt; SQLiteStuff -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName -&gt; SQLite ()
+</span><a href="#local-6989586621679061560"><span class="hs-identifier hs-var">migrateDown</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061567"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Database -&gt; Maybe Int -&gt; SQLiteStuff
+</span><a href="Database.Sqlite.Easy.Internal.html#SQLiteStuff"><span class="hs-identifier hs-var">Sqlite.SQLiteStuff</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061568"><span class="hs-identifier hs-var">db</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061563"><span class="hs-identifier hs-var">database</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Driver</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Direct.Database</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679061575"><span class="annot"><span class="annottext">withTransaction :: forall a. (Database -&gt; IO a) -&gt; Database -&gt; IO a
+</span><a href="#local-6989586621679061575"><span class="hs-identifier hs-var hs-var hs-var hs-var">withTransaction</span></a></span></span><span> </span><span id="local-6989586621679061577"><span class="annot"><span class="annottext">Database -&gt; IO a
+</span><a href="#local-6989586621679061577"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679061578"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061578"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Database -&gt; IO a -&gt; IO a
+forall a. Database -&gt; IO a -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#asTransaction%27"><span class="hs-identifier hs-var">Sqlite.asTransaction'</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061578"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Database -&gt; IO a
+</span><a href="#local-6989586621679061577"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061578"><span class="hs-identifier hs-var">conn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679061588"><span class="annot"><span class="annottext">initMigrations :: Database -&gt; IO ()
+</span><a href="#local-6989586621679061588"><span class="hs-identifier hs-var hs-var hs-var hs-var">initMigrations</span></a></span></span><span> </span><span id="local-6989586621679061590"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061590"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Database -&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a. Database -&gt; SQLite a -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#withDatabase"><span class="hs-identifier hs-var">Sqlite.withDatabase</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061590"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite [[SQLData]] -&gt; IO [[SQLData]])
+-&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">SQL -&gt; SQLite [[SQLData]]
+</span><a href="Database.Sqlite.Easy.Internal.html#run"><span class="hs-identifier hs-var">Sqlite.run</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><span class="annottext">SQL
+</span><span class="hs-string">&quot;CREATE TABLE IF NOT EXISTS _migrations (id INTEGER PRIMARY KEY, name TEXT)&quot;</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679061597"><span class="annot"><span class="annottext">markUp :: MigrationName -&gt; Database -&gt; IO ()
+</span><a href="#local-6989586621679061597"><span class="hs-identifier hs-var hs-var hs-var hs-var">markUp</span></a></span></span><span> </span><span id="local-6989586621679061599"><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061599"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679061600"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061600"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Database -&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a. Database -&gt; SQLite a -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#withDatabase"><span class="hs-identifier hs-var">Sqlite.withDatabase</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061600"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite [[SQLData]] -&gt; IO [[SQLData]])
+-&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">SQL -&gt; [SQLData] -&gt; SQLite [[SQLData]]
+</span><a href="Database.Sqlite.Easy.Internal.html#runWith"><span class="hs-identifier hs-var">Sqlite.runWith</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">SQL
+</span><span class="hs-string">&quot;INSERT INTO _migrations (name) VALUES (?)&quot;</span></span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; SQLData
+</span><span class="hs-identifier hs-var">Direct.SQLText</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; SQLData) -&gt; Text -&gt; SQLData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName -&gt; Text
+</span><span class="hs-identifier hs-var">unpackMigrationName</span></span><span> </span><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061599"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679061608"><span class="annot"><span class="annottext">markDown :: MigrationName -&gt; Database -&gt; IO ()
+</span><a href="#local-6989586621679061608"><span class="hs-identifier hs-var hs-var hs-var hs-var">markDown</span></a></span></span><span> </span><span id="local-6989586621679061610"><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061610"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679061611"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061611"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Database -&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a. Database -&gt; SQLite a -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#withDatabase"><span class="hs-identifier hs-var">Sqlite.withDatabase</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061611"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite [[SQLData]] -&gt; IO [[SQLData]])
+-&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">SQL -&gt; [SQLData] -&gt; SQLite [[SQLData]]
+</span><a href="Database.Sqlite.Easy.Internal.html#runWith"><span class="hs-identifier hs-var">Sqlite.runWith</span></a></span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">SQL
+</span><span class="hs-string">&quot;DELETE FROM _migrations WHERE name = ?&quot;</span></span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; SQLData
+</span><span class="hs-identifier hs-var">Direct.SQLText</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; SQLData) -&gt; Text -&gt; SQLData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MigrationName -&gt; Text
+</span><span class="hs-identifier hs-var">unpackMigrationName</span></span><span> </span><span class="annot"><span class="annottext">MigrationName
+</span><a href="#local-6989586621679061610"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679061615"><span class="annot"><span class="annottext">getMigrations :: Database -&gt; IO [MigrationName]
+</span><a href="#local-6989586621679061615"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMigrations</span></a></span></span><span> </span><span id="local-6989586621679061617"><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061617"><span class="hs-identifier hs-var">conn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679061618"><span class="annot"><span class="annottext">[[SQLData]]
+</span><a href="#local-6989586621679061618"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Database -&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a. Database -&gt; SQLite a -&gt; IO a
+</span><a href="Database.Sqlite.Easy.Internal.html#withDatabase"><span class="hs-identifier hs-var">Sqlite.withDatabase</span></a></span><span> </span><span class="annot"><span class="annottext">Database
+</span><a href="#local-6989586621679061617"><span class="hs-identifier hs-var">conn</span></a></span><span> </span><span class="annot"><span class="annottext">(SQLite [[SQLData]] -&gt; IO [[SQLData]])
+-&gt; SQLite [[SQLData]] -&gt; IO [[SQLData]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">SQL -&gt; SQLite [[SQLData]]
+</span><a href="Database.Sqlite.Easy.Internal.html#run"><span class="hs-identifier hs-var">Sqlite.run</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">SQL
+</span><span class="hs-string">&quot;SELECT name FROM _migrations ORDER BY id&quot;</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">[MigrationName] -&gt; IO [MigrationName]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; MigrationName
+</span><span class="hs-identifier hs-var">MigrationName</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679061620"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Direct.SQLText</span></span><span> </span><span id="local-6989586621679061620"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679061620"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[[SQLData]]
+</span><a href="#local-6989586621679061618"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span></pre></body></html>

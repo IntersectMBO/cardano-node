@@ -1,0 +1,982 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Parsers.Cardano</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Parsers.Cardano.html#cmdCardano"><span class="hs-identifier">cmdCardano</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Parsers.Cardano.html#cmdCreateEnv"><span class="hs-identifier">cmdCreateEnv</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier">AnyShelleyBasedEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html"><span class="hs-identifier">Cardano.CLI.EraBased.Common.Option</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#pNetworkId"><span class="hs-identifier">pNetworkId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html#readMaybe"><span class="hs-identifier">readMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier">optional</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator">(&lt;|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/7k5rm1bc62wnbdl29rcpi0cj4w08l7a5-data-default-class-lib-data-default-class-0.2.0.0-haddock-doc/share/doc/data-default-class/html/src/Data.Default.Class.html"><span class="hs-identifier">Data.Default.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier">NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3A%7C"><span class="hs-operator">(:|)</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#CommandFields"><span class="hs-identifier">CommandFields</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#Mod"><span class="hs-identifier">Mod</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier">Parser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OA</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html"><span class="hs-identifier">Options.Applicative.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#readerAsk"><span class="hs-identifier">readerAsk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Defaults.html"><span class="hs-identifier">Testnet.Defaults</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Defaults.html#defaultEra"><span class="hs-identifier">defaultEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Cardano.html"><span class="hs-identifier">Testnet.Start.Cardano</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Types.html"><span class="hs-identifier">Testnet.Start.Types</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Types.html"><span class="hs-identifier">Testnet.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#readNodeLoggingFormat"><span class="hs-identifier">readNodeLoggingFormat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Parsers.Cardano.html#optsTestnet"><span class="hs-identifier hs-type">optsTestnet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-type">CardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-31"></span><span id="optsTestnet"><span class="annot"><span class="annottext">optsTestnet :: Parser CardanoTestnetCliOptions
+</span><a href="Parsers.Cardano.html#optsTestnet"><span class="hs-identifier hs-var hs-var">optsTestnet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTestnetOptions
+-&gt; GenesisOptions
+-&gt; UserProvidedEnv
+-&gt; UpdateTimestamps
+-&gt; CardanoTestnetCliOptions
+</span><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-var">CardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="annottext">(CardanoTestnetOptions
+ -&gt; GenesisOptions
+ -&gt; UserProvidedEnv
+ -&gt; UpdateTimestamps
+ -&gt; CardanoTestnetCliOptions)
+-&gt; Parser CardanoTestnetOptions
+-&gt; Parser
+     (GenesisOptions
+      -&gt; UserProvidedEnv -&gt; UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetOptions
+</span><a href="Parsers.Cardano.html#pCardanoTestnetCliOptions"><span class="hs-identifier hs-var">pCardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (GenesisOptions
+   -&gt; UserProvidedEnv -&gt; UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+-&gt; Parser GenesisOptions
+-&gt; Parser
+     (UserProvidedEnv -&gt; UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GenesisOptions
+</span><a href="Parsers.Cardano.html#pGenesisOptions"><span class="hs-identifier hs-var">pGenesisOptions</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (UserProvidedEnv -&gt; UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+-&gt; Parser UserProvidedEnv
+-&gt; Parser (UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser UserProvidedEnv
+</span><a href="Parsers.Cardano.html#pNodeEnvironment"><span class="hs-identifier hs-var">pNodeEnvironment</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">Parser (UpdateTimestamps -&gt; CardanoTestnetCliOptions)
+-&gt; Parser UpdateTimestamps -&gt; Parser CardanoTestnetCliOptions
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser UpdateTimestamps
+</span><a href="Parsers.Cardano.html#pUpdateTimestamps"><span class="hs-identifier hs-var">pUpdateTimestamps</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Parsers.Cardano.html#optsCreateTestnet"><span class="hs-identifier hs-type">optsCreateTestnet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCreateEnvOptions"><span class="hs-identifier hs-type">CardanoTestnetCreateEnvOptions</span></a></span><span>
+</span><span id="line-38"></span><span id="optsCreateTestnet"><span class="annot"><span class="annottext">optsCreateTestnet :: Parser CardanoTestnetCreateEnvOptions
+</span><a href="Parsers.Cardano.html#optsCreateTestnet"><span class="hs-identifier hs-var hs-var">optsCreateTestnet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoTestnetOptions
+-&gt; GenesisOptions
+-&gt; FilePath
+-&gt; CreateEnvOptions
+-&gt; CardanoTestnetCreateEnvOptions
+</span><a href="Testnet.Start.Types.html#CardanoTestnetCreateEnvOptions"><span class="hs-identifier hs-var">CardanoTestnetCreateEnvOptions</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">(CardanoTestnetOptions
+ -&gt; GenesisOptions
+ -&gt; FilePath
+ -&gt; CreateEnvOptions
+ -&gt; CardanoTestnetCreateEnvOptions)
+-&gt; Parser CardanoTestnetOptions
+-&gt; Parser
+     (GenesisOptions
+      -&gt; FilePath -&gt; CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetOptions
+</span><a href="Parsers.Cardano.html#pCardanoTestnetCliOptions"><span class="hs-identifier hs-var">pCardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (GenesisOptions
+   -&gt; FilePath -&gt; CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+-&gt; Parser GenesisOptions
+-&gt; Parser
+     (FilePath -&gt; CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GenesisOptions
+</span><a href="Parsers.Cardano.html#pGenesisOptions"><span class="hs-identifier hs-var">pGenesisOptions</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (FilePath -&gt; CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+-&gt; Parser FilePath
+-&gt; Parser (CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser FilePath
+</span><a href="Parsers.Cardano.html#pEnvOutputDir"><span class="hs-identifier hs-var">pEnvOutputDir</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Parser (CreateEnvOptions -&gt; CardanoTestnetCreateEnvOptions)
+-&gt; Parser CreateEnvOptions -&gt; Parser CardanoTestnetCreateEnvOptions
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser CreateEnvOptions
+</span><a href="Parsers.Cardano.html#pCreateEnvOptions"><span class="hs-identifier hs-var">pCreateEnvOptions</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- We can't fill in the optional Genesis files at parse time, because we want to be in a monad</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- to properly parse JSON. We delegate this task to the caller.</span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Parsers.Cardano.html#pCreateEnvOptions"><span class="hs-identifier hs-type">pCreateEnvOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CreateEnvOptions"><span class="hs-identifier hs-type">CreateEnvOptions</span></a></span><span>
+</span><span id="line-47"></span><span id="pCreateEnvOptions"><span class="annot"><span class="annottext">pCreateEnvOptions :: Parser CreateEnvOptions
+</span><a href="Parsers.Cardano.html#pCreateEnvOptions"><span class="hs-identifier hs-var hs-var">pCreateEnvOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestnetOnChainParams -&gt; CreateEnvOptions
+</span><a href="Testnet.Start.Types.html#CreateEnvOptions"><span class="hs-identifier hs-var">CreateEnvOptions</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">(TestnetOnChainParams -&gt; CreateEnvOptions)
+-&gt; Parser TestnetOnChainParams -&gt; Parser CreateEnvOptions
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pOnChainParams"><span class="hs-identifier hs-var">pOnChainParams</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Parsers.Cardano.html#pCardanoTestnetCliOptions"><span class="hs-identifier hs-type">pCardanoTestnetCliOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-type">CardanoTestnetOptions</span></a></span><span>
+</span><span id="line-51"></span><span id="pCardanoTestnetCliOptions"><span class="annot"><span class="annottext">pCardanoTestnetCliOptions :: Parser CardanoTestnetOptions
+</span><a href="Parsers.Cardano.html#pCardanoTestnetCliOptions"><span class="hs-identifier hs-var hs-var">pCardanoTestnetCliOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeOption
+-&gt; AnyShelleyBasedEra
+-&gt; Word64
+-&gt; NodeLoggingFormat
+-&gt; NumDReps
+-&gt; Bool
+-&gt; TxGeneratorSupport
+-&gt; UserProvidedEnv
+-&gt; CardanoTestnetOptions
+</span><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-var">CardanoTestnetOptions</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">(NonEmpty NodeOption
+ -&gt; AnyShelleyBasedEra
+ -&gt; Word64
+ -&gt; NodeLoggingFormat
+ -&gt; NumDReps
+ -&gt; Bool
+ -&gt; TxGeneratorSupport
+ -&gt; UserProvidedEnv
+ -&gt; CardanoTestnetOptions)
+-&gt; Parser (NonEmpty NodeOption)
+-&gt; Parser
+     (AnyShelleyBasedEra
+      -&gt; Word64
+      -&gt; NodeLoggingFormat
+      -&gt; NumDReps
+      -&gt; Bool
+      -&gt; TxGeneratorSupport
+      -&gt; UserProvidedEnv
+      -&gt; CardanoTestnetOptions)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (NonEmpty NodeOption)
+</span><a href="Parsers.Cardano.html#pTestnetNodeOptions"><span class="hs-identifier hs-var">pTestnetNodeOptions</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (AnyShelleyBasedEra
+   -&gt; Word64
+   -&gt; NodeLoggingFormat
+   -&gt; NumDReps
+   -&gt; Bool
+   -&gt; TxGeneratorSupport
+   -&gt; UserProvidedEnv
+   -&gt; CardanoTestnetOptions)
+-&gt; Parser AnyShelleyBasedEra
+-&gt; Parser
+     (Word64
+      -&gt; NodeLoggingFormat
+      -&gt; NumDReps
+      -&gt; Bool
+      -&gt; TxGeneratorSupport
+      -&gt; UserProvidedEnv
+      -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; Parser AnyShelleyBasedEra
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra -&gt; AnyShelleyBasedEra
+forall era.
+Typeable era =&gt;
+ShelleyBasedEra era -&gt; AnyShelleyBasedEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#AnyShelleyBasedEra"><span class="hs-identifier hs-var">AnyShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra ConwayEra
+</span><a href="Testnet.Defaults.html#defaultEra"><span class="hs-identifier hs-var">defaultEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Word64
+   -&gt; NodeLoggingFormat
+   -&gt; NumDReps
+   -&gt; Bool
+   -&gt; TxGeneratorSupport
+   -&gt; UserProvidedEnv
+   -&gt; CardanoTestnetOptions)
+-&gt; Parser Word64
+-&gt; Parser
+     (NodeLoggingFormat
+      -&gt; NumDReps
+      -&gt; Bool
+      -&gt; TxGeneratorSupport
+      -&gt; UserProvidedEnv
+      -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Word64
+</span><a href="Parsers.Cardano.html#pMaxLovelaceSupply"><span class="hs-identifier hs-var">pMaxLovelaceSupply</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (NodeLoggingFormat
+   -&gt; NumDReps
+   -&gt; Bool
+   -&gt; TxGeneratorSupport
+   -&gt; UserProvidedEnv
+   -&gt; CardanoTestnetOptions)
+-&gt; Parser NodeLoggingFormat
+-&gt; Parser
+     (NumDReps
+      -&gt; Bool
+      -&gt; TxGeneratorSupport
+      -&gt; UserProvidedEnv
+      -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat -&gt; Parser NodeLoggingFormat
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(FilePath -&gt; Either FilePath NodeLoggingFormat)
+-&gt; ReadM NodeLoggingFormat
+forall a. (FilePath -&gt; Either FilePath a) -&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#eitherReader"><span class="hs-identifier hs-var">OA.eitherReader</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Either FilePath NodeLoggingFormat
+</span><a href="Testnet.Types.html#readNodeLoggingFormat"><span class="hs-identifier hs-var">readNodeLoggingFormat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NodeLoggingFormat
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;nodeLoggingFormat&quot;</span></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NodeLoggingFormat
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Node logging format (json|text)&quot;</span></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NodeLoggingFormat
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;LOGGING_FORMAT&quot;</span></span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields NodeLoggingFormat
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+-&gt; Mod OptionFields NodeLoggingFormat
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">NodeLoggingFormat -&gt; Mod OptionFields NodeLoggingFormat
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#cardanoNodeLoggingFormat"><span class="hs-identifier hs-var">cardanoNodeLoggingFormat</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTestnetOptions
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (NumDReps
+   -&gt; Bool
+   -&gt; TxGeneratorSupport
+   -&gt; UserProvidedEnv
+   -&gt; CardanoTestnetOptions)
+-&gt; Parser NumDReps
+-&gt; Parser
+     (Bool
+      -&gt; TxGeneratorSupport -&gt; UserProvidedEnv -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM NumDReps -&gt; Mod OptionFields NumDReps -&gt; Parser NumDReps
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM NumDReps
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">OA.auto</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NumDReps
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;num-dreps&quot;</span></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NumDReps
+-&gt; Mod OptionFields NumDReps -&gt; Mod OptionFields NumDReps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NumDReps
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Number of delegate representatives (DReps) to generate. Ignored if a node environment is passed.&quot;</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NumDReps
+-&gt; Mod OptionFields NumDReps -&gt; Mod OptionFields NumDReps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NumDReps
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;NUMBER&quot;</span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NumDReps
+-&gt; Mod OptionFields NumDReps -&gt; Mod OptionFields NumDReps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields NumDReps
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields NumDReps
+-&gt; Mod OptionFields NumDReps -&gt; Mod OptionFields NumDReps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">NumDReps -&gt; Mod OptionFields NumDReps
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="annot"><span class="annottext">NumDReps
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Bool
+   -&gt; TxGeneratorSupport -&gt; UserProvidedEnv -&gt; CardanoTestnetOptions)
+-&gt; Parser Bool
+-&gt; Parser
+     (TxGeneratorSupport -&gt; UserProvidedEnv -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Mod FlagFields Bool -&gt; Parser Bool
+forall a. a -&gt; a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag"><span class="hs-identifier hs-var">OA.flag</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields Bool
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;enable-new-epoch-state-logging&quot;</span></span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">Mod FlagFields Bool -&gt; Mod FlagFields Bool -&gt; Mod FlagFields Bool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields Bool
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Enable new epoch state logging to logs/ledger-epoch-state.log&quot;</span></span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">Mod FlagFields Bool -&gt; Mod FlagFields Bool -&gt; Mod FlagFields Bool
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod FlagFields Bool
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (TxGeneratorSupport -&gt; UserProvidedEnv -&gt; CardanoTestnetOptions)
+-&gt; Parser TxGeneratorSupport
+-&gt; Parser (UserProvidedEnv -&gt; CardanoTestnetOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport -&gt; Parser TxGeneratorSupport
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag%27"><span class="hs-identifier hs-var">OA.flag'</span></a></span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport
+</span><a href="Testnet.Start.Types.html#GenerateTemplateConfigForTxGenerator"><span class="hs-identifier hs-var">GenerateTemplateConfigForTxGenerator</span></a></span><span>
+</span><span id="line-75"></span><span>          </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TxGeneratorSupport
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;generate-tx-generator-config&quot;</span></span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><span class="annottext">Mod FlagFields TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TxGeneratorSupport
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Generate a template configuration file for tx-generator.&quot;</span></span><span>
+</span><span id="line-77"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Parser TxGeneratorSupport
+-&gt; Parser TxGeneratorSupport -&gt; Parser TxGeneratorSupport
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport -&gt; Parser TxGeneratorSupport
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag%27"><span class="hs-identifier hs-var">OA.flag'</span></a></span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport
+</span><a href="Testnet.Start.Types.html#GenerateAndRunTxGenerator"><span class="hs-identifier hs-var">GenerateAndRunTxGenerator</span></a></span><span>
+</span><span id="line-79"></span><span>          </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TxGeneratorSupport
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;run-tx-generator&quot;</span></span><span>
+</span><span id="line-80"></span><span>          </span><span class="annot"><span class="annottext">Mod FlagFields TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport
+-&gt; Mod FlagFields TxGeneratorSupport
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TxGeneratorSupport
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Generate a configuration file for tx-generator and run it.&quot;</span></span><span>
+</span><span id="line-81"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">Parser TxGeneratorSupport
+-&gt; Parser TxGeneratorSupport -&gt; Parser TxGeneratorSupport
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport -&gt; Parser TxGeneratorSupport
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">TxGeneratorSupport
+</span><a href="Testnet.Start.Types.html#NoTxGeneratorSupport"><span class="hs-identifier hs-var">NoTxGeneratorSupport</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">Parser (UserProvidedEnv -&gt; CardanoTestnetOptions)
+-&gt; Parser UserProvidedEnv -&gt; Parser CardanoTestnetOptions
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UserProvidedEnv
+-&gt; (FilePath -&gt; UserProvidedEnv)
+-&gt; Maybe FilePath
+-&gt; UserProvidedEnv
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="Testnet.Start.Types.html#NoUserProvidedEnv"><span class="hs-identifier hs-var">NoUserProvidedEnv</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; UserProvidedEnv
+</span><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-var">UserProvidedEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe FilePath -&gt; UserProvidedEnv)
+-&gt; Parser (Maybe FilePath) -&gt; Parser UserProvidedEnv
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser FilePath -&gt; Parser (Maybe FilePath)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mod OptionFields FilePath -&gt; Parser FilePath
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">OA.strOption</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;output-dir&quot;</span></span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used.&quot;</span></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;DIRECTORY&quot;</span></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Parsers.Cardano.html#pTestnetNodeOptions"><span class="hs-identifier hs-type">pTestnetNodeOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeOption"><span class="hs-identifier hs-type">NodeOption</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span id="pTestnetNodeOptions"><span class="annot"><span class="annottext">pTestnetNodeOptions :: Parser (NonEmpty NodeOption)
+</span><a href="Parsers.Cardano.html#pTestnetNodeOptions"><span class="hs-identifier hs-var hs-var">pTestnetNodeOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-comment">-- If `--num-pool-nodes N` is present, return N nodes with option `SpoNodeOptions []`.</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">-- Otherwise, return `cardanoDefaultTestnetNodeOptions`</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">(Maybe Int -&gt; NonEmpty NodeOption)
+-&gt; Parser (Maybe Int) -&gt; Parser (NonEmpty NodeOption)
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty NodeOption
+-&gt; (Int -&gt; NonEmpty NodeOption) -&gt; Maybe Int -&gt; NonEmpty NodeOption
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NodeOption
+</span><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier hs-var">cardanoDefaultTestnetNodeOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679575011"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679575011"><span class="hs-identifier hs-var">num</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeOption
+</span><a href="#local-6989586621679575012"><span class="hs-identifier hs-var">defaultSpoOptions</span></a></span><span> </span><span class="annot"><span class="annottext">NodeOption -&gt; [NodeOption] -&gt; NonEmpty NodeOption
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3A%7C"><span class="hs-operator hs-var">:|</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; NodeOption -&gt; [NodeOption]
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#replicate"><span class="hs-identifier hs-var">L.replicate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679575011"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeOption
+</span><a href="#local-6989586621679575012"><span class="hs-identifier hs-var">defaultSpoOptions</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser (Maybe Int) -&gt; Parser (NonEmpty NodeOption))
+-&gt; (Parser Int -&gt; Parser (Maybe Int))
+-&gt; Parser Int
+-&gt; Parser (NonEmpty NodeOption)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">Parser Int -&gt; Parser (Maybe Int)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser Int -&gt; Parser (NonEmpty NodeOption))
+-&gt; Parser Int -&gt; Parser (NonEmpty NodeOption)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Int -&gt; Mod OptionFields Int -&gt; Parser Int
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Int
+</span><a href="#local-6989586621679575014"><span class="hs-identifier hs-var">ensureAtLeastOne</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;num-pool-nodes&quot;</span></span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Number of pool nodes. Note this uses a default node configuration for all nodes.&quot;</span></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;COUNT&quot;</span></span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>    </span><span id="local-6989586621679575012"><span class="annot"><span class="annottext">defaultSpoOptions :: NodeOption
+</span><a href="#local-6989586621679575012"><span class="hs-identifier hs-var hs-var">defaultSpoOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[FilePath] -&gt; NodeOption
+</span><a href="Testnet.Start.Types.html#SpoNodeOptions"><span class="hs-identifier hs-var">SpoNodeOptions</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="#local-6989586621679575014"><span class="hs-identifier hs-type">ensureAtLeastOne</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ReadM"><span class="hs-identifier hs-type">OA.ReadM</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679575014"><span class="annot"><span class="annottext">ensureAtLeastOne :: ReadM Int
+</span><a href="#local-6989586621679575014"><span class="hs-identifier hs-var hs-var">ensureAtLeastOne</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadM FilePath
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#readerAsk"><span class="hs-identifier hs-var">readerAsk</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM FilePath -&gt; (FilePath -&gt; ReadM Int) -&gt; ReadM Int
+forall a b. ReadM a -&gt; (a -&gt; ReadM b) -&gt; ReadM b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679575016"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679575016"><span class="hs-identifier hs-var">arg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Maybe Int
+forall b a. (Read b, ToString a) =&gt; a -&gt; Maybe b
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html#readMaybe"><span class="hs-identifier hs-var">readMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679575016"><span class="hs-identifier hs-var">arg</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679575017"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679575017"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679575017"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ReadM Int
+forall a. a -&gt; ReadM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679575017"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">Maybe Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ReadM Int
+forall a. FilePath -&gt; ReadM a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; FilePath -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Need at least one SPO node to produce blocks, but got none.&quot;</span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Parsers.Cardano.html#pNodeEnvironment"><span class="hs-identifier hs-type">pNodeEnvironment</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-type">UserProvidedEnv</span></a></span><span>
+</span><span id="line-110"></span><span id="pNodeEnvironment"><span class="annot"><span class="annottext">pNodeEnvironment :: Parser UserProvidedEnv
+</span><a href="Parsers.Cardano.html#pNodeEnvironment"><span class="hs-identifier hs-var hs-var">pNodeEnvironment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe FilePath -&gt; UserProvidedEnv)
+-&gt; Parser (Maybe FilePath) -&gt; Parser UserProvidedEnv
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UserProvidedEnv
+-&gt; (FilePath -&gt; UserProvidedEnv)
+-&gt; Maybe FilePath
+-&gt; UserProvidedEnv
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">UserProvidedEnv
+</span><a href="Testnet.Start.Types.html#NoUserProvidedEnv"><span class="hs-identifier hs-var">NoUserProvidedEnv</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; UserProvidedEnv
+</span><a href="Testnet.Start.Types.html#UserProvidedEnv"><span class="hs-identifier hs-var">UserProvidedEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser (Maybe FilePath) -&gt; Parser UserProvidedEnv)
+-&gt; (Parser FilePath -&gt; Parser (Maybe FilePath))
+-&gt; Parser FilePath
+-&gt; Parser UserProvidedEnv
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">Parser FilePath -&gt; Parser (Maybe FilePath)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser FilePath -&gt; Parser UserProvidedEnv)
+-&gt; Parser FilePath -&gt; Parser UserProvidedEnv
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields FilePath -&gt; Parser FilePath
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">OA.strOption</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;node-env&quot;</span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;FILEPATH&quot;</span></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Path to the node's environment (which is generated otherwise). You can generate a default environment with the 'create-env' command, then modify it and pass it with this argument.&quot;</span></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Parsers.Cardano.html#pOnChainParams"><span class="hs-identifier hs-type">pOnChainParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#TestnetOnChainParams"><span class="hs-identifier hs-type">TestnetOnChainParams</span></a></span><span>
+</span><span id="line-118"></span><span id="pOnChainParams"><span class="annot"><span class="annottext">pOnChainParams :: Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pOnChainParams"><span class="hs-identifier hs-var hs-var">pOnChainParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe TestnetOnChainParams -&gt; TestnetOnChainParams)
+-&gt; Parser (Maybe TestnetOnChainParams)
+-&gt; Parser TestnetOnChainParams
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestnetOnChainParams
+-&gt; Maybe TestnetOnChainParams -&gt; TestnetOnChainParams
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetOnChainParams
+</span><a href="Testnet.Start.Types.html#DefaultParams"><span class="hs-identifier hs-var">DefaultParams</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser (Maybe TestnetOnChainParams)
+ -&gt; Parser TestnetOnChainParams)
+-&gt; (Parser TestnetOnChainParams
+    -&gt; Parser (Maybe TestnetOnChainParams))
+-&gt; Parser TestnetOnChainParams
+-&gt; Parser TestnetOnChainParams
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TestnetOnChainParams -&gt; Parser (Maybe TestnetOnChainParams)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser TestnetOnChainParams -&gt; Parser TestnetOnChainParams)
+-&gt; Parser TestnetOnChainParams -&gt; Parser TestnetOnChainParams
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pCustomParamsFile"><span class="hs-identifier hs-var">pCustomParamsFile</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TestnetOnChainParams
+-&gt; Parser TestnetOnChainParams -&gt; Parser TestnetOnChainParams
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pMainnetParams"><span class="hs-identifier hs-var">pMainnetParams</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Parsers.Cardano.html#pCustomParamsFile"><span class="hs-identifier hs-type">pCustomParamsFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#TestnetOnChainParams"><span class="hs-identifier hs-type">TestnetOnChainParams</span></a></span><span>
+</span><span id="line-122"></span><span id="pCustomParamsFile"><span class="annot"><span class="annottext">pCustomParamsFile :: Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pCustomParamsFile"><span class="hs-identifier hs-var hs-var">pCustomParamsFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; TestnetOnChainParams
+</span><a href="Testnet.Start.Types.html#OnChainParamsFile"><span class="hs-identifier hs-var">OnChainParamsFile</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; TestnetOnChainParams)
+-&gt; Parser FilePath -&gt; Parser TestnetOnChainParams
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields FilePath -&gt; Parser FilePath
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">OA.strOption</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;params-file&quot;</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;File containing custom on-chain parameters in Blockfrost format:\nhttps://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters&quot;</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;FILEPATH&quot;</span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Parsers.Cardano.html#pMainnetParams"><span class="hs-identifier hs-type">pMainnetParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#TestnetOnChainParams"><span class="hs-identifier hs-type">TestnetOnChainParams</span></a></span><span>
+</span><span id="line-129"></span><span id="pMainnetParams"><span class="annot"><span class="annottext">pMainnetParams :: Parser TestnetOnChainParams
+</span><a href="Parsers.Cardano.html#pMainnetParams"><span class="hs-identifier hs-var hs-var">pMainnetParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestnetOnChainParams
+-&gt; Mod FlagFields TestnetOnChainParams
+-&gt; Parser TestnetOnChainParams
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag%27"><span class="hs-identifier hs-var">OA.flag'</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetOnChainParams
+</span><a href="Testnet.Start.Types.html#OnChainParamsMainnet"><span class="hs-identifier hs-var">OnChainParamsMainnet</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TestnetOnChainParams
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;params-mainnet&quot;</span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><span class="annottext">Mod FlagFields TestnetOnChainParams
+-&gt; Mod FlagFields TestnetOnChainParams
+-&gt; Mod FlagFields TestnetOnChainParams
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields TestnetOnChainParams
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Use mainnet on-chain parameters&quot;</span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Parsers.Cardano.html#pUpdateTimestamps"><span class="hs-identifier hs-type">pUpdateTimestamps</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#UpdateTimestamps"><span class="hs-identifier hs-type">UpdateTimestamps</span></a></span><span>
+</span><span id="line-135"></span><span id="pUpdateTimestamps"><span class="annot"><span class="annottext">pUpdateTimestamps :: Parser UpdateTimestamps
+</span><a href="Parsers.Cardano.html#pUpdateTimestamps"><span class="hs-identifier hs-var hs-var">pUpdateTimestamps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpdateTimestamps
+-&gt; UpdateTimestamps
+-&gt; Mod FlagFields UpdateTimestamps
+-&gt; Parser UpdateTimestamps
+forall a. a -&gt; a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag"><span class="hs-identifier hs-var">OA.flag</span></a></span><span> </span><span class="annot"><span class="annottext">UpdateTimestamps
+</span><a href="Testnet.Start.Types.html#DontUpdateTimestamps"><span class="hs-identifier hs-var">DontUpdateTimestamps</span></a></span><span> </span><span class="annot"><span class="annottext">UpdateTimestamps
+</span><a href="Testnet.Start.Types.html#UpdateTimestamps"><span class="hs-identifier hs-var">UpdateTimestamps</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">(</span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields UpdateTimestamps
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;update-time&quot;</span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="annottext">Mod FlagFields UpdateTimestamps
+-&gt; Mod FlagFields UpdateTimestamps
+-&gt; Mod FlagFields UpdateTimestamps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod FlagFields UpdateTimestamps
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Update the time stamps in genesis files to current date&quot;</span></span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">Mod FlagFields UpdateTimestamps
+-&gt; Mod FlagFields UpdateTimestamps
+-&gt; Mod FlagFields UpdateTimestamps
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod FlagFields UpdateTimestamps
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Parsers.Cardano.html#pEnvOutputDir"><span class="hs-identifier hs-type">pEnvOutputDir</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-142"></span><span id="pEnvOutputDir"><span class="annot"><span class="annottext">pEnvOutputDir :: Parser FilePath
+</span><a href="Parsers.Cardano.html#pEnvOutputDir"><span class="hs-identifier hs-var hs-var">pEnvOutputDir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod OptionFields FilePath -&gt; Parser FilePath
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">OA.strOption</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;output&quot;</span></span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Directory where to create the sandbox environment.&quot;</span></span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;DIRECTORY&quot;</span></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Parsers.Cardano.html#pGenesisOptions"><span class="hs-identifier hs-type">pGenesisOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#GenesisOptions"><span class="hs-identifier hs-type">GenesisOptions</span></a></span><span>
+</span><span id="line-149"></span><span id="pGenesisOptions"><span class="annot"><span class="annottext">pGenesisOptions :: Parser GenesisOptions
+</span><a href="Parsers.Cardano.html#pGenesisOptions"><span class="hs-identifier hs-var hs-var">pGenesisOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Double -&gt; Double -&gt; GenesisOptions
+</span><a href="Testnet.Start.Types.html#GenesisOptions"><span class="hs-identifier hs-var">GenesisOptions</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Double -&gt; Double -&gt; GenesisOptions)
+-&gt; Parser Int -&gt; Parser (Int -&gt; Double -&gt; Double -&gt; GenesisOptions)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Int
+</span><a href="Parsers.Cardano.html#pNetworkId"><span class="hs-identifier hs-var">pNetworkId</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><span class="annottext">Parser (Int -&gt; Double -&gt; Double -&gt; GenesisOptions)
+-&gt; Parser Int -&gt; Parser (Double -&gt; Double -&gt; GenesisOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Int
+</span><a href="#local-6989586621679575028"><span class="hs-identifier hs-var">pEpochLength</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">Parser (Double -&gt; Double -&gt; GenesisOptions)
+-&gt; Parser Double -&gt; Parser (Double -&gt; GenesisOptions)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Double
+</span><a href="#local-6989586621679575029"><span class="hs-identifier hs-var">pSlotLength</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">Parser (Double -&gt; GenesisOptions)
+-&gt; Parser Double -&gt; Parser GenesisOptions
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Double
+</span><a href="#local-6989586621679575030"><span class="hs-identifier hs-var">pActiveSlotCoeffs</span></a></span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-156"></span><span>    </span><span id="local-6989586621679575028"><span class="annot"><span class="annottext">pEpochLength :: Parser Int
+</span><a href="#local-6989586621679575028"><span class="hs-identifier hs-var hs-var">pEpochLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>      </span><span class="annot"><span class="annottext">ReadM Int -&gt; Mod OptionFields Int -&gt; Parser Int
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Int
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">OA.auto</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;epoch-length&quot;</span></span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Epoch length, in number of slots. Ignored if a node environment is passed.&quot;</span></span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SLOTS&quot;</span></span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields Int
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenesisOptions -&gt; Int
+</span><a href="Testnet.Start.Types.html#genesisEpochLength"><span class="hs-identifier hs-var">genesisEpochLength</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisOptions
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679575029"><span class="annot"><span class="annottext">pSlotLength :: Parser Double
+</span><a href="#local-6989586621679575029"><span class="hs-identifier hs-var hs-var">pSlotLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-165"></span><span>      </span><span class="annot"><span class="annottext">ReadM Double -&gt; Mod OptionFields Double -&gt; Parser Double
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Double
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">OA.auto</span></a></span><span>
+</span><span id="line-166"></span><span>        </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;slot-length&quot;</span></span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Slot length. Ignored if a node environment is passed.&quot;</span></span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SECONDS&quot;</span></span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields Double
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-170"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Double -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenesisOptions -&gt; Double
+</span><a href="Testnet.Start.Types.html#genesisSlotLength"><span class="hs-identifier hs-var">genesisSlotLength</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisOptions
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>    </span><span id="local-6989586621679575030"><span class="annot"><span class="annottext">pActiveSlotCoeffs :: Parser Double
+</span><a href="#local-6989586621679575030"><span class="hs-identifier hs-var hs-var">pActiveSlotCoeffs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><span class="annottext">ReadM Double -&gt; Mod OptionFields Double -&gt; Parser Double
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Double
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">OA.auto</span></a></span><span>
+</span><span id="line-174"></span><span>        </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;active-slots-coeff&quot;</span></span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Active slots coefficient. Ignored if a node environment is passed.&quot;</span></span><span>
+</span><span id="line-176"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;DOUBLE&quot;</span></span><span>
+</span><span id="line-177"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields Double
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-178"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Double -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenesisOptions -&gt; Double
+</span><a href="Testnet.Start.Types.html#genesisActiveSlotsCoeff"><span class="hs-identifier hs-var">genesisActiveSlotsCoeff</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisOptions
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="annot"><a href="Parsers.Cardano.html#cmdCardano"><span class="hs-identifier hs-type">cmdCardano</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#Mod"><span class="hs-identifier hs-type">Mod</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#CommandFields"><span class="hs-identifier hs-type">CommandFields</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCliOptions"><span class="hs-identifier hs-type">CardanoTestnetCliOptions</span></a></span><span>
+</span><span id="line-182"></span><span id="cmdCardano"><span class="annot"><span class="annottext">cmdCardano :: Mod CommandFields CardanoTestnetCliOptions
+</span><a href="Parsers.Cardano.html#cmdCardano"><span class="hs-identifier hs-var hs-var">cmdCardano</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; FilePath
+-&gt; Parser CardanoTestnetCliOptions
+-&gt; Mod CommandFields CardanoTestnetCliOptions
+forall a. FilePath -&gt; FilePath -&gt; Parser a -&gt; Mod CommandFields a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#command%27"><span class="hs-identifier hs-var">command'</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;cardano&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Start a testnet and keep it running until stopped&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetCliOptions
+</span><a href="Parsers.Cardano.html#optsTestnet"><span class="hs-identifier hs-var">optsTestnet</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Parsers.Cardano.html#cmdCreateEnv"><span class="hs-identifier hs-type">cmdCreateEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#Mod"><span class="hs-identifier hs-type">Mod</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Internal.html#CommandFields"><span class="hs-identifier hs-type">CommandFields</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetCreateEnvOptions"><span class="hs-identifier hs-type">CardanoTestnetCreateEnvOptions</span></a></span><span>
+</span><span id="line-185"></span><span id="cmdCreateEnv"><span class="annot"><span class="annottext">cmdCreateEnv :: Mod CommandFields CardanoTestnetCreateEnvOptions
+</span><a href="Parsers.Cardano.html#cmdCreateEnv"><span class="hs-identifier hs-var hs-var">cmdCreateEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; FilePath
+-&gt; Parser CardanoTestnetCreateEnvOptions
+-&gt; Mod CommandFields CardanoTestnetCreateEnvOptions
+forall a. FilePath -&gt; FilePath -&gt; Parser a -&gt; Mod CommandFields a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#command%27"><span class="hs-identifier hs-var">command'</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;create-env&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Create a sandbox for Cardano testnet&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser CardanoTestnetCreateEnvOptions
+</span><a href="Parsers.Cardano.html#optsCreateTestnet"><span class="hs-identifier hs-var">optsCreateTestnet</span></a></span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="annot"><a href="Parsers.Cardano.html#pNetworkId"><span class="hs-identifier hs-type">pNetworkId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-188"></span><span id="pNetworkId"><span class="annot"><span class="annottext">pNetworkId :: Parser Int
+</span><a href="Parsers.Cardano.html#pNetworkId"><span class="hs-identifier hs-var hs-var">pNetworkId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><span class="annottext">ReadM Int -&gt; Mod OptionFields Int -&gt; Parser Int
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; ReadM Int
+forall a. (Bounded a, Integral a, Show a) =&gt; FilePath -&gt; ReadM a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#bounded"><span class="hs-identifier hs-var">bounded</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;TESTNET_MAGIC&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Mod OptionFields Int -&gt; Parser Int)
+-&gt; Mod OptionFields Int -&gt; Parser Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields Int] -&gt; Mod OptionFields Int
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;testnet-magic&quot;</span></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;INT&quot;</span></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Specify a testnet magic id.&quot;</span></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Mod OptionFields Int
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Testnet.Start.Types.html#defaultTestnetMagic"><span class="hs-identifier hs-var">defaultTestnetMagic</span></a></span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Parsers.Cardano.html#pMaxLovelaceSupply"><span class="hs-identifier hs-type">pMaxLovelaceSupply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-198"></span><span id="pMaxLovelaceSupply"><span class="annot"><span class="annottext">pMaxLovelaceSupply :: Parser Word64
+</span><a href="Parsers.Cardano.html#pMaxLovelaceSupply"><span class="hs-identifier hs-var hs-var">pMaxLovelaceSupply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><span class="annottext">ReadM Word64 -&gt; Mod OptionFields Word64 -&gt; Parser Word64
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">OA.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Word64
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">OA.auto</span></a></span><span>
+</span><span id="line-200"></span><span>      </span><span class="hs-special">(</span><span>   </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Word64
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">OA.long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;max-lovelace-supply&quot;</span></span><span>
+</span><span id="line-201"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Word64
+-&gt; Mod OptionFields Word64 -&gt; Mod OptionFields Word64
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Word64
+forall (f :: * -&gt; *) a. FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">OA.help</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Max lovelace supply that your testnet starts with. Ignored if a node environment is passed.&quot;</span></span><span>
+</span><span id="line-202"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Word64
+-&gt; Mod OptionFields Word64 -&gt; Mod OptionFields Word64
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Word64
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">OA.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;WORD64&quot;</span></span><span>
+</span><span id="line-203"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Word64
+-&gt; Mod OptionFields Word64 -&gt; Mod OptionFields Word64
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Mod OptionFields Word64
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">OA.showDefault</span></a></span><span>
+</span><span id="line-204"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields Word64
+-&gt; Mod OptionFields Word64 -&gt; Mod OptionFields Word64
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; Mod OptionFields Word64
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">OA.value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Word64
+</span><a href="Testnet.Start.Types.html#cardanoMaxSupply"><span class="hs-identifier hs-var">cardanoMaxSupply</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoTestnetOptions
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">def</span></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span></pre></body></html>

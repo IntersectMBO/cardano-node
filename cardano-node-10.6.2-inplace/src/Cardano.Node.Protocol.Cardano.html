@@ -1,0 +1,943 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans  #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Protocol.Cardano</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#mkSomeConsensusProtocolCardano"><span class="hs-identifier">mkSomeConsensusProtocolCardano</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Errors</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationError"><span class="hs-identifier">CardanoProtocolInstantiationError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.html"><span class="hs-identifier">Cardano.Api.Byron</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Update.html"><span class="hs-identifier">Cardano.Chain.Update</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Update</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-api-1.12.1.0-7ce6cafe784c1290e0d69a16fb30030353636c75969db44408e6fecda047992c/share/doc/html/src/Cardano.Ledger.Api.Transition.html"><span class="hs-identifier">Cardano.Ledger.Api.Transition</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier">natVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Alonzo.html"><span class="hs-identifier">Cardano.Node.Protocol.Alonzo</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Alonzo</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html"><span class="hs-identifier">Cardano.Node.Protocol.Byron</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Protocol.Checkpoints.html"><span class="hs-identifier">Cardano.Node.Protocol.Checkpoints</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html"><span class="hs-identifier">Cardano.Node.Protocol.Conway</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Conway</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html"><span class="hs-identifier">Cardano.Node.Protocol.Shelley</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Shelley</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Dijkstra.html"><span class="hs-identifier">Cardano.Node.Protocol.Dijkstra</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Dijkstra</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Protocol.Types.html"><span class="hs-identifier">Cardano.Node.Protocol.Types</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Byron.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Shelley.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Condense.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano.Condense</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano.Node</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.Condense.html"><span class="hs-identifier">Ouroboros.Consensus.HardFork.Combinator.Condense</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Real Cardano protocol</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | Make 'SomeConsensusProtocol' using the Cardano instance.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- The Cardano protocol instance is currently the sequential composition of</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- the Byron and Shelley protocols, and will likely be extended in future</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- with further sequentially composed protocol revisions.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- The use of 'SomeConsensusProtocol' lets us handle multiple protocols in a</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- generic way.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- This also serves a purpose as a sanity check that we have all the necessary</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- type class instances available.</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#mkSomeConsensusProtocolCardano"><span class="hs-identifier hs-type">mkSomeConsensusProtocolCardano</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeByronProtocolConfiguration"><span class="hs-identifier hs-type">NodeByronProtocolConfiguration</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeShelleyProtocolConfiguration"><span class="hs-identifier hs-type">NodeShelleyProtocolConfiguration</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeAlonzoProtocolConfiguration"><span class="hs-identifier hs-type">NodeAlonzoProtocolConfiguration</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeConwayProtocolConfiguration"><span class="hs-identifier hs-type">NodeConwayProtocolConfiguration</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeDijkstraProtocolConfiguration"><span class="hs-identifier hs-type">NodeDijkstraProtocolConfiguration</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeHardForkProtocolConfiguration"><span class="hs-identifier hs-type">NodeHardForkProtocolConfiguration</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeCheckpointsConfiguration"><span class="hs-identifier hs-type">NodeCheckpointsConfiguration</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#ProtocolFilepaths"><span class="hs-identifier hs-type">ProtocolFilepaths</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Types.html#SomeConsensusProtocol"><span class="hs-identifier hs-type">SomeConsensusProtocol</span></a></span><span>
+</span><span id="line-69"></span><span id="mkSomeConsensusProtocolCardano"><span class="annot"><span class="annottext">mkSomeConsensusProtocolCardano :: NodeByronProtocolConfiguration
+-&gt; NodeShelleyProtocolConfiguration
+-&gt; NodeAlonzoProtocolConfiguration
+-&gt; NodeConwayProtocolConfiguration
+-&gt; Maybe NodeDijkstraProtocolConfiguration
+-&gt; NodeHardForkProtocolConfiguration
+-&gt; NodeCheckpointsConfiguration
+-&gt; Maybe ProtocolFilepaths
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO SomeConsensusProtocol
+</span><a href="Cardano.Node.Protocol.Cardano.html#mkSomeConsensusProtocolCardano"><span class="hs-identifier hs-var hs-var">mkSomeConsensusProtocolCardano</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#NodeByronProtocolConfiguration"><span class="hs-identifier hs-type">NodeByronProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-70"></span><span>                             </span><span id="local-6989586621681726860"><span class="annot"><span class="annottext">GenesisFile
+npcByronGenesisFile :: GenesisFile
+npcByronGenesisFile :: NodeByronProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621681726860"><span class="hs-identifier hs-var hs-var">npcByronGenesisFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>                             </span><span id="local-6989586621681726862"><span class="annot"><span class="annottext">Maybe GenesisHash
+npcByronGenesisFileHash :: Maybe GenesisHash
+npcByronGenesisFileHash :: NodeByronProtocolConfiguration -&gt; Maybe GenesisHash
+</span><a href="#local-6989586621681726862"><span class="hs-identifier hs-var hs-var">npcByronGenesisFileHash</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>                             </span><span id="local-6989586621681726864"><span class="annot"><span class="annottext">RequiresNetworkMagic
+npcByronReqNetworkMagic :: RequiresNetworkMagic
+npcByronReqNetworkMagic :: NodeByronProtocolConfiguration -&gt; RequiresNetworkMagic
+</span><a href="#local-6989586621681726864"><span class="hs-identifier hs-var hs-var">npcByronReqNetworkMagic</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>                             </span><span id="local-6989586621681726866"><span class="annot"><span class="annottext">Maybe Double
+npcByronPbftSignatureThresh :: Maybe Double
+npcByronPbftSignatureThresh :: NodeByronProtocolConfiguration -&gt; Maybe Double
+</span><a href="#local-6989586621681726866"><span class="hs-identifier hs-var hs-var">npcByronPbftSignatureThresh</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>                             </span><span id="local-6989586621681726868"><span class="annot"><span class="annottext">Word16
+npcByronSupportedProtocolVersionMajor :: Word16
+npcByronSupportedProtocolVersionMajor :: NodeByronProtocolConfiguration -&gt; Word16
+</span><a href="#local-6989586621681726868"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionMajor</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>                             </span><span id="local-6989586621681726870"><span class="annot"><span class="annottext">Word16
+npcByronSupportedProtocolVersionMinor :: Word16
+npcByronSupportedProtocolVersionMinor :: NodeByronProtocolConfiguration -&gt; Word16
+</span><a href="#local-6989586621681726870"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionMinor</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>                             </span><span id="local-6989586621681726872"><span class="annot"><span class="annottext">Word8
+npcByronSupportedProtocolVersionAlt :: Word8
+npcByronSupportedProtocolVersionAlt :: NodeByronProtocolConfiguration -&gt; Word8
+</span><a href="#local-6989586621681726872"><span class="hs-identifier hs-var hs-var">npcByronSupportedProtocolVersionAlt</span></a></span></span><span>
+</span><span id="line-77"></span><span>                           </span><span class="hs-special">}</span><span>
+</span><span id="line-78"></span><span>                           </span><span class="annot"><a href="Cardano.Node.Types.html#NodeShelleyProtocolConfiguration"><span class="hs-identifier hs-type">NodeShelleyProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-79"></span><span>                             </span><span id="local-6989586621681726875"><span class="annot"><span class="annottext">GenesisFile
+npcShelleyGenesisFile :: GenesisFile
+npcShelleyGenesisFile :: NodeShelleyProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621681726875"><span class="hs-identifier hs-var hs-var">npcShelleyGenesisFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>                             </span><span id="local-6989586621681726877"><span class="annot"><span class="annottext">Maybe GenesisHash
+npcShelleyGenesisFileHash :: Maybe GenesisHash
+npcShelleyGenesisFileHash :: NodeShelleyProtocolConfiguration -&gt; Maybe GenesisHash
+</span><a href="#local-6989586621681726877"><span class="hs-identifier hs-var hs-var">npcShelleyGenesisFileHash</span></a></span></span><span>
+</span><span id="line-81"></span><span>                           </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span><span>                           </span><span class="annot"><a href="Cardano.Node.Types.html#NodeAlonzoProtocolConfiguration"><span class="hs-identifier hs-type">NodeAlonzoProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-83"></span><span>                             </span><span id="local-6989586621681726880"><span class="annot"><span class="annottext">GenesisFile
+npcAlonzoGenesisFile :: GenesisFile
+npcAlonzoGenesisFile :: NodeAlonzoProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621681726880"><span class="hs-identifier hs-var hs-var">npcAlonzoGenesisFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>                             </span><span id="local-6989586621681726882"><span class="annot"><span class="annottext">Maybe GenesisHash
+npcAlonzoGenesisFileHash :: Maybe GenesisHash
+npcAlonzoGenesisFileHash :: NodeAlonzoProtocolConfiguration -&gt; Maybe GenesisHash
+</span><a href="#local-6989586621681726882"><span class="hs-identifier hs-var hs-var">npcAlonzoGenesisFileHash</span></a></span></span><span>
+</span><span id="line-85"></span><span>                           </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>                           </span><span class="annot"><a href="Cardano.Node.Types.html#NodeConwayProtocolConfiguration"><span class="hs-identifier hs-type">NodeConwayProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-87"></span><span>                             </span><span id="local-6989586621681726885"><span class="annot"><span class="annottext">GenesisFile
+npcConwayGenesisFile :: GenesisFile
+npcConwayGenesisFile :: NodeConwayProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621681726885"><span class="hs-identifier hs-var hs-var">npcConwayGenesisFile</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>                             </span><span id="local-6989586621681726887"><span class="annot"><span class="annottext">Maybe GenesisHash
+npcConwayGenesisFileHash :: Maybe GenesisHash
+npcConwayGenesisFileHash :: NodeConwayProtocolConfiguration -&gt; Maybe GenesisHash
+</span><a href="#local-6989586621681726887"><span class="hs-identifier hs-var hs-var">npcConwayGenesisFileHash</span></a></span></span><span>
+</span><span id="line-89"></span><span>                           </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>                           </span><span id="local-6989586621681726889"><span class="annot"><span class="annottext">Maybe NodeDijkstraProtocolConfiguration
+</span><a href="#local-6989586621681726889"><span class="hs-identifier hs-var">ndpc</span></a></span></span><span>
+</span><span id="line-91"></span><span>                           </span><span class="annot"><a href="Cardano.Node.Types.html#NodeHardForkProtocolConfiguration"><span class="hs-identifier hs-type">NodeHardForkProtocolConfiguration</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-92"></span><span>                            </span><span class="hs-comment">-- During testing of the Alonzo era, we conditionally declared that we</span><span>
+</span><span id="line-93"></span><span>                            </span><span class="hs-comment">-- knew about the Alonzo era. We do so only when a config option for</span><span>
+</span><span id="line-94"></span><span>                            </span><span class="hs-comment">-- testing development/unstable eras is used. This lets us include</span><span>
+</span><span id="line-95"></span><span>                            </span><span class="hs-comment">-- not-yet-ready eras in released node versions without mainnet nodes</span><span>
+</span><span id="line-96"></span><span>                            </span><span class="hs-comment">-- prematurely advertising that they could hard fork into the new era.</span><span>
+</span><span id="line-97"></span><span>                             </span><span id="local-6989586621681726891"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
+npcTestShelleyHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726891"><span class="hs-identifier hs-var hs-var">npcTestShelleyHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>                             </span><span id="local-6989586621681726893"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestAllegraHardForkAtEpoch :: Maybe EpochNo
+npcTestAllegraHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726893"><span class="hs-identifier hs-var hs-var">npcTestAllegraHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>                             </span><span id="local-6989586621681726895"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestMaryHardForkAtEpoch :: Maybe EpochNo
+npcTestMaryHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726895"><span class="hs-identifier hs-var hs-var">npcTestMaryHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>                             </span><span id="local-6989586621681726897"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestAlonzoHardForkAtEpoch :: Maybe EpochNo
+npcTestAlonzoHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726897"><span class="hs-identifier hs-var hs-var">npcTestAlonzoHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>                             </span><span id="local-6989586621681726899"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestBabbageHardForkAtEpoch :: Maybe EpochNo
+npcTestBabbageHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726899"><span class="hs-identifier hs-var hs-var">npcTestBabbageHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-102"></span><span>                             </span><span id="local-6989586621681726901"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestConwayHardForkAtEpoch :: Maybe EpochNo
+npcTestConwayHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726901"><span class="hs-identifier hs-var hs-var">npcTestConwayHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>                             </span><span id="local-6989586621681726903"><span class="annot"><span class="annottext">Maybe EpochNo
+npcTestDijkstraHardForkAtEpoch :: Maybe EpochNo
+npcTestDijkstraHardForkAtEpoch :: NodeHardForkProtocolConfiguration -&gt; Maybe EpochNo
+</span><a href="#local-6989586621681726903"><span class="hs-identifier hs-var hs-var">npcTestDijkstraHardForkAtEpoch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>                             </span><span id="local-6989586621681726905"><span class="annot"><span class="annottext">Bool
+npcExperimentalHardForksEnabled :: Bool
+npcExperimentalHardForksEnabled :: NodeHardForkProtocolConfiguration -&gt; Bool
+</span><a href="#local-6989586621681726905"><span class="hs-identifier hs-var hs-var">npcExperimentalHardForksEnabled</span></a></span></span><span>
+</span><span id="line-105"></span><span>                           </span><span class="hs-special">}</span><span>
+</span><span id="line-106"></span><span>                           </span><span id="local-6989586621681726907"><span class="annot"><span class="annottext">NodeCheckpointsConfiguration
+</span><a href="#local-6989586621681726907"><span class="hs-identifier hs-var">checkpointsConfiguration</span></a></span></span><span>
+</span><span id="line-107"></span><span>                           </span><span id="local-6989586621681726908"><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="#local-6989586621681726908"><span class="hs-identifier hs-var">files</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621681726909"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681726909"><span class="hs-identifier hs-var">byronGenesis</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="annottext">(ByronProtocolInstantiationError
+ -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+-&gt; ExceptT CardanoProtocolInstantiationError IO Config
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorByron"><span class="hs-identifier hs-var">CardanoProtocolInstantiationErrorByron</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT ByronProtocolInstantiationError IO Config
+ -&gt; ExceptT CardanoProtocolInstantiationError IO Config)
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+-&gt; ExceptT CardanoProtocolInstantiationError IO Config
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; RequiresNetworkMagic
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+</span><a href="Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier hs-var">Byron.readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726860"><span class="hs-identifier hs-var">npcByronGenesisFile</span></a></span><span>
+</span><span id="line-111"></span><span>                          </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726862"><span class="hs-identifier hs-var">npcByronGenesisFileHash</span></a></span><span>
+</span><span id="line-112"></span><span>                          </span><span class="annot"><span class="annottext">RequiresNetworkMagic
+</span><a href="#local-6989586621681726864"><span class="hs-identifier hs-var">npcByronReqNetworkMagic</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>    </span><span id="local-6989586621681726913"><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+</span><a href="#local-6989586621681726913"><span class="hs-identifier hs-var">byronLeaderCredentials</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">(ByronProtocolInstantiationError
+ -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+-&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorByron"><span class="hs-identifier hs-var">CardanoProtocolInstantiationErrorByron</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError
+      IO
+      (Maybe ByronLeaderCredentials))
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><span class="annottext">Config
+-&gt; Maybe ProtocolFilepaths
+-&gt; ExceptT
+     ByronProtocolInstantiationError IO (Maybe ByronLeaderCredentials)
+</span><a href="Cardano.Node.Protocol.Byron.html#readLeaderCredentials"><span class="hs-identifier hs-var">Byron.readLeaderCredentials</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681726909"><span class="hs-identifier hs-var">byronGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="#local-6989586621681726908"><span class="hs-identifier hs-var">files</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621681726915"><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621681726915"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681726916"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681726916"><span class="hs-identifier hs-var">shelleyGenesisHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">(GenesisReadError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT GenesisReadError IO (ShelleyGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (ShelleyGenesis, GenesisHash)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationShelleyGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationShelleyGenesisReadError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT GenesisReadError IO (ShelleyGenesis, GenesisHash)
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError IO (ShelleyGenesis, GenesisHash))
+-&gt; ExceptT GenesisReadError IO (ShelleyGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (ShelleyGenesis, GenesisHash)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ShelleyGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Shelley.html#readGenesis"><span class="hs-identifier hs-var">Shelley.readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726875"><span class="hs-identifier hs-var">npcShelleyGenesisFile</span></a></span><span>
+</span><span id="line-121"></span><span>                            </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726877"><span class="hs-identifier hs-var">npcShelleyGenesisFileHash</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621681726919"><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621681726919"><span class="hs-identifier hs-var">alonzoGenesis</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681726920"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681726920"><span class="hs-identifier hs-var">_alonzoGenesisHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">(GenesisReadError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT GenesisReadError IO (AlonzoGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (AlonzoGenesis, GenesisHash)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationAlonzoGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationAlonzoGenesisReadError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT GenesisReadError IO (AlonzoGenesis, GenesisHash)
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError IO (AlonzoGenesis, GenesisHash))
+-&gt; ExceptT GenesisReadError IO (AlonzoGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (AlonzoGenesis, GenesisHash)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (AlonzoGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Alonzo.html#readGenesis"><span class="hs-identifier hs-var">Alonzo.readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726880"><span class="hs-identifier hs-var">npcAlonzoGenesisFile</span></a></span><span>
+</span><span id="line-126"></span><span>                               </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726882"><span class="hs-identifier hs-var">npcAlonzoGenesisFileHash</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621681726923"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621681726923"><span class="hs-identifier hs-var">conwayGenesis</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681726924"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681726924"><span class="hs-identifier hs-var">_conwayGenesisHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">(GenesisReadError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (ConwayGenesis, GenesisHash)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationConwayGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationConwayGenesisReadError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError IO (ConwayGenesis, GenesisHash))
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (ConwayGenesis, GenesisHash)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Conway.html#readGenesis"><span class="hs-identifier hs-var">Conway.readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726885"><span class="hs-identifier hs-var">npcConwayGenesisFile</span></a></span><span>
+</span><span id="line-131"></span><span>                                </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726887"><span class="hs-identifier hs-var">npcConwayGenesisFileHash</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621681726927"><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621681726927"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe NodeDijkstraProtocolConfiguration
+</span><a href="#local-6989586621681726889"><span class="hs-identifier hs-var">ndpc</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><span class="annottext">Maybe NodeDijkstraProtocolConfiguration
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+-&gt; ExceptT CardanoProtocolInstantiationError IO DijkstraGenesis
+forall a. a -&gt; ExceptT CardanoProtocolInstantiationError IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="Cardano.Node.Protocol.Dijkstra.html#emptyDijkstraGenesis"><span class="hs-identifier hs-var">Dijkstra.emptyDijkstraGenesis</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Types.html#NodeDijkstraProtocolConfiguration"><span class="hs-identifier hs-type">NodeDijkstraProtocolConfiguration</span></a></span><span> </span><span id="local-6989586621681726930"><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726930"><span class="hs-identifier hs-var">npcDijkstraGenesisFile</span></a></span></span><span> </span><span id="local-6989586621681726931"><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726931"><span class="hs-identifier hs-var">npcDijkstraGenesisFileHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-137"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621681726932"><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621681726932"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681726933"><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681726933"><span class="hs-identifier hs-var">_dijkstraGenesisHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(GenesisReadError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT GenesisReadError IO (DijkstraGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (DijkstraGenesis, GenesisHash)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationDijkstraGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationDijkstraGenesisReadError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT GenesisReadError IO (DijkstraGenesis, GenesisHash)
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError
+      IO
+      (DijkstraGenesis, GenesisHash))
+-&gt; ExceptT GenesisReadError IO (DijkstraGenesis, GenesisHash)
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO (DijkstraGenesis, GenesisHash)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-138"></span><span>           </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (DijkstraGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Dijkstra.html#readGenesis"><span class="hs-identifier hs-var">Dijkstra.readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681726930"><span class="hs-identifier hs-var">npcDijkstraGenesisFile</span></a></span><span>
+</span><span id="line-139"></span><span>                                 </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681726931"><span class="hs-identifier hs-var">npcDijkstraGenesisFileHash</span></a></span><span>
+</span><span id="line-140"></span><span>          </span><span class="annot"><span class="annottext">DijkstraGenesis
+-&gt; ExceptT CardanoProtocolInstantiationError IO DijkstraGenesis
+forall a. a -&gt; ExceptT CardanoProtocolInstantiationError IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621681726932"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span>    </span><span id="local-6989586621681726936"><span class="annot"><span class="annottext">[ShelleyLeaderCredentials StandardCrypto]
+</span><a href="#local-6989586621681726936"><span class="hs-identifier hs-var">shelleyLeaderCredentials</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">(PraosLeaderCredentialsError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT
+     PraosLeaderCredentialsError
+     IO
+     [ShelleyLeaderCredentials StandardCrypto]
+-&gt; ExceptT
+     CardanoProtocolInstantiationError
+     IO
+     [ShelleyLeaderCredentials StandardCrypto]
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">PraosLeaderCredentialsError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationPraosLeaderCredentialsError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationPraosLeaderCredentialsError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   PraosLeaderCredentialsError
+   IO
+   [ShelleyLeaderCredentials StandardCrypto]
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError
+      IO
+      [ShelleyLeaderCredentials StandardCrypto])
+-&gt; ExceptT
+     PraosLeaderCredentialsError
+     IO
+     [ShelleyLeaderCredentials StandardCrypto]
+-&gt; ExceptT
+     CardanoProtocolInstantiationError
+     IO
+     [ShelleyLeaderCredentials StandardCrypto]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+-&gt; ExceptT
+     PraosLeaderCredentialsError
+     IO
+     [ShelleyLeaderCredentials StandardCrypto]
+</span><a href="Cardano.Node.Protocol.Shelley.html#readLeaderCredentials"><span class="hs-identifier hs-var">Shelley.readLeaderCredentials</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProtocolFilepaths
+</span><a href="#local-6989586621681726908"><span class="hs-identifier hs-var">files</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621681726939"><span class="annot"><span class="annottext">CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto))
+</span><a href="#local-6989586621681726939"><span class="hs-identifier hs-var">checkpointsMap</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">(CheckpointsReadError -&gt; CardanoProtocolInstantiationError)
+-&gt; ExceptT
+     CheckpointsReadError
+     IO
+     (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+-&gt; ExceptT
+     CardanoProtocolInstantiationError
+     IO
+     (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">CheckpointsReadError -&gt; CardanoProtocolInstantiationError
+</span><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationCheckpointsReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationCheckpointsReadError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   CheckpointsReadError
+   IO
+   (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError
+      IO
+      (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto))))
+-&gt; ExceptT
+     CheckpointsReadError
+     IO
+     (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+-&gt; ExceptT
+     CardanoProtocolInstantiationError
+     IO
+     (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">NodeCheckpointsConfiguration
+-&gt; ExceptT
+     CheckpointsReadError
+     IO
+     (CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto)))
+</span><a href="Cardano.Node.Protocol.Checkpoints.html#readCheckpointsMap"><span class="hs-identifier hs-var">readCheckpointsMap</span></a></span><span> </span><span class="annot"><span class="annottext">NodeCheckpointsConfiguration
+</span><a href="#local-6989586621681726907"><span class="hs-identifier hs-var">checkpointsConfiguration</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><span class="annottext">SomeConsensusProtocol
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO SomeConsensusProtocol
+forall a. a -&gt; ExceptT CardanoProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeConsensusProtocol
+ -&gt; ExceptT
+      CardanoProtocolInstantiationError IO SomeConsensusProtocol)
+-&gt; SomeConsensusProtocol
+-&gt; ExceptT
+     CardanoProtocolInstantiationError IO SomeConsensusProtocol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">BlockType (HardForkBlock (CardanoEras StandardCrypto))
+-&gt; ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto))
+-&gt; SomeConsensusProtocol
+forall blk.
+(Protocol IO blk, HasKESMetricsData blk, HasKESInfo blk,
+ TraceConstraints blk) =&gt;
+BlockType blk -&gt; ProtocolInfoArgs blk -&gt; SomeConsensusProtocol
+</span><a href="Cardano.Node.Protocol.Types.html#SomeConsensusProtocol"><span class="hs-identifier hs-var">SomeConsensusProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">BlockType (HardForkBlock (CardanoEras StandardCrypto))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Consensus.Internal.Protocol.html#CardanoBlockType"><span class="hs-identifier hs-var">CardanoBlockType</span></a></span><span> </span><span class="annot"><span class="annottext">(ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto))
+ -&gt; SomeConsensusProtocol)
+-&gt; ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto))
+-&gt; SomeConsensusProtocol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoProtocolParams StandardCrypto
+-&gt; ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Consensus.Internal.Protocol.html#ProtocolInfoArgsCardano"><span class="hs-identifier hs-var">ProtocolInfoArgsCardano</span></a></span><span> </span><span class="annot"><span class="annottext">(CardanoProtocolParams StandardCrypto
+ -&gt; ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto)))
+-&gt; CardanoProtocolParams StandardCrypto
+-&gt; ProtocolInfoArgs (HardForkBlock (CardanoEras StandardCrypto))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoProtocolParams"><span class="hs-identifier hs-type">Consensus.CardanoProtocolParams</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><span class="annottext">byronProtocolParams :: ProtocolParamsByron
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#byronProtocolParams"><span class="hs-identifier hs-var">Consensus.byronProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#ProtocolParamsByron"><span class="hs-identifier hs-type">Consensus.ProtocolParamsByron</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><span class="annottext">$sel:byronGenesis:ProtocolParamsByron :: Config
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronGenesis%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621681726909"><span class="hs-identifier hs-var">byronGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span>          </span><span class="annot"><span class="annottext">$sel:byronPbftSignatureThreshold:ProtocolParamsByron :: Maybe PBftSignatureThreshold
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronPbftSignatureThreshold%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronPbftSignatureThreshold</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-156"></span><span>            </span><span class="annot"><span class="annottext">Double -&gt; PBftSignatureThreshold
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Protocol.PBFT.html#PBftSignatureThreshold"><span class="hs-identifier hs-var">PBftSignatureThreshold</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; PBftSignatureThreshold)
+-&gt; Maybe Double -&gt; Maybe PBftSignatureThreshold
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Double
+</span><a href="#local-6989586621681726866"><span class="hs-identifier hs-var">npcByronPbftSignatureThresh</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>          </span><span class="hs-comment">-- This is /not/ the Byron protocol version. It is the protocol</span><span>
+</span><span id="line-159"></span><span>          </span><span class="hs-comment">-- version that this node will use in blocks it creates. It is used</span><span>
+</span><span id="line-160"></span><span>          </span><span class="hs-comment">-- in the Byron update mechanism to signal that this block-producing</span><span>
+</span><span id="line-161"></span><span>          </span><span class="hs-comment">-- node is ready to move to the new protocol. For example, when the</span><span>
+</span><span id="line-162"></span><span>          </span><span class="hs-comment">-- protocol version (according to the ledger state) is 0, this setting</span><span>
+</span><span id="line-163"></span><span>          </span><span class="hs-comment">-- should be 1 when we are ready to move. Similarly when the current</span><span>
+</span><span id="line-164"></span><span>          </span><span class="hs-comment">-- protocol version is 1, this should be 2 to indicate we are ready</span><span>
+</span><span id="line-165"></span><span>          </span><span class="hs-comment">-- to move into the Shelley era.</span><span>
+</span><span id="line-166"></span><span>          </span><span class="annot"><span class="annottext">$sel:byronProtocolVersion:ProtocolParamsByron :: ProtocolVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronProtocolVersion%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>            </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word8 -&gt; ProtocolVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-var">Update.ProtocolVersion</span></a></span><span>
+</span><span id="line-168"></span><span>              </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681726868"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionMajor</span></a></span><span>
+</span><span id="line-169"></span><span>              </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681726870"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionMinor</span></a></span><span>
+</span><span id="line-170"></span><span>              </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621681726872"><span class="hs-identifier hs-var">npcByronSupportedProtocolVersionAlt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-171"></span><span>          </span><span class="annot"><span class="annottext">$sel:byronSoftwareVersion:ProtocolParamsByron :: SoftwareVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronSoftwareVersion%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronSoftwareVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SoftwareVersion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Proposal.html#softwareVersion"><span class="hs-identifier hs-var">Byron.softwareVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-172"></span><span>          </span><span class="annot"><span class="annottext">$sel:byronLeaderCredentials:ProtocolParamsByron :: Maybe ByronLeaderCredentials
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Node.html#%24sel%3AbyronLeaderCredentials%3AProtocolParamsByron"><span class="hs-identifier hs-var">byronLeaderCredentials</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>            </span><span class="annot"><span class="annottext">Maybe ByronLeaderCredentials
+</span><a href="#local-6989586621681726913"><span class="hs-identifier hs-var">byronLeaderCredentials</span></a></span><span>
+</span><span id="line-174"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-175"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">shelleyBasedProtocolParams :: ProtocolParamsShelleyBased StandardCrypto
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#shelleyBasedProtocolParams"><span class="hs-identifier hs-var">Consensus.shelleyBasedProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-176"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Node.Common.html#ProtocolParamsShelleyBased"><span class="hs-identifier hs-type">Consensus.ProtocolParamsShelleyBased</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-177"></span><span>          </span><span class="annot"><span class="annottext">shelleyBasedInitialNonce :: Nonce
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Node.Common.html#shelleyBasedInitialNonce"><span class="hs-identifier hs-var">shelleyBasedInitialNonce</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisHash -&gt; Nonce
+</span><a href="Cardano.Node.Protocol.Shelley.html#genesisHashToPraosNonce"><span class="hs-identifier hs-var">Shelley.genesisHashToPraosNonce</span></a></span><span>
+</span><span id="line-178"></span><span>                                            </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681726916"><span class="hs-identifier hs-var">shelleyGenesisHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-179"></span><span>          </span><span class="annot"><span class="annottext">shelleyBasedLeaderCredentials :: [ShelleyLeaderCredentials StandardCrypto]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Node.Common.html#shelleyBasedLeaderCredentials"><span class="hs-identifier hs-var">shelleyBasedLeaderCredentials</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ShelleyLeaderCredentials StandardCrypto]
+</span><a href="#local-6989586621681726936"><span class="hs-identifier hs-var">shelleyLeaderCredentials</span></a></span><span>
+</span><span id="line-180"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoProtocolVersion :: ProtVer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#cardanoProtocolVersion"><span class="hs-identifier hs-var">Consensus.cardanoProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621681726905"><span class="hs-identifier hs-var">npcExperimentalHardForksEnabled</span></a></span><span>
+</span><span id="line-182"></span><span>                                           </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Natural -&gt; ProtVer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">11</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-183"></span><span>                                           </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Natural -&gt; ProtVer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">7</span></span><span>
+</span><span id="line-184"></span><span>        </span><span class="hs-comment">-- The remaining arguments specify the parameters needed to transition between two eras</span><span>
+</span><span id="line-185"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoLedgerTransitionConfig :: TransitionConfig DijkstraEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#cardanoLedgerTransitionConfig"><span class="hs-identifier hs-var">Consensus.cardanoLedgerTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>          </span><span class="annot"><span class="annottext">ShelleyGenesis
+-&gt; AlonzoGenesis
+-&gt; ConwayGenesis
+-&gt; DijkstraGenesis
+-&gt; TransitionConfig DijkstraEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-api-1.12.1.0-7ce6cafe784c1290e0d69a16fb30030353636c75969db44408e6fecda047992c/share/doc/html/src/Cardano.Ledger.Api.Transition.html#mkLatestTransitionConfig"><span class="hs-identifier hs-var">Ledger.mkLatestTransitionConfig</span></a></span><span>
+</span><span id="line-187"></span><span>            </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621681726915"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span><span>
+</span><span id="line-188"></span><span>            </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621681726919"><span class="hs-identifier hs-var">alonzoGenesis</span></a></span><span>
+</span><span id="line-189"></span><span>            </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621681726923"><span class="hs-identifier hs-var">conwayGenesis</span></a></span><span>
+</span><span id="line-190"></span><span>            </span><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621681726927"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span><span>
+</span><span id="line-191"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoHardForkTriggers :: CardanoHardForkTriggers
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#cardanoHardForkTriggers"><span class="hs-identifier hs-var">Consensus.cardanoHardForkTriggers</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-192"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoHardForkTriggers%27"><span class="hs-identifier hs-type">Consensus.CardanoHardForkTriggers'</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-193"></span><span>          </span><span class="annot"><span class="annottext">triggerHardForkShelley :: CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkShelley"><span class="hs-identifier hs-var">triggerHardForkShelley</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>            </span><span class="hs-comment">-- What will trigger the Byron -&gt; Shelley hard fork?</span><span>
+</span><span id="line-195"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726891"><span class="hs-identifier hs-var">npcTestShelleyHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) ShelleyEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) ShelleyEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span>               </span><span class="hs-comment">-- This specifies the major protocol version number update that will</span><span>
+</span><span id="line-198"></span><span>               </span><span class="hs-comment">-- trigger us moving to the Shelley protocol.</span><span>
+</span><span id="line-199"></span><span>               </span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span>               </span><span class="hs-comment">-- Version 0 is Byron with Ouroboros classic</span><span>
+</span><span id="line-201"></span><span>               </span><span class="hs-comment">-- Version 1 is Byron with Ouroboros Permissive BFT</span><span>
+</span><span id="line-202"></span><span>               </span><span class="hs-comment">-- Version 2 is Shelley</span><span>
+</span><span id="line-203"></span><span>               </span><span class="hs-comment">-- Version 3 is Allegra</span><span>
+</span><span id="line-204"></span><span>               </span><span class="hs-comment">-- Version 4 is Mary</span><span>
+</span><span id="line-205"></span><span>               </span><span class="hs-comment">-- Version 5 is Alonzo</span><span>
+</span><span id="line-206"></span><span>               </span><span class="hs-comment">-- Version 6 is Alonzo (intra era hardfork)</span><span>
+</span><span id="line-207"></span><span>               </span><span class="hs-comment">-- Version 7 is Babbage</span><span>
+</span><span id="line-208"></span><span>               </span><span class="hs-comment">-- Version 8 is Babbage (intra era hardfork)</span><span>
+</span><span id="line-209"></span><span>               </span><span class="hs-comment">-- Version 9 is Conway (bootstrap era)</span><span>
+</span><span id="line-210"></span><span>               </span><span class="hs-comment">-- Version 10 is Conway + 1</span><span>
+</span><span id="line-211"></span><span>               </span><span class="hs-comment">--</span><span>
+</span><span id="line-212"></span><span>               </span><span class="hs-comment">-- But we also provide an override to allow for simpler test setups</span><span>
+</span><span id="line-213"></span><span>               </span><span class="hs-comment">-- such as triggering at the 0 -&gt; 1 transition .</span><span>
+</span><span id="line-214"></span><span>               </span><span class="hs-comment">--</span><span>
+</span><span id="line-215"></span><span>               </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-216"></span><span>
+</span><span id="line-217"></span><span>               </span><span class="hs-comment">-- Alternatively, for testing we can transition at a specific epoch.</span><span>
+</span><span id="line-218"></span><span>               </span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span>               </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) ShelleyEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-220"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkAllegra :: CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkAllegra"><span class="hs-identifier hs-var">triggerHardForkAllegra</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-221"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726893"><span class="hs-identifier hs-var">npcTestAllegraHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) AllegraEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-222"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) AllegraEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-223"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-224"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AllegraEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-225"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkMary :: CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkMary"><span class="hs-identifier hs-var">triggerHardForkMary</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-226"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726895"><span class="hs-identifier hs-var">npcTestMaryHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) MaryEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-227"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) MaryEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-228"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-229"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) MaryEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-230"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkAlonzo :: CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkAlonzo"><span class="hs-identifier hs-var">triggerHardForkAlonzo</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-231"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726897"><span class="hs-identifier hs-var">npcTestAlonzoHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) AlonzoEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-232"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (TPraos StandardCrypto) AlonzoEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-233"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-234"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (TPraos StandardCrypto) AlonzoEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-235"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkBabbage :: CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkBabbage"><span class="hs-identifier hs-var">triggerHardForkBabbage</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-236"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726899"><span class="hs-identifier hs-var">npcTestBabbageHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) BabbageEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-237"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) BabbageEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-238"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-239"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) BabbageEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-240"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkConway :: CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkConway"><span class="hs-identifier hs-var">triggerHardForkConway</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-241"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726901"><span class="hs-identifier hs-var">npcTestConwayHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) ConwayEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-242"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) ConwayEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-243"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-244"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) ConwayEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-245"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">triggerHardForkDijkstra :: CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#triggerHardForkDijkstra"><span class="hs-identifier hs-var">triggerHardForkDijkstra</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-246"></span><span>            </span><span class="annot"><span class="annottext">Maybe EpochNo
+</span><a href="#local-6989586621681726903"><span class="hs-identifier hs-var">npcTestDijkstraHardForkAtEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe EpochNo
+-&gt; (Maybe EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) DijkstraEra))
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-247"></span><span>              </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+-&gt; (EpochNo
+    -&gt; CardanoHardForkTrigger
+         (ShelleyBlock (Praos StandardCrypto) DijkstraEra))
+-&gt; Maybe EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span>
+</span><span id="line-248"></span><span>                </span><span class="annot"><span class="annottext">CardanoHardForkTrigger
+  (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+forall blk. CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtDefaultVersion"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtDefaultVersion</span></a></span><span>
+</span><span id="line-249"></span><span>                </span><span class="annot"><span class="annottext">EpochNo
+-&gt; CardanoHardForkTrigger
+     (ShelleyBlock (Praos StandardCrypto) DijkstraEra)
+forall blk. EpochNo -&gt; CardanoHardForkTrigger blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#CardanoTriggerHardForkAtEpoch"><span class="hs-identifier hs-var">Consensus.CardanoTriggerHardForkAtEpoch</span></a></span><span>
+</span><span id="line-250"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-251"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoCheckpoints :: CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html#cardanoCheckpoints"><span class="hs-identifier hs-var">Consensus.cardanoCheckpoints</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CheckpointsMap (HardForkBlock (CardanoEras StandardCrypto))
+</span><a href="#local-6989586621681726939"><span class="hs-identifier hs-var">checkpointsMap</span></a></span><span>
+</span><span id="line-252"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span>        </span><span class="hs-comment">----------------------------------------------------------------------</span><span>
+</span><span id="line-255"></span><span>        </span><span class="hs-comment">-- WARNING When adding new entries above, be aware that if there is an</span><span>
+</span><span id="line-256"></span><span>        </span><span class="hs-comment">-- intra-era fork, then the numbering is not consecutive.</span><span>
+</span><span id="line-257"></span><span>        </span><span class="hs-comment">----------------------------------------------------------------------</span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- Errors</span><span>
+</span><span id="line-261"></span><span class="hs-comment">--</span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="hs-keyword">data</span><span> </span><span id="CardanoProtocolInstantiationError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-264"></span><span>       </span><span id="CardanoProtocolInstantiationErrorByron"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorByron"><span class="hs-identifier hs-var">CardanoProtocolInstantiationErrorByron</span></a></span></span><span>
+</span><span id="line-265"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Byron.html#ByronProtocolInstantiationError"><span class="hs-identifier hs-type">Byron.ByronProtocolInstantiationError</span></a></span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationShelleyGenesisReadError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationShelleyGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationShelleyGenesisReadError</span></a></span></span><span>
+</span><span id="line-268"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">Shelley.GenesisReadError</span></a></span><span>
+</span><span id="line-269"></span><span>
+</span><span id="line-270"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationAlonzoGenesisReadError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationAlonzoGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationAlonzoGenesisReadError</span></a></span></span><span>
+</span><span id="line-271"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">Shelley.GenesisReadError</span></a></span><span>
+</span><span id="line-272"></span><span>
+</span><span id="line-273"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationConwayGenesisReadError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationConwayGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationConwayGenesisReadError</span></a></span></span><span>
+</span><span id="line-274"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">Shelley.GenesisReadError</span></a></span><span>
+</span><span id="line-275"></span><span>
+</span><span id="line-276"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationDijkstraGenesisReadError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationDijkstraGenesisReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationDijkstraGenesisReadError</span></a></span></span><span>
+</span><span id="line-277"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">Shelley.GenesisReadError</span></a></span><span>
+</span><span id="line-278"></span><span>
+</span><span id="line-279"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationPraosLeaderCredentialsError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationPraosLeaderCredentialsError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationPraosLeaderCredentialsError</span></a></span></span><span>
+</span><span id="line-280"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#PraosLeaderCredentialsError"><span class="hs-identifier hs-type">Shelley.PraosLeaderCredentialsError</span></a></span><span>
+</span><span id="line-281"></span><span>
+</span><span id="line-282"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationErrorAlonzo"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorAlonzo"><span class="hs-identifier hs-var">CardanoProtocolInstantiationErrorAlonzo</span></a></span></span><span>
+</span><span id="line-283"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Alonzo.html#AlonzoProtocolInstantiationError"><span class="hs-identifier hs-type">Alonzo.AlonzoProtocolInstantiationError</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span>     </span><span class="hs-glyph">|</span><span> </span><span id="CardanoProtocolInstantiationCheckpointsReadError"><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationCheckpointsReadError"><span class="hs-identifier hs-var">CardanoProtocolInstantiationCheckpointsReadError</span></a></span></span><span>
+</span><span id="line-286"></span><span>         </span><span class="annot"><a href="Cardano.Node.Protocol.Checkpoints.html#CheckpointsReadError"><span class="hs-identifier hs-type">CheckpointsReadError</span></a></span><span>
+</span><span id="line-287"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681726981"><span id="local-6989586621681727005"><span id="local-6989586621681727009"><span class="annot"><span class="annottext">Int -&gt; CardanoProtocolInstantiationError -&gt; ShowS
+[CardanoProtocolInstantiationError] -&gt; ShowS
+CardanoProtocolInstantiationError -&gt; String
+(Int -&gt; CardanoProtocolInstantiationError -&gt; ShowS)
+-&gt; (CardanoProtocolInstantiationError -&gt; String)
+-&gt; ([CardanoProtocolInstantiationError] -&gt; ShowS)
+-&gt; Show CardanoProtocolInstantiationError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CardanoProtocolInstantiationError -&gt; ShowS
+showsPrec :: Int -&gt; CardanoProtocolInstantiationError -&gt; ShowS
+$cshow :: CardanoProtocolInstantiationError -&gt; String
+show :: CardanoProtocolInstantiationError -&gt; String
+$cshowList :: [CardanoProtocolInstantiationError] -&gt; ShowS
+showList :: [CardanoProtocolInstantiationError] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-290"></span><span>  </span><span id="local-6989586621681727038"><span class="annot"><span class="annottext">prettyError :: forall ann. CardanoProtocolInstantiationError -&gt; Doc ann
+</span><a href="#local-6989586621681727038"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorByron"><span class="hs-identifier hs-type">CardanoProtocolInstantiationErrorByron</span></a></span><span> </span><span id="local-6989586621681727040"><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="#local-6989586621681727040"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-291"></span><span>    </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. ByronProtocolInstantiationError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError
+</span><a href="#local-6989586621681727040"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-292"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationShelleyGenesisReadError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationShelleyGenesisReadError</span></a></span><span> </span><span id="local-6989586621681727041"><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727041"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-293"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Shelley related: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. GenesisReadError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727041"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-294"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationAlonzoGenesisReadError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationAlonzoGenesisReadError</span></a></span><span> </span><span id="local-6989586621681727042"><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727042"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-295"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Alonzo related: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. GenesisReadError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727042"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-296"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationConwayGenesisReadError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationConwayGenesisReadError</span></a></span><span> </span><span id="local-6989586621681727043"><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727043"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-297"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Conway related : &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. GenesisReadError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727043"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-298"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationDijkstraGenesisReadError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationDijkstraGenesisReadError</span></a></span><span> </span><span id="local-6989586621681727044"><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727044"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-299"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Dijkstra related : &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. GenesisReadError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisReadError
+</span><a href="#local-6989586621681727044"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-300"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationPraosLeaderCredentialsError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationPraosLeaderCredentialsError</span></a></span><span> </span><span id="local-6989586621681727045"><span class="annot"><span class="annottext">PraosLeaderCredentialsError
+</span><a href="#local-6989586621681727045"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-301"></span><span>    </span><span class="annot"><span class="annottext">PraosLeaderCredentialsError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. PraosLeaderCredentialsError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">PraosLeaderCredentialsError
+</span><a href="#local-6989586621681727045"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-302"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationErrorAlonzo"><span class="hs-identifier hs-type">CardanoProtocolInstantiationErrorAlonzo</span></a></span><span> </span><span id="local-6989586621681727046"><span class="annot"><span class="annottext">AlonzoProtocolInstantiationError
+</span><a href="#local-6989586621681727046"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-303"></span><span>    </span><span class="annot"><span class="annottext">AlonzoProtocolInstantiationError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. AlonzoProtocolInstantiationError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoProtocolInstantiationError
+</span><a href="#local-6989586621681727046"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-304"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Cardano.html#CardanoProtocolInstantiationCheckpointsReadError"><span class="hs-identifier hs-type">CardanoProtocolInstantiationCheckpointsReadError</span></a></span><span> </span><span id="local-6989586621681727047"><span class="annot"><span class="annottext">CheckpointsReadError
+</span><a href="#local-6989586621681727047"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-305"></span><span>    </span><span class="annot"><span class="annottext">CheckpointsReadError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. CheckpointsReadError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">CheckpointsReadError
+</span><a href="#local-6989586621681727047"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-306"></span></pre></body></html>

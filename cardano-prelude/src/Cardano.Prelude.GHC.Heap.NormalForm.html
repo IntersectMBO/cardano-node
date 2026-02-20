@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DoAndIfThenElse #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      :  Cardano.Prelude.GHC.Heap.NormalForm</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright   :  (c) 2013 Joachim Breitner</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License     :  BSD3</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- This code has been adapted from the module &quot;GHC.AssertNF&quot; of the package</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- &lt;http://hackage.haskell.org/package/ghc-heap-view ghc-heap-view&gt;</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- (&lt;https://github.com/nomeata/ghc-heap-view GitHub&gt;) authored by</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Joachim Breitner.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- To avoid space leaks and unwanted evaluation behaviour, the programmer might want his data to be fully evaluated at certain positions in the code. This can be enforced, for example, by ample use of &quot;Control.DeepSeq&quot;, but this comes at a cost.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Experienced users hence use 'Control.DeepSeq.deepseq' only to find out about the existence of space leaks and optimize their code to not create the thunks in the first place, until the code no longer shows better performance with 'deepseq'.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- This module provides an alternative approach: An explicit assertion about the evaluation state. If the programmer expect a certain value to be fully evaluated at a specific point of the program (e.g. before a call to 'writeIORef'), he can state that, and as long as assertions are enabled, this statement will be checked. In the production code the assertions can be disabled, to avoid the run-time cost.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- Copyright (c) 2012-2013, Joachim Breitner</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- All rights reserved.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- Redistribution and use in source and binary forms, with or without</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- modification, are permitted provided that the following conditions are met:</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--     * Redistributions of source code must retain the above copyright</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--       notice, this list of conditions and the following disclaimer.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--     * Redistributions in binary form must reproduce the above</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--       copyright notice, this list of conditions and the following</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--       disclaimer in the documentation and/or other materials provided</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--       with the distribution.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--     * Neither the name of Joachim Breitner nor the names of other</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--       contributors may be used to endorse or promote products derived</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--       from this software without specific prior written permission.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Prelude.GHC.Heap.NormalForm</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isHeadNormalForm"><span class="hs-identifier">isHeadNormalForm</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalForm"><span class="hs-identifier">isNormalForm</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html"><span class="hs-identifier">GHC.Exts.Heap</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- Everything is in normal form, unless it is a</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- thunk explicitly marked as such.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- Indirection are also considered to be in HNF</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isHeadNormalForm"><span class="hs-identifier hs-type">isHeadNormalForm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Closure"><span class="hs-identifier hs-type">Closure</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-61"></span><span id="isHeadNormalForm"><span class="annot"><span class="annottext">isHeadNormalForm :: Closure -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isHeadNormalForm"><span class="hs-identifier hs-var hs-var">isHeadNormalForm</span></a></span></span><span> </span><span id="local-6989586621679095363"><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095363"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095363"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#ThunkClosure"><span class="hs-identifier hs-type">ThunkClosure</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#APClosure"><span class="hs-identifier hs-type">APClosure</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#SelectorClosure"><span class="hs-identifier hs-type">SelectorClosure</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#BCOClosure"><span class="hs-identifier hs-type">BCOClosure</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">Closure
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | The function 'isNormalForm' checks whether its argument is fully evaluated</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- and deeply evaluated.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- NOTE: The normal form check can be quite brittle, especially with @-O0@. For</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- example, writing something like</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- &gt; let !(Value x) = ... in ....</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- might translate to</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- &gt; let !.. = ... in ... (case ... of Value x -&gt; x)</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- which would trivially be @False@. In general, 'isNormalForm' should probably</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- only be used with @-O1@, but even then the answer may still depend on</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- internal decisions made by ghc during compilation.</span><span>
+</span><span id="line-84"></span><span id="local-6989586621679095340"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalForm"><span class="hs-identifier hs-type">isNormalForm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679095340"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-85"></span><span id="isNormalForm"><span class="annot"><span class="annottext">isNormalForm :: forall a. a -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalForm"><span class="hs-identifier hs-var hs-var">isNormalForm</span></a></span></span><span> </span><span id="local-6989586621679095368"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095368"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Box -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalFormBoxed"><span class="hs-identifier hs-var">isNormalFormBoxed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Box
+forall a. a -&gt; Box
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#asBox"><span class="hs-identifier hs-var">asBox</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095368"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalFormBoxed"><span class="hs-identifier hs-type">isNormalFormBoxed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#Box"><span class="hs-identifier hs-type">Box</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-88"></span><span id="isNormalFormBoxed"><span class="annot"><span class="annottext">isNormalFormBoxed :: Box -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalFormBoxed"><span class="hs-identifier hs-var hs-var">isNormalFormBoxed</span></a></span></span><span> </span><span id="local-6989586621679095371"><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095371"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679095372"><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095372"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Box -&gt; IO Closure
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html#getBoxedClosureData"><span class="hs-identifier hs-var">getBoxedClosureData</span></a></span><span> </span><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095371"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679095374"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095374"><span class="hs-identifier hs-var">nf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Closure -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isHeadNormalForm"><span class="hs-identifier hs-var">isHeadNormalForm</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095372"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095374"><span class="hs-identifier hs-var">nf</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>      </span><span id="local-6989586621679095375"><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095375"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Box -&gt; IO Closure
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.html#getBoxedClosureData"><span class="hs-identifier hs-var">getBoxedClosureData</span></a></span><span> </span><span class="annot"><span class="annottext">Box
+</span><a href="#local-6989586621679095371"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">(Box -&gt; IO Bool) -&gt; [Box] -&gt; IO Bool
+forall (m :: * -&gt; *) a. Monad m =&gt; (a -&gt; m Bool) -&gt; [a] -&gt; m Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#allM"><span class="hs-identifier hs-var">allM</span></a></span><span> </span><span class="annot"><span class="annottext">Box -&gt; IO Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#isNormalFormBoxed"><span class="hs-identifier hs-var">isNormalFormBoxed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Closure -&gt; [Box]
+forall b. GenClosure b -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.Closures.html#allClosures"><span class="hs-identifier hs-var">allClosures</span></a></span><span> </span><span class="annot"><span class="annottext">Closure
+</span><a href="#local-6989586621679095375"><span class="hs-identifier hs-var">c'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- From Control.Monad.Loops in monad-loops, but I'd like to avoid too many</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- trivial dependencies</span><span>
+</span><span id="line-100"></span><span id="local-6989586621679095344"><span id="local-6989586621679095345"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#allM"><span class="hs-identifier hs-type">allM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095344"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679095345"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095344"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679095345"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095344"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span></span><span>
+</span><span id="line-101"></span><span id="allM"><span class="annot"><span class="annottext">allM :: forall (m :: * -&gt; *) a. Monad m =&gt; (a -&gt; m Bool) -&gt; [a] -&gt; m Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#allM"><span class="hs-identifier hs-var hs-var">allM</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; m Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m Bool
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#allM"><span class="hs-identifier hs-var">allM</span></a></span><span> </span><span id="local-6989586621679095383"><span class="annot"><span class="annottext">a -&gt; m Bool
+</span><a href="#local-6989586621679095383"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095384"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095384"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679095385"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679095385"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679095386"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095386"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m Bool
+</span><a href="#local-6989586621679095383"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095384"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679095386"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m Bool) -&gt; [a] -&gt; m Bool
+forall (m :: * -&gt; *) a. Monad m =&gt; (a -&gt; m Bool) -&gt; [a] -&gt; m Bool
+</span><a href="Cardano.Prelude.GHC.Heap.NormalForm.html#allM"><span class="hs-identifier hs-var">allM</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m Bool
+</span><a href="#local-6989586621679095383"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679095385"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m Bool
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-105"></span></pre></body></html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="annot"><span class="hs-comment">-- | Orphan instances for external types/classes.</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Prelude.Orphans</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Prelude.Base.html"><span class="hs-identifier">Cardano.Prelude.Base</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Tagged</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tagged</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tagged</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Formatting.Buildable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Buildable</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Formatting</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Buildable</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><span class="hs-comment">-- | This orphan instance is sometimes useful and why not have it?</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679096651"><span class="annot"><span class="annottext">build :: () -&gt; Builder
+</span><a href="#local-6989586621679096651"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;()&quot;</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679096617"><span id="local-6989586621679096618"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679096617"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="annot"><a href="#local-6989586621679096618"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Buildable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tagged</span></span><span> </span><span class="annot"><a href="#local-6989586621679096617"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679096618"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679096666"><span class="annot"><span class="annottext">build :: Tagged s a -&gt; Builder
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></span></span><span> </span><span id="local-6989586621679096667"><span class="annot"><span class="annottext">tt :: Tagged s a
+</span><a href="#local-6989586621679096667"><span class="hs-identifier hs-var">tt</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tagged</span></span><span> </span><span id="local-6989586621679096668"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679096668"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="annottext">Format Builder (TypeRep -&gt; a -&gt; Builder) -&gt; TypeRep -&gt; a -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><span class="hs-identifier hs-var">F.bprint</span></span><span>
+</span><span id="line-27"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (TypeRep -&gt; a -&gt; Builder) (TypeRep -&gt; a -&gt; Builder)
+</span><span class="hs-string">&quot;Tagged &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (TypeRep -&gt; a -&gt; Builder) (TypeRep -&gt; a -&gt; Builder)
+-&gt; Format Builder (TypeRep -&gt; a -&gt; Builder)
+-&gt; Format Builder (TypeRep -&gt; a -&gt; Builder)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><span class="hs-operator hs-var">F.%</span></span><span> </span><span class="annot"><span class="annottext">Format (a -&gt; Builder) (TypeRep -&gt; a -&gt; Builder)
+forall a r. Show a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.shown</span></span><span> </span><span class="annot"><span class="annottext">Format (a -&gt; Builder) (TypeRep -&gt; a -&gt; Builder)
+-&gt; Format Builder (a -&gt; Builder)
+-&gt; Format Builder (TypeRep -&gt; a -&gt; Builder)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><span class="hs-operator hs-var">F.%</span></span><span> </span><span class="annot"><span class="annottext">Format (a -&gt; Builder) (a -&gt; Builder)
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (a -&gt; Builder) (a -&gt; Builder)
+-&gt; Format Builder (a -&gt; Builder) -&gt; Format Builder (a -&gt; Builder)
+forall r a r'. Format r a -&gt; Format r' r -&gt; Format r' a
+</span><span class="hs-operator hs-var">F.%</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (a -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><span class="hs-identifier hs-var">F.build</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>      </span><span class="annot"><span class="annottext">TypeRep
+</span><a href="#local-6989586621679096673"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-29"></span><span>      </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679096668"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621679096673"><span class="annot"><span class="annottext">ts :: TypeRep
+</span><a href="#local-6989586621679096673"><span class="hs-identifier hs-var hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy s -&gt; TypeRep
+forall {k} (proxy :: k -&gt; *) (a :: k).
+Typeable a =&gt;
+proxy a -&gt; TypeRep
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#typeRep"><span class="hs-identifier hs-var">typeRep</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy s
+</span><a href="#local-6989586621679096675"><span class="hs-identifier hs-var">proxy</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span id="local-6989586621679096675"><span class="annot"><span class="annottext">proxy :: Proxy s
+</span><a href="#local-6989586621679096675"><span class="hs-identifier hs-var hs-var">proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679096676"><span id="local-6989586621679096677"><span class="annot"><span class="annottext">Proxy s -&gt; Tagged s a -&gt; Proxy s
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy s
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tagged</span></span><span> </span><span class="annot"><a href="#local-6989586621679096676"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679096677"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679096676"><span class="hs-identifier hs-type">s</span></a></span></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tagged s a
+</span><a href="#local-6989586621679096667"><span class="hs-identifier hs-var">tt</span></a></span><span>
+</span><span id="line-33"></span></pre></body></html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679198843"><span id="local-6989586621679198844"></span></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Commands.Available
+   Description : Available command-line programs
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   These are the known programs that read in Dot graphs.
+
+ -}</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Commands.Available</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html"><span class="hs-identifier">Data.GraphViz.Parsing</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Printing.html"><span class="hs-identifier">Data.GraphViz.Printing</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- | The available Graphviz commands.  The following directions are</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   based upon those in the Graphviz man page (available online at</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   &lt;http://graphviz.org/pdf/dot.1.pdf&gt;, or if installed on your</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--   system @man graphviz@).  Note that any command can be used on</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--   both directed and undirected graphs.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--   When used with the 'Layout' attribute, it overrides any actual</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--   command called on the dot graph.</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">data</span><span> </span><span id="GraphvizCommand"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-var">GraphvizCommand</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Dot"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span></span><span>       </span><span class="hs-comment">-- ^ For hierachical graphs (ideal for</span><span>
+</span><span id="line-29"></span><span>                                 </span><span class="hs-comment">--   directed graphs).</span><span>
+</span><span id="line-30"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Neato"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Neato"><span class="hs-identifier hs-var">Neato</span></a></span></span><span>     </span><span class="hs-comment">-- ^ For symmetric layouts of graphs</span><span>
+</span><span id="line-31"></span><span>                                 </span><span class="hs-comment">--   (ideal for undirected graphs).</span><span>
+</span><span id="line-32"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="TwoPi"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#TwoPi"><span class="hs-identifier hs-var">TwoPi</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ For radial layout of graphs.</span></span><span>
+</span><span id="line-33"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Circo"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Circo"><span class="hs-identifier hs-var">Circo</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ For circular layout of graphs.</span></span><span>
+</span><span id="line-34"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Fdp"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Fdp"><span class="hs-identifier hs-var">Fdp</span></a></span></span><span>       </span><span class="hs-comment">-- ^ Spring-model approach for</span><span>
+</span><span id="line-35"></span><span>                                 </span><span class="hs-comment">--   undirected graphs.</span><span>
+</span><span id="line-36"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Sfdp"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Sfdp"><span class="hs-identifier hs-var">Sfdp</span></a></span></span><span>      </span><span class="hs-comment">-- ^ As with Fdp, but ideal for large</span><span>
+</span><span id="line-37"></span><span>                                 </span><span class="hs-comment">--   graphs.</span><span>
+</span><span id="line-38"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Osage"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Osage"><span class="hs-identifier hs-var">Osage</span></a></span></span><span>     </span><span class="hs-comment">-- ^ Filter for drawing clustered graphs,</span><span>
+</span><span id="line-39"></span><span>                                 </span><span class="hs-comment">--   requires Graphviz &gt;= 2.28.0.</span><span>
+</span><span id="line-40"></span><span>                     </span><span class="hs-glyph">|</span><span> </span><span id="Patchwork"><span class="annot"><a href="Data.GraphViz.Commands.Available.html#Patchwork"><span class="hs-identifier hs-var">Patchwork</span></a></span></span><span> </span><span class="hs-comment">-- ^ Draw clustered graphs as treemaps,</span><span>
+</span><span id="line-41"></span><span>                                 </span><span class="hs-comment">--   requires Graphviz &gt;= 2.28.0.</span><span>
+</span><span id="line-42"></span><span>                     </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679198854"><span id="local-6989586621679198856"><span class="annot"><span class="annottext">GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+(GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; Eq GraphvizCommand
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+== :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+$c/= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+/= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679198863"><span id="local-6989586621679198865"><span id="local-6989586621679198867"><span id="local-6989586621679198871"><span id="local-6989586621679198874"><span id="local-6989586621679198877"><span id="local-6989586621679198880"><span class="annot"><span class="annottext">Eq GraphvizCommand
+Eq GraphvizCommand =&gt;
+(GraphvizCommand -&gt; GraphvizCommand -&gt; Ordering)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; Bool)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand)
+-&gt; Ord GraphvizCommand
+GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+GraphvizCommand -&gt; GraphvizCommand -&gt; Ordering
+GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: GraphvizCommand -&gt; GraphvizCommand -&gt; Ordering
+compare :: GraphvizCommand -&gt; GraphvizCommand -&gt; Ordering
+$c&lt; :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+&lt; :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+$c&lt;= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+&lt;= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+$c&gt; :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+&gt; :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+$c&gt;= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+&gt;= :: GraphvizCommand -&gt; GraphvizCommand -&gt; Bool
+$cmax :: GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand
+max :: GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand
+$cmin :: GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand
+min :: GraphvizCommand -&gt; GraphvizCommand -&gt; GraphvizCommand
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679198884"><span id="local-6989586621679198886"><span class="annot"><span class="annottext">GraphvizCommand
+GraphvizCommand -&gt; GraphvizCommand -&gt; Bounded GraphvizCommand
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: GraphvizCommand
+minBound :: GraphvizCommand
+$cmaxBound :: GraphvizCommand
+maxBound :: GraphvizCommand
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679198890"><span id="local-6989586621679198898"><span id="local-6989586621679198904"><span id="local-6989586621679198918"><span id="local-6989586621679198920"><span id="local-6989586621679198924"><span id="local-6989586621679198928"><span id="local-6989586621679198932"><span class="annot"><span class="annottext">Int -&gt; GraphvizCommand
+GraphvizCommand -&gt; Int
+GraphvizCommand -&gt; [GraphvizCommand]
+GraphvizCommand -&gt; GraphvizCommand
+GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+GraphvizCommand
+-&gt; GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+(GraphvizCommand -&gt; GraphvizCommand)
+-&gt; (GraphvizCommand -&gt; GraphvizCommand)
+-&gt; (Int -&gt; GraphvizCommand)
+-&gt; (GraphvizCommand -&gt; Int)
+-&gt; (GraphvizCommand -&gt; [GraphvizCommand])
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand])
+-&gt; (GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand])
+-&gt; (GraphvizCommand
+    -&gt; GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand])
+-&gt; Enum GraphvizCommand
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: GraphvizCommand -&gt; GraphvizCommand
+succ :: GraphvizCommand -&gt; GraphvizCommand
+$cpred :: GraphvizCommand -&gt; GraphvizCommand
+pred :: GraphvizCommand -&gt; GraphvizCommand
+$ctoEnum :: Int -&gt; GraphvizCommand
+toEnum :: Int -&gt; GraphvizCommand
+$cfromEnum :: GraphvizCommand -&gt; Int
+fromEnum :: GraphvizCommand -&gt; Int
+$cenumFrom :: GraphvizCommand -&gt; [GraphvizCommand]
+enumFrom :: GraphvizCommand -&gt; [GraphvizCommand]
+$cenumFromThen :: GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+enumFromThen :: GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+$cenumFromTo :: GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+enumFromTo :: GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+$cenumFromThenTo :: GraphvizCommand
+-&gt; GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+enumFromThenTo :: GraphvizCommand
+-&gt; GraphvizCommand -&gt; GraphvizCommand -&gt; [GraphvizCommand]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679198936"><span id="local-6989586621679198938"><span id="local-6989586621679198942"><span class="annot"><span class="annottext">Int -&gt; GraphvizCommand -&gt; ShowS
+[GraphvizCommand] -&gt; ShowS
+GraphvizCommand -&gt; [Char]
+(Int -&gt; GraphvizCommand -&gt; ShowS)
+-&gt; (GraphvizCommand -&gt; [Char])
+-&gt; ([GraphvizCommand] -&gt; ShowS)
+-&gt; Show GraphvizCommand
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GraphvizCommand -&gt; ShowS
+showsPrec :: Int -&gt; GraphvizCommand -&gt; ShowS
+$cshow :: GraphvizCommand -&gt; [Char]
+show :: GraphvizCommand -&gt; [Char]
+$cshowList :: [GraphvizCommand] -&gt; ShowS
+showList :: [GraphvizCommand] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679198946"><span id="local-6989586621679198950"><span id="local-6989586621679198953"><span id="local-6989586621679198964"><span class="annot"><span class="annottext">ReadPrec [GraphvizCommand]
+ReadPrec GraphvizCommand
+Int -&gt; ReadS GraphvizCommand
+ReadS [GraphvizCommand]
+(Int -&gt; ReadS GraphvizCommand)
+-&gt; ReadS [GraphvizCommand]
+-&gt; ReadPrec GraphvizCommand
+-&gt; ReadPrec [GraphvizCommand]
+-&gt; Read GraphvizCommand
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS GraphvizCommand
+readsPrec :: Int -&gt; ReadS GraphvizCommand
+$creadList :: ReadS [GraphvizCommand]
+readList :: ReadS [GraphvizCommand]
+$creadPrec :: ReadPrec GraphvizCommand
+readPrec :: ReadPrec GraphvizCommand
+$creadListPrec :: ReadPrec [GraphvizCommand]
+readListPrec :: ReadPrec [GraphvizCommand]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679198969"><span id="local-6989586621679198973"><span id="local-6989586621679198976"><span class="annot"><a href="Data.GraphViz.Printing.html#PrintDot"><span class="hs-identifier hs-type">PrintDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679198997"><span class="annot"><span class="annottext">unqtDot :: GraphvizCommand -&gt; DotCode
+</span><a href="#local-6989586621679198997"><span class="hs-identifier hs-var hs-var hs-var hs-var">unqtDot</span></a></span></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;dot&quot;</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Neato"><span class="hs-identifier hs-var">Neato</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;neato&quot;</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#TwoPi"><span class="hs-identifier hs-var">TwoPi</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;twopi&quot;</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Circo"><span class="hs-identifier hs-var">Circo</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;circo&quot;</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Fdp"><span class="hs-identifier hs-var">Fdp</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;fdp&quot;</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Sfdp"><span class="hs-identifier hs-var">Sfdp</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;sfdp&quot;</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Osage"><span class="hs-identifier hs-var">Osage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;osage&quot;</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Printing.html#unqtDot"><span class="hs-identifier hs-var">unqtDot</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Patchwork"><span class="hs-identifier hs-var">Patchwork</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; DotCode
+forall (m :: * -&gt; *). Applicative m =&gt; Text -&gt; m Doc
+</span><span class="hs-identifier hs-var">text</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;patchwork&quot;</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679199002"><span id="local-6989586621679199006"><span id="local-6989586621679199009"><span class="annot"><a href="Data.GraphViz.Parsing.html#ParseDot"><span class="hs-identifier hs-type">ParseDot</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679199012"><span class="annot"><span class="annottext">parseUnqt :: Parse GraphvizCommand
+</span><a href="#local-6989586621679199012"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseUnqt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[([Char], GraphvizCommand)] -&gt; Parse GraphvizCommand
+forall a. [([Char], a)] -&gt; Parse a
+</span><a href="Data.GraphViz.Parsing.html#stringValue"><span class="hs-identifier hs-var">stringValue</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;dot&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;neato&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Neato"><span class="hs-identifier hs-var">Neato</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;twopi&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#TwoPi"><span class="hs-identifier hs-var">TwoPi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;circo&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Circo"><span class="hs-identifier hs-var">Circo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;fdp&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Fdp"><span class="hs-identifier hs-var">Fdp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;sfdp&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Sfdp"><span class="hs-identifier hs-var">Sfdp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;osage&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Osage"><span class="hs-identifier hs-var">Osage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;patchwork&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Patchwork"><span class="hs-identifier hs-var">Patchwork</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>                          </span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span></pre></body></html>

@@ -1,0 +1,553 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Protocol.Conway</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayProtocolInstantiationError"><span class="hs-identifier">ConwayProtocolInstantiationError</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Reusable parts</span></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#readGenesis"><span class="hs-identifier">readGenesis</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#readGenesisMaybe"><span class="hs-identifier">readGenesisMaybe</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#validateGenesis"><span class="hs-identifier">validateGenesis</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.2-dc24b8c0f258427fc3a42e732bc38d1450a38847c26bc2889a808cfb2c9d46b9/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Crypto</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier">ConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Conway</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html"><span class="hs-identifier">Cardano.Ledger.Conway.PParams</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Orphans.html"><span class="hs-identifier">Cardano.Node.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html"><span class="hs-identifier">Cardano.Node.Protocol.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier">GenesisReadError</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#readGenesisAny"><span class="hs-identifier">readGenesisAny</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.HardFork.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.HardFork</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracing.OrphanInstances.Shelley.html"><span class="hs-identifier">Cardano.Tracing.OrphanInstances.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LB</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/7k5rm1bc62wnbdl29rcpi0cj4w08l7a5-data-default-class-lib-data-default-class-0.2.0.0-haddock-doc/share/doc/data-default-class/html/src/Data.Default.Class.html"><span class="hs-identifier">Data.Default.Class</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DefaultClass</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier">Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Conway genesis</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- The Conway genesis values are not going to be ready in time for</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- cardano-node 9.0. Therefore when the conway genesis file is not set</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- we will restrict the max protocol version to 8 and use a dummy conway</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- genesis value. This will prevent an unintentional hardfork.</span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#readGenesisMaybe"><span class="hs-identifier hs-type">readGenesisMaybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisFile"><span class="hs-identifier hs-type">GenesisFile</span></a></span><span>
+</span><span id="line-47"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span><span>
+</span><span id="line-48"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">GenesisReadError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-49"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">Conway.ConwayGenesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span id="readGenesisMaybe"><span class="annot"><span class="annottext">readGenesisMaybe :: Maybe GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Conway.html#readGenesisMaybe"><span class="hs-identifier hs-var hs-var">readGenesisMaybe</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681722876"><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681722876"><span class="hs-identifier hs-var">genFp</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681722877"><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681722877"><span class="hs-identifier hs-var">mHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Conway.html#readGenesis"><span class="hs-identifier hs-var">readGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621681722876"><span class="hs-identifier hs-var">genFp</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><a href="#local-6989586621681722877"><span class="hs-identifier hs-var">mHash</span></a></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#readGenesisMaybe"><span class="hs-identifier hs-var">readGenesisMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GenesisFile
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe GenesisHash
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Maybe CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">L.mkCostModelsLenient</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="Cardano.Node.Protocol.Conway.html#plutusV3CostModel"><span class="hs-identifier hs-var">plutusV3CostModel</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CostModels
+-&gt; (CostModels -&gt; Maybe CostModel) -&gt; Maybe CostModel
+forall a b. Maybe a -&gt; (a -&gt; Maybe b) -&gt; Maybe b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Language -&gt; Map Language CostModel -&gt; Maybe CostModel
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-var">L.PlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Language CostModel -&gt; Maybe CostModel)
+-&gt; (CostModels -&gt; Map Language CostModel)
+-&gt; CostModels
+-&gt; Maybe CostModel
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Language CostModel
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier hs-var">L.costModelsValid</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">Maybe CostModel
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;readGenesisMaybe: missing PlutusV3 cost model in default cost models.&quot;</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681722885"><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621681722885"><span class="hs-identifier hs-var">cm</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681722890"><span class="annot"><span class="annottext">protocolVerson :: Version
+</span><a href="#local-6989586621681722890"><span class="hs-identifier hs-var hs-var">protocolVerson</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">L.natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">8</span></span><span> </span><span class="hs-comment">-- For empty conway genesis we stay in Babbage (protocol version 8)</span><span>
+</span><span id="line-56"></span><span>          </span><span id="local-6989586621681722892"><span class="annot"><span class="annottext">conwayGenesis :: ConwayGenesis
+</span><a href="#local-6989586621681722892"><span class="hs-identifier hs-var hs-var">conwayGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CostModel -&gt; ConwayGenesis
+</span><a href="Cardano.Node.Protocol.Conway.html#emptyConwayGenesis"><span class="hs-identifier hs-var">emptyConwayGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621681722885"><span class="hs-identifier hs-var">cm</span></a></span><span>
+</span><span id="line-57"></span><span>          </span><span id="local-6989586621681722898"><span class="annot"><span class="annottext">genesisHash :: GenesisHash
+</span><a href="#local-6989586621681722898"><span class="hs-identifier hs-var hs-var">genesisHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash Blake2b_256 ByteString -&gt; GenesisHash
+</span><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-var">GenesisHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; ByteString -&gt; Hash Blake2b_256 ByteString
+forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.2-dc24b8c0f258427fc3a42e732bc38d1450a38847c26bc2889a808cfb2c9d46b9/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">Crypto.hashWith</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Hash Blake2b_256 ByteString)
+-&gt; ByteString -&gt; Hash Blake2b_256 ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LB.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; ConwayGenesis -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-binary-1.7.1.0-bd66ce39a4bb161bd53fb051faf3a8c074c041d274e9fcdb3f15729da1e5b220/share/doc/html/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">L.serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621681722890"><span class="hs-identifier hs-var">protocolVerson</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621681722892"><span class="hs-identifier hs-var">conwayGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">(ConwayGenesis, GenesisHash)
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+forall a. a -&gt; ExceptT GenesisReadError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621681722892"><span class="hs-identifier hs-var">conwayGenesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenesisHash
+</span><a href="#local-6989586621681722898"><span class="hs-identifier hs-var">genesisHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#plutusV3CostModel"><span class="hs-identifier hs-type">plutusV3CostModel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span id="plutusV3CostModel"><span class="annot"><span class="annottext">plutusV3CostModel :: Map Word8 [Int64]
+</span><a href="Cardano.Node.Protocol.Conway.html#plutusV3CostModel"><span class="hs-identifier hs-var hs-var">plutusV3CostModel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; [Int64] -&gt; Map Word8 [Int64]
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">[Int64]
+</span><a href="Cardano.Node.Protocol.Conway.html#plutusV3ExampleValues"><span class="hs-identifier hs-var">plutusV3ExampleValues</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#plutusV3ExampleValues"><span class="hs-identifier hs-type">plutusV3ExampleValues</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span id="plutusV3ExampleValues"><span class="annot"><span class="annottext">plutusV3ExampleValues :: [Int64]
+</span><a href="Cardano.Node.Protocol.Conway.html#plutusV3ExampleValues"><span class="hs-identifier hs-var hs-var">plutusV3ExampleValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">205665</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">812</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">571</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">24177</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">117366</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10475</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">19537</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">175354</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">46417</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">221973</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">511</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">89141</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">497525</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">14068</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">196500</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">453240</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">220</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">28662</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">245000</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">216773</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">62</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1060367</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">12586</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">208512</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">421</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">187000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">52998</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">80436</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">43249</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">80556</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">57667</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">197145</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">156</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">197145</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">156</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">204924</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">473</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">208896</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">511</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">52467</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">64832</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">65493</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">22558</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">16563</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">76511</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">196500</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">453240</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">220</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">69522</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">11687</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">60091</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">196500</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">453240</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">220</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">196500</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">453240</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">220</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1159724</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">392670</span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">806990</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">30482</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1927926</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">82523</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">265318</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">85931</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">205665</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">812</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">41182</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">212342</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">31220</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32696</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">43357</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32247</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">38314</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">35190005</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">57996947</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18975</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">39121781</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">32260</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23000</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">100</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">832808</span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">3209094</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">6</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">331451</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">65990684</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23097</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">114242</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">94393407</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">87060</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">16420089</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">18</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">2145798</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">36</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">3795345</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">12</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">889023</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">204237282</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">23271</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">36</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">129165</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">36</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">189977790</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">85902</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">36</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">33012864</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">36</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">388443360</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">401885761</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">72</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">2331379</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">72</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1927926</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">82523</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">117366</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">10475</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1292075</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">24469</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">74</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">936157</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">49601</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">237</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#emptyConwayGenesis"><span class="hs-identifier hs-type">emptyConwayGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#CostModel"><span class="hs-identifier hs-type">L.CostModel</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">ConwayGenesis</span></a></span><span>
+</span><span id="line-83"></span><span id="emptyConwayGenesis"><span class="annot"><span class="annottext">emptyConwayGenesis :: CostModel -&gt; ConwayGenesis
+</span><a href="Cardano.Node.Protocol.Conway.html#emptyConwayGenesis"><span class="hs-identifier hs-var hs-var">emptyConwayGenesis</span></a></span></span><span> </span><span id="local-6989586621681722906"><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621681722906"><span class="hs-identifier hs-var">cm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621681722907"><span class="hs-identifier hs-type">upgradePParamsDef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#UpgradeConwayPParams"><span class="hs-identifier hs-type">UpgradeConwayPParams</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- TODO: need to define values</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">-- the default instance is for StrictMaybe</span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621681722907"><span class="annot"><span class="annottext">upgradePParamsDef :: UpgradeConwayPParams Identity
+</span><a href="#local-6989586621681722907"><span class="hs-identifier hs-var hs-var">upgradePParamsDef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#UpgradeConwayPParams"><span class="hs-identifier hs-type">UpgradeConwayPParams</span></a></span><span>
+</span><span id="line-87"></span><span>                            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ucppPoolVotingThresholds :: HKD Identity PoolVotingThresholds
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppPoolVotingThresholds"><span class="hs-identifier hs-var">ucppPoolVotingThresholds</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PoolVotingThresholds
+HKD Identity PoolVotingThresholds
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">DefaultClass.def</span></span><span>
+</span><span id="line-88"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppDRepVotingThresholds :: HKD Identity DRepVotingThresholds
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppDRepVotingThresholds"><span class="hs-identifier hs-var">ucppDRepVotingThresholds</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DRepVotingThresholds
+HKD Identity DRepVotingThresholds
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">DefaultClass.def</span></span><span>
+</span><span id="line-89"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppCommitteeMinSize :: HKD Identity Word16
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppCommitteeMinSize"><span class="hs-identifier hs-var">ucppCommitteeMinSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16
+HKD Identity Word16
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-90"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppCommitteeMaxTermLength :: HKD Identity EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppCommitteeMaxTermLength"><span class="hs-identifier hs-var">ucppCommitteeMaxTermLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-91"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppGovActionLifetime :: HKD Identity EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppGovActionLifetime"><span class="hs-identifier hs-var">ucppGovActionLifetime</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-92"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppGovActionDeposit :: HKD Identity Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppGovActionDeposit"><span class="hs-identifier hs-var">ucppGovActionDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+HKD Identity Coin
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-93"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppDRepDeposit :: HKD Identity Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppDRepDeposit"><span class="hs-identifier hs-var">ucppDRepDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+HKD Identity Coin
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-94"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppDRepActivity :: HKD Identity EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppDRepActivity"><span class="hs-identifier hs-var">ucppDRepActivity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-95"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppMinFeeRefScriptCostPerByte :: HKD Identity NonNegativeInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppMinFeeRefScriptCostPerByte"><span class="hs-identifier hs-var">ucppMinFeeRefScriptCostPerByte</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval
+HKD Identity NonNegativeInterval
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span>
+</span><span id="line-96"></span><span>                            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ucppPlutusV3CostModel :: HKD Identity CostModel
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.PParams.html#ucppPlutusV3CostModel"><span class="hs-identifier hs-var">ucppPlutusV3CostModel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CostModel
+HKD Identity CostModel
+</span><a href="#local-6989586621681722906"><span class="hs-identifier hs-var">cm</span></a></span><span>
+</span><span id="line-97"></span><span>                            </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">ConwayGenesis</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cgUpgradePParams :: UpgradeConwayPParams Identity
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#cgUpgradePParams"><span class="hs-identifier hs-var">cgUpgradePParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621681722907"><span class="hs-identifier hs-var">upgradePParamsDef</span></a></span><span>
+</span><span id="line-99"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cgConstitution :: Constitution ConwayEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#cgConstitution"><span class="hs-identifier hs-var">cgConstitution</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Constitution ConwayEra
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">DefaultClass.def</span></span><span>
+</span><span id="line-100"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cgCommittee :: Committee ConwayEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#cgCommittee"><span class="hs-identifier hs-var">cgCommittee</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Committee ConwayEra
+forall a. Default a =&gt; a
+</span><span class="hs-identifier hs-var">DefaultClass.def</span></span><span>
+</span><span id="line-101"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cgDelegs :: ListMap (Credential 'Staking) Delegatee
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#cgDelegs"><span class="hs-identifier hs-var">cgDelegs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListMap (Credential 'Staking) Delegatee
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-102"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cgInitialDReps :: ListMap (Credential 'DRepRole) DRepState
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#cgInitialDReps"><span class="hs-identifier hs-var">cgInitialDReps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListMap (Credential 'DRepRole) DRepState
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-103"></span><span>                   </span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#readGenesis"><span class="hs-identifier hs-type">readGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisFile"><span class="hs-identifier hs-type">GenesisFile</span></a></span><span>
+</span><span id="line-107"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span><span>
+</span><span id="line-108"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Shelley.html#GenesisReadError"><span class="hs-identifier hs-type">GenesisReadError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-109"></span><span>                       </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">Conway.ConwayGenesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Types.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span id="readGenesis"><span class="annot"><span class="annottext">readGenesis :: GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Conway.html#readGenesis"><span class="hs-identifier hs-var hs-var">readGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (ConwayGenesis, GenesisHash)
+forall genesis.
+FromJSON genesis =&gt;
+GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; ExceptT GenesisReadError IO (genesis, GenesisHash)
+</span><a href="Cardano.Node.Protocol.Shelley.html#readGenesisAny"><span class="hs-identifier hs-var">readGenesisAny</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#validateGenesis"><span class="hs-identifier hs-type">validateGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-conway-1.20.0.0-86cbd3078de989c4c3f15b644d8e32c4101efda63f6e0f7ac9fbbffd5157dac2/share/doc/html/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">Conway.ConwayGenesis</span></a></span><span>
+</span><span id="line-113"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayProtocolInstantiationError"><span class="hs-identifier hs-type">ConwayProtocolInstantiationError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span id="validateGenesis"><span class="annot"><span class="annottext">validateGenesis :: ConwayGenesis -&gt; ExceptT ConwayProtocolInstantiationError IO ()
+</span><a href="Cardano.Node.Protocol.Conway.html#validateGenesis"><span class="hs-identifier hs-var hs-var">validateGenesis</span></a></span></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; ExceptT ConwayProtocolInstantiationError IO ()
+forall a. a -&gt; ExceptT ConwayProtocolInstantiationError IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-comment">--TODO conway: do the validation</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">data</span><span> </span><span id="ConwayProtocolInstantiationError"><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayProtocolInstantiationError"><span class="hs-identifier hs-var">ConwayProtocolInstantiationError</span></a></span></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="InvalidCostModelError"><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#InvalidCostModelError"><span class="hs-identifier hs-var">InvalidCostModelError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CostModelExtractionError"><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#CostModelExtractionError"><span class="hs-identifier hs-var">CostModelExtractionError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ConwayCostModelFileError"><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayCostModelFileError"><span class="hs-identifier hs-var">ConwayCostModelFileError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ConwayCostModelDecodeError"><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayCostModelDecodeError"><span class="hs-identifier hs-var">ConwayCostModelDecodeError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681722934"><span id="local-6989586621681722950"><span id="local-6989586621681722954"><span class="annot"><span class="annottext">Int -&gt; ConwayProtocolInstantiationError -&gt; ShowS
+[ConwayProtocolInstantiationError] -&gt; ShowS
+ConwayProtocolInstantiationError -&gt; [Char]
+(Int -&gt; ConwayProtocolInstantiationError -&gt; ShowS)
+-&gt; (ConwayProtocolInstantiationError -&gt; [Char])
+-&gt; ([ConwayProtocolInstantiationError] -&gt; ShowS)
+-&gt; Show ConwayProtocolInstantiationError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ConwayProtocolInstantiationError -&gt; ShowS
+showsPrec :: Int -&gt; ConwayProtocolInstantiationError -&gt; ShowS
+$cshow :: ConwayProtocolInstantiationError -&gt; [Char]
+show :: ConwayProtocolInstantiationError -&gt; [Char]
+$cshowList :: [ConwayProtocolInstantiationError] -&gt; ShowS
+showList :: [ConwayProtocolInstantiationError] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayProtocolInstantiationError"><span class="hs-identifier hs-type">ConwayProtocolInstantiationError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621681722982"><span class="annot"><span class="annottext">prettyError :: forall ann. ConwayProtocolInstantiationError -&gt; Doc ann
+</span><a href="#local-6989586621681722982"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#InvalidCostModelError"><span class="hs-identifier hs-type">InvalidCostModelError</span></a></span><span> </span><span id="local-6989586621681722984"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722984"><span class="hs-identifier hs-var">fp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Invalid cost model: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722984"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#CostModelExtractionError"><span class="hs-identifier hs-type">CostModelExtractionError</span></a></span><span> </span><span id="local-6989586621681722986"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722986"><span class="hs-identifier hs-var">fp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Error extracting the cost model at: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722986"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayCostModelFileError"><span class="hs-identifier hs-type">ConwayCostModelFileError</span></a></span><span> </span><span id="local-6989586621681722987"><span class="annot"><span class="annottext">FileError ()
+</span><a href="#local-6989586621681722987"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">FileError () -&gt; Doc ann
+forall ann. FileError () -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">FileError ()
+</span><a href="#local-6989586621681722987"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Protocol.Conway.html#ConwayCostModelDecodeError"><span class="hs-identifier hs-type">ConwayCostModelDecodeError</span></a></span><span> </span><span id="local-6989586621681722988"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722988"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621681722989"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722989"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Error decoding cost model at: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722988"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Pretty.html#pshow"><span class="hs-identifier hs-var">pshow</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621681722989"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-132"></span></pre></body></html>

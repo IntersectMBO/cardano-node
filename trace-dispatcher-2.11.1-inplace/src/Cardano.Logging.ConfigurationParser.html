@@ -1,0 +1,914 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.ConfigurationParser</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#readConfiguration"><span class="hs-identifier">readConfiguration</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#readConfigurationWithDefault"><span class="hs-identifier">readConfigurationWithDefault</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#configToRepresentation"><span class="hs-identifier">configToRepresentation</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator">(&lt;|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier">throwIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AE</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier">foldl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier">catMaybes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#listToMaybe"><span class="hs-identifier">listToMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#split"><span class="hs-identifier">split</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html"><span class="hs-identifier">Data.Yaml</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Configuration file</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | The external representation of a configuration file</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="ConfigRepresentation"><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-var">ConfigRepresentation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConfigRepresentation"><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-var">ConfigRepresentation</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-32"></span><span>    </span><span id="traceOptions"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; OptionsRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptions"><span class="hs-identifier hs-var hs-var">traceOptions</span></a></span></span><span>                  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#OptionsRepresentation"><span class="hs-identifier hs-type">OptionsRepresentation</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="traceOptionForwarder"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe TraceOptionForwarder
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionForwarder"><span class="hs-identifier hs-var hs-var">traceOptionForwarder</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceOptionForwarder"><span class="hs-identifier hs-type">TraceOptionForwarder</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="traceOptionNodeName"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Text
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionNodeName"><span class="hs-identifier hs-var hs-var">traceOptionNodeName</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="traceOptionMetricsPrefix"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Text
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionMetricsPrefix"><span class="hs-identifier hs-var hs-var">traceOptionMetricsPrefix</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="traceOptionResourceFrequency"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Int
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionResourceFrequency"><span class="hs-identifier hs-var hs-var">traceOptionResourceFrequency</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="traceOptionLedgerMetricsFrequency"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Int
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionLedgerMetricsFrequency"><span class="hs-identifier hs-var hs-var">traceOptionLedgerMetricsFrequency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679143758"><span id="local-6989586621679143772"><span class="annot"><span class="annottext">ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+(ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; (ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; Eq ConfigRepresentation
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+== :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+$c/= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+/= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679143783"><span id="local-6989586621679143796"><span id="local-6989586621679143807"><span id="local-6989586621679143811"><span id="local-6989586621679143814"><span id="local-6989586621679143817"><span id="local-6989586621679143820"><span class="annot"><span class="annottext">Eq ConfigRepresentation
+Eq ConfigRepresentation =&gt;
+(ConfigRepresentation -&gt; ConfigRepresentation -&gt; Ordering)
+-&gt; (ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; (ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; (ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; (ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool)
+-&gt; (ConfigRepresentation
+    -&gt; ConfigRepresentation -&gt; ConfigRepresentation)
+-&gt; (ConfigRepresentation
+    -&gt; ConfigRepresentation -&gt; ConfigRepresentation)
+-&gt; Ord ConfigRepresentation
+ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+ConfigRepresentation -&gt; ConfigRepresentation -&gt; Ordering
+ConfigRepresentation
+-&gt; ConfigRepresentation -&gt; ConfigRepresentation
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Ordering
+compare :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Ordering
+$c&lt; :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+&lt; :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+$c&lt;= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+&lt;= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+$c&gt; :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+&gt; :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+$c&gt;= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+&gt;= :: ConfigRepresentation -&gt; ConfigRepresentation -&gt; Bool
+$cmax :: ConfigRepresentation
+-&gt; ConfigRepresentation -&gt; ConfigRepresentation
+max :: ConfigRepresentation
+-&gt; ConfigRepresentation -&gt; ConfigRepresentation
+$cmin :: ConfigRepresentation
+-&gt; ConfigRepresentation -&gt; ConfigRepresentation
+min :: ConfigRepresentation
+-&gt; ConfigRepresentation -&gt; ConfigRepresentation
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679143827"><span id="local-6989586621679143842"><span id="local-6989586621679143846"><span class="annot"><span class="annottext">Int -&gt; ConfigRepresentation -&gt; ShowS
+[ConfigRepresentation] -&gt; ShowS
+ConfigRepresentation -&gt; String
+(Int -&gt; ConfigRepresentation -&gt; ShowS)
+-&gt; (ConfigRepresentation -&gt; String)
+-&gt; ([ConfigRepresentation] -&gt; ShowS)
+-&gt; Show ConfigRepresentation
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ConfigRepresentation -&gt; ShowS
+showsPrec :: Int -&gt; ConfigRepresentation -&gt; ShowS
+$cshow :: ConfigRepresentation -&gt; String
+show :: ConfigRepresentation -&gt; String
+$cshowList :: [ConfigRepresentation] -&gt; ShowS
+showList :: [ConfigRepresentation] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679143855"><span id="local-6989586621679143858"><span class="annot"><span class="hs-identifier hs-type">AE.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>    </span><span id="local-6989586621679143892"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ConfigRepresentation
+</span><a href="#local-6989586621679143892"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span id="local-6989586621679143895"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OptionsRepresentation
+-&gt; Maybe TraceOptionForwarder
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe Int
+-&gt; Maybe Int
+-&gt; ConfigRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-var">ConfigRepresentation</span></a></span><span>
+</span><span id="line-43"></span><span>                           </span><span class="annot"><span class="annottext">(OptionsRepresentation
+ -&gt; Maybe TraceOptionForwarder
+ -&gt; Maybe Text
+ -&gt; Maybe Text
+ -&gt; Maybe Int
+ -&gt; Maybe Int
+ -&gt; ConfigRepresentation)
+-&gt; Parser OptionsRepresentation
+-&gt; Parser
+     (Maybe TraceOptionForwarder
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe Int
+      -&gt; Maybe Int
+      -&gt; ConfigRepresentation)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser OptionsRepresentation
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptions&quot;</span></span><span>
+</span><span id="line-44"></span><span>                           </span><span class="annot"><span class="annottext">Parser
+  (Maybe TraceOptionForwarder
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe Int
+   -&gt; Maybe Int
+   -&gt; ConfigRepresentation)
+-&gt; Parser (Maybe TraceOptionForwarder)
+-&gt; Parser
+     (Maybe Text
+      -&gt; Maybe Text -&gt; Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe TraceOptionForwarder)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionForwarder&quot;</span></span><span>
+</span><span id="line-45"></span><span>                           </span><span class="annot"><span class="annottext">Parser
+  (Maybe Text
+   -&gt; Maybe Text -&gt; Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+-&gt; Parser (Maybe Text)
+-&gt; Parser
+     (Maybe Text -&gt; Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Text)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionNodeName&quot;</span></span><span>
+</span><span id="line-46"></span><span>                           </span><span class="annot"><span class="annottext">Parser
+  (Maybe Text -&gt; Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+-&gt; Parser (Maybe Text)
+-&gt; Parser (Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Text)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionMetricsPrefix&quot;</span></span><span>
+</span><span id="line-47"></span><span>                           </span><span class="annot"><span class="annottext">Parser (Maybe Int -&gt; Maybe Int -&gt; ConfigRepresentation)
+-&gt; Parser (Maybe Int) -&gt; Parser (Maybe Int -&gt; ConfigRepresentation)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Int)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionResourceFrequency&quot;</span></span><span>
+</span><span id="line-48"></span><span>                           </span><span class="annot"><span class="annottext">Parser (Maybe Int -&gt; ConfigRepresentation)
+-&gt; Parser (Maybe Int) -&gt; Parser ConfigRepresentation
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679143895"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Int)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionLedgerMetricsFrequency&quot;</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser ConfigRepresentation
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679143901"><span id="local-6989586621679143905"><span id="local-6989586621679143908"><span id="local-6989586621679143911"><span class="annot"><span class="hs-identifier hs-type">AE.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679143947"><span class="annot"><span class="annottext">toJSON :: ConfigRepresentation -&gt; Value
+</span><a href="#local-6989586621679143947"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143949"><span id="local-6989586621679143950"><span id="local-6989586621679143951"><span id="local-6989586621679143952"><span id="local-6989586621679143953"><span id="local-6989586621679143954"><span class="annot"><span class="annottext">Maybe Int
+Maybe Text
+Maybe TraceOptionForwarder
+OptionsRepresentation
+traceOptions :: ConfigRepresentation -&gt; OptionsRepresentation
+traceOptionForwarder :: ConfigRepresentation -&gt; Maybe TraceOptionForwarder
+traceOptionNodeName :: ConfigRepresentation -&gt; Maybe Text
+traceOptionMetricsPrefix :: ConfigRepresentation -&gt; Maybe Text
+traceOptionResourceFrequency :: ConfigRepresentation -&gt; Maybe Int
+traceOptionLedgerMetricsFrequency :: ConfigRepresentation -&gt; Maybe Int
+traceOptions :: OptionsRepresentation
+traceOptionForwarder :: Maybe TraceOptionForwarder
+traceOptionNodeName :: Maybe Text
+traceOptionMetricsPrefix :: Maybe Text
+traceOptionResourceFrequency :: Maybe Int
+traceOptionLedgerMetricsFrequency :: Maybe Int
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptions"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptions&quot;</span></span><span>                  </span><span class="annot"><span class="annottext">Key -&gt; OptionsRepresentation -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">OptionsRepresentation
+</span><a href="#local-6989586621679143949"><span class="hs-identifier hs-var">traceOptions</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionForwarder&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Key -&gt; Maybe TraceOptionForwarder -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe TraceOptionForwarder
+</span><a href="#local-6989586621679143950"><span class="hs-identifier hs-var">traceOptionForwarder</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionNodeName&quot;</span></span><span>           </span><span class="annot"><span class="annottext">Key -&gt; Maybe Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679143951"><span class="hs-identifier hs-var">traceOptionNodeName</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionMetricsPrefix&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Key -&gt; Maybe Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679143952"><span class="hs-identifier hs-var">traceOptionMetricsPrefix</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionResourceFrequency&quot;</span></span><span>  </span><span class="annot"><span class="annottext">Key -&gt; Maybe Int -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679143953"><span class="hs-identifier hs-var">traceOptionResourceFrequency</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;TraceOptionLedgerMetricsFrequency&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe Int -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679143954"><span class="hs-identifier hs-var">traceOptionLedgerMetricsFrequency</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">type</span><span> </span><span id="OptionsRepresentation"><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#OptionsRepresentation"><span class="hs-identifier hs-var">OptionsRepresentation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | In the external configuration representation for configuration files</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- all options for a namespace are part of a record</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="ConfigOptionRep"><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-var">ConfigOptionRep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConfigOptionRep"><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-var">ConfigOptionRep</span></a></span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="severity"><span class="annot"><span class="annottext">ConfigOptionRep -&gt; Maybe SeverityF
+</span><a href="Cardano.Logging.ConfigurationParser.html#severity"><span class="hs-identifier hs-var hs-var">severity</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#SeverityF"><span class="hs-identifier hs-type">SeverityF</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="detail"><span class="annot"><span class="annottext">ConfigOptionRep -&gt; Maybe DetailLevel
+</span><a href="Cardano.Logging.ConfigurationParser.html#detail"><span class="hs-identifier hs-var hs-var">detail</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#DetailLevel"><span class="hs-identifier hs-type">DetailLevel</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="backends"><span class="annot"><span class="annottext">ConfigOptionRep -&gt; Maybe [BackendConfig]
+</span><a href="Cardano.Logging.ConfigurationParser.html#backends"><span class="hs-identifier hs-var hs-var">backends</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.html#BackendConfig"><span class="hs-identifier hs-type">BackendConfig</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="maxFrequency"><span class="annot"><span class="annottext">ConfigOptionRep -&gt; Maybe Double
+</span><a href="Cardano.Logging.ConfigurationParser.html#maxFrequency"><span class="hs-identifier hs-var hs-var">maxFrequency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679143963"><span id="local-6989586621679143973"><span class="annot"><span class="annottext">ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+(ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; Eq ConfigOptionRep
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+== :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+$c/= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+/= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679143984"><span id="local-6989586621679143994"><span id="local-6989586621679144004"><span id="local-6989586621679144007"><span id="local-6989586621679144010"><span id="local-6989586621679144013"><span id="local-6989586621679144016"><span class="annot"><span class="annottext">Eq ConfigOptionRep
+Eq ConfigOptionRep =&gt;
+(ConfigOptionRep -&gt; ConfigOptionRep -&gt; Ordering)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep)
+-&gt; (ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep)
+-&gt; Ord ConfigOptionRep
+ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+ConfigOptionRep -&gt; ConfigOptionRep -&gt; Ordering
+ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Ordering
+compare :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Ordering
+$c&lt; :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+&lt; :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+$c&lt;= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+&lt;= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+$c&gt; :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+&gt; :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+$c&gt;= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+&gt;= :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; Bool
+$cmax :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep
+max :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep
+$cmin :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep
+min :: ConfigOptionRep -&gt; ConfigOptionRep -&gt; ConfigOptionRep
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144026"><span id="local-6989586621679144037"><span id="local-6989586621679144040"><span class="annot"><span class="annottext">Int -&gt; ConfigOptionRep -&gt; ShowS
+[ConfigOptionRep] -&gt; ShowS
+ConfigOptionRep -&gt; String
+(Int -&gt; ConfigOptionRep -&gt; ShowS)
+-&gt; (ConfigOptionRep -&gt; String)
+-&gt; ([ConfigOptionRep] -&gt; ShowS)
+-&gt; Show ConfigOptionRep
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ConfigOptionRep -&gt; ShowS
+showsPrec :: Int -&gt; ConfigOptionRep -&gt; ShowS
+$cshow :: ConfigOptionRep -&gt; String
+show :: ConfigOptionRep -&gt; String
+$cshowList :: [ConfigOptionRep] -&gt; ShowS
+showList :: [ConfigOptionRep] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144050"><span id="local-6989586621679144053"><span class="annot"><span class="hs-identifier hs-type">AE.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679144074"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ConfigOptionRep
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span id="local-6989586621679144075"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679144075"><span class="hs-identifier hs-var">obj</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SeverityF
+-&gt; Maybe DetailLevel
+-&gt; Maybe [BackendConfig]
+-&gt; Maybe Double
+-&gt; ConfigOptionRep
+</span><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-var">ConfigOptionRep</span></a></span><span>
+</span><span id="line-75"></span><span>                         </span><span class="annot"><span class="annottext">(Maybe SeverityF
+ -&gt; Maybe DetailLevel
+ -&gt; Maybe [BackendConfig]
+ -&gt; Maybe Double
+ -&gt; ConfigOptionRep)
+-&gt; Parser (Maybe SeverityF)
+-&gt; Parser
+     (Maybe DetailLevel
+      -&gt; Maybe [BackendConfig] -&gt; Maybe Double -&gt; ConfigOptionRep)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679144075"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe SeverityF)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;severity&quot;</span></span><span>
+</span><span id="line-76"></span><span>                         </span><span class="annot"><span class="annottext">Parser
+  (Maybe DetailLevel
+   -&gt; Maybe [BackendConfig] -&gt; Maybe Double -&gt; ConfigOptionRep)
+-&gt; Parser (Maybe DetailLevel)
+-&gt; Parser
+     (Maybe [BackendConfig] -&gt; Maybe Double -&gt; ConfigOptionRep)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679144075"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe DetailLevel)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;detail&quot;</span></span><span>
+</span><span id="line-77"></span><span>                         </span><span class="annot"><span class="annottext">Parser (Maybe [BackendConfig] -&gt; Maybe Double -&gt; ConfigOptionRep)
+-&gt; Parser (Maybe [BackendConfig])
+-&gt; Parser (Maybe Double -&gt; ConfigOptionRep)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679144075"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe [BackendConfig])
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;backends&quot;</span></span><span>
+</span><span id="line-78"></span><span>                         </span><span class="annot"><span class="annottext">Parser (Maybe Double -&gt; ConfigOptionRep)
+-&gt; Parser (Maybe Double) -&gt; Parser ConfigOptionRep
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679144075"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Double)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxFrequency&quot;</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser ConfigOptionRep
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144078"><span id="local-6989586621679144081"><span id="local-6989586621679144084"><span id="local-6989586621679144087"><span class="annot"><span class="hs-identifier hs-type">AE.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679144089"><span class="annot"><span class="annottext">toJSON :: ConfigOptionRep -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144090"><span id="local-6989586621679144091"><span id="local-6989586621679144092"><span id="local-6989586621679144093"><span class="annot"><span class="annottext">Maybe Double
+Maybe [BackendConfig]
+Maybe SeverityF
+Maybe DetailLevel
+severity :: ConfigOptionRep -&gt; Maybe SeverityF
+detail :: ConfigOptionRep -&gt; Maybe DetailLevel
+backends :: ConfigOptionRep -&gt; Maybe [BackendConfig]
+maxFrequency :: ConfigOptionRep -&gt; Maybe Double
+severity :: Maybe SeverityF
+detail :: Maybe DetailLevel
+backends :: Maybe [BackendConfig]
+maxFrequency :: Maybe Double
+</span><a href="Cardano.Logging.ConfigurationParser.html#severity"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Pair] -&gt; [Pair]
+</span><a href="#local-6989586621679144094"><span class="hs-identifier hs-var">conss</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>      </span><span id="local-6989586621679144099"><span class="annot"><span class="annottext">consMay :: Key -&gt; Maybe a -&gt; [b] -&gt; [b]
+</span><a href="#local-6989586621679144099"><span class="hs-identifier hs-var hs-var">consMay</span></a></span></span><span> </span><span id="local-6989586621679144100"><span class="annot"><span class="annottext">Key
+</span><a href="#local-6989586621679144100"><span class="hs-identifier hs-var">attr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([b] -&gt; [b]) -&gt; (a -&gt; [b] -&gt; [b]) -&gt; Maybe a -&gt; [b] -&gt; [b]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">[b] -&gt; [b]
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(b -&gt; [b] -&gt; [b]) -&gt; (a -&gt; b) -&gt; a -&gt; [b] -&gt; [b]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Key
+</span><a href="#local-6989586621679144100"><span class="hs-identifier hs-var">attr</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; a -&gt; b
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; b
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621679144094"><span class="annot"><span class="annottext">conss :: [Pair] -&gt; [Pair]
+</span><a href="#local-6989586621679144094"><span class="hs-identifier hs-var hs-var">conss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe SeverityF -&gt; [Pair] -&gt; [Pair]
+forall {e} {b} {a}.
+(KeyValue e b, ToJSON a) =&gt;
+Key -&gt; Maybe a -&gt; [b] -&gt; [b]
+</span><a href="#local-6989586621679144099"><span class="hs-identifier hs-var">consMay</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;severity&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe SeverityF
+</span><a href="#local-6989586621679144090"><span class="hs-identifier hs-var">severity</span></a></span><span>
+</span><span id="line-87"></span><span>            </span><span class="annot"><span class="annottext">([Pair] -&gt; [Pair]) -&gt; ([Pair] -&gt; [Pair]) -&gt; [Pair] -&gt; [Pair]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe DetailLevel -&gt; [Pair] -&gt; [Pair]
+forall {e} {b} {a}.
+(KeyValue e b, ToJSON a) =&gt;
+Key -&gt; Maybe a -&gt; [b] -&gt; [b]
+</span><a href="#local-6989586621679144099"><span class="hs-identifier hs-var">consMay</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;detail&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe DetailLevel
+</span><a href="#local-6989586621679144091"><span class="hs-identifier hs-var">detail</span></a></span><span>
+</span><span id="line-88"></span><span>            </span><span class="annot"><span class="annottext">([Pair] -&gt; [Pair]) -&gt; ([Pair] -&gt; [Pair]) -&gt; [Pair] -&gt; [Pair]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe [BackendConfig] -&gt; [Pair] -&gt; [Pair]
+forall {e} {b} {a}.
+(KeyValue e b, ToJSON a) =&gt;
+Key -&gt; Maybe a -&gt; [b] -&gt; [b]
+</span><a href="#local-6989586621679144099"><span class="hs-identifier hs-var">consMay</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;backends&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe [BackendConfig]
+</span><a href="#local-6989586621679144092"><span class="hs-identifier hs-var">backends</span></a></span><span>
+</span><span id="line-89"></span><span>            </span><span class="annot"><span class="annottext">([Pair] -&gt; [Pair]) -&gt; ([Pair] -&gt; [Pair]) -&gt; [Pair] -&gt; [Pair]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe Double -&gt; [Pair] -&gt; [Pair]
+forall {e} {b} {a}.
+(KeyValue e b, ToJSON a) =&gt;
+Key -&gt; Maybe a -&gt; [b] -&gt; [b]
+</span><a href="#local-6989586621679144099"><span class="hs-identifier hs-var">consMay</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxFrequency&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Double
+</span><a href="#local-6989586621679144093"><span class="hs-identifier hs-var">maxFrequency</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144126"><span id="local-6989586621679144130"><span id="local-6989586621679144133"><span id="local-6989586621679144136"><span class="annot"><span class="hs-identifier hs-type">AE.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679144139"><span class="annot"><span class="annottext">toJSON :: TraceConfig -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span id="local-6989586621679144140"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144140"><span class="hs-identifier hs-var">tc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; ConfigRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#configToRepresentation"><span class="hs-identifier hs-var">configToRepresentation</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144140"><span class="hs-identifier hs-var">tc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><span class="hs-comment">-- | Read a configuration file and returns the internal representation</span></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#readConfiguration"><span class="hs-identifier hs-type">readConfiguration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-96"></span><span id="readConfiguration"><span class="annot"><span class="annottext">readConfiguration :: String -&gt; IO TraceConfig
+</span><a href="Cardano.Logging.ConfigurationParser.html#readConfiguration"><span class="hs-identifier hs-var hs-var">readConfiguration</span></a></span></span><span> </span><span id="local-6989586621679144142"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144142"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">(ParseException -&gt; IO TraceConfig)
+-&gt; (TraceConfig -&gt; IO TraceConfig)
+-&gt; Either ParseException TraceConfig
+-&gt; IO TraceConfig
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">ParseException -&gt; IO TraceConfig
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; IO TraceConfig
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either ParseException TraceConfig -&gt; IO TraceConfig)
+-&gt; (ByteString -&gt; Either ParseException TraceConfig)
+-&gt; ByteString
+-&gt; IO TraceConfig
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either ParseException TraceConfig
+</span><a href="Cardano.Logging.ConfigurationParser.html#parseRepresentation"><span class="hs-identifier hs-var">parseRepresentation</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO TraceConfig) -&gt; IO ByteString -&gt; IO TraceConfig
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144142"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Read a configuration file and returns the internal representation</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- Uses values which are not in the file from the defaultConfig</span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#readConfigurationWithDefault"><span class="hs-identifier hs-type">readConfigurationWithDefault</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-102"></span><span id="readConfigurationWithDefault"><span class="annot"><span class="annottext">readConfigurationWithDefault :: String -&gt; TraceConfig -&gt; IO TraceConfig
+</span><a href="Cardano.Logging.ConfigurationParser.html#readConfigurationWithDefault"><span class="hs-identifier hs-var hs-var">readConfigurationWithDefault</span></a></span></span><span> </span><span id="local-6989586621679144147"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144147"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span id="local-6989586621679144148"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679144149"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144149"><span class="hs-identifier hs-var">fileConf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(ParseException -&gt; IO TraceConfig)
+-&gt; (TraceConfig -&gt; IO TraceConfig)
+-&gt; Either ParseException TraceConfig
+-&gt; IO TraceConfig
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">ParseException -&gt; IO TraceConfig
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; IO TraceConfig
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either ParseException TraceConfig -&gt; IO TraceConfig)
+-&gt; (ByteString -&gt; Either ParseException TraceConfig)
+-&gt; ByteString
+-&gt; IO TraceConfig
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either ParseException TraceConfig
+</span><a href="Cardano.Logging.ConfigurationParser.html#parseRepresentation"><span class="hs-identifier hs-var">parseRepresentation</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO TraceConfig) -&gt; IO ByteString -&gt; IO TraceConfig
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144147"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="annottext">TraceConfig -&gt; IO TraceConfig
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceConfig -&gt; IO TraceConfig) -&gt; TraceConfig -&gt; IO TraceConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; TraceConfig
+</span><a href="#local-6989586621679144150"><span class="hs-identifier hs-var">mergeWithDefault</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144149"><span class="hs-identifier hs-var">fileConf</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="#local-6989586621679144150"><span class="hs-identifier hs-type">mergeWithDefault</span></a></span><span> </span><span class="hs-glyph">::</span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679144150"><span class="annot"><span class="annottext">mergeWithDefault :: TraceConfig -&gt; TraceConfig
+</span><a href="#local-6989586621679144150"><span class="hs-identifier hs-var hs-var">mergeWithDefault</span></a></span></span><span> </span><span id="local-6989586621679144151"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+-&gt; Maybe TraceOptionForwarder
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe Int
+-&gt; Maybe Int
+-&gt; TraceConfig
+</span><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-var">TraceConfig</span></a></span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; (Map [Text] [ConfigOption] -&gt; Bool)
+-&gt; Map [Text] [ConfigOption]
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption] -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#null"><span class="hs-identifier hs-var">Map.null</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Map [Text] [ConfigOption]
+</span><a href="Cardano.Logging.Types.html#tcOptions"><span class="hs-identifier hs-var">tcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Map [Text] [ConfigOption]
+</span><a href="Cardano.Logging.Types.html#tcOptions"><span class="hs-identifier hs-var">tcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span>
+</span><span id="line-111"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Map [Text] [ConfigOption]
+</span><a href="Cardano.Logging.Types.html#tcOptions"><span class="hs-identifier hs-var">tcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe TraceOptionForwarder
+</span><a href="Cardano.Logging.Types.html#tcForwarder"><span class="hs-identifier hs-var">tcForwarder</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe TraceOptionForwarder
+-&gt; Maybe TraceOptionForwarder -&gt; Maybe TraceOptionForwarder
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe TraceOptionForwarder
+</span><a href="Cardano.Logging.Types.html#tcForwarder"><span class="hs-identifier hs-var">tcForwarder</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcNodeName"><span class="hs-identifier hs-var">tcNodeName</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Maybe Text -&gt; Maybe Text
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcNodeName"><span class="hs-identifier hs-var">tcNodeName</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcMetricsPrefix"><span class="hs-identifier hs-var">tcMetricsPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Maybe Text -&gt; Maybe Text
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcMetricsPrefix"><span class="hs-identifier hs-var">tcMetricsPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcResourceFrequency"><span class="hs-identifier hs-var">tcResourceFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Maybe Int -&gt; Maybe Int
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcResourceFrequency"><span class="hs-identifier hs-var">tcResourceFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcLedgerMetricsFrequency"><span class="hs-identifier hs-var">tcLedgerMetricsFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144151"><span class="hs-identifier hs-var">fileConf</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Maybe Int -&gt; Maybe Int
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcLedgerMetricsFrequency"><span class="hs-identifier hs-var">tcLedgerMetricsFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144148"><span class="hs-identifier hs-var">defaultConf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Parse the byteString as external representation and converts to internal</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- representation</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#parseRepresentation"><span class="hs-identifier hs-type">parseRepresentation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.Internal.html#ParseException"><span class="hs-identifier hs-type">ParseException</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-121"></span><span id="parseRepresentation"><span class="annot"><span class="annottext">parseRepresentation :: ByteString -&gt; Either ParseException TraceConfig
+</span><a href="Cardano.Logging.ConfigurationParser.html#parseRepresentation"><span class="hs-identifier hs-var hs-var">parseRepresentation</span></a></span></span><span> </span><span id="local-6989586621679144161"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679144161"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either ParseException ConfigRepresentation
+-&gt; Either ParseException TraceConfig
+</span><a href="#local-6989586621679144162"><span class="hs-identifier hs-var">transform</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either ParseException ConfigRepresentation
+forall a. FromJSON a =&gt; ByteString -&gt; Either ParseException a
+</span><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.html#decodeEither%27"><span class="hs-identifier hs-var">decodeEither'</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679144161"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="#local-6989586621679144162"><span class="hs-identifier hs-type">transform</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-124"></span><span>         </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.Internal.html#ParseException"><span class="hs-identifier hs-type">ParseException</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span><span>
+</span><span id="line-125"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/y5s1459k6zmg7d82k4i826ka7w1mzxsj-yaml-lib-yaml-0.11.11.2-haddock-doc/share/doc/yaml/html/src/Data.Yaml.Internal.html#ParseException"><span class="hs-identifier hs-type">ParseException</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679144162"><span class="annot"><span class="annottext">transform :: Either ParseException ConfigRepresentation
+-&gt; Either ParseException TraceConfig
+</span><a href="#local-6989586621679144162"><span class="hs-identifier hs-var hs-var">transform</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679144164"><span class="annot"><span class="annottext">ParseException
+</span><a href="#local-6989586621679144164"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParseException -&gt; Either ParseException TraceConfig
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">ParseException
+</span><a href="#local-6989586621679144164"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><a href="#local-6989586621679144162"><span class="hs-identifier hs-var">transform</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679144165"><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144165"><span class="hs-identifier hs-var">rl</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Either ParseException TraceConfig
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceConfig -&gt; Either ParseException TraceConfig)
+-&gt; TraceConfig -&gt; Either ParseException TraceConfig
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; ConfigRepresentation -&gt; TraceConfig
+</span><a href="#local-6989586621679144166"><span class="hs-identifier hs-var">transform'</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="Cardano.Logging.Types.html#emptyTraceConfig"><span class="hs-identifier hs-var">emptyTraceConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144165"><span class="hs-identifier hs-var">rl</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><a href="#local-6989586621679144166"><span class="hs-identifier hs-type">transform'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679144166"><span class="annot"><span class="annottext">transform' :: TraceConfig -&gt; ConfigRepresentation -&gt; TraceConfig
+</span><a href="#local-6989586621679144166"><span class="hs-identifier hs-var hs-var">transform'</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">tcOptions :: TraceConfig -&gt; Map [Text] [ConfigOption]
+</span><a href="Cardano.Logging.Types.html#tcOptions"><span class="hs-identifier hs-var">tcOptions</span></a></span><span class="hs-glyph">=</span><span id="local-6989586621679144168"><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144168"><span class="hs-identifier hs-var">to'</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679144169"><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679144173"><span class="annot"><span class="annottext">to'' :: Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144173"><span class="hs-identifier hs-var hs-var">to''</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map [Text] [ConfigOption]
+ -&gt; (Text, ConfigOptionRep) -&gt; Map [Text] [ConfigOption])
+-&gt; Map [Text] [ConfigOption]
+-&gt; [(Text, ConfigOptionRep)]
+-&gt; Map [Text] [ConfigOption]
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">List.foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679144174"><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144174"><span class="hs-identifier hs-var">tci</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144175"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144175"><span class="hs-identifier hs-var">nsp</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144176"><span class="annot"><span class="annottext">ConfigOptionRep
+</span><a href="#local-6989586621679144176"><span class="hs-identifier hs-var">opts'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>                              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679144179"><span class="annot"><span class="annottext">ns' :: [Text]
+</span><a href="#local-6989586621679144179"><span class="hs-identifier hs-var hs-var">ns'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; [Text]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#split"><span class="hs-identifier hs-var">split</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144175"><span class="hs-identifier hs-var">nsp</span></a></span><span>
+</span><span id="line-132"></span><span>                                  </span><span id="local-6989586621679144184"><span class="annot"><span class="annottext">ns'' :: [Text]
+</span><a href="#local-6989586621679144184"><span class="hs-identifier hs-var hs-var">ns''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144179"><span class="hs-identifier hs-var">ns'</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144179"><span class="hs-identifier hs-var">ns'</span></a></span><span>
+</span><span id="line-133"></span><span>                                  </span><span id="local-6989586621679144187"><span class="annot"><span class="annottext">ns''' :: [Text]
+</span><a href="#local-6989586621679144187"><span class="hs-identifier hs-var hs-var">ns'''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144184"><span class="hs-identifier hs-var">ns''</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-134"></span><span>                                            </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Cardano&quot;</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679144188"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144188"><span class="hs-identifier hs-var">tl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144188"><span class="hs-identifier hs-var">tl</span></a></span><span>
+</span><span id="line-135"></span><span>                                            </span><span id="local-6989586621679144189"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144189"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144189"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-136"></span><span>                              </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">([ConfigOption] -&gt; [ConfigOption] -&gt; [ConfigOption])
+-&gt; [Text]
+-&gt; [ConfigOption]
+-&gt; Map [Text] [ConfigOption]
+-&gt; Map [Text] [ConfigOption]
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insertWith"><span class="hs-identifier hs-var">Map.insertWith</span></a></span><span>
+</span><span id="line-137"></span><span>                                  </span><span class="annot"><span class="annottext">[ConfigOption] -&gt; [ConfigOption] -&gt; [ConfigOption]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">(++)</span></a></span><span>
+</span><span id="line-138"></span><span>                                  </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144187"><span class="hs-identifier hs-var">ns'''</span></a></span><span>
+</span><span id="line-139"></span><span>                                  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigOptionRep -&gt; [ConfigOption]
+</span><a href="#local-6989586621679144191"><span class="hs-identifier hs-var">toConfigOptions</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigOptionRep
+</span><a href="#local-6989586621679144176"><span class="hs-identifier hs-var">opts'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>                                  </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144174"><span class="hs-identifier hs-var">tci</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>                           </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144168"><span class="hs-identifier hs-var">to'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OptionsRepresentation -&gt; [(Text, ConfigOptionRep)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; OptionsRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptions"><span class="hs-identifier hs-var">traceOptions</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+-&gt; Maybe TraceOptionForwarder
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe Int
+-&gt; Maybe Int
+-&gt; TraceConfig
+</span><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-var">TraceConfig</span></a></span><span>
+</span><span id="line-143"></span><span>          </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144173"><span class="hs-identifier hs-var">to''</span></a></span><span>
+</span><span id="line-144"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe TraceOptionForwarder
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionForwarder"><span class="hs-identifier hs-var">traceOptionForwarder</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Text
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionNodeName"><span class="hs-identifier hs-var">traceOptionNodeName</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Text
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionMetricsPrefix"><span class="hs-identifier hs-var">traceOptionMetricsPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Int
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionResourceFrequency"><span class="hs-identifier hs-var">traceOptionResourceFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigRepresentation -&gt; Maybe Int
+</span><a href="Cardano.Logging.ConfigurationParser.html#traceOptionLedgerMetricsFrequency"><span class="hs-identifier hs-var">traceOptionLedgerMetricsFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigRepresentation
+</span><a href="#local-6989586621679144169"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- | Convert from external to internal representation</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><a href="#local-6989586621679144191"><span class="hs-identifier hs-type">toConfigOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.html#ConfigOption"><span class="hs-identifier hs-type">ConfigOption</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679144191"><span class="annot"><span class="annottext">toConfigOptions :: ConfigOptionRep -&gt; [ConfigOption]
+</span><a href="#local-6989586621679144191"><span class="hs-identifier hs-var hs-var">toConfigOptions</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679144193"><span id="local-6989586621679144194"><span id="local-6989586621679144195"><span id="local-6989586621679144196"><span class="annot"><span class="annottext">Maybe Double
+Maybe [BackendConfig]
+Maybe SeverityF
+Maybe DetailLevel
+severity :: ConfigOptionRep -&gt; Maybe SeverityF
+detail :: ConfigOptionRep -&gt; Maybe DetailLevel
+backends :: ConfigOptionRep -&gt; Maybe [BackendConfig]
+maxFrequency :: ConfigOptionRep -&gt; Maybe Double
+severity :: Maybe SeverityF
+detail :: Maybe DetailLevel
+backends :: Maybe [BackendConfig]
+maxFrequency :: Maybe Double
+</span><a href="Cardano.Logging.ConfigurationParser.html#severity"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>      </span><span class="annot"><span class="annottext">[Maybe ConfigOption] -&gt; [ConfigOption]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span>
+</span><span id="line-155"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">SeverityF -&gt; ConfigOption
+</span><a href="Cardano.Logging.Types.html#ConfSeverity"><span class="hs-identifier hs-var">ConfSeverity</span></a></span><span> </span><span class="annot"><span class="annottext">(SeverityF -&gt; ConfigOption)
+-&gt; Maybe SeverityF -&gt; Maybe ConfigOption
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SeverityF
+</span><a href="#local-6989586621679144193"><span class="hs-identifier hs-var">severity</span></a></span><span>
+</span><span id="line-156"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DetailLevel -&gt; ConfigOption
+</span><a href="Cardano.Logging.Types.html#ConfDetail"><span class="hs-identifier hs-var">ConfDetail</span></a></span><span> </span><span class="annot"><span class="annottext">(DetailLevel -&gt; ConfigOption)
+-&gt; Maybe DetailLevel -&gt; Maybe ConfigOption
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe DetailLevel
+</span><a href="#local-6989586621679144194"><span class="hs-identifier hs-var">detail</span></a></span><span>
+</span><span id="line-157"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[BackendConfig] -&gt; ConfigOption
+</span><a href="Cardano.Logging.Types.html#ConfBackend"><span class="hs-identifier hs-var">ConfBackend</span></a></span><span> </span><span class="annot"><span class="annottext">([BackendConfig] -&gt; ConfigOption)
+-&gt; Maybe [BackendConfig] -&gt; Maybe ConfigOption
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe [BackendConfig]
+</span><a href="#local-6989586621679144195"><span class="hs-identifier hs-var">backends</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Double -&gt; ConfigOption
+</span><a href="Cardano.Logging.Types.html#ConfLimiter"><span class="hs-identifier hs-var">ConfLimiter</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; ConfigOption) -&gt; Maybe Double -&gt; Maybe ConfigOption
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Double
+</span><a href="#local-6989586621679144196"><span class="hs-identifier hs-var">maxFrequency</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><span class="hs-comment">-- | Convert from internal to external representation</span></span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#configToRepresentation"><span class="hs-identifier hs-type">configToRepresentation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-type">ConfigRepresentation</span></a></span><span>
+</span><span id="line-163"></span><span id="configToRepresentation"><span class="annot"><span class="annottext">configToRepresentation :: TraceConfig -&gt; ConfigRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#configToRepresentation"><span class="hs-identifier hs-var hs-var">configToRepresentation</span></a></span></span><span> </span><span id="local-6989586621679144201"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>     </span><span class="annot"><span class="annottext">OptionsRepresentation
+-&gt; Maybe TraceOptionForwarder
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe Int
+-&gt; Maybe Int
+-&gt; ConfigRepresentation
+</span><a href="Cardano.Logging.ConfigurationParser.html#ConfigRepresentation"><span class="hs-identifier hs-var">ConfigRepresentation</span></a></span><span>
+</span><span id="line-165"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map [Text] [ConfigOption] -&gt; OptionsRepresentation
+</span><a href="#local-6989586621679144202"><span class="hs-identifier hs-var">toOptionRepresentation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Map [Text] [ConfigOption]
+</span><a href="Cardano.Logging.Types.html#tcOptions"><span class="hs-identifier hs-var">tcOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe TraceOptionForwarder
+</span><a href="Cardano.Logging.Types.html#tcForwarder"><span class="hs-identifier hs-var">tcForwarder</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcNodeName"><span class="hs-identifier hs-var">tcNodeName</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Text
+</span><a href="Cardano.Logging.Types.html#tcMetricsPrefix"><span class="hs-identifier hs-var">tcMetricsPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcResourceFrequency"><span class="hs-identifier hs-var">tcResourceFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; Maybe Int
+</span><a href="Cardano.Logging.Types.html#tcLedgerMetricsFrequency"><span class="hs-identifier hs-var">tcLedgerMetricsFrequency</span></a></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144201"><span class="hs-identifier hs-var">traceConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="#local-6989586621679144202"><span class="hs-identifier hs-type">toOptionRepresentation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.html#ConfigOption"><span class="hs-identifier hs-type">ConfigOption</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-173"></span><span>                              </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679144202"><span class="annot"><span class="annottext">toOptionRepresentation :: Map [Text] [ConfigOption] -&gt; OptionsRepresentation
+</span><a href="#local-6989586621679144202"><span class="hs-identifier hs-var hs-var">toOptionRepresentation</span></a></span></span><span> </span><span id="local-6989586621679144203"><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144203"><span class="hs-identifier hs-var">internalOptMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>      </span><span class="annot"><span class="annottext">(OptionsRepresentation
+ -&gt; ([Text], [ConfigOption]) -&gt; OptionsRepresentation)
+-&gt; OptionsRepresentation
+-&gt; [([Text], [ConfigOption])]
+-&gt; OptionsRepresentation
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">List.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">OptionsRepresentation
+-&gt; ([Text], [ConfigOption]) -&gt; OptionsRepresentation
+</span><a href="#local-6989586621679144204"><span class="hs-identifier hs-var">conversion</span></a></span><span> </span><span class="annot"><span class="annottext">OptionsRepresentation
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map [Text] [ConfigOption] -&gt; [([Text], [ConfigOption])]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map [Text] [ConfigOption]
+</span><a href="#local-6989586621679144203"><span class="hs-identifier hs-var">internalOptMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><a href="#local-6989586621679144204"><span class="hs-identifier hs-type">conversion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-178"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.html#ConfigOption"><span class="hs-identifier hs-type">ConfigOption</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span id="local-6989586621679144204"><span class="annot"><span class="annottext">conversion :: OptionsRepresentation
+-&gt; ([Text], [ConfigOption]) -&gt; OptionsRepresentation
+</span><a href="#local-6989586621679144204"><span class="hs-identifier hs-var hs-var">conversion</span></a></span></span><span> </span><span id="local-6989586621679144206"><span class="annot"><span class="annottext">OptionsRepresentation
+</span><a href="#local-6989586621679144206"><span class="hs-identifier hs-var">accuMap</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144207"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144207"><span class="hs-identifier hs-var">ns</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144208"><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144208"><span class="hs-identifier hs-var">options</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679144210"><span class="annot"><span class="annottext">nssingle :: Text
+</span><a href="#local-6989586621679144210"><span class="hs-identifier hs-var hs-var">nssingle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144207"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-182"></span><span>          </span><span id="local-6989586621679144211"><span class="annot"><span class="annottext">optionRep :: ConfigOptionRep
+</span><a href="#local-6989586621679144211"><span class="hs-identifier hs-var hs-var">optionRep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ConfigOption] -&gt; ConfigOptionRep
+</span><a href="#local-6989586621679144212"><span class="hs-identifier hs-var">fromOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144208"><span class="hs-identifier hs-var">options</span></a></span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-keyword">in</span><span>  </span><span class="annot"><span class="annottext">Text
+-&gt; ConfigOptionRep
+-&gt; OptionsRepresentation
+-&gt; OptionsRepresentation
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144210"><span class="hs-identifier hs-var">nssingle</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigOptionRep
+</span><a href="#local-6989586621679144211"><span class="hs-identifier hs-var">optionRep</span></a></span><span> </span><span class="annot"><span class="annottext">OptionsRepresentation
+</span><a href="#local-6989586621679144206"><span class="hs-identifier hs-var">accuMap</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><a href="#local-6989586621679144212"><span class="hs-identifier hs-type">fromOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Logging.Types.html#ConfigOption"><span class="hs-identifier hs-type">ConfigOption</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span id="local-6989586621679144212"><span class="annot"><span class="annottext">fromOptions :: [ConfigOption] -&gt; ConfigOptionRep
+</span><a href="#local-6989586621679144212"><span class="hs-identifier hs-var hs-var">fromOptions</span></a></span></span><span> </span><span id="local-6989586621679144214"><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144214"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-187"></span><span>      </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html#ConfigOptionRep"><span class="hs-identifier hs-type">ConfigOptionRep</span></a></span><span>
+</span><span id="line-188"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">severity :: Maybe SeverityF
+</span><a href="Cardano.Logging.ConfigurationParser.html#severity"><span class="hs-identifier hs-var">severity</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SeverityF] -&gt; Maybe SeverityF
+forall a. [a] -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#listToMaybe"><span class="hs-identifier hs-var">listToMaybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">SeverityF
+</span><a href="#local-6989586621679144215"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#ConfSeverity"><span class="hs-identifier hs-type">ConfSeverity</span></a></span><span> </span><span id="local-6989586621679144215"><span class="annot"><span class="annottext">SeverityF
+</span><a href="#local-6989586621679144215"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144214"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-189"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">detail :: Maybe DetailLevel
+</span><a href="Cardano.Logging.ConfigurationParser.html#detail"><span class="hs-identifier hs-var">detail</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[DetailLevel] -&gt; Maybe DetailLevel
+forall a. [a] -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#listToMaybe"><span class="hs-identifier hs-var">listToMaybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144216"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#ConfDetail"><span class="hs-identifier hs-type">ConfDetail</span></a></span><span> </span><span id="local-6989586621679144216"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144216"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144214"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">backends :: Maybe [BackendConfig]
+</span><a href="Cardano.Logging.ConfigurationParser.html#backends"><span class="hs-identifier hs-var">backends</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[BackendConfig]] -&gt; Maybe [BackendConfig]
+forall a. [a] -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#listToMaybe"><span class="hs-identifier hs-var">listToMaybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[BackendConfig]
+</span><a href="#local-6989586621679144217"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#ConfBackend"><span class="hs-identifier hs-type">ConfBackend</span></a></span><span> </span><span id="local-6989586621679144217"><span class="annot"><span class="annottext">[BackendConfig]
+</span><a href="#local-6989586621679144217"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144214"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-191"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxFrequency :: Maybe Double
+</span><a href="Cardano.Logging.ConfigurationParser.html#maxFrequency"><span class="hs-identifier hs-var">maxFrequency</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Double] -&gt; Maybe Double
+forall a. [a] -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#listToMaybe"><span class="hs-identifier hs-var">listToMaybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679144218"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#ConfLimiter"><span class="hs-identifier hs-type">ConfLimiter</span></a></span><span> </span><span id="local-6989586621679144218"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679144218"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[ConfigOption]
+</span><a href="#local-6989586621679144214"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span></pre></body></html>

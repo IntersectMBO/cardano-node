@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Metrics.Prometheus.Concurrent.Registry</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier">Registry</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#new"><span class="hs-identifier">new</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerCounter"><span class="hs-identifier">registerCounter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerGauge"><span class="hs-identifier">registerGauge</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerHistogram"><span class="hs-identifier">registerHistogram</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#listMetricIds"><span class="hs-identifier">listMetricIds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#removeMetric"><span class="hs-identifier">removeMetric</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#sample"><span class="hs-identifier">sample</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator">(&lt;$&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier">modifyMVarMasked</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier">newMVar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier">readMVar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier">withMVar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html"><span class="hs-identifier">Data.Tuple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#swap"><span class="hs-identifier">swap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Counter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#Counter"><span class="hs-identifier">Counter</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Gauge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#Gauge"><span class="hs-identifier">Gauge</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Histogram</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#Histogram"><span class="hs-identifier">Histogram</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#UpperBound"><span class="hs-identifier">UpperBound</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html"><span class="hs-identifier">System.Metrics.Prometheus.MetricId</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier">Labels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier">MetricId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier">Name</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html"><span class="hs-identifier">System.Metrics.Prometheus.Registry</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">R</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">newtype</span><span> </span><span id="Registry"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-var">Registry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Registry"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-var">Registry</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unRegistry"><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var hs-var">unRegistry</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#Registry"><span class="hs-identifier hs-type">R.Registry</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#new"><span class="hs-identifier hs-type">new</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span>
+</span><span id="line-40"></span><span id="new"><span class="annot"><span class="annottext">new :: IO Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#new"><span class="hs-identifier hs-var hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MVar Registry -&gt; Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-var">Registry</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; Registry) -&gt; IO (MVar Registry) -&gt; IO Registry
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO (MVar Registry)
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Registry
+</span><a href="System.Metrics.Prometheus.Registry.html#new"><span class="hs-identifier hs-var">R.new</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerCounter"><span class="hs-identifier hs-type">registerCounter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#Counter"><span class="hs-identifier hs-type">Counter</span></a></span><span>
+</span><span id="line-44"></span><span id="registerCounter"><span class="annot"><span class="annottext">registerCounter :: Name -&gt; Labels -&gt; Registry -&gt; IO Counter
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerCounter"><span class="hs-identifier hs-var hs-var">registerCounter</span></a></span></span><span> </span><span id="local-6989586621679074742"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074742"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679074743"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074743"><span class="hs-identifier hs-var">labels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar Registry
+ -&gt; (Registry -&gt; IO (Registry, Counter)) -&gt; IO Counter)
+-&gt; (Registry -&gt; IO (Registry, Counter))
+-&gt; MVar Registry
+-&gt; IO Counter
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry -&gt; (Registry -&gt; IO (Registry, Counter)) -&gt; IO Counter
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">modifyMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO (Registry, Counter)
+</span><a href="#local-6989586621679074745"><span class="hs-identifier hs-var">register</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO Counter)
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO Counter
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>    </span><span id="local-6989586621679074745"><span class="annot"><span class="annottext">register :: Registry -&gt; IO (Registry, Counter)
+</span><a href="#local-6989586621679074745"><span class="hs-identifier hs-var hs-var">register</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Counter, Registry) -&gt; (Registry, Counter))
+-&gt; IO (Counter, Registry) -&gt; IO (Registry, Counter)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Counter, Registry) -&gt; (Registry, Counter)
+forall a b. (a, b) -&gt; (b, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#swap"><span class="hs-identifier hs-var">swap</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Counter, Registry) -&gt; IO (Registry, Counter))
+-&gt; (Registry -&gt; IO (Counter, Registry))
+-&gt; Registry
+-&gt; IO (Registry, Counter)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO (Counter, Registry)
+</span><a href="System.Metrics.Prometheus.Registry.html#registerCounter"><span class="hs-identifier hs-var">R.registerCounter</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074742"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074743"><span class="hs-identifier hs-var">labels</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerGauge"><span class="hs-identifier hs-type">registerGauge</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#Gauge"><span class="hs-identifier hs-type">Gauge</span></a></span><span>
+</span><span id="line-50"></span><span id="registerGauge"><span class="annot"><span class="annottext">registerGauge :: Name -&gt; Labels -&gt; Registry -&gt; IO Gauge
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerGauge"><span class="hs-identifier hs-var hs-var">registerGauge</span></a></span></span><span> </span><span id="local-6989586621679074749"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074749"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679074750"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074750"><span class="hs-identifier hs-var">labels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; (Registry -&gt; IO (Registry, Gauge)) -&gt; IO Gauge)
+-&gt; (Registry -&gt; IO (Registry, Gauge)) -&gt; MVar Registry -&gt; IO Gauge
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry -&gt; (Registry -&gt; IO (Registry, Gauge)) -&gt; IO Gauge
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">modifyMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO (Registry, Gauge)
+</span><a href="#local-6989586621679074751"><span class="hs-identifier hs-var">register</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO Gauge)
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO Gauge
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679074751"><span class="annot"><span class="annottext">register :: Registry -&gt; IO (Registry, Gauge)
+</span><a href="#local-6989586621679074751"><span class="hs-identifier hs-var hs-var">register</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Gauge, Registry) -&gt; (Registry, Gauge))
+-&gt; IO (Gauge, Registry) -&gt; IO (Registry, Gauge)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Gauge, Registry) -&gt; (Registry, Gauge)
+forall a b. (a, b) -&gt; (b, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#swap"><span class="hs-identifier hs-var">swap</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Gauge, Registry) -&gt; IO (Registry, Gauge))
+-&gt; (Registry -&gt; IO (Gauge, Registry))
+-&gt; Registry
+-&gt; IO (Registry, Gauge)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO (Gauge, Registry)
+</span><a href="System.Metrics.Prometheus.Registry.html#registerGauge"><span class="hs-identifier hs-var">R.registerGauge</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074749"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074750"><span class="hs-identifier hs-var">labels</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerHistogram"><span class="hs-identifier hs-type">registerHistogram</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#UpperBound"><span class="hs-identifier hs-type">UpperBound</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#Histogram"><span class="hs-identifier hs-type">Histogram</span></a></span><span>
+</span><span id="line-56"></span><span id="registerHistogram"><span class="annot"><span class="annottext">registerHistogram :: Name -&gt; Labels -&gt; [UpperBound] -&gt; Registry -&gt; IO Histogram
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerHistogram"><span class="hs-identifier hs-var hs-var">registerHistogram</span></a></span></span><span> </span><span id="local-6989586621679074754"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074754"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679074755"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074755"><span class="hs-identifier hs-var">labels</span></a></span></span><span> </span><span id="local-6989586621679074756"><span class="annot"><span class="annottext">[UpperBound]
+</span><a href="#local-6989586621679074756"><span class="hs-identifier hs-var">buckets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar Registry
+ -&gt; (Registry -&gt; IO (Registry, Histogram)) -&gt; IO Histogram)
+-&gt; (Registry -&gt; IO (Registry, Histogram))
+-&gt; MVar Registry
+-&gt; IO Histogram
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry
+-&gt; (Registry -&gt; IO (Registry, Histogram)) -&gt; IO Histogram
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">modifyMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO (Registry, Histogram)
+</span><a href="#local-6989586621679074757"><span class="hs-identifier hs-var">register</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO Histogram)
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO Histogram
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621679074757"><span class="annot"><span class="annottext">register :: Registry -&gt; IO (Registry, Histogram)
+</span><a href="#local-6989586621679074757"><span class="hs-identifier hs-var hs-var">register</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Histogram, Registry) -&gt; (Registry, Histogram))
+-&gt; IO (Histogram, Registry) -&gt; IO (Registry, Histogram)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Histogram, Registry) -&gt; (Registry, Histogram)
+forall a b. (a, b) -&gt; (b, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#swap"><span class="hs-identifier hs-var">swap</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Histogram, Registry) -&gt; IO (Registry, Histogram))
+-&gt; (Registry -&gt; IO (Histogram, Registry))
+-&gt; Registry
+-&gt; IO (Registry, Histogram)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+-&gt; Labels -&gt; [UpperBound] -&gt; Registry -&gt; IO (Histogram, Registry)
+</span><a href="System.Metrics.Prometheus.Registry.html#registerHistogram"><span class="hs-identifier hs-var">R.registerHistogram</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074754"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074755"><span class="hs-identifier hs-var">labels</span></a></span><span> </span><span class="annot"><span class="annottext">[UpperBound]
+</span><a href="#local-6989586621679074756"><span class="hs-identifier hs-var">buckets</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#removeMetric"><span class="hs-identifier hs-type">removeMetric</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span id="removeMetric"><span class="annot"><span class="annottext">removeMetric :: MetricId -&gt; Registry -&gt; IO ()
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#removeMetric"><span class="hs-identifier hs-var hs-var">removeMetric</span></a></span></span><span> </span><span id="local-6989586621679074760"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074760"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; (Registry -&gt; IO (Registry, ())) -&gt; IO ())
+-&gt; (Registry -&gt; IO (Registry, ())) -&gt; MVar Registry -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry -&gt; (Registry -&gt; IO (Registry, ())) -&gt; IO ()
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVarMasked"><span class="hs-identifier hs-var">modifyMVarMasked</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO (Registry, ())
+forall {f :: * -&gt; *}. Applicative f =&gt; Registry -&gt; f (Registry, ())
+</span><a href="#local-6989586621679074761"><span class="hs-identifier hs-var">remove</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO ())
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679074761"><span class="annot"><span class="annottext">remove :: Registry -&gt; f (Registry, ())
+</span><a href="#local-6989586621679074761"><span class="hs-identifier hs-var hs-var">remove</span></a></span></span><span> </span><span id="local-6989586621679074767"><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679074767"><span class="hs-identifier hs-var">reg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Registry, ()) -&gt; f (Registry, ())
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricId -&gt; Registry -&gt; Registry
+</span><a href="System.Metrics.Prometheus.Registry.html#removeMetric"><span class="hs-identifier hs-var">R.removeMetric</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679074760"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Registry
+</span><a href="#local-6989586621679074767"><span class="hs-identifier hs-var">reg</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#listMetricIds"><span class="hs-identifier hs-type">listMetricIds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span id="listMetricIds"><span class="annot"><span class="annottext">listMetricIds :: Registry -&gt; IO [MetricId]
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#listMetricIds"><span class="hs-identifier hs-var hs-var">listMetricIds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Registry -&gt; [MetricId]) -&gt; IO Registry -&gt; IO [MetricId]
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; [MetricId]
+</span><a href="System.Metrics.Prometheus.Registry.html#listMetricIds"><span class="hs-identifier hs-var">R.listMetricIds</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Registry -&gt; IO [MetricId])
+-&gt; (Registry -&gt; IO Registry) -&gt; Registry -&gt; IO [MetricId]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry -&gt; IO Registry
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO Registry)
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO Registry
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#sample"><span class="hs-identifier hs-type">sample</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#RegistrySample"><span class="hs-identifier hs-type">R.RegistrySample</span></a></span><span>
+</span><span id="line-72"></span><span id="sample"><span class="annot"><span class="annottext">sample :: Registry -&gt; IO RegistrySample
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#sample"><span class="hs-identifier hs-var hs-var">sample</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MVar Registry
+ -&gt; (Registry -&gt; IO RegistrySample) -&gt; IO RegistrySample)
+-&gt; (Registry -&gt; IO RegistrySample)
+-&gt; MVar Registry
+-&gt; IO RegistrySample
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Registry
+-&gt; (Registry -&gt; IO RegistrySample) -&gt; IO RegistrySample
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO RegistrySample
+</span><a href="System.Metrics.Prometheus.Registry.html#sample"><span class="hs-identifier hs-var">R.sample</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Registry -&gt; IO RegistrySample)
+-&gt; (Registry -&gt; MVar Registry) -&gt; Registry -&gt; IO RegistrySample
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; MVar Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#unRegistry"><span class="hs-identifier hs-var">unRegistry</span></a></span><span>
+</span><span id="line-73"></span></pre></body></html>

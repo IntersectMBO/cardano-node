@@ -1,0 +1,384 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Cardano.Benchmarking.Wallet
+Description : Basic functions to manipulate wallets.
+
+Beyond the basic wallet functions, there are some functions
+manipulating the 'FundQueue' held in a 'WalletRef' by side
+effect, like 'createAndStore' and 'mangle'.
+-}</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Wallet</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#txId"><span class="hs-identifier">txId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html"><span class="hs-identifier">Cardano.TxGenerator.FundQueue</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">FundQueue</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html"><span class="hs-identifier">Cardano.TxGenerator.Tx</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.UTxO.html"><span class="hs-identifier">Cardano.TxGenerator.UTxO</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.html"><span class="hs-identifier">Streaming</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | All the actual functionality of Wallet / WalletRef has been removed</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- and WalletRef has been stripped down to MVar FundQueue.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- The implementation of Wallet has become trivial.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- Todo: Remove trivial wrapper functions.</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">type</span><span> </span><span id="WalletRef"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-var">WalletRef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- '[ ToUTxO era ]` is easier to construct.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- There is also a thought that a `Control.Monad.Error.MonadError`</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- might fit here, but that's a deprecated interface relative to</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- `Control.Monad.Trans.Except.ExceptT`:</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">type</span><span> </span><span id="TxStream"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#TxStream"><span class="hs-identifier hs-var">TxStream</span></a></span></span><span> </span><span id="local-6989586621679920402"><span class="annot"><a href="#local-6989586621679920402"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679920403"><span class="annot"><a href="#local-6989586621679920403"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920403"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679920402"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | 'createAndStore' hides its 3rd argument in the 'CreateAndStore'</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- type alias. The sole uses are in &quot;Cardano.Benchmarking.Script.Core&quot;,</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- in 'Cardano.Benchmarking.Script.Core.interpretPayMode'. The 2nd</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- @store@ argument is always passed as 'mkWalletFundStore' applied</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- to a 'WalletRef'.</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679920323"><span id="local-6989586621679920326"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#createAndStore"><span class="hs-identifier hs-type">createAndStore</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.UTxO.html#ToUTxO"><span class="hs-identifier hs-type">ToUTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920323"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679920326"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStore"><span class="hs-identifier hs-type">CreateAndStore</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920326"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920323"><span class="hs-identifier hs-type">era</span></a></span></span></span><span>
+</span><span id="line-49"></span><span id="createAndStore"><span class="annot"><span class="annottext">createAndStore :: forall era (m :: * -&gt; *).
+ToUTxO era -&gt; (Fund -&gt; m ()) -&gt; CreateAndStore m era
+</span><a href="Cardano.Benchmarking.Wallet.html#createAndStore"><span class="hs-identifier hs-var hs-var">createAndStore</span></a></span></span><span> </span><span id="local-6989586621679920408"><span class="annot"><span class="annottext">ToUTxO era
+</span><a href="#local-6989586621679920408"><span class="hs-identifier hs-var">create</span></a></span></span><span> </span><span id="local-6989586621679920409"><span class="annot"><span class="annottext">Fund -&gt; m ()
+</span><a href="#local-6989586621679920409"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679920410"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679920410"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut CtxTx era
+</span><a href="#local-6989586621679920411"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; TxId -&gt; m ()
+</span><a href="#local-6989586621679920412"><span class="hs-identifier hs-var">toStore</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679920411"><span class="annot"><span class="annottext">TxOut CtxTx era
+</span><a href="#local-6989586621679920411"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920413"><span class="annot"><span class="annottext">TxIx -&gt; TxId -&gt; Fund
+</span><a href="#local-6989586621679920413"><span class="hs-identifier hs-var">mkFund</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ToUTxO era
+</span><a href="#local-6989586621679920408"><span class="hs-identifier hs-var">create</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679920410"><span class="hs-identifier hs-var">lovelace</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679920412"><span class="annot"><span class="annottext">toStore :: TxIx -&gt; TxId -&gt; m ()
+</span><a href="#local-6989586621679920412"><span class="hs-identifier hs-var hs-var">toStore</span></a></span></span><span> </span><span id="local-6989586621679920414"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679920414"><span class="hs-identifier hs-var">txIx</span></a></span></span><span> </span><span id="local-6989586621679920415"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679920415"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fund -&gt; m ()
+</span><a href="#local-6989586621679920409"><span class="hs-identifier hs-var">store</span></a></span><span> </span><span class="annot"><span class="annottext">(Fund -&gt; m ()) -&gt; Fund -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; TxId -&gt; Fund
+</span><a href="#local-6989586621679920413"><span class="hs-identifier hs-var">mkFund</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679920414"><span class="hs-identifier hs-var">txIx</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679920415"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | This creates a new `MVar` with an `emptyFundQueue` vs. truly</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- initializing a preexisting `WalletRef`.</span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#initWallet"><span class="hs-identifier hs-type">initWallet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span>
+</span><span id="line-57"></span><span id="initWallet"><span class="annot"><span class="annottext">initWallet :: IO WalletRef
+</span><a href="Cardano.Benchmarking.Wallet.html#initWallet"><span class="hs-identifier hs-var hs-var">initWallet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; IO WalletRef
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | This reads an `MVar` and applies a function to the copied content.</span></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679920342"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#askWalletRef"><span class="hs-identifier hs-type">askWalletRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679920342"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920342"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-61"></span><span id="askWalletRef"><span class="annot"><span class="annottext">askWalletRef :: forall a. WalletRef -&gt; (FundQueue -&gt; a) -&gt; IO a
+</span><a href="Cardano.Benchmarking.Wallet.html#askWalletRef"><span class="hs-identifier hs-var hs-var">askWalletRef</span></a></span></span><span> </span><span id="local-6989586621679920422"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920422"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679920423"><span class="annot"><span class="annottext">FundQueue -&gt; a
+</span><a href="#local-6989586621679920423"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679920424"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920424"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">WalletRef -&gt; IO FundQueue
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920422"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO a) -&gt; a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; a
+</span><a href="#local-6989586621679920423"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920424"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | This does an insertion into the `MVar` contents.</span></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#walletRefInsertFund"><span class="hs-identifier hs-type">walletRefInsertFund</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span id="walletRefInsertFund"><span class="annot"><span class="annottext">walletRefInsertFund :: WalletRef -&gt; Fund -&gt; IO ()
+</span><a href="Cardano.Benchmarking.Wallet.html#walletRefInsertFund"><span class="hs-identifier hs-var hs-var">walletRefInsertFund</span></a></span></span><span> </span><span id="local-6989586621679920427"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920427"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span id="local-6989586621679920428"><span class="annot"><span class="annottext">Fund
+</span><a href="#local-6989586621679920428"><span class="hs-identifier hs-var">fund</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WalletRef -&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span>  </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920427"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">((FundQueue -&gt; IO FundQueue) -&gt; IO ())
+-&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679920430"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920430"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; IO FundQueue
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; IO FundQueue) -&gt; FundQueue -&gt; IO FundQueue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-identifier hs-var">FundQueue.insertFund</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920430"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Fund
+</span><a href="#local-6989586621679920428"><span class="hs-identifier hs-var">fund</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | 'mkWalletFundStoreList' hides its second argument in</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- 'FundToStoreList'. This is not used anywhere.</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#mkWalletFundStoreList"><span class="hs-identifier hs-type">mkWalletFundStoreList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#FundToStoreList"><span class="hs-identifier hs-type">FundToStoreList</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-72"></span><span id="mkWalletFundStoreList"><span class="annot"><span class="annottext">mkWalletFundStoreList :: WalletRef -&gt; FundToStoreList IO
+</span><a href="Cardano.Benchmarking.Wallet.html#mkWalletFundStoreList"><span class="hs-identifier hs-var hs-var">mkWalletFundStoreList</span></a></span></span><span> </span><span id="local-6989586621679920433"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920433"><span class="hs-identifier hs-var">walletRef</span></a></span></span><span> </span><span id="local-6989586621679920434"><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679920434"><span class="hs-identifier hs-var">funds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WalletRef -&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span>  </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920433"><span class="hs-identifier hs-var">walletRef</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><span class="annottext">((FundQueue -&gt; IO FundQueue) -&gt; IO ())
+-&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679920435"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920435"><span class="hs-identifier hs-var">wallet</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; IO FundQueue
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(FundQueue -&gt; Fund -&gt; FundQueue)
+-&gt; FundQueue -&gt; [Fund] -&gt; FundQueue
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-identifier hs-var">FundQueue.insertFund</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920435"><span class="hs-identifier hs-var">wallet</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679920434"><span class="hs-identifier hs-var">funds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- | 'mkWalletFundStore' hides its second argument in 'FundToStore'.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- This is only ever called in tandem with 'createAndStore' in</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Core.interpretPayMode'. It's only</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- ever partially applied to make a function that modifies the</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- 'WalletRef' 'MVar' by side effect.</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#mkWalletFundStore"><span class="hs-identifier hs-type">mkWalletFundStore</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#FundToStore"><span class="hs-identifier hs-type">FundToStore</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-81"></span><span id="mkWalletFundStore"><span class="annot"><span class="annottext">mkWalletFundStore :: WalletRef -&gt; Fund -&gt; IO ()
+</span><a href="Cardano.Benchmarking.Wallet.html#mkWalletFundStore"><span class="hs-identifier hs-var hs-var">mkWalletFundStore</span></a></span></span><span> </span><span id="local-6989586621679920438"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920438"><span class="hs-identifier hs-var">walletRef</span></a></span></span><span> </span><span id="local-6989586621679920439"><span class="annot"><span class="annottext">Fund
+</span><a href="#local-6989586621679920439"><span class="hs-identifier hs-var">fund</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WalletRef -&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">modifyMVar_</span></a></span><span>  </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920438"><span class="hs-identifier hs-var">walletRef</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">((FundQueue -&gt; IO FundQueue) -&gt; IO ())
+-&gt; (FundQueue -&gt; IO FundQueue) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679920440"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920440"><span class="hs-identifier hs-var">wallet</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; IO FundQueue
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; IO FundQueue) -&gt; FundQueue -&gt; IO FundQueue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-identifier hs-var">FundQueue.insertFund</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920440"><span class="hs-identifier hs-var">wallet</span></a></span><span> </span><span class="annot"><span class="annottext">Fund
+</span><a href="#local-6989586621679920439"><span class="hs-identifier hs-var">fund</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- | 'walletSource' is only ever used in</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Core.evalGenerator' to pass</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- to 'Cardano.TxGenerator.Tx.sourceToStoreTransaction' and</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- its associated functions.</span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#walletSource"><span class="hs-identifier hs-type">walletSource</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#FundSource"><span class="hs-identifier hs-type">FundSource</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-89"></span><span id="walletSource"><span class="annot"><span class="annottext">walletSource :: WalletRef -&gt; Int -&gt; FundSource IO
+</span><a href="Cardano.Benchmarking.Wallet.html#walletSource"><span class="hs-identifier hs-var hs-var">walletSource</span></a></span></span><span> </span><span id="local-6989586621679920443"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920443"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span id="local-6989586621679920444"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679920444"><span class="hs-identifier hs-var">munch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WalletRef
+-&gt; (FundQueue -&gt; IO (FundQueue, Either TxGenError [Fund]))
+-&gt; FundSource IO
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920443"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">((FundQueue -&gt; IO (FundQueue, Either TxGenError [Fund]))
+ -&gt; FundSource IO)
+-&gt; (FundQueue -&gt; IO (FundQueue, Either TxGenError [Fund]))
+-&gt; FundSource IO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679920446"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920446"><span class="hs-identifier hs-var">fifo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(FundQueue, Either TxGenError [Fund])
+-&gt; IO (FundQueue, Either TxGenError [Fund])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((FundQueue, Either TxGenError [Fund])
+ -&gt; IO (FundQueue, Either TxGenError [Fund]))
+-&gt; (FundQueue, Either TxGenError [Fund])
+-&gt; IO (FundQueue, Either TxGenError [Fund])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int -&gt; FundQueue -&gt; Maybe (FundQueue, [Fund])
+</span><a href="Cardano.TxGenerator.FundQueue.html#removeFunds"><span class="hs-identifier hs-var">removeFunds</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679920444"><span class="hs-identifier hs-var">munch</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920446"><span class="hs-identifier hs-var">fifo</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">Maybe (FundQueue, [Fund])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920446"><span class="hs-identifier hs-var">fifo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; Either TxGenError [Fund]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxGenError -&gt; Either TxGenError [Fund])
+-&gt; TxGenError -&gt; Either TxGenError [Fund]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-var">TxGenError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;WalletSource: out of funds&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679920449"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920449"><span class="hs-identifier hs-var">newFifo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920450"><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679920450"><span class="hs-identifier hs-var">funds</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920449"><span class="hs-identifier hs-var">newFifo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Fund] -&gt; Either TxGenError [Fund]
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679920450"><span class="hs-identifier hs-var">funds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="annot"><span class="hs-comment">-- | Just a preview of the wallet's funds; wallet remains unmodified.</span></span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#walletPreview"><span class="hs-identifier hs-type">walletPreview</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#WalletRef"><span class="hs-identifier hs-type">WalletRef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-95"></span><span id="walletPreview"><span class="annot"><span class="annottext">walletPreview :: WalletRef -&gt; Int -&gt; IO [Fund]
+</span><a href="Cardano.Benchmarking.Wallet.html#walletPreview"><span class="hs-identifier hs-var hs-var">walletPreview</span></a></span></span><span> </span><span id="local-6989586621679920452"><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920452"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span id="local-6989586621679920453"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679920453"><span class="hs-identifier hs-var">munch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679920454"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920454"><span class="hs-identifier hs-var">fifo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">WalletRef -&gt; IO FundQueue
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">WalletRef
+</span><a href="#local-6989586621679920452"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><span class="annottext">[Fund] -&gt; IO [Fund]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">([Fund] -&gt; IO [Fund]) -&gt; [Fund] -&gt; IO [Fund]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+-&gt; ((FundQueue, [Fund]) -&gt; [Fund])
+-&gt; Maybe (FundQueue, [Fund])
+-&gt; [Fund]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue -&gt; [Fund]
+</span><a href="Cardano.TxGenerator.FundQueue.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920454"><span class="hs-identifier hs-var">fifo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(FundQueue, [Fund]) -&gt; [Fund]
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; FundQueue -&gt; Maybe (FundQueue, [Fund])
+</span><a href="Cardano.TxGenerator.FundQueue.html#removeFunds"><span class="hs-identifier hs-var">removeFunds</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679920453"><span class="hs-identifier hs-var">munch</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679920454"><span class="hs-identifier hs-var">fifo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | The second argument to 'mangleWithChange' is hidden in the</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- 'CreateAndStoreList' type. When there is change to be made,</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- it makes separate transactions to pay the change and sends</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- them off to 'mangle' to get zips of applications. This is</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- only ever used once, in</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Core.evalGenerator' for the</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Types.Split' case.</span><span>
+</span><span id="line-106"></span><span id="local-6989586621679920362"><span id="local-6989586621679920363"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#mangleWithChange"><span class="hs-identifier hs-type">mangleWithChange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920362"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStore"><span class="hs-identifier hs-type">CreateAndStore</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920362"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStore"><span class="hs-identifier hs-type">CreateAndStore</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920362"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStoreList"><span class="hs-identifier hs-type">CreateAndStoreList</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920362"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#PayWithChange"><span class="hs-identifier hs-type">PayWithChange</span></a></span></span></span><span>
+</span><span id="line-107"></span><span id="mangleWithChange"><span class="annot"><span class="annottext">mangleWithChange :: forall (m :: * -&gt; *) era.
+Monad m =&gt;
+CreateAndStore m era
+-&gt; CreateAndStore m era -&gt; CreateAndStoreList m era PayWithChange
+</span><a href="Cardano.Benchmarking.Wallet.html#mangleWithChange"><span class="hs-identifier hs-var hs-var">mangleWithChange</span></a></span></span><span> </span><span id="local-6989586621679920462"><span class="annot"><span class="annottext">CreateAndStore m era
+</span><a href="#local-6989586621679920462"><span class="hs-identifier hs-var">mkChange</span></a></span></span><span> </span><span id="local-6989586621679920463"><span class="annot"><span class="annottext">CreateAndStore m era
+</span><a href="#local-6989586621679920463"><span class="hs-identifier hs-var">mkPayment</span></a></span></span><span> </span><span id="local-6989586621679920464"><span class="annot"><span class="annottext">PayWithChange
+</span><a href="#local-6989586621679920464"><span class="hs-identifier hs-var">outs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PayWithChange
+</span><a href="#local-6989586621679920464"><span class="hs-identifier hs-var">outs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#PayExact"><span class="hs-identifier hs-type">PayExact</span></a></span><span> </span><span id="local-6989586621679920466"><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920466"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[CreateAndStore m era] -&gt; CreateAndStoreList m era [Coin]
+forall (m :: * -&gt; *) era.
+Monad m =&gt;
+[CreateAndStore m era] -&gt; CreateAndStoreList m era [Coin]
+</span><a href="Cardano.Benchmarking.Wallet.html#mangle"><span class="hs-identifier hs-var">mangle</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CreateAndStore m era -&gt; [CreateAndStore m era]
+forall a. a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#repeat"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="annot"><span class="annottext">CreateAndStore m era
+</span><a href="#local-6989586621679920463"><span class="hs-identifier hs-var">mkPayment</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920466"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#PayWithChange"><span class="hs-identifier hs-type">PayWithChange</span></a></span><span> </span><span id="local-6989586621679920469"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679920469"><span class="hs-identifier hs-var">change</span></a></span></span><span> </span><span id="local-6989586621679920470"><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920470"><span class="hs-identifier hs-var">payments</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[CreateAndStore m era] -&gt; CreateAndStoreList m era [Coin]
+forall (m :: * -&gt; *) era.
+Monad m =&gt;
+[CreateAndStore m era] -&gt; CreateAndStoreList m era [Coin]
+</span><a href="Cardano.Benchmarking.Wallet.html#mangle"><span class="hs-identifier hs-var">mangle</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CreateAndStore m era
+</span><a href="#local-6989586621679920462"><span class="hs-identifier hs-var">mkChange</span></a></span><span> </span><span class="annot"><span class="annottext">CreateAndStore m era
+-&gt; [CreateAndStore m era] -&gt; [CreateAndStore m era]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">CreateAndStore m era -&gt; [CreateAndStore m era]
+forall a. a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#repeat"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="annot"><span class="annottext">CreateAndStore m era
+</span><a href="#local-6989586621679920463"><span class="hs-identifier hs-var">mkPayment</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679920469"><span class="hs-identifier hs-var">change</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; [Coin] -&gt; [Coin]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920470"><span class="hs-identifier hs-var">payments</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- | The second argument to 'mangle' is hidden in the</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- 'CreateAndStoreList' type. This is basically</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- @second (\x -&gt; (mapM_ ($ x)))</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- . unzip</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- $ zipWith3 (\x y z -&gt; second ($ z) (x y))@</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- but relatively obfuscated.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- This appears to mostly be list processing and function application.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- and is only ever used by 'Cardano.Bencharking.Script.Core.evalGenerator'</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- to handle several of the cases of</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Types.Generator', though it's also</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- indirectly invoked via 'mangleWithChange' once.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- The only caller not passing a constant list built with 'repeat'</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- as the first @fkts@ argument is 'mangleWithChange' above. This</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- is likely worth refactoring for the sake of maintainability.</span><span>
+</span><span id="line-125"></span><span id="local-6989586621679920368"><span id="local-6989586621679920369"><span class="annot"><a href="Cardano.Benchmarking.Wallet.html#mangle"><span class="hs-identifier hs-type">mangle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920368"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStore"><span class="hs-identifier hs-type">CreateAndStore</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920368"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920369"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#CreateAndStoreList"><span class="hs-identifier hs-type">CreateAndStoreList</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920368"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679920369"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span> </span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-126"></span><span id="mangle"><span class="annot"><span class="annottext">mangle :: forall (m :: * -&gt; *) era.
+Monad m =&gt;
+[CreateAndStore m era] -&gt; CreateAndStoreList m era [Coin]
+</span><a href="Cardano.Benchmarking.Wallet.html#mangle"><span class="hs-identifier hs-var hs-var">mangle</span></a></span></span><span> </span><span id="local-6989586621679920476"><span class="annot"><span class="annottext">[CreateAndStore m era]
+</span><a href="#local-6989586621679920476"><span class="hs-identifier hs-var">fkts</span></a></span></span><span> </span><span id="local-6989586621679920477"><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920477"><span class="hs-identifier hs-var">values</span></a></span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TxOut CtxTx era]
+</span><a href="#local-6989586621679920478"><span class="hs-identifier hs-var">outs</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679920479"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679920479"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((TxId -&gt; m ()) -&gt; m ()) -&gt; [TxId -&gt; m ()] -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679920481"><span class="annot"><span class="annottext">TxId -&gt; m ()
+</span><a href="#local-6989586621679920481"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; m ()
+</span><a href="#local-6989586621679920481"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679920479"><span class="hs-identifier hs-var">txId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TxId -&gt; m ()]
+</span><a href="#local-6989586621679920482"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679920478"><span class="annot"><span class="annottext">[TxOut CtxTx era]
+</span><a href="#local-6989586621679920478"><span class="hs-identifier hs-var">outs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920482"><span class="annot"><span class="annottext">[TxId -&gt; m ()]
+</span><a href="#local-6989586621679920482"><span class="hs-identifier hs-var">fs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(TxOut CtxTx era, TxId -&gt; m ())]
+-&gt; ([TxOut CtxTx era], [TxId -&gt; m ()])
+forall a b. [(a, b)] -&gt; ([a], [b])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#unzip"><span class="hs-identifier hs-var">unzip</span></a></span><span> </span><span class="annot"><span class="annottext">([(TxOut CtxTx era, TxId -&gt; m ())]
+ -&gt; ([TxOut CtxTx era], [TxId -&gt; m ()]))
+-&gt; [(TxOut CtxTx era, TxId -&gt; m ())]
+-&gt; ([TxOut CtxTx era], [TxId -&gt; m ()])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((CreateAndStore m era, Coin, TxIx)
+ -&gt; (TxOut CtxTx era, TxId -&gt; m ()))
+-&gt; [(CreateAndStore m era, Coin, TxIx)]
+-&gt; [(TxOut CtxTx era, TxId -&gt; m ())]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(CreateAndStore m era, Coin, TxIx)
+-&gt; (TxOut CtxTx era, TxId -&gt; m ())
+forall {t} {a} {t} {b}. (t -&gt; (a, t -&gt; b), t, t) -&gt; (a, b)
+</span><a href="#local-6989586621679920484"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="annot"><span class="annottext">([(CreateAndStore m era, Coin, TxIx)]
+ -&gt; [(TxOut CtxTx era, TxId -&gt; m ())])
+-&gt; [(CreateAndStore m era, Coin, TxIx)]
+-&gt; [(TxOut CtxTx era, TxId -&gt; m ())]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[CreateAndStore m era]
+-&gt; [Coin] -&gt; [TxIx] -&gt; [(CreateAndStore m era, Coin, TxIx)]
+forall a b c. [a] -&gt; [b] -&gt; [c] -&gt; [(a, b, c)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zip3"><span class="hs-identifier hs-var">zip3</span></a></span><span> </span><span class="annot"><span class="annottext">[CreateAndStore m era]
+</span><a href="#local-6989586621679920476"><span class="hs-identifier hs-var">fkts</span></a></span><span> </span><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679920477"><span class="hs-identifier hs-var">values</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Word -&gt; TxIx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679920484"><span class="annot"><span class="annottext">worker :: (t -&gt; (a, t -&gt; b), t, t) -&gt; (a, b)
+</span><a href="#local-6989586621679920484"><span class="hs-identifier hs-var hs-var">worker</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679920487"><span class="annot"><span class="annottext">t -&gt; (a, t -&gt; b)
+</span><a href="#local-6989586621679920487"><span class="hs-identifier hs-var">toUTxO</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920488"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679920488"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920489"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679920489"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679920490"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679920490"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679920491"><span class="annot"><span class="annottext">t -&gt; b
+</span><a href="#local-6989586621679920491"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">t -&gt; (a, t -&gt; b)
+</span><a href="#local-6989586621679920487"><span class="hs-identifier hs-var">toUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679920488"><span class="hs-identifier hs-var">value</span></a></span><span>
+</span><span id="line-132"></span><span>         </span><span class="hs-keyword">in</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679920490"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">t -&gt; b
+</span><a href="#local-6989586621679920491"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679920489"><span class="hs-identifier hs-var">idx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span></pre></body></html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.TxSubmit.CLI.Parsers</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#opts"><span class="hs-identifier">opts</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pTxSubmit"><span class="hs-identifier">pTxSubmit</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pConfigFile"><span class="hs-identifier">pConfigFile</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#pSocketPath"><span class="hs-identifier">pSocketPath</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier">File</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#SocketPath"><span class="hs-identifier">SocketPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Environment.html"><span class="hs-identifier">Cardano.CLI.Environment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Environment.html#EnvCli"><span class="hs-identifier">EnvCli</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html"><span class="hs-identifier">Cardano.CLI.EraBased.Common.Option</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html"><span class="hs-identifier">Cardano.TxSubmit.CLI.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#ConfigFile"><span class="hs-identifier">ConfigFile</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier">TxSubmitCommand</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>                   </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitNodeParams"><span class="hs-identifier">TxSubmitNodeParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxSubmit.Rest.Parsers.html"><span class="hs-identifier">Cardano.TxSubmit.Rest.Parsers</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxSubmit.Rest.Parsers.html#pWebserverConfig"><span class="hs-identifier">pWebserverConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier">Parser</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserInfo"><span class="hs-identifier">ParserInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Opt</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#opts"><span class="hs-identifier hs-type">opts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Environment.html#EnvCli"><span class="hs-identifier hs-type">EnvCli</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#ParserInfo"><span class="hs-identifier hs-type">ParserInfo</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier hs-type">TxSubmitCommand</span></a></span><span>
+</span><span id="line-24"></span><span id="opts"><span class="annot"><span class="annottext">opts :: EnvCli -&gt; ParserInfo TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#opts"><span class="hs-identifier hs-var hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679397891"><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679397891"><span class="hs-identifier hs-var">envCli</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">Parser TxSubmitCommand
+-&gt; InfoMod TxSubmitCommand -&gt; ParserInfo TxSubmitCommand
+forall a. Parser a -&gt; InfoMod a -&gt; ParserInfo a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#info"><span class="hs-identifier hs-var">Opt.info</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EnvCli -&gt; Parser TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pTxSubmit"><span class="hs-identifier hs-var">pTxSubmit</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679397891"><span class="hs-identifier hs-var">envCli</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxSubmitCommand
+-&gt; Parser (TxSubmitCommand -&gt; TxSubmitCommand)
+-&gt; Parser TxSubmitCommand
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (TxSubmitCommand -&gt; TxSubmitCommand)
+forall a. Parser (a -&gt; a)
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Extra.html#helper"><span class="hs-identifier hs-var">Opt.helper</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(InfoMod TxSubmitCommand -&gt; ParserInfo TxSubmitCommand)
+-&gt; InfoMod TxSubmitCommand -&gt; ParserInfo TxSubmitCommand
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="annottext">[InfoMod TxSubmitCommand] -&gt; InfoMod TxSubmitCommand
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-27"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">InfoMod TxSubmitCommand
+forall a. InfoMod a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#fullDesc"><span class="hs-identifier hs-var">Opt.fullDesc</span></a></span><span>
+</span><span id="line-28"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; InfoMod TxSubmitCommand
+forall a. String -&gt; InfoMod a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#progDesc"><span class="hs-identifier hs-var">Opt.progDesc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Cardano transaction submission web API.&quot;</span></span><span>
+</span><span id="line-29"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pTxSubmit"><span class="hs-identifier hs-type">pTxSubmit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.Environment.html#EnvCli"><span class="hs-identifier hs-type">EnvCli</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier hs-type">TxSubmitCommand</span></a></span><span>
+</span><span id="line-32"></span><span id="pTxSubmit"><span class="annot"><span class="annottext">pTxSubmit :: EnvCli -&gt; Parser TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pTxSubmit"><span class="hs-identifier hs-var hs-var">pTxSubmit</span></a></span></span><span> </span><span id="local-6989586621679397897"><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679397897"><span class="hs-identifier hs-var">envCli</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">[Parser TxSubmitCommand] -&gt; Parser TxSubmitCommand
+forall (t :: * -&gt; *) (f :: * -&gt; *) a.
+(Foldable t, Alternative f) =&gt;
+t (f a) -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#asum"><span class="hs-identifier hs-var">asum</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TxSubmitNodeParams -&gt; TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitRun"><span class="hs-identifier hs-var">TxSubmitRun</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">(TxSubmitNodeParams -&gt; TxSubmitCommand)
+-&gt; Parser TxSubmitNodeParams -&gt; Parser TxSubmitCommand
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">ConfigFile
+-&gt; ConsensusModeParams
+-&gt; NetworkId
+-&gt; SocketPath
+-&gt; WebserverConfig
+-&gt; Int
+-&gt; TxSubmitNodeParams
+</span><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitNodeParams"><span class="hs-identifier hs-var">TxSubmitNodeParams</span></a></span><span>
+</span><span id="line-36"></span><span>                </span><span class="annot"><span class="annottext">(ConfigFile
+ -&gt; ConsensusModeParams
+ -&gt; NetworkId
+ -&gt; SocketPath
+ -&gt; WebserverConfig
+ -&gt; Int
+ -&gt; TxSubmitNodeParams)
+-&gt; Parser ConfigFile
+-&gt; Parser
+     (ConsensusModeParams
+      -&gt; NetworkId
+      -&gt; SocketPath
+      -&gt; WebserverConfig
+      -&gt; Int
+      -&gt; TxSubmitNodeParams)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ConfigFile
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pConfigFile"><span class="hs-identifier hs-var">pConfigFile</span></a></span><span>
+</span><span id="line-37"></span><span>                </span><span class="annot"><span class="annottext">Parser
+  (ConsensusModeParams
+   -&gt; NetworkId
+   -&gt; SocketPath
+   -&gt; WebserverConfig
+   -&gt; Int
+   -&gt; TxSubmitNodeParams)
+-&gt; Parser ConsensusModeParams
+-&gt; Parser
+     (NetworkId
+      -&gt; SocketPath -&gt; WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ConsensusModeParams
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#pConsensusModeParams"><span class="hs-identifier hs-var">pConsensusModeParams</span></a></span><span>
+</span><span id="line-38"></span><span>                </span><span class="annot"><span class="annottext">Parser
+  (NetworkId
+   -&gt; SocketPath -&gt; WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+-&gt; Parser NetworkId
+-&gt; Parser
+     (SocketPath -&gt; WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli -&gt; Parser NetworkId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-cli-10.15.0.0-3a8fca1950a83b33290a0f0537bcf7674d5dd74f9a02afec4230dcb96bc3a7eb/share/doc/html/src/Cardano.CLI.EraBased.Common.Option.html#pNetworkId"><span class="hs-identifier hs-var">pNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">EnvCli
+</span><a href="#local-6989586621679397897"><span class="hs-identifier hs-var">envCli</span></a></span><span>
+</span><span id="line-39"></span><span>                </span><span class="annot"><span class="annottext">Parser (SocketPath -&gt; WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+-&gt; Parser SocketPath
+-&gt; Parser (WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser SocketPath
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pSocketPath%27"><span class="hs-identifier hs-var">pSocketPath'</span></a></span><span>
+</span><span id="line-40"></span><span>                </span><span class="annot"><span class="annottext">Parser (WebserverConfig -&gt; Int -&gt; TxSubmitNodeParams)
+-&gt; Parser WebserverConfig -&gt; Parser (Int -&gt; TxSubmitNodeParams)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Parser WebserverConfig
+</span><a href="Cardano.TxSubmit.Rest.Parsers.html#pWebserverConfig"><span class="hs-identifier hs-var">pWebserverConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8090</span></span><span>
+</span><span id="line-41"></span><span>                </span><span class="annot"><span class="annottext">Parser (Int -&gt; TxSubmitNodeParams)
+-&gt; Parser Int -&gt; Parser TxSubmitNodeParams
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Parser Int
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pMetricsPort"><span class="hs-identifier hs-var">pMetricsPort</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8081</span></span><span>
+</span><span id="line-42"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parser TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pVersion"><span class="hs-identifier hs-var">pVersion</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pVersion"><span class="hs-identifier hs-type">pVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitCommand"><span class="hs-identifier hs-type">TxSubmitCommand</span></a></span><span>
+</span><span id="line-47"></span><span id="pVersion"><span class="annot"><span class="annottext">pVersion :: Parser TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pVersion"><span class="hs-identifier hs-var hs-var">pVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">TxSubmitCommand
+-&gt; Mod FlagFields TxSubmitCommand -&gt; Parser TxSubmitCommand
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#flag%27"><span class="hs-identifier hs-var">Opt.flag'</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">TxSubmitCommand
+</span><a href="Cardano.TxSubmit.CLI.Types.html#TxSubmitVersion"><span class="hs-identifier hs-var">TxSubmitVersion</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields TxSubmitCommand
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">Opt.long</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;version&quot;</span></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">Mod FlagFields TxSubmitCommand
+-&gt; Mod FlagFields TxSubmitCommand -&gt; Mod FlagFields TxSubmitCommand
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields TxSubmitCommand
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">Opt.help</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Show the cardano-submit-api version&quot;</span></span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">Mod FlagFields TxSubmitCommand
+-&gt; Mod FlagFields TxSubmitCommand -&gt; Mod FlagFields TxSubmitCommand
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod FlagFields TxSubmitCommand
+forall (f :: * -&gt; *) a. Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#hidden"><span class="hs-identifier hs-var">Opt.hidden</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pConfigFile"><span class="hs-identifier hs-type">pConfigFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.TxSubmit.CLI.Types.html#ConfigFile"><span class="hs-identifier hs-type">ConfigFile</span></a></span><span>
+</span><span id="line-56"></span><span id="pConfigFile"><span class="annot"><span class="annottext">pConfigFile :: Parser ConfigFile
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pConfigFile"><span class="hs-identifier hs-var hs-var">pConfigFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; ConfigFile
+</span><a href="Cardano.TxSubmit.CLI.Types.html#ConfigFile"><span class="hs-identifier hs-var">ConfigFile</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">(String -&gt; ConfigFile) -&gt; Parser String -&gt; Parser ConfigFile
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields String -&gt; Parser String
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">Opt.strOption</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">Opt.long</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;config&quot;</span></span><span>
+</span><span id="line-60"></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields String
+-&gt; Mod OptionFields String -&gt; Mod OptionFields String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">Opt.help</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Path to the tx-submit web API configuration file&quot;</span></span><span>
+</span><span id="line-61"></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields String
+-&gt; Mod OptionFields String -&gt; Mod OptionFields String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Completer -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasCompleter f =&gt; Completer -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#completer"><span class="hs-identifier hs-var">Opt.completer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Completer
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Completer.html#bashCompleter"><span class="hs-identifier hs-var">Opt.bashCompleter</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;file&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields String
+-&gt; Mod OptionFields String -&gt; Mod OptionFields String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">Opt.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FILEPATH&quot;</span></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pSocketPath%27"><span class="hs-identifier hs-type">pSocketPath'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#SocketPath"><span class="hs-identifier hs-type">SocketPath</span></a></span><span>
+</span><span id="line-66"></span><span id="pSocketPath%27"><span class="annot"><span class="annottext">pSocketPath' :: Parser SocketPath
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pSocketPath%27"><span class="hs-identifier hs-var hs-var">pSocketPath'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; SocketPath) -&gt; Parser String -&gt; Parser SocketPath
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; SocketPath
+forall content (direction :: FileDirection).
+String -&gt; File content direction
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-var">File</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser String -&gt; Parser SocketPath)
+-&gt; Parser String -&gt; Parser SocketPath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Mod OptionFields String -&gt; Parser String
+forall s. IsString s =&gt; Mod OptionFields s -&gt; Parser s
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#strOption"><span class="hs-identifier hs-var">Opt.strOption</span></a></span><span> </span><span class="annot"><span class="annottext">(Mod OptionFields String -&gt; Parser String)
+-&gt; Mod OptionFields String -&gt; Parser String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">[Mod OptionFields String] -&gt; Mod OptionFields String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">Opt.long</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;socket-path&quot;</span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">Opt.help</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Path to a cardano-node socket&quot;</span></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Completer -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasCompleter f =&gt; Completer -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#completer"><span class="hs-identifier hs-var">Opt.completer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Completer
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.Completer.html#bashCompleter"><span class="hs-identifier hs-var">Opt.bashCompleter</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;file&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">Opt.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FILEPATH&quot;</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Cardano.TxSubmit.CLI.Parsers.html#pMetricsPort"><span class="hs-identifier hs-type">pMetricsPort</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-77"></span><span id="pMetricsPort"><span class="annot"><span class="annottext">pMetricsPort :: Int -&gt; Parser Int
+</span><a href="Cardano.TxSubmit.CLI.Parsers.html#pMetricsPort"><span class="hs-identifier hs-var hs-var">pMetricsPort</span></a></span></span><span> </span><span id="local-6989586621679397918"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679397918"><span class="hs-identifier hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">ReadM Int -&gt; Mod OptionFields Int -&gt; Parser Int
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">Opt.option</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">ReadM Int
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">Opt.auto</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasName f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">Opt.long</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;metrics-port&quot;</span></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">Opt.help</span></a></span><span>
+</span><span id="line-82"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Port for exposing metrics. If unavailable, the next free port is used. If no port can be allocated, &quot;</span></span><span>
+</span><span id="line-83"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the transaction submission API starts without metrics endpoint.&quot;</span></span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">Opt.metavar</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PORT&quot;</span></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasValue f =&gt; a -&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#value"><span class="hs-identifier hs-var">Opt.value</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679397918"><span class="hs-identifier hs-var">defaultValue</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields Int
+forall a (f :: * -&gt; *). Show a =&gt; Mod f a
+</span><a href="file:///nix/store/jm1kga7mlmqc2lhyk52jmlmqiq9kdkm1-optparse-applicative-fork-lib-optparse-applicative-fork-0.18.1.0-haddock-doc/share/doc/optparse-applicative-fork/html/src/Options.Applicative.Builder.html#showDefault"><span class="hs-identifier hs-var">Opt.showDefault</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span></pre></body></html>

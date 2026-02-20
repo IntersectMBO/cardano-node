@@ -1,0 +1,268 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Orphans</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html"><span class="hs-identifier">Ouroboros.Consensus.Node</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.Genesis.html"><span class="hs-identifier">Ouroboros.Consensus.Node.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.Genesis.html#GenesisConfigFlags"><span class="hs-identifier">GenesisConfigFlags</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Snapshots.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.Snapshots</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Util.html#Flag"><span class="hs-identifier">Flag</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.SizeInBytes.html"><span class="hs-identifier">Ouroboros.Network.SizeInBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier">SizeInBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#PrintfArg"><span class="hs-identifier">PrintfArg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span id="local-6989586621681670295"><span id="local-6989586621681670302"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html#NodeDatabasePaths"><span class="hs-identifier hs-type">NodeDatabasePaths</span></a></span></span></span><span>
+</span><span id="line-22"></span><span id="local-6989586621681670308"><span id="local-6989586621681670318"><span id="local-6989586621681670322"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html#NodeDatabasePaths"><span class="hs-identifier hs-type">NodeDatabasePaths</span></a></span></span></span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681670328"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#PrintfArg"><span class="hs-identifier hs-type">PrintfArg</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier hs-type">SizeInBytes</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>    </span><span id="local-6989586621681670334"><span class="annot"><span class="annottext">formatArg :: SizeInBytes -&gt; FieldFormatter
+</span><a href="#local-6989586621681670334"><span class="hs-identifier hs-var hs-var hs-var hs-var">formatArg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier hs-type">SizeInBytes</span></a></span><span> </span><span id="local-6989586621681670337"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621681670337"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; FieldFormatter
+forall a. PrintfArg a =&gt; a -&gt; FieldFormatter
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#formatArg"><span class="hs-identifier hs-var">formatArg</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621681670337"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681670340"><span id="local-6989586621681670344"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html#NodeDatabasePaths"><span class="hs-identifier hs-type">NodeDatabasePaths</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621681670363"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser NodeDatabasePaths
+</span><a href="#local-6989586621681670363"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621681670365"><span class="annot"><span class="annottext">o :: Value
+</span><a href="#local-6989586621681670365"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-glyph">=</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">FilePath
+-&gt; (Object -&gt; Parser NodeDatabasePaths)
+-&gt; Value
+-&gt; Parser NodeDatabasePaths
+forall a. FilePath -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;NodeDatabasePaths&quot;</span></span><span>
+</span><span id="line-30"></span><span>     </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681670368"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670368"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; NodeDatabasePaths
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html#MultipleDbPaths"><span class="hs-identifier hs-var">MultipleDbPaths</span></a></span><span>
+</span><span id="line-31"></span><span>              </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath -&gt; NodeDatabasePaths)
+-&gt; Parser FilePath -&gt; Parser (FilePath -&gt; NodeDatabasePaths)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670368"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser FilePath
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;ImmutableDbPath&quot;</span></span><span>
+</span><span id="line-32"></span><span>              </span><span class="annot"><span class="annottext">Parser (FilePath -&gt; NodeDatabasePaths)
+-&gt; Parser FilePath -&gt; Parser NodeDatabasePaths
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670368"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser FilePath
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;VolatileDbPath&quot;</span></span><span>
+</span><span id="line-33"></span><span>     </span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621681670365"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span id="local-6989586621681670373"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681670373"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeDatabasePaths -&gt; Parser NodeDatabasePaths
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeDatabasePaths -&gt; Parser NodeDatabasePaths)
+-&gt; (FilePath -&gt; NodeDatabasePaths)
+-&gt; FilePath
+-&gt; Parser NodeDatabasePaths
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; NodeDatabasePaths
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html#OnePathForAllDbs"><span class="hs-identifier hs-var">OnePathForAllDbs</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Parser NodeDatabasePaths)
+-&gt; FilePath -&gt; Parser NodeDatabasePaths
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681670373"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Parser NodeDatabasePaths
+forall a. FilePath -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; FilePath -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;NodeDatabasePaths must be an object or a string&quot;</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span id="local-6989586621681670378"><span id="local-6989586621681670383"><span id="local-6989586621681670387"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681670283"><span class="annot"><a href="#local-6989586621681670283"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Util.html#Flag"><span class="hs-identifier hs-type">Flag</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670283"><span class="hs-identifier hs-type">symbol</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-38"></span><span id="local-6989586621681670392"><span id="local-6989586621681670397"><span id="local-6989586621681670401"><span id="local-6989586621681670405"><span id="local-6989586621681670409"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681670288"><span class="annot"><a href="#local-6989586621681670288"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Util.html#Flag"><span class="hs-identifier hs-type">Flag</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670288"><span class="hs-identifier hs-type">symbol</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681670416"><span id="local-6989586621681670420"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.Genesis.html#GenesisConfigFlags"><span class="hs-identifier hs-type">GenesisConfigFlags</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621681670449"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser GenesisConfigFlags
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; (Object -&gt; Parser GenesisConfigFlags)
+-&gt; Value
+-&gt; Parser GenesisConfigFlags
+forall a. FilePath -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;GenesisConfigFlags&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser GenesisConfigFlags)
+ -&gt; Value -&gt; Parser GenesisConfigFlags)
+-&gt; (Object -&gt; Parser GenesisConfigFlags)
+-&gt; Value
+-&gt; Parser GenesisConfigFlags
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681670450"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Bool
+-&gt; Bool
+-&gt; Bool
+-&gt; Maybe DiffTime
+-&gt; Maybe Integer
+-&gt; Maybe Integer
+-&gt; Maybe SlotNo
+-&gt; Maybe DiffTime
+-&gt; GenesisConfigFlags
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.Genesis.html#GenesisConfigFlags"><span class="hs-identifier hs-var">GenesisConfigFlags</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">(Bool
+ -&gt; Bool
+ -&gt; Bool
+ -&gt; Maybe DiffTime
+ -&gt; Maybe Integer
+ -&gt; Maybe Integer
+ -&gt; Maybe SlotNo
+ -&gt; Maybe DiffTime
+ -&gt; GenesisConfigFlags)
+-&gt; Parser Bool
+-&gt; Parser
+     (Bool
+      -&gt; Bool
+      -&gt; Maybe DiffTime
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Maybe SlotNo
+      -&gt; Maybe DiffTime
+      -&gt; GenesisConfigFlags)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Bool)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;EnableCSJ&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Parser (Maybe Bool) -&gt; Bool -&gt; Parser Bool
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Bool
+   -&gt; Bool
+   -&gt; Maybe DiffTime
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Maybe SlotNo
+   -&gt; Maybe DiffTime
+   -&gt; GenesisConfigFlags)
+-&gt; Parser Bool
+-&gt; Parser
+     (Bool
+      -&gt; Maybe DiffTime
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Maybe SlotNo
+      -&gt; Maybe DiffTime
+      -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Bool)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;EnableLoEAndGDD&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Bool) -&gt; Bool -&gt; Parser Bool
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Bool
+   -&gt; Maybe DiffTime
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Maybe SlotNo
+   -&gt; Maybe DiffTime
+   -&gt; GenesisConfigFlags)
+-&gt; Parser Bool
+-&gt; Parser
+     (Maybe DiffTime
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Maybe SlotNo
+      -&gt; Maybe DiffTime
+      -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Bool)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;EnableLoP&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Parser (Maybe Bool) -&gt; Bool -&gt; Parser Bool
+forall a. Parser (Maybe a) -&gt; a -&gt; Parser a
+</span><span class="hs-operator hs-var">.!=</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe DiffTime
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Maybe SlotNo
+   -&gt; Maybe DiffTime
+   -&gt; GenesisConfigFlags)
+-&gt; Parser (Maybe DiffTime)
+-&gt; Parser
+     (Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Maybe SlotNo
+      -&gt; Maybe DiffTime
+      -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe DiffTime)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;BlockFetchGracePeriod&quot;</span></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Maybe SlotNo
+   -&gt; Maybe DiffTime
+   -&gt; GenesisConfigFlags)
+-&gt; Parser (Maybe Integer)
+-&gt; Parser
+     (Maybe Integer
+      -&gt; Maybe SlotNo -&gt; Maybe DiffTime -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Integer)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;BucketCapacity&quot;</span></span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Integer
+   -&gt; Maybe SlotNo -&gt; Maybe DiffTime -&gt; GenesisConfigFlags)
+-&gt; Parser (Maybe Integer)
+-&gt; Parser (Maybe SlotNo -&gt; Maybe DiffTime -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Integer)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;BucketRate&quot;</span></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe SlotNo -&gt; Maybe DiffTime -&gt; GenesisConfigFlags)
+-&gt; Parser (Maybe SlotNo)
+-&gt; Parser (Maybe DiffTime -&gt; GenesisConfigFlags)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe SlotNo)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;CSJJumpSize&quot;</span></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe DiffTime -&gt; GenesisConfigFlags)
+-&gt; Parser (Maybe DiffTime) -&gt; Parser GenesisConfigFlags
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681670450"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe DiffTime)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;GDDRateLimit&quot;</span></span><span>
+</span><span id="line-51"></span></pre></body></html>

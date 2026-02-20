@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Metrics.Prometheus.Concurrent.RegistryT</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator">(&lt;$&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html"><span class="hs-identifier">Control.Monad.Trans.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#MonadTrans"><span class="hs-identifier">MonadTrans</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html"><span class="hs-identifier">Control.Monad.Trans.Reader</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier">ReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier">ask</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html"><span class="hs-identifier">System.Metrics.Prometheus.Concurrent.Registry</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier">Registry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#new"><span class="hs-identifier">new</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html"><span class="hs-identifier">System.Metrics.Prometheus.Concurrent.Registry</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">R</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Counter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#Counter"><span class="hs-identifier">Counter</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Gauge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#Gauge"><span class="hs-identifier">Gauge</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Histogram</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#Histogram"><span class="hs-identifier">Histogram</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html"><span class="hs-identifier">System.Metrics.Prometheus.Metric.Histogram</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Histogram</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html"><span class="hs-identifier">System.Metrics.Prometheus.MetricId</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier">Labels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier">MetricId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier">Name</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html"><span class="hs-identifier">System.Metrics.Prometheus.Registry</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#RegistrySample"><span class="hs-identifier">RegistrySample</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#listMetricIds"><span class="hs-identifier">listMetricIds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">newtype</span><span> </span><span id="RegistryT"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span></span><span> </span><span id="local-6989586621679074771"><span class="annot"><a href="#local-6989586621679074771"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679074772"><span class="annot"><a href="#local-6989586621679074772"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RegistryT"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unRegistryT"><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. RegistryT m a -&gt; ReaderT Registry m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#unRegistryT"><span class="hs-identifier hs-var hs-var">unRegistryT</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.Registry.html#Registry"><span class="hs-identifier hs-type">Registry</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074771"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074772"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679074899"><span id="local-6989586621679074904"><span id="local-6989586621679074908"><span class="annot"><span class="annottext">Applicative (RegistryT m)
+Applicative (RegistryT m) =&gt;
+(forall a b.
+ RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b)
+-&gt; (forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b)
+-&gt; (forall a. a -&gt; RegistryT m a)
+-&gt; Monad (RegistryT m)
+forall a. a -&gt; RegistryT m a
+forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *). Monad m =&gt; Applicative (RegistryT m)
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+&gt;&gt;= :: forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+$c&gt;&gt; :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+&gt;&gt; :: forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+$creturn :: forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; RegistryT m a
+return :: forall a. a -&gt; RegistryT m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074919"><span class="annot"><span class="annottext">(forall (m :: * -&gt; *). Monad m =&gt; Monad (RegistryT m)) =&gt;
+(forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RegistryT m a)
+-&gt; MonadTrans RegistryT
+forall (m :: * -&gt; *). Monad m =&gt; Monad (RegistryT m)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RegistryT m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *).
+(forall (m :: * -&gt; *). Monad m =&gt; Monad (t m)) =&gt;
+(forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; t m a) -&gt; MonadTrans t
+$clift :: forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RegistryT m a
+lift :: forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RegistryT m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#MonadTrans"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadTrans</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074933"><span id="local-6989586621679074938"><span id="local-6989586621679074942"><span id="local-6989586621679074946"><span id="local-6989586621679074950"><span class="annot"><span class="annottext">Functor (RegistryT m)
+Functor (RegistryT m) =&gt;
+(forall a. a -&gt; RegistryT m a)
+-&gt; (forall a b.
+    RegistryT m (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m c)
+-&gt; (forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b)
+-&gt; (forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m a)
+-&gt; Applicative (RegistryT m)
+forall a. a -&gt; RegistryT m a
+forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m a
+forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+forall a b. RegistryT m (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+forall (m :: * -&gt; *). Applicative m =&gt; Functor (RegistryT m)
+forall (m :: * -&gt; *) a. Applicative m =&gt; a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m a
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c) -&gt; RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m c
+$cpure :: forall (m :: * -&gt; *) a. Applicative m =&gt; a -&gt; RegistryT m a
+pure :: forall a. a -&gt; RegistryT m a
+$c&lt;*&gt; :: forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+&lt;*&gt; :: forall a b. RegistryT m (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+$cliftA2 :: forall (m :: * -&gt; *) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c) -&gt; RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m c
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m c
+$c*&gt; :: forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+*&gt; :: forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m b
+$c&lt;* :: forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m a
+&lt;* :: forall a b. RegistryT m a -&gt; RegistryT m b -&gt; RegistryT m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074957"><span id="local-6989586621679074962"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b)
+-&gt; (forall a b. a -&gt; RegistryT m b -&gt; RegistryT m a)
+-&gt; Functor (RegistryT m)
+forall a b. a -&gt; RegistryT m b -&gt; RegistryT m a
+forall a b. (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; RegistryT m b -&gt; RegistryT m a
+forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+fmap :: forall a b. (a -&gt; b) -&gt; RegistryT m a -&gt; RegistryT m b
+$c&lt;$ :: forall (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; RegistryT m b -&gt; RegistryT m a
+&lt;$ :: forall a b. a -&gt; RegistryT m b -&gt; RegistryT m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074971"><span class="annot"><span class="annottext">Monad (RegistryT m)
+Monad (RegistryT m) =&gt;
+(forall a. IO a -&gt; RegistryT m a) -&gt; MonadIO (RegistryT m)
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. IO a -&gt; m a) -&gt; MonadIO m
+forall (m :: * -&gt; *). MonadIO m =&gt; Monad (RegistryT m)
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; RegistryT m a
+$cliftIO :: forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; RegistryT m a
+liftIO :: forall a. IO a -&gt; RegistryT m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span id="local-6989586621679074851"><span id="local-6989586621679074852"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#runRegistryT"><span class="hs-identifier hs-type">runRegistryT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074851"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074851"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074852"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679074851"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074852"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-35"></span><span id="runRegistryT"><span class="annot"><span class="annottext">runRegistryT :: forall (m :: * -&gt; *) a. MonadIO m =&gt; RegistryT m a -&gt; m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#runRegistryT"><span class="hs-identifier hs-var hs-var">runRegistryT</span></a></span></span><span> </span><span id="local-6989586621679074983"><span class="annot"><span class="annottext">RegistryT m a
+</span><a href="#local-6989586621679074983"><span class="hs-identifier hs-var">registry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Registry -&gt; m Registry
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO Registry
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#new"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="annot"><span class="annottext">m Registry -&gt; (Registry -&gt; m a) -&gt; m a
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m a -&gt; Registry -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RegistryT m a -&gt; ReaderT Registry m a
+forall (m :: * -&gt; *) a. RegistryT m a -&gt; ReaderT Registry m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#unRegistryT"><span class="hs-identifier hs-var">unRegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m a
+</span><a href="#local-6989586621679074983"><span class="hs-identifier hs-var">registry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span id="local-6989586621679074858"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerCounter"><span class="hs-identifier hs-type">registerCounter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074858"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074858"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Counter.html#Counter"><span class="hs-identifier hs-type">Counter</span></a></span></span><span>
+</span><span id="line-39"></span><span id="registerCounter"><span class="annot"><span class="annottext">registerCounter :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Name -&gt; Labels -&gt; RegistryT m Counter
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerCounter"><span class="hs-identifier hs-var hs-var">registerCounter</span></a></span></span><span> </span><span id="local-6989586621679074991"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074991"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679074992"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074992"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m Registry
+-&gt; (Registry -&gt; RegistryT m Counter) -&gt; RegistryT m Counter
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO Counter -&gt; RegistryT m Counter
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Counter -&gt; RegistryT m Counter)
+-&gt; (Registry -&gt; IO Counter) -&gt; Registry -&gt; RegistryT m Counter
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO Counter
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerCounter"><span class="hs-identifier hs-var">R.registerCounter</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679074991"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679074992"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span id="local-6989586621679074868"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerGauge"><span class="hs-identifier hs-type">registerGauge</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074868"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074868"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Gauge.html#Gauge"><span class="hs-identifier hs-type">Gauge</span></a></span></span><span>
+</span><span id="line-43"></span><span id="registerGauge"><span class="annot"><span class="annottext">registerGauge :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Name -&gt; Labels -&gt; RegistryT m Gauge
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerGauge"><span class="hs-identifier hs-var hs-var">registerGauge</span></a></span></span><span> </span><span id="local-6989586621679075001"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679075001"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679075002"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679075002"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m Registry
+-&gt; (Registry -&gt; RegistryT m Gauge) -&gt; RegistryT m Gauge
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO Gauge -&gt; RegistryT m Gauge
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Gauge -&gt; RegistryT m Gauge)
+-&gt; (Registry -&gt; IO Gauge) -&gt; Registry -&gt; RegistryT m Gauge
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; Registry -&gt; IO Gauge
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerGauge"><span class="hs-identifier hs-var">R.registerGauge</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679075001"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679075002"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span id="local-6989586621679074871"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerHistogram"><span class="hs-identifier hs-type">registerHistogram</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074871"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#Labels"><span class="hs-identifier hs-type">Labels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#UpperBound"><span class="hs-identifier hs-type">Histogram.UpperBound</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074871"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Metric.Histogram.html#Histogram"><span class="hs-identifier hs-type">Histogram</span></a></span></span><span>
+</span><span id="line-47"></span><span id="registerHistogram"><span class="annot"><span class="annottext">registerHistogram :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Name -&gt; Labels -&gt; [UpperBound] -&gt; RegistryT m Histogram
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#registerHistogram"><span class="hs-identifier hs-var hs-var">registerHistogram</span></a></span></span><span> </span><span id="local-6989586621679075010"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679075010"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679075011"><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679075011"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679075012"><span class="annot"><span class="annottext">[UpperBound]
+</span><a href="#local-6989586621679075012"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m Registry
+-&gt; (Registry -&gt; RegistryT m Histogram) -&gt; RegistryT m Histogram
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO Histogram -&gt; RegistryT m Histogram
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Histogram -&gt; RegistryT m Histogram)
+-&gt; (Registry -&gt; IO Histogram) -&gt; Registry -&gt; RegistryT m Histogram
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Labels -&gt; [UpperBound] -&gt; Registry -&gt; IO Histogram
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#registerHistogram"><span class="hs-identifier hs-var">R.registerHistogram</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679075010"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Labels
+</span><a href="#local-6989586621679075011"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">[UpperBound]
+</span><a href="#local-6989586621679075012"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679074875"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#removeMetric"><span class="hs-identifier hs-type">removeMetric</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074875"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074875"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-51"></span><span id="removeMetric"><span class="annot"><span class="annottext">removeMetric :: forall (m :: * -&gt; *). MonadIO m =&gt; MetricId -&gt; RegistryT m ()
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#removeMetric"><span class="hs-identifier hs-var hs-var">removeMetric</span></a></span></span><span> </span><span id="local-6989586621679075020"><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679075020"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m Registry
+-&gt; (Registry -&gt; RegistryT m ()) -&gt; RegistryT m ()
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; RegistryT m ()
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; RegistryT m ())
+-&gt; (Registry -&gt; IO ()) -&gt; Registry -&gt; RegistryT m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId -&gt; Registry -&gt; IO ()
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#removeMetric"><span class="hs-identifier hs-var">R.removeMetric</span></a></span><span> </span><span class="annot"><span class="annottext">MetricId
+</span><a href="#local-6989586621679075020"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679074878"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#listMetricIds"><span class="hs-identifier hs-type">listMetricIds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074878"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074878"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="System.Metrics.Prometheus.MetricId.html#MetricId"><span class="hs-identifier hs-type">MetricId</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-55"></span><span id="listMetricIds"><span class="annot"><span class="annottext">listMetricIds :: forall (m :: * -&gt; *). MonadIO m =&gt; RegistryT m [MetricId]
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#listMetricIds"><span class="hs-identifier hs-var hs-var">listMetricIds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span> </span><span class="annot"><span class="annottext">RegistryT m Registry
+-&gt; (Registry -&gt; RegistryT m [MetricId]) -&gt; RegistryT m [MetricId]
+forall a b. RegistryT m a -&gt; (a -&gt; RegistryT m b) -&gt; RegistryT m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO [MetricId] -&gt; RegistryT m [MetricId]
+forall a. IO a -&gt; RegistryT m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [MetricId] -&gt; RegistryT m [MetricId])
+-&gt; (Registry -&gt; IO [MetricId])
+-&gt; Registry
+-&gt; RegistryT m [MetricId]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO [MetricId]
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#listMetricIds"><span class="hs-identifier hs-var">R.listMetricIds</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span id="local-6989586621679074880"><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#sample"><span class="hs-identifier hs-type">sample</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074880"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-type">RegistryT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679074880"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="System.Metrics.Prometheus.Registry.html#RegistrySample"><span class="hs-identifier hs-type">RegistrySample</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-59"></span><span id="sample"><span class="annot"><span class="annottext">sample :: forall (m :: * -&gt; *). Monad m =&gt; RegistryT m (IO RegistrySample)
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#sample"><span class="hs-identifier hs-var hs-var">sample</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Registry -&gt; IO RegistrySample
+</span><a href="System.Metrics.Prometheus.Concurrent.Registry.html#sample"><span class="hs-identifier hs-var">R.sample</span></a></span><span> </span><span class="annot"><span class="annottext">(Registry -&gt; IO RegistrySample)
+-&gt; RegistryT m Registry -&gt; RegistryT m (IO RegistrySample)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry -&gt; RegistryT m Registry
+forall (m :: * -&gt; *) a. ReaderT Registry m a -&gt; RegistryT m a
+</span><a href="System.Metrics.Prometheus.Concurrent.RegistryT.html#RegistryT"><span class="hs-identifier hs-var">RegistryT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Registry m Registry
+forall (m :: * -&gt; *) r. Monad m =&gt; ReaderT r m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span>
+</span><span id="line-60"></span></pre></body></html>

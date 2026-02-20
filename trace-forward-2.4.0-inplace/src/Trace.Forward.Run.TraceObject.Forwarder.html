@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Trace.Forward.Run.TraceObject.Forwarder</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsInit"><span class="hs-identifier">forwardTraceObjectsInit</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsResp"><span class="hs-identifier">forwardTraceObjectsResp</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.html"><span class="hs-identifier">Network.Mux</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mux</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html"><span class="hs-identifier">Ouroboros.Network.Driver.Simple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier">runPeer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html"><span class="hs-identifier">Ouroboros.Network.Mux</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier">MiniProtocolCb</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Util.ShowProxy.html"><span class="hs-identifier">Ouroboros.Network.Util.ShowProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Util.ShowProxy.html#ShowProxy"><span class="hs-identifier">ShowProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.html"><span class="hs-identifier">Codec.Serialise</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Void.html"><span class="hs-identifier">Data.Void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Void"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Configuration.TraceObject.html"><span class="hs-identifier">Trace.Forward.Configuration.TraceObject</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Trace.Forward.Configuration.TraceObject.html#ForwarderConfiguration"><span class="hs-identifier">ForwarderConfiguration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.TraceObject.Codec.html"><span class="hs-identifier">Trace.Forward.Protocol.TraceObject.Codec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Forwarder</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.TraceObject.Forwarder.html"><span class="hs-identifier">Trace.Forward.Protocol.TraceObject.Forwarder</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Forwarder</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Utils.TraceObject.html"><span class="hs-identifier">Trace.Forward.Utils.TraceObject</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.ForwardSink.html"><span class="hs-identifier">Trace.Forward.Utils.ForwardSink</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Trace.Forward.Utils.ForwardSink.html#ForwardSink"><span class="hs-identifier">ForwardSink</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span id="local-6989586621679137967"><span id="local-6989586621679137973"><span id="local-6989586621679137974"><span class="annot"><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsInit"><span class="hs-identifier hs-type">forwardTraceObjectsInit</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#Serialise"><span class="hs-identifier hs-type">CBOR.Serialise</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137967"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Util.ShowProxy.html#ShowProxy"><span class="hs-identifier hs-type">ShowProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137967"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Configuration.TraceObject.html#ForwarderConfiguration"><span class="hs-identifier hs-type">ForwarderConfiguration</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137967"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.ForwardSink.html#ForwardSink"><span class="hs-identifier hs-type">ForwardSink</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137967"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier hs-type">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Types.html#InitiatorMode"><span class="hs-identifier hs-type">Mux.InitiatorMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137973"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137974"><span class="hs-identifier hs-type">responderCtx</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span></span></span></span><span>
+</span><span id="line-29"></span><span id="forwardTraceObjectsInit"><span class="annot"><span class="annottext">forwardTraceObjectsInit :: forall lo initiatorCtx responderCtx.
+(Serialise lo, ShowProxy lo) =&gt;
+ForwarderConfiguration lo
+-&gt; ForwardSink lo
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx ByteString IO () Void
+</span><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsInit"><span class="hs-identifier hs-var hs-var">forwardTraceObjectsInit</span></a></span></span><span> </span><span id="local-6989586621679138059"><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138059"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679138060"><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138060"><span class="hs-identifier hs-var">sink</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">MiniProtocolCb initiatorCtx ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx ByteString IO () Void
+forall initiatorCtx bytes (m :: * -&gt; *) a responderCtx.
+MiniProtocolCb initiatorCtx bytes m a
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx bytes m a Void
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#InitiatorProtocolOnly"><span class="hs-identifier hs-var">InitiatorProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb initiatorCtx ByteString IO ()
+ -&gt; RunMiniProtocol
+      'InitiatorMode initiatorCtx responderCtx ByteString IO () Void)
+-&gt; MiniProtocolCb initiatorCtx ByteString IO ()
+-&gt; RunMiniProtocol
+     'InitiatorMode initiatorCtx responderCtx ByteString IO () Void
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+-&gt; ForwardSink lo -&gt; MiniProtocolCb initiatorCtx ByteString IO ()
+forall lo ctx.
+(ShowProxy lo, Serialise lo) =&gt;
+ForwarderConfiguration lo
+-&gt; ForwardSink lo -&gt; MiniProtocolCb ctx ByteString IO ()
+</span><a href="Trace.Forward.Run.TraceObject.Forwarder.html#runPeerWithSink"><span class="hs-identifier hs-var">runPeerWithSink</span></a></span><span> </span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138059"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138060"><span class="hs-identifier hs-var">sink</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span id="local-6989586621679137991"><span id="local-6989586621679137993"><span id="local-6989586621679137994"><span class="annot"><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsResp"><span class="hs-identifier hs-type">forwardTraceObjectsResp</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#Serialise"><span class="hs-identifier hs-type">CBOR.Serialise</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137991"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Util.ShowProxy.html#ShowProxy"><span class="hs-identifier hs-type">ShowProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137991"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Configuration.TraceObject.html#ForwarderConfiguration"><span class="hs-identifier hs-type">ForwarderConfiguration</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137991"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.ForwardSink.html#ForwardSink"><span class="hs-identifier hs-type">ForwardSink</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137991"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#RunMiniProtocol"><span class="hs-identifier hs-type">RunMiniProtocol</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/network-mux-0.9.0.0-8b1317dd1ff23710652abfaf7732ffd3cc3f3c24e9f0d84e1e3b121a83a7c794/share/doc/html/src/Network.Mux.Types.html#ResponderMode"><span class="hs-identifier hs-type">Mux.ResponderMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137993"><span class="hs-identifier hs-type">initiatorCtx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137994"><span class="hs-identifier hs-type">responderCtx</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-38"></span><span id="forwardTraceObjectsResp"><span class="annot"><span class="annottext">forwardTraceObjectsResp :: forall lo initiatorCtx responderCtx.
+(Serialise lo, ShowProxy lo) =&gt;
+ForwarderConfiguration lo
+-&gt; ForwardSink lo
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+</span><a href="Trace.Forward.Run.TraceObject.Forwarder.html#forwardTraceObjectsResp"><span class="hs-identifier hs-var hs-var">forwardTraceObjectsResp</span></a></span></span><span> </span><span id="local-6989586621679138067"><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138067"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679138068"><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138068"><span class="hs-identifier hs-var">sink</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">MiniProtocolCb responderCtx ByteString IO ()
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+forall responderCtx bytes (m :: * -&gt; *) b initiatorCtx.
+MiniProtocolCb responderCtx bytes m b
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx bytes m Void b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#ResponderProtocolOnly"><span class="hs-identifier hs-var">ResponderProtocolOnly</span></a></span><span> </span><span class="annot"><span class="annottext">(MiniProtocolCb responderCtx ByteString IO ()
+ -&gt; RunMiniProtocol
+      'ResponderMode initiatorCtx responderCtx ByteString IO Void ())
+-&gt; MiniProtocolCb responderCtx ByteString IO ()
+-&gt; RunMiniProtocol
+     'ResponderMode initiatorCtx responderCtx ByteString IO Void ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+-&gt; ForwardSink lo -&gt; MiniProtocolCb responderCtx ByteString IO ()
+forall lo ctx.
+(ShowProxy lo, Serialise lo) =&gt;
+ForwarderConfiguration lo
+-&gt; ForwardSink lo -&gt; MiniProtocolCb ctx ByteString IO ()
+</span><a href="Trace.Forward.Run.TraceObject.Forwarder.html#runPeerWithSink"><span class="hs-identifier hs-var">runPeerWithSink</span></a></span><span> </span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138067"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138068"><span class="hs-identifier hs-var">sink</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621679137989"><span id="local-6989586621679137990"><span class="annot"><a href="Trace.Forward.Run.TraceObject.Forwarder.html#runPeerWithSink"><span class="hs-identifier hs-type">runPeerWithSink</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Util.ShowProxy.html#ShowProxy"><span class="hs-identifier hs-type">ShowProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137989"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#Serialise"><span class="hs-identifier hs-type">CBOR.Serialise</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137989"><span class="hs-identifier hs-type">lo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Configuration.TraceObject.html#ForwarderConfiguration"><span class="hs-identifier hs-type">ForwarderConfiguration</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137989"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.ForwardSink.html#ForwardSink"><span class="hs-identifier hs-type">ForwardSink</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137989"><span class="hs-identifier hs-type">lo</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-type">MiniProtocolCb</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679137990"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-46"></span><span id="runPeerWithSink"><span class="annot"><span class="annottext">runPeerWithSink :: forall lo ctx.
+(ShowProxy lo, Serialise lo) =&gt;
+ForwarderConfiguration lo
+-&gt; ForwardSink lo -&gt; MiniProtocolCb ctx ByteString IO ()
+</span><a href="Trace.Forward.Run.TraceObject.Forwarder.html#runPeerWithSink"><span class="hs-identifier hs-var hs-var">runPeerWithSink</span></a></span></span><span> </span><span id="local-6989586621679138092"><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138092"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679138093"><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138093"><span class="hs-identifier hs-var">sink</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">(ctx -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb ctx ByteString IO ()
+forall ctx bytes (m :: * -&gt; *) a.
+(ctx -&gt; Channel m bytes -&gt; m (a, Maybe bytes))
+-&gt; MiniProtocolCb ctx bytes m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Mux.html#MiniProtocolCb"><span class="hs-identifier hs-var">MiniProtocolCb</span></a></span><span> </span><span class="annot"><span class="annottext">((ctx -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+ -&gt; MiniProtocolCb ctx ByteString IO ())
+-&gt; (ctx -&gt; Channel IO ByteString -&gt; IO ((), Maybe ByteString))
+-&gt; MiniProtocolCb ctx ByteString IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679138095"><span class="annot"><span class="annottext">ctx
+</span><a href="#local-6989586621679138095"><span class="hs-identifier hs-var">_ctx</span></a></span></span><span> </span><span id="local-6989586621679138096"><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679138096"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Tracer IO (TraceSendRecv (TraceObjectForward lo))
+-&gt; Codec (TraceObjectForward lo) DeserialiseFailure IO ByteString
+-&gt; Channel IO ByteString
+-&gt; Peer
+     (TraceObjectForward lo) 'AsServer 'NonPipelined 'StIdle IO ()
+-&gt; IO ((), Maybe ByteString)
+forall ps (st :: ps) (pr :: PeerRole) failure bytes (m :: * -&gt; *)
+       a.
+(MonadEvaluate m, MonadThrow m, ShowProxy ps,
+ forall (st' :: ps) stok. (stok ~ StateToken st') =&gt; Show stok,
+ NFData failure, Show failure) =&gt;
+Tracer m (TraceSendRecv ps)
+-&gt; Codec ps failure m bytes
+-&gt; Channel m bytes
+-&gt; Peer ps pr 'NonPipelined st m a
+-&gt; m (a, Maybe bytes)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-framework-0.19.3.0-de5d8bb4dc7b338890cfe6794b81cba20cbb34de00442e0c5cd24f72536a4167/share/doc/html/src/Ouroboros.Network.Driver.Simple.html#runPeer"><span class="hs-identifier hs-var">runPeer</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+-&gt; Tracer IO (TraceSendRecv (TraceObjectForward lo))
+forall lo.
+ForwarderConfiguration lo
+-&gt; Tracer IO (TraceSendRecv (TraceObjectForward lo))
+</span><a href="Trace.Forward.Configuration.TraceObject.html#forwarderTracer"><span class="hs-identifier hs-var">forwarderTracer</span></a></span><span> </span><span class="annot"><span class="annottext">ForwarderConfiguration lo
+</span><a href="#local-6989586621679138092"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(NumberOfTraceObjects -&gt; Encoding)
+-&gt; (forall s. Decoder s NumberOfTraceObjects)
+-&gt; ([lo] -&gt; Encoding)
+-&gt; (forall s. Decoder s [lo])
+-&gt; Codec (TraceObjectForward lo) DeserialiseFailure IO ByteString
+forall lo (m :: * -&gt; *).
+MonadST m =&gt;
+(NumberOfTraceObjects -&gt; Encoding)
+-&gt; (forall s. Decoder s NumberOfTraceObjects)
+-&gt; ([lo] -&gt; Encoding)
+-&gt; (forall s. Decoder s [lo])
+-&gt; Codec (TraceObjectForward lo) DeserialiseFailure m ByteString
+</span><a href="Trace.Forward.Protocol.TraceObject.Codec.html#codecTraceObjectForward"><span class="hs-identifier hs-var">Forwarder.codecTraceObjectForward</span></a></span><span> </span><span class="annot"><span class="annottext">NumberOfTraceObjects -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#encode"><span class="hs-identifier hs-var">CBOR.encode</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s NumberOfTraceObjects
+forall s. Decoder s NumberOfTraceObjects
+forall a s. Serialise a =&gt; Decoder s a
+</span><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier hs-var">CBOR.decode</span></a></span><span>
+</span><span id="line-51"></span><span>                                         </span><span class="annot"><span class="annottext">[lo] -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#encode"><span class="hs-identifier hs-var">CBOR.encode</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s [lo]
+forall s. Decoder s [lo]
+forall a s. Serialise a =&gt; Decoder s a
+</span><a href="file:///nix/store/y6ip4gsdipj5pzzxb7xsa56313swlhml-serialise-lib-serialise-0.2.6.1-haddock-doc/share/doc/serialise/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier hs-var">CBOR.decode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Channel IO ByteString
+</span><a href="#local-6989586621679138096"><span class="hs-identifier hs-var">channel</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceObjectForwarder lo IO ()
+-&gt; Peer
+     (TraceObjectForward lo) 'AsServer 'NonPipelined 'StIdle IO ()
+forall (m :: * -&gt; *) lo a.
+Monad m =&gt;
+TraceObjectForwarder lo m a
+-&gt; Server (TraceObjectForward lo) 'NonPipelined 'StIdle m a
+</span><a href="Trace.Forward.Protocol.TraceObject.Forwarder.html#traceObjectForwarderPeer"><span class="hs-identifier hs-var">Forwarder.traceObjectForwarderPeer</span></a></span><span> </span><span class="annot"><span class="annottext">(TraceObjectForwarder lo IO ()
+ -&gt; Peer
+      (TraceObjectForward lo) 'AsServer 'NonPipelined 'StIdle IO ())
+-&gt; TraceObjectForwarder lo IO ()
+-&gt; Peer
+     (TraceObjectForward lo) 'AsServer 'NonPipelined 'StIdle IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardSink lo -&gt; TraceObjectForwarder lo IO ()
+forall lo. ForwardSink lo -&gt; TraceObjectForwarder lo IO ()
+</span><a href="Trace.Forward.Utils.TraceObject.html#readFromSink"><span class="hs-identifier hs-var">readFromSink</span></a></span><span> </span><span class="annot"><span class="annottext">ForwardSink lo
+</span><a href="#local-6989586621679138093"><span class="hs-identifier hs-var">sink</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span></pre></body></html>

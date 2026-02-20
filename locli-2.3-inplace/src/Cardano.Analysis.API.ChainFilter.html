@@ -1,0 +1,801 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Analysis.API.ChainFilter</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html"><span class="hs-identifier">Cardano.Analysis.API.ChainFilter</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#head"><span class="hs-identifier">head</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span>       </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>                        </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span>              </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Opt</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.Posix.html"><span class="hs-identifier">System.FilePath.Posix</span></a></span><span>                        </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#takeBaseName"><span class="hs-identifier">takeBaseName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html"><span class="hs-identifier">Cardano.Analysis.API.Ground</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">newtype</span><span> </span><span id="JsonFilterFile"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-var">JsonFilterFile</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="JsonFilterFile"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-var">JsonFilterFile</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unJsonFilterFile"><span class="annot"><span class="annottext">JsonFilterFile -&gt; [Char]
+</span><a href="Cardano.Analysis.API.ChainFilter.html#unJsonFilterFile"><span class="hs-identifier hs-var hs-var">unJsonFilterFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422192"><span id="local-6989586621679422199"><span id="local-6989586621679422203"><span class="annot"><span class="annottext">Int -&gt; JsonFilterFile -&gt; ShowS
+[JsonFilterFile] -&gt; ShowS
+JsonFilterFile -&gt; [Char]
+(Int -&gt; JsonFilterFile -&gt; ShowS)
+-&gt; (JsonFilterFile -&gt; [Char])
+-&gt; ([JsonFilterFile] -&gt; ShowS)
+-&gt; Show JsonFilterFile
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; JsonFilterFile -&gt; ShowS
+showsPrec :: Int -&gt; JsonFilterFile -&gt; ShowS
+$cshow :: JsonFilterFile -&gt; [Char]
+show :: JsonFilterFile -&gt; [Char]
+$cshowList :: [JsonFilterFile] -&gt; ShowS
+showList :: [JsonFilterFile] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422208"><span id="local-6989586621679422214"><span class="annot"><span class="annottext">JsonFilterFile -&gt; JsonFilterFile -&gt; Bool
+(JsonFilterFile -&gt; JsonFilterFile -&gt; Bool)
+-&gt; (JsonFilterFile -&gt; JsonFilterFile -&gt; Bool) -&gt; Eq JsonFilterFile
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: JsonFilterFile -&gt; JsonFilterFile -&gt; Bool
+== :: JsonFilterFile -&gt; JsonFilterFile -&gt; Bool
+$c/= :: JsonFilterFile -&gt; JsonFilterFile -&gt; Bool
+/= :: JsonFilterFile -&gt; JsonFilterFile -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">newtype</span><span> </span><span id="FilterName"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#FilterName"><span class="hs-identifier hs-var">FilterName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FilterName"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#FilterName"><span class="hs-identifier hs-var">FilterName</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unFilterName"><span class="annot"><span class="annottext">FilterName -&gt; Text
+</span><a href="Cardano.Analysis.API.ChainFilter.html#unFilterName"><span class="hs-identifier hs-var hs-var">unFilterName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422224"><span id="local-6989586621679422229"><span class="annot"><span class="annottext">FilterName -&gt; FilterName -&gt; Bool
+(FilterName -&gt; FilterName -&gt; Bool)
+-&gt; (FilterName -&gt; FilterName -&gt; Bool) -&gt; Eq FilterName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FilterName -&gt; FilterName -&gt; Bool
+== :: FilterName -&gt; FilterName -&gt; Bool
+$c/= :: FilterName -&gt; FilterName -&gt; Bool
+/= :: FilterName -&gt; FilterName -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422234"><span id="local-6989586621679422242"><span id="local-6989586621679422245"><span class="annot"><span class="annottext">Maybe FilterName
+Value -&gt; Parser [FilterName]
+Value -&gt; Parser FilterName
+(Value -&gt; Parser FilterName)
+-&gt; (Value -&gt; Parser [FilterName])
+-&gt; Maybe FilterName
+-&gt; FromJSON FilterName
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser FilterName
+parseJSON :: Value -&gt; Parser FilterName
+$cparseJSONList :: Value -&gt; Parser [FilterName]
+parseJSONList :: Value -&gt; Parser [FilterName]
+$comittedField :: Maybe FilterName
+omittedField :: Maybe FilterName
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422314"><span id="local-6989586621679422316"><span class="annot"><span class="annottext">(forall x. FilterName -&gt; Rep FilterName x)
+-&gt; (forall x. Rep FilterName x -&gt; FilterName) -&gt; Generic FilterName
+forall x. Rep FilterName x -&gt; FilterName
+forall x. FilterName -&gt; Rep FilterName x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. FilterName -&gt; Rep FilterName x
+from :: forall x. FilterName -&gt; Rep FilterName x
+$cto :: forall x. Rep FilterName x -&gt; FilterName
+to :: forall x. Rep FilterName x -&gt; FilterName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422319"><span class="annot"><span class="annottext">FilterName -&gt; ()
+(FilterName -&gt; ()) -&gt; NFData FilterName
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: FilterName -&gt; ()
+rnf :: FilterName -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422334"><span id="local-6989586621679422339"><span id="local-6989586621679422343"><span class="annot"><span class="annottext">Int -&gt; FilterName -&gt; ShowS
+[FilterName] -&gt; ShowS
+FilterName -&gt; [Char]
+(Int -&gt; FilterName -&gt; ShowS)
+-&gt; (FilterName -&gt; [Char])
+-&gt; ([FilterName] -&gt; ShowS)
+-&gt; Show FilterName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FilterName -&gt; ShowS
+showsPrec :: Int -&gt; FilterName -&gt; ShowS
+$cshow :: FilterName -&gt; [Char]
+show :: FilterName -&gt; [Char]
+$cshowList :: [FilterName] -&gt; ShowS
+showList :: [FilterName] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422346"><span id="local-6989586621679422353"><span id="local-6989586621679422356"><span id="local-6989586621679422359"><span id="local-6989586621679422362"><span class="annot"><span class="annottext">[FilterName] -&gt; Value
+[FilterName] -&gt; Encoding
+FilterName -&gt; Bool
+FilterName -&gt; Value
+FilterName -&gt; Encoding
+(FilterName -&gt; Value)
+-&gt; (FilterName -&gt; Encoding)
+-&gt; ([FilterName] -&gt; Value)
+-&gt; ([FilterName] -&gt; Encoding)
+-&gt; (FilterName -&gt; Bool)
+-&gt; ToJSON FilterName
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: FilterName -&gt; Value
+toJSON :: FilterName -&gt; Value
+$ctoEncoding :: FilterName -&gt; Encoding
+toEncoding :: FilterName -&gt; Encoding
+$ctoJSONList :: [FilterName] -&gt; Value
+toJSONList :: [FilterName] -&gt; Value
+$ctoEncodingList :: [FilterName] -&gt; Encoding
+toEncodingList :: [FilterName] -&gt; Encoding
+$comitField :: FilterName -&gt; Bool
+omitField :: FilterName -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><span class="hs-comment">-- | Conditions for chain subsetting</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="ChainFilter"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-var">ChainFilter</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CBlock"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#CBlock"><span class="hs-identifier hs-var">CBlock</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BlockCond"><span class="hs-identifier hs-type">BlockCond</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CSlot"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#CSlot"><span class="hs-identifier hs-var">CSlot</span></a></span></span><span>  </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotCond"><span class="hs-identifier hs-type">SlotCond</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422426"><span id="local-6989586621679422432"><span class="annot"><span class="annottext">ChainFilter -&gt; ChainFilter -&gt; Bool
+(ChainFilter -&gt; ChainFilter -&gt; Bool)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; Bool) -&gt; Eq ChainFilter
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ChainFilter -&gt; ChainFilter -&gt; Bool
+== :: ChainFilter -&gt; ChainFilter -&gt; Bool
+$c/= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+/= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422436"><span id="local-6989586621679422443"><span id="local-6989586621679422446"><span class="annot"><span class="annottext">Maybe ChainFilter
+Value -&gt; Parser [ChainFilter]
+Value -&gt; Parser ChainFilter
+(Value -&gt; Parser ChainFilter)
+-&gt; (Value -&gt; Parser [ChainFilter])
+-&gt; Maybe ChainFilter
+-&gt; FromJSON ChainFilter
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser ChainFilter
+parseJSON :: Value -&gt; Parser ChainFilter
+$cparseJSONList :: Value -&gt; Parser [ChainFilter]
+parseJSONList :: Value -&gt; Parser [ChainFilter]
+$comittedField :: Maybe ChainFilter
+omittedField :: Maybe ChainFilter
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422508"><span id="local-6989586621679422510"><span class="annot"><span class="annottext">(forall x. ChainFilter -&gt; Rep ChainFilter x)
+-&gt; (forall x. Rep ChainFilter x -&gt; ChainFilter)
+-&gt; Generic ChainFilter
+forall x. Rep ChainFilter x -&gt; ChainFilter
+forall x. ChainFilter -&gt; Rep ChainFilter x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ChainFilter -&gt; Rep ChainFilter x
+from :: forall x. ChainFilter -&gt; Rep ChainFilter x
+$cto :: forall x. Rep ChainFilter x -&gt; ChainFilter
+to :: forall x. Rep ChainFilter x -&gt; ChainFilter
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422512"><span class="annot"><span class="annottext">ChainFilter -&gt; ()
+(ChainFilter -&gt; ()) -&gt; NFData ChainFilter
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: ChainFilter -&gt; ()
+rnf :: ChainFilter -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422533"><span id="local-6989586621679422539"><span id="local-6989586621679422543"><span id="local-6989586621679422547"><span id="local-6989586621679422550"><span id="local-6989586621679422553"><span id="local-6989586621679422556"><span class="annot"><span class="annottext">Eq ChainFilter
+Eq ChainFilter =&gt;
+(ChainFilter -&gt; ChainFilter -&gt; Ordering)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; Bool)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; Bool)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; Bool)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; Bool)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; ChainFilter)
+-&gt; (ChainFilter -&gt; ChainFilter -&gt; ChainFilter)
+-&gt; Ord ChainFilter
+ChainFilter -&gt; ChainFilter -&gt; Bool
+ChainFilter -&gt; ChainFilter -&gt; Ordering
+ChainFilter -&gt; ChainFilter -&gt; ChainFilter
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ChainFilter -&gt; ChainFilter -&gt; Ordering
+compare :: ChainFilter -&gt; ChainFilter -&gt; Ordering
+$c&lt; :: ChainFilter -&gt; ChainFilter -&gt; Bool
+&lt; :: ChainFilter -&gt; ChainFilter -&gt; Bool
+$c&lt;= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+&lt;= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+$c&gt; :: ChainFilter -&gt; ChainFilter -&gt; Bool
+&gt; :: ChainFilter -&gt; ChainFilter -&gt; Bool
+$c&gt;= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+&gt;= :: ChainFilter -&gt; ChainFilter -&gt; Bool
+$cmax :: ChainFilter -&gt; ChainFilter -&gt; ChainFilter
+max :: ChainFilter -&gt; ChainFilter -&gt; ChainFilter
+$cmin :: ChainFilter -&gt; ChainFilter -&gt; ChainFilter
+min :: ChainFilter -&gt; ChainFilter -&gt; ChainFilter
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422560"><span id="local-6989586621679422568"><span id="local-6989586621679422572"><span class="annot"><span class="annottext">Int -&gt; ChainFilter -&gt; ShowS
+[ChainFilter] -&gt; ShowS
+ChainFilter -&gt; [Char]
+(Int -&gt; ChainFilter -&gt; ShowS)
+-&gt; (ChainFilter -&gt; [Char])
+-&gt; ([ChainFilter] -&gt; ShowS)
+-&gt; Show ChainFilter
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ChainFilter -&gt; ShowS
+showsPrec :: Int -&gt; ChainFilter -&gt; ShowS
+$cshow :: ChainFilter -&gt; [Char]
+show :: ChainFilter -&gt; [Char]
+$cshowList :: [ChainFilter] -&gt; ShowS
+showList :: [ChainFilter] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422575"><span id="local-6989586621679422582"><span id="local-6989586621679422585"><span id="local-6989586621679422588"><span id="local-6989586621679422591"><span class="annot"><span class="annottext">[ChainFilter] -&gt; Value
+[ChainFilter] -&gt; Encoding
+ChainFilter -&gt; Bool
+ChainFilter -&gt; Value
+ChainFilter -&gt; Encoding
+(ChainFilter -&gt; Value)
+-&gt; (ChainFilter -&gt; Encoding)
+-&gt; ([ChainFilter] -&gt; Value)
+-&gt; ([ChainFilter] -&gt; Encoding)
+-&gt; (ChainFilter -&gt; Bool)
+-&gt; ToJSON ChainFilter
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: ChainFilter -&gt; Value
+toJSON :: ChainFilter -&gt; Value
+$ctoEncoding :: ChainFilter -&gt; Encoding
+toEncoding :: ChainFilter -&gt; Encoding
+$ctoJSONList :: [ChainFilter] -&gt; Value
+toJSONList :: [ChainFilter] -&gt; Value
+$ctoEncodingList :: [ChainFilter] -&gt; Encoding
+toEncodingList :: [ChainFilter] -&gt; Encoding
+$comitField :: ChainFilter -&gt; Bool
+omitField :: ChainFilter -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><span class="hs-comment">-- | Block classification -- primary for validity as subjects of analysis.</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="BlockCond"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BlockCond"><span class="hs-identifier hs-var">BlockCond</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BUnitaryChainDelta"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BUnitaryChainDelta"><span class="hs-identifier hs-var">BUnitaryChainDelta</span></a></span></span><span>            </span><span class="hs-comment">-- ^ All timings account for</span><span>
+</span><span id="line-34"></span><span>                                  </span><span class="hs-comment">--    processing of a single block.</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BFullnessGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BFullnessGEq"><span class="hs-identifier hs-var">BFullnessGEq</span></a></span></span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Block fullness is above fraction.</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BFullnessLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BFullnessLEq"><span class="hs-identifier hs-var">BFullnessLEq</span></a></span></span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Block fullness is below fraction.</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BSizeGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BSizeGEq"><span class="hs-identifier hs-var">BSizeGEq</span></a></span></span><span>               </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BSizeLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BSizeLEq"><span class="hs-identifier hs-var">BSizeLEq</span></a></span></span><span>               </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BMinimumAdoptions"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BMinimumAdoptions"><span class="hs-identifier hs-var">BMinimumAdoptions</span></a></span></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ At least this many adoptions</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BNonNegatives"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#BNonNegatives"><span class="hs-identifier hs-var">BNonNegatives</span></a></span></span><span>                 </span><span class="annot"><span class="hs-comment">-- ^ Non-negative timings only</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679422664"><span id="local-6989586621679422673"><span class="annot"><span class="annottext">BlockCond -&gt; BlockCond -&gt; Bool
+(BlockCond -&gt; BlockCond -&gt; Bool)
+-&gt; (BlockCond -&gt; BlockCond -&gt; Bool) -&gt; Eq BlockCond
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BlockCond -&gt; BlockCond -&gt; Bool
+== :: BlockCond -&gt; BlockCond -&gt; Bool
+$c/= :: BlockCond -&gt; BlockCond -&gt; Bool
+/= :: BlockCond -&gt; BlockCond -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422676"><span id="local-6989586621679422683"><span id="local-6989586621679422686"><span class="annot"><span class="annottext">Maybe BlockCond
+Value -&gt; Parser [BlockCond]
+Value -&gt; Parser BlockCond
+(Value -&gt; Parser BlockCond)
+-&gt; (Value -&gt; Parser [BlockCond])
+-&gt; Maybe BlockCond
+-&gt; FromJSON BlockCond
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser BlockCond
+parseJSON :: Value -&gt; Parser BlockCond
+$cparseJSONList :: Value -&gt; Parser [BlockCond]
+parseJSONList :: Value -&gt; Parser [BlockCond]
+$comittedField :: Maybe BlockCond
+omittedField :: Maybe BlockCond
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422830"><span id="local-6989586621679422832"><span class="annot"><span class="annottext">(forall x. BlockCond -&gt; Rep BlockCond x)
+-&gt; (forall x. Rep BlockCond x -&gt; BlockCond) -&gt; Generic BlockCond
+forall x. Rep BlockCond x -&gt; BlockCond
+forall x. BlockCond -&gt; Rep BlockCond x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. BlockCond -&gt; Rep BlockCond x
+from :: forall x. BlockCond -&gt; Rep BlockCond x
+$cto :: forall x. Rep BlockCond x -&gt; BlockCond
+to :: forall x. Rep BlockCond x -&gt; BlockCond
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422834"><span class="annot"><span class="annottext">BlockCond -&gt; ()
+(BlockCond -&gt; ()) -&gt; NFData BlockCond
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: BlockCond -&gt; ()
+rnf :: BlockCond -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422865"><span id="local-6989586621679422874"><span id="local-6989586621679422877"><span id="local-6989586621679422880"><span id="local-6989586621679422883"><span id="local-6989586621679422886"><span id="local-6989586621679422889"><span class="annot"><span class="annottext">Eq BlockCond
+Eq BlockCond =&gt;
+(BlockCond -&gt; BlockCond -&gt; Ordering)
+-&gt; (BlockCond -&gt; BlockCond -&gt; Bool)
+-&gt; (BlockCond -&gt; BlockCond -&gt; Bool)
+-&gt; (BlockCond -&gt; BlockCond -&gt; Bool)
+-&gt; (BlockCond -&gt; BlockCond -&gt; Bool)
+-&gt; (BlockCond -&gt; BlockCond -&gt; BlockCond)
+-&gt; (BlockCond -&gt; BlockCond -&gt; BlockCond)
+-&gt; Ord BlockCond
+BlockCond -&gt; BlockCond -&gt; Bool
+BlockCond -&gt; BlockCond -&gt; Ordering
+BlockCond -&gt; BlockCond -&gt; BlockCond
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BlockCond -&gt; BlockCond -&gt; Ordering
+compare :: BlockCond -&gt; BlockCond -&gt; Ordering
+$c&lt; :: BlockCond -&gt; BlockCond -&gt; Bool
+&lt; :: BlockCond -&gt; BlockCond -&gt; Bool
+$c&lt;= :: BlockCond -&gt; BlockCond -&gt; Bool
+&lt;= :: BlockCond -&gt; BlockCond -&gt; Bool
+$c&gt; :: BlockCond -&gt; BlockCond -&gt; Bool
+&gt; :: BlockCond -&gt; BlockCond -&gt; Bool
+$c&gt;= :: BlockCond -&gt; BlockCond -&gt; Bool
+&gt;= :: BlockCond -&gt; BlockCond -&gt; Bool
+$cmax :: BlockCond -&gt; BlockCond -&gt; BlockCond
+max :: BlockCond -&gt; BlockCond -&gt; BlockCond
+$cmin :: BlockCond -&gt; BlockCond -&gt; BlockCond
+min :: BlockCond -&gt; BlockCond -&gt; BlockCond
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422892"><span id="local-6989586621679422906"><span id="local-6989586621679422909"><span class="annot"><span class="annottext">Int -&gt; BlockCond -&gt; ShowS
+[BlockCond] -&gt; ShowS
+BlockCond -&gt; [Char]
+(Int -&gt; BlockCond -&gt; ShowS)
+-&gt; (BlockCond -&gt; [Char])
+-&gt; ([BlockCond] -&gt; ShowS)
+-&gt; Show BlockCond
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BlockCond -&gt; ShowS
+showsPrec :: Int -&gt; BlockCond -&gt; ShowS
+$cshow :: BlockCond -&gt; [Char]
+show :: BlockCond -&gt; [Char]
+$cshowList :: [BlockCond] -&gt; ShowS
+showList :: [BlockCond] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422912"><span id="local-6989586621679422918"><span id="local-6989586621679422921"><span id="local-6989586621679422924"><span id="local-6989586621679422927"><span class="annot"><span class="annottext">[BlockCond] -&gt; Value
+[BlockCond] -&gt; Encoding
+BlockCond -&gt; Bool
+BlockCond -&gt; Value
+BlockCond -&gt; Encoding
+(BlockCond -&gt; Value)
+-&gt; (BlockCond -&gt; Encoding)
+-&gt; ([BlockCond] -&gt; Value)
+-&gt; ([BlockCond] -&gt; Encoding)
+-&gt; (BlockCond -&gt; Bool)
+-&gt; ToJSON BlockCond
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: BlockCond -&gt; Value
+toJSON :: BlockCond -&gt; Value
+$ctoEncoding :: BlockCond -&gt; Encoding
+toEncoding :: BlockCond -&gt; Encoding
+$ctoJSONList :: [BlockCond] -&gt; Value
+toJSONList :: [BlockCond] -&gt; Value
+$ctoEncodingList :: [BlockCond] -&gt; Encoding
+toEncodingList :: [BlockCond] -&gt; Encoding
+$comitField :: BlockCond -&gt; Bool
+omitField :: BlockCond -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">data</span><span> </span><span id="SlotCond"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotCond"><span class="hs-identifier hs-var">SlotCond</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SlotGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotGEq"><span class="hs-identifier hs-var">SlotGEq</span></a></span></span><span>         </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlotLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotLEq"><span class="hs-identifier hs-var">SlotLEq</span></a></span></span><span>         </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpochGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpochGEq"><span class="hs-identifier hs-var">EpochGEq</span></a></span></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpochLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpochLEq"><span class="hs-identifier hs-var">EpochLEq</span></a></span></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpochSafeIntGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpochSafeIntGEq"><span class="hs-identifier hs-var">EpochSafeIntGEq</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSafeInt"><span class="hs-identifier hs-type">EpochSafeInt</span></a></span><span>  </span><span class="hs-comment">-- 10 per epoch for the standard setup of&lt; Ouroboros Praos</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpochSafeIntLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpochSafeIntLEq"><span class="hs-identifier hs-var">EpochSafeIntLEq</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSafeInt"><span class="hs-identifier hs-type">EpochSafeInt</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpSlotGEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpSlotGEq"><span class="hs-identifier hs-var">EpSlotGEq</span></a></span></span><span>       </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-type">EpochSlot</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpSlotLEq"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#EpSlotLEq"><span class="hs-identifier hs-var">EpSlotLEq</span></a></span></span><span>       </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-type">EpochSlot</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlotHasLeaders"><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotHasLeaders"><span class="hs-identifier hs-var">SlotHasLeaders</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423113"><span id="local-6989586621679423127"><span class="annot"><span class="annottext">SlotCond -&gt; SlotCond -&gt; Bool
+(SlotCond -&gt; SlotCond -&gt; Bool)
+-&gt; (SlotCond -&gt; SlotCond -&gt; Bool) -&gt; Eq SlotCond
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SlotCond -&gt; SlotCond -&gt; Bool
+== :: SlotCond -&gt; SlotCond -&gt; Bool
+$c/= :: SlotCond -&gt; SlotCond -&gt; Bool
+/= :: SlotCond -&gt; SlotCond -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423130"><span id="local-6989586621679423137"><span id="local-6989586621679423140"><span class="annot"><span class="annottext">Maybe SlotCond
+Value -&gt; Parser [SlotCond]
+Value -&gt; Parser SlotCond
+(Value -&gt; Parser SlotCond)
+-&gt; (Value -&gt; Parser [SlotCond])
+-&gt; Maybe SlotCond
+-&gt; FromJSON SlotCond
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser SlotCond
+parseJSON :: Value -&gt; Parser SlotCond
+$cparseJSONList :: Value -&gt; Parser [SlotCond]
+parseJSONList :: Value -&gt; Parser [SlotCond]
+$comittedField :: Maybe SlotCond
+omittedField :: Maybe SlotCond
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423324"><span id="local-6989586621679423326"><span class="annot"><span class="annottext">(forall x. SlotCond -&gt; Rep SlotCond x)
+-&gt; (forall x. Rep SlotCond x -&gt; SlotCond) -&gt; Generic SlotCond
+forall x. Rep SlotCond x -&gt; SlotCond
+forall x. SlotCond -&gt; Rep SlotCond x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SlotCond -&gt; Rep SlotCond x
+from :: forall x. SlotCond -&gt; Rep SlotCond x
+$cto :: forall x. Rep SlotCond x -&gt; SlotCond
+to :: forall x. Rep SlotCond x -&gt; SlotCond
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423328"><span class="annot"><span class="annottext">SlotCond -&gt; ()
+(SlotCond -&gt; ()) -&gt; NFData SlotCond
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: SlotCond -&gt; ()
+rnf :: SlotCond -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423370"><span id="local-6989586621679423384"><span id="local-6989586621679423387"><span id="local-6989586621679423390"><span id="local-6989586621679423393"><span id="local-6989586621679423396"><span id="local-6989586621679423399"><span class="annot"><span class="annottext">Eq SlotCond
+Eq SlotCond =&gt;
+(SlotCond -&gt; SlotCond -&gt; Ordering)
+-&gt; (SlotCond -&gt; SlotCond -&gt; Bool)
+-&gt; (SlotCond -&gt; SlotCond -&gt; Bool)
+-&gt; (SlotCond -&gt; SlotCond -&gt; Bool)
+-&gt; (SlotCond -&gt; SlotCond -&gt; Bool)
+-&gt; (SlotCond -&gt; SlotCond -&gt; SlotCond)
+-&gt; (SlotCond -&gt; SlotCond -&gt; SlotCond)
+-&gt; Ord SlotCond
+SlotCond -&gt; SlotCond -&gt; Bool
+SlotCond -&gt; SlotCond -&gt; Ordering
+SlotCond -&gt; SlotCond -&gt; SlotCond
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SlotCond -&gt; SlotCond -&gt; Ordering
+compare :: SlotCond -&gt; SlotCond -&gt; Ordering
+$c&lt; :: SlotCond -&gt; SlotCond -&gt; Bool
+&lt; :: SlotCond -&gt; SlotCond -&gt; Bool
+$c&lt;= :: SlotCond -&gt; SlotCond -&gt; Bool
+&lt;= :: SlotCond -&gt; SlotCond -&gt; Bool
+$c&gt; :: SlotCond -&gt; SlotCond -&gt; Bool
+&gt; :: SlotCond -&gt; SlotCond -&gt; Bool
+$c&gt;= :: SlotCond -&gt; SlotCond -&gt; Bool
+&gt;= :: SlotCond -&gt; SlotCond -&gt; Bool
+$cmax :: SlotCond -&gt; SlotCond -&gt; SlotCond
+max :: SlotCond -&gt; SlotCond -&gt; SlotCond
+$cmin :: SlotCond -&gt; SlotCond -&gt; SlotCond
+min :: SlotCond -&gt; SlotCond -&gt; SlotCond
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423402"><span id="local-6989586621679423424"><span id="local-6989586621679423427"><span class="annot"><span class="annottext">Int -&gt; SlotCond -&gt; ShowS
+[SlotCond] -&gt; ShowS
+SlotCond -&gt; [Char]
+(Int -&gt; SlotCond -&gt; ShowS)
+-&gt; (SlotCond -&gt; [Char]) -&gt; ([SlotCond] -&gt; ShowS) -&gt; Show SlotCond
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SlotCond -&gt; ShowS
+showsPrec :: Int -&gt; SlotCond -&gt; ShowS
+$cshow :: SlotCond -&gt; [Char]
+show :: SlotCond -&gt; [Char]
+$cshowList :: [SlotCond] -&gt; ShowS
+showList :: [SlotCond] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423430"><span id="local-6989586621679423436"><span id="local-6989586621679423439"><span id="local-6989586621679423442"><span id="local-6989586621679423445"><span class="annot"><span class="annottext">[SlotCond] -&gt; Value
+[SlotCond] -&gt; Encoding
+SlotCond -&gt; Bool
+SlotCond -&gt; Value
+SlotCond -&gt; Encoding
+(SlotCond -&gt; Value)
+-&gt; (SlotCond -&gt; Encoding)
+-&gt; ([SlotCond] -&gt; Value)
+-&gt; ([SlotCond] -&gt; Encoding)
+-&gt; (SlotCond -&gt; Bool)
+-&gt; ToJSON SlotCond
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: SlotCond -&gt; Value
+toJSON :: SlotCond -&gt; Value
+$ctoEncoding :: SlotCond -&gt; Encoding
+toEncoding :: SlotCond -&gt; Encoding
+$ctoJSONList :: [SlotCond] -&gt; Value
+toJSONList :: [SlotCond] -&gt; Value
+$ctoEncodingList :: [SlotCond] -&gt; Encoding
+toEncodingList :: [SlotCond] -&gt; Encoding
+$comitField :: SlotCond -&gt; Bool
+omitField :: SlotCond -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#cfIsSlotCond"><span class="hs-identifier hs-type">cfIsSlotCond</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#cfIsBlockCond"><span class="hs-identifier hs-type">cfIsBlockCond</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-56"></span><span id="cfIsSlotCond"><span class="annot"><span class="annottext">cfIsSlotCond :: ChainFilter -&gt; Bool
+</span><a href="Cardano.Analysis.API.ChainFilter.html#cfIsSlotCond"><span class="hs-identifier hs-var hs-var">cfIsSlotCond</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#CSlot"><span class="hs-identifier hs-type">CSlot</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">;</span><span> </span><span class="annot"><span class="annottext">ChainFilter
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">;</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span id="cfIsBlockCond"><span class="annot"><span class="annottext">cfIsBlockCond :: ChainFilter -&gt; Bool
+</span><a href="Cardano.Analysis.API.ChainFilter.html#cfIsBlockCond"><span class="hs-identifier hs-var hs-var">cfIsBlockCond</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#CBlock"><span class="hs-identifier hs-type">CBlock</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">;</span><span> </span><span class="annot"><span class="annottext">ChainFilter
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">;</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#catSlotFilters"><span class="hs-identifier hs-type">catSlotFilters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotCond"><span class="hs-identifier hs-type">SlotCond</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span id="catSlotFilters"><span class="annot"><span class="annottext">catSlotFilters :: [ChainFilter] -&gt; [SlotCond]
+</span><a href="Cardano.Analysis.API.ChainFilter.html#catSlotFilters"><span class="hs-identifier hs-var hs-var">catSlotFilters</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SlotCond] -&gt; [ChainFilter] -&gt; [SlotCond]
+</span><a href="#local-6989586621679423679"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="#local-6989586621679423679"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotCond"><span class="hs-identifier hs-type">SlotCond</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#SlotCond"><span class="hs-identifier hs-type">SlotCond</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679423679"><span class="annot"><span class="annottext">go :: [SlotCond] -&gt; [ChainFilter] -&gt; [SlotCond]
+</span><a href="#local-6989586621679423679"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679423680"><span class="annot"><span class="annottext">[SlotCond]
+</span><a href="#local-6989586621679423680"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[SlotCond] -&gt; [SlotCond]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[SlotCond]
+</span><a href="#local-6989586621679423680"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#CSlot"><span class="hs-identifier hs-type">CSlot</span></a></span><span> </span><span id="local-6989586621679423682"><span class="annot"><span class="annottext">SlotCond
+</span><a href="#local-6989586621679423682"><span class="hs-identifier hs-var">c</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679423683"><span class="annot"><span class="annottext">[ChainFilter]
+</span><a href="#local-6989586621679423683"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[SlotCond] -&gt; [ChainFilter] -&gt; [SlotCond]
+</span><a href="#local-6989586621679423679"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotCond
+</span><a href="#local-6989586621679423682"><span class="hs-identifier hs-var">c</span></a></span><span class="annot"><span class="annottext">SlotCond -&gt; [SlotCond] -&gt; [SlotCond]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[SlotCond]
+</span><a href="#local-6989586621679423680"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ChainFilter]
+</span><a href="#local-6989586621679423683"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">ChainFilter
+</span><span class="hs-identifier">_</span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679423684"><span class="annot"><span class="annottext">[ChainFilter]
+</span><a href="#local-6989586621679423684"><span class="hs-identifier hs-var">rest</span></a></span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[SlotCond] -&gt; [ChainFilter] -&gt; [SlotCond]
+</span><a href="#local-6989586621679423679"><span class="hs-identifier hs-var">go</span></a></span><span>    </span><span class="annot"><span class="annottext">[SlotCond]
+</span><a href="#local-6989586621679423680"><span class="hs-identifier hs-var">acc</span></a></span><span>  </span><span class="annot"><span class="annottext">[ChainFilter]
+</span><a href="#local-6989586621679423684"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#readChainFilter"><span class="hs-identifier hs-type">readChainFilter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#FilterName"><span class="hs-identifier hs-type">FilterName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span id="readChainFilter"><span class="annot"><span class="annottext">readChainFilter :: JsonFilterFile -&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+</span><a href="Cardano.Analysis.API.ChainFilter.html#readChainFilter"><span class="hs-identifier hs-var hs-var">readChainFilter</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span> </span><span id="local-6989586621679423686"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423686"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">([ChainFilter] -&gt; ([ChainFilter], FilterName))
+-&gt; ExceptT [Char] IO [ChainFilter]
+-&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+forall a b. (a -&gt; b) -&gt; ExceptT [Char] IO a -&gt; ExceptT [Char] IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilterName
+</span><a href="Cardano.Analysis.API.ChainFilter.html#FilterName"><span class="hs-identifier hs-var">FilterName</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; FilterName) -&gt; ([Char] -&gt; Text) -&gt; [Char] -&gt; FilterName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; FilterName) -&gt; [Char] -&gt; FilterName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#takeBaseName"><span class="hs-identifier hs-var">takeBaseName</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423686"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">(ExceptT [Char] IO [ChainFilter]
+ -&gt; ExceptT [Char] IO ([ChainFilter], FilterName))
+-&gt; (IO (Either [Char] [ChainFilter])
+    -&gt; ExceptT [Char] IO [ChainFilter])
+-&gt; IO (Either [Char] [ChainFilter])
+-&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either [Char] [ChainFilter]) -&gt; ExceptT [Char] IO [ChainFilter]
+forall (m :: * -&gt; *) x a. m (Either x a) -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#newExceptT"><span class="hs-identifier hs-var">newExceptT</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">(IO (Either [Char] [ChainFilter])
+ -&gt; ExceptT [Char] IO ([ChainFilter], FilterName))
+-&gt; IO (Either [Char] [ChainFilter])
+-&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; ByteString -&gt; Either [Char] a
+</span><span class="hs-identifier hs-var">eitherDecode</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either [Char] [ChainFilter])
+-&gt; IO ByteString -&gt; IO (Either [Char] [ChainFilter])
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423686"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#argChainFilterset"><span class="hs-identifier hs-type">argChainFilterset</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span>
+</span><span id="line-74"></span><span id="argChainFilterset"><span class="annot"><span class="annottext">argChainFilterset :: [Char] -&gt; [Char] -&gt; Parser JsonFilterFile
+</span><a href="Cardano.Analysis.API.ChainFilter.html#argChainFilterset"><span class="hs-identifier hs-var hs-var">argChainFilterset</span></a></span></span><span> </span><span id="local-6989586621679423694"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423694"><span class="hs-identifier hs-var">optname</span></a></span></span><span> </span><span id="local-6989586621679423695"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423695"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">([Char] -&gt; JsonFilterFile)
+-&gt; Parser [Char] -&gt; Parser JsonFilterFile
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; JsonFilterFile
+</span><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-var">JsonFilterFile</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser [Char] -&gt; Parser JsonFilterFile)
+-&gt; Parser [Char] -&gt; Parser JsonFilterFile
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">ReadM [Char] -&gt; Mod OptionFields [Char] -&gt; Parser [Char]
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">Opt.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM [Char]
+forall s. IsString s =&gt; ReadM s
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#str"><span class="hs-identifier hs-var">Opt.str</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">(Mod OptionFields [Char] -&gt; Parser [Char])
+-&gt; Mod OptionFields [Char] -&gt; Parser [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. HasName f =&gt; [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423694"><span class="hs-identifier hs-var">optname</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields [Char]
+-&gt; Mod OptionFields [Char] -&gt; Mod OptionFields [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;FILTERSET-FILE&quot;</span></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields [Char]
+-&gt; Mod OptionFields [Char] -&gt; Mod OptionFields [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">help</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423695"><span class="hs-identifier hs-var">desc</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#argChainFilterExpr"><span class="hs-identifier hs-type">argChainFilterExpr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span>
+</span><span id="line-82"></span><span id="argChainFilterExpr"><span class="annot"><span class="annottext">argChainFilterExpr :: Parser ChainFilter
+</span><a href="Cardano.Analysis.API.ChainFilter.html#argChainFilterExpr"><span class="hs-identifier hs-var hs-var">argChainFilterExpr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">([Char] -&gt; ChainFilter) -&gt; Parser [Char] -&gt; Parser ChainFilter
+forall a b. (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679423702"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423702"><span class="hs-identifier hs-var">arg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>          </span><span class="annot"><span class="annottext">([Char] -&gt; ChainFilter)
+-&gt; (ChainFilter -&gt; ChainFilter)
+-&gt; Either [Char] ChainFilter
+-&gt; ChainFilter
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; ChainFilter
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; ChainFilter) -&gt; ShowS -&gt; [Char] -&gt; ChainFilter
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[[Char]] -&gt; [Char]
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([[Char]] -&gt; [Char]) -&gt; ([Char] -&gt; [[Char]]) -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Error while parsing JSON filter expression __&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423702"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;__: &quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[[Char]] -&gt; [[Char]] -&gt; [[Char]]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([[Char]] -&gt; [[Char]])
+-&gt; ([Char] -&gt; [[Char]]) -&gt; [Char] -&gt; [[Char]]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [[Char]] -&gt; [[Char]]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ChainFilter -&gt; ChainFilter
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">(Either [Char] ChainFilter -&gt; ChainFilter)
+-&gt; (ByteString -&gt; Either [Char] ChainFilter)
+-&gt; ByteString
+-&gt; ChainFilter
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; ByteString -&gt; Either [Char] a
+</span><span class="hs-identifier hs-var">eitherDecode</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">(ByteString -&gt; ChainFilter) -&gt; ByteString -&gt; ChainFilter
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Char8.html#pack"><span class="hs-identifier hs-var">LBS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423702"><span class="hs-identifier hs-var">arg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser [Char] -&gt; Parser ChainFilter)
+-&gt; Parser [Char] -&gt; Parser ChainFilter
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">ReadM [Char] -&gt; Mod OptionFields [Char] -&gt; Parser [Char]
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">Opt.option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM [Char]
+forall s. IsString s =&gt; ReadM s
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#str"><span class="hs-identifier hs-var">Opt.str</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">(Mod OptionFields [Char] -&gt; Parser [Char])
+-&gt; Mod OptionFields [Char] -&gt; Parser [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. HasName f =&gt; [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;filter-expr&quot;</span></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields [Char]
+-&gt; Mod OptionFields [Char] -&gt; Mod OptionFields [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;JSON&quot;</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields [Char]
+-&gt; Mod OptionFields [Char] -&gt; Mod OptionFields [Char]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Mod OptionFields [Char]
+forall (f :: * -&gt; *) a. [Char] -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#help"><span class="hs-identifier hs-var">help</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;A directly specified filter JSON expression&quot;</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#readFilters"><span class="hs-identifier hs-type">readFilters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#ChainFilter"><span class="hs-identifier hs-type">ChainFilter</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#FilterName"><span class="hs-identifier hs-type">FilterName</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span id="readFilters"><span class="annot"><span class="annottext">readFilters :: [JsonFilterFile] -&gt; ExceptT Text IO ([ChainFilter], [FilterName])
+</span><a href="Cardano.Analysis.API.ChainFilter.html#readFilters"><span class="hs-identifier hs-var hs-var">readFilters</span></a></span></span><span> </span><span id="local-6989586621679423708"><span class="annot"><span class="annottext">[JsonFilterFile]
+</span><a href="#local-6989586621679423708"><span class="hs-identifier hs-var">fltfs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679423709"><span class="annot"><span class="annottext">[([ChainFilter], FilterName)]
+</span><a href="#local-6989586621679423709"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">[JsonFilterFile]
+-&gt; (JsonFilterFile -&gt; ExceptT Text IO ([ChainFilter], FilterName))
+-&gt; ExceptT Text IO [([ChainFilter], FilterName)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m (t b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#forM"><span class="hs-identifier hs-var">forM</span></a></span><span> </span><span class="annot"><span class="annottext">[JsonFilterFile]
+</span><a href="#local-6989586621679423708"><span class="hs-identifier hs-var">fltfs</span></a></span><span> </span><span class="annot"><span class="annottext">((JsonFilterFile -&gt; ExceptT Text IO ([ChainFilter], FilterName))
+ -&gt; ExceptT Text IO [([ChainFilter], FilterName)])
+-&gt; (JsonFilterFile -&gt; ExceptT Text IO ([ChainFilter], FilterName))
+-&gt; ExceptT Text IO [([ChainFilter], FilterName)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679423711"><span class="annot"><span class="annottext">f :: JsonFilterFile
+</span><a href="#local-6989586621679423711"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span> </span><span id="local-6989586621679423712"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423712"><span class="hs-identifier hs-var">fp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><span class="annottext">([Char] -&gt; Text)
+-&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+-&gt; ExceptT Text IO ([ChainFilter], FilterName)
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679423714"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423714"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Text) -&gt; [Char] -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failed to parse chain filter &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423712"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679423714"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonFilterFile -&gt; ExceptT [Char] IO ([ChainFilter], FilterName)
+</span><a href="Cardano.Analysis.API.ChainFilter.html#readChainFilter"><span class="hs-identifier hs-var">readChainFilter</span></a></span><span> </span><span class="annot"><span class="annottext">JsonFilterFile
+</span><a href="#local-6989586621679423711"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">([ChainFilter], [FilterName])
+-&gt; ExceptT Text IO ([ChainFilter], [FilterName])
+forall a. a -&gt; ExceptT Text IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[ChainFilter]] -&gt; [ChainFilter]
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([[ChainFilter]] -&gt; [ChainFilter])
+-&gt; [[ChainFilter]] -&gt; [ChainFilter]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">([ChainFilter], FilterName) -&gt; [ChainFilter]
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(([ChainFilter], FilterName) -&gt; [ChainFilter])
+-&gt; [([ChainFilter], FilterName)] -&gt; [[ChainFilter]]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[([ChainFilter], FilterName)]
+</span><a href="#local-6989586621679423709"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">([ChainFilter], FilterName) -&gt; FilterName
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(([ChainFilter], FilterName) -&gt; FilterName)
+-&gt; [([ChainFilter], FilterName)] -&gt; [FilterName]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[([ChainFilter], FilterName)]
+</span><a href="#local-6989586621679423709"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span></pre></body></html>

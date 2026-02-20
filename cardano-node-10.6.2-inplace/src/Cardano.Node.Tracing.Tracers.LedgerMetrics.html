@@ -1,0 +1,581 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PackageImports #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Tracing.Tracers.LedgerMetrics</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier">LedgerMetrics</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#traceLedgerMetrics"><span class="hs-identifier">traceLedgerMetrics</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#startLedgerMetricsTracer"><span class="hs-identifier">startLedgerMetricsTracer</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.6.0-e1471692a7d59360a7fad2dc1a25ffc60d986df4f428121d569869d02f61878c/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier">traceWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Queries.html"><span class="hs-identifier">Cardano.Node.Queries</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Queries.html#LedgerQueries"><span class="hs-identifier">LedgerQueries</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#NodeKernelData"><span class="hs-identifier">NodeKernelData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#mapNodeKernelDataIO"><span class="hs-identifier">mapNodeKernelDataIO</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>                   </span><span class="annot"><a href="Cardano.Node.Queries.html#nkQueryChain"><span class="hs-identifier">nkQueryChain</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#nkQueryLedger"><span class="hs-identifier">nkQueryLedger</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ChainDB.html"><span class="hs-identifier">Cardano.Node.Tracing.Tracers.ChainDB</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.ChainDB.html#fragmentChainDensity"><span class="hs-identifier">fragmentChainDensity</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html"><span class="hs-identifier">Ouroboros.Consensus.BlockchainTime.API</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.html"><span class="hs-identifier">Ouroboros.Consensus.HardFork.Combinator</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Abstract.html"><span class="hs-identifier">Ouroboros.Consensus.Ledger.Abstract</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Basics.html#IsLedger"><span class="hs-identifier">IsLedger</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Extended.html"><span class="hs-identifier">Ouroboros.Consensus.Ledger.Extended</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Extended.html#ledgerState"><span class="hs-identifier">ledgerState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.Node.html"><span class="hs-identifier">Ouroboros.Consensus.Node</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.NodeKernel.html#NodeKernel"><span class="hs-identifier">NodeKernel</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.NodeKernel.html#%24sel%3AgetBlockchainTime%3ANodeKernel"><span class="hs-identifier">getBlockchainTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.NodeKernel.html#%24sel%3AgetChainDB%3ANodeKernel"><span class="hs-identifier">getChainDB</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.ChainDB</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ChainDB</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#getStatistics"><span class="hs-identifier">getStatistics</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Forker.html"><span class="hs-identifier">Ouroboros.Consensus.Storage.LedgerDB.Forker</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LedgerDB</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Forker.html#ledgerTableSize"><span class="hs-identifier">ledgerTableSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.AnchoredFragment.html"><span class="hs-identifier">Ouroboros.Network.AnchoredFragment</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AF</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">async</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html#link"><span class="hs-identifier">link</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Monad.STM.html"><span class="hs-identifier">Control.Monad.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#retry"><span class="hs-identifier">retry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-string">&quot;contra-tracer&quot;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier">Tracer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#traceWith"><span class="hs-identifier">traceWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Number</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">String</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier">labelThread</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier">myThreadId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#startLedgerMetricsTracer"><span class="hs-identifier hs-type">startLedgerMetricsTracer</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681720602"><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span></span><span>
+</span><span id="line-43"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Basics.html#IsLedger"><span class="hs-identifier hs-type">IsLedger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Basics.html#LedgerState"><span class="hs-identifier hs-type">LedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#LedgerQueries"><span class="hs-identifier hs-type">LedgerQueries</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Block.html#HasHeader"><span class="hs-identifier hs-type">AF.HasHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Block.html#HasHeader"><span class="hs-identifier hs-type">AF.HasHeader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>                         </span><span class="annot"><span class="hs-comment">-- ^ Every Nth slot</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#NodeKernelData"><span class="hs-identifier hs-type">NodeKernelData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720602"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span id="startLedgerMetricsTracer"><span class="annot"><span class="annottext">startLedgerMetricsTracer :: forall blk.
+(IsLedger (LedgerState blk), LedgerQueries blk,
+ HasHeader (Header blk), HasHeader blk) =&gt;
+Tracer IO LedgerMetrics -&gt; Int -&gt; NodeKernelData blk -&gt; IO ()
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#startLedgerMetricsTracer"><span class="hs-identifier hs-var hs-var">startLedgerMetricsTracer</span></a></span></span><span> </span><span class="annot"><span class="annottext">Tracer IO LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">NodeKernelData blk
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- Disabled if 0</span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#startLedgerMetricsTracer"><span class="hs-identifier hs-var">startLedgerMetricsTracer</span></a></span><span> </span><span id="local-6989586621681720794"><span class="annot"><span class="annottext">Tracer IO LedgerMetrics
+</span><a href="#local-6989586621681720794"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621681720795"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720795"><span class="hs-identifier hs-var">everyNThSlot</span></a></span></span><span> </span><span id="local-6989586621681720796"><span class="annot"><span class="annottext">NodeKernelData blk
+</span><a href="#local-6989586621681720796"><span class="hs-identifier hs-var">nodeKernelData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; IO (Async ())
+forall a. IO a -&gt; IO (Async a)
+</span><span class="hs-identifier hs-var">async</span></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621681720797"><span class="hs-identifier hs-var">ledgerMetricsThread</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Async ()) -&gt; (Async () -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
+Async IO () -&gt; IO ()
+forall (m :: * -&gt; *) a.
+(MonadAsync m, MonadFork m, MonadMask m) =&gt;
+Async m a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html#link"><span class="hs-identifier hs-var">link</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="#local-6989586621681720797"><span class="hs-identifier hs-type">ledgerMetricsThread</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621681720797"><span class="annot"><span class="annottext">ledgerMetricsThread :: IO ()
+</span><a href="#local-6989586621681720797"><span class="hs-identifier hs-var hs-var">ledgerMetricsThread</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span> </span><span class="annot"><span class="annottext">IO ThreadId -&gt; (ThreadId -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(ThreadId -&gt; String -&gt; IO ()) -&gt; String -&gt; ThreadId -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier hs-var">labelThread</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Ledger Metrics&quot;</span></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; CurrentSlot -&gt; IO ()
+</span><a href="#local-6989586621681720799"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlotUnknown"><span class="hs-identifier hs-var">CurrentSlotUnknown</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><a href="#local-6989586621681720799"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>        </span><span id="local-6989586621681720799"><span class="annot"><span class="annottext">go :: Int -&gt; CurrentSlot -&gt; IO ()
+</span><a href="#local-6989586621681720799"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621681720801"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720801"><span class="hs-identifier hs-var">countdown</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621681720802"><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720802"><span class="hs-identifier hs-var">prevSlot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-glyph">!</span><span id="local-6989586621681720803"><span class="annot"><span class="annottext">StrictMaybe CurrentSlot
+</span><a href="#local-6989586621681720803"><span class="hs-identifier hs-var">query</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">CurrentSlot -&gt; IO (StrictMaybe CurrentSlot)
+</span><a href="#local-6989586621681720804"><span class="hs-identifier hs-var">waitForDifferentSlot</span></a></span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720802"><span class="hs-identifier hs-var">prevSlot</span></a></span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; IO ()) -&gt; Int -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">700</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>                      </span><span class="hs-comment">-- 700ms; see Note [Interval]</span><span>
+</span><span id="line-64"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StrictMaybe CurrentSlot
+</span><a href="#local-6989586621681720803"><span class="hs-identifier hs-var">query</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.6.0-e1471692a7d59360a7fad2dc1a25ffc60d986df4f428121d569869d02f61878c/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621681720807"><span class="annot"><span class="annottext">current :: CurrentSlot
+</span><a href="#local-6989586621681720807"><span class="hs-identifier hs-var">current</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span> </span><span id="local-6989586621681720809"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720809"><span class="hs-identifier hs-var">slot'</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720801"><span class="hs-identifier hs-var">countdown</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeKernelData blk -&gt; SlotNo -&gt; Tracer IO LedgerMetrics -&gt; IO ()
+forall blk.
+(IsLedger (LedgerState blk), LedgerQueries blk, HasHeader blk,
+ HasHeader (Header blk)) =&gt;
+NodeKernelData blk -&gt; SlotNo -&gt; Tracer IO LedgerMetrics -&gt; IO ()
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#traceLedgerMetrics"><span class="hs-identifier hs-var">traceLedgerMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernelData blk
+</span><a href="#local-6989586621681720796"><span class="hs-identifier hs-var">nodeKernelData</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720809"><span class="hs-identifier hs-var">slot'</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO LedgerMetrics
+</span><a href="#local-6989586621681720794"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; CurrentSlot -&gt; IO ()
+</span><a href="#local-6989586621681720799"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720795"><span class="hs-identifier hs-var">everyNThSlot</span></a></span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720807"><span class="hs-identifier hs-var">current</span></a></span><span>
+</span><span id="line-67"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; CurrentSlot -&gt; IO ()
+</span><a href="#local-6989586621681720799"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720801"><span class="hs-identifier hs-var">countdown</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720807"><span class="hs-identifier hs-var">current</span></a></span><span>
+</span><span id="line-68"></span><span>            </span><span class="annot"><span class="annottext">StrictMaybe CurrentSlot
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; CurrentSlot -&gt; IO ()
+</span><a href="#local-6989586621681720799"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720801"><span class="hs-identifier hs-var">countdown</span></a></span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720802"><span class="hs-identifier hs-var">prevSlot</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><a href="#local-6989586621681720804"><span class="hs-identifier hs-type">waitForDifferentSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.6.0-e1471692a7d59360a7fad2dc1a25ffc60d986df4f428121d569869d02f61878c/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621681720804"><span class="annot"><span class="annottext">waitForDifferentSlot :: CurrentSlot -&gt; IO (StrictMaybe CurrentSlot)
+</span><a href="#local-6989586621681720804"><span class="hs-identifier hs-var hs-var">waitForDifferentSlot</span></a></span></span><span> </span><span id="local-6989586621681720810"><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720810"><span class="hs-identifier hs-var">prev</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">(NodeKernel IO RemoteAddress LocalConnectionId blk
+ -&gt; IO CurrentSlot)
+-&gt; NodeKernelData blk -&gt; IO (StrictMaybe CurrentSlot)
+forall blk a.
+(NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO a)
+-&gt; NodeKernelData blk -&gt; IO (StrictMaybe a)
+</span><a href="Cardano.Node.Queries.html#mapNodeKernelDataIO"><span class="hs-identifier hs-var">mapNodeKernelDataIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681720811"><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720811"><span class="hs-identifier hs-var">nk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM CurrentSlot -&gt; IO CurrentSlot
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM CurrentSlot -&gt; IO CurrentSlot)
+-&gt; STM CurrentSlot -&gt; IO CurrentSlot
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>            </span><span id="local-6989586621681720812"><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720812"><span class="hs-identifier hs-var">mSlot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BlockchainTime IO -&gt; STM IO CurrentSlot
+forall (m :: * -&gt; *). BlockchainTime m -&gt; STM m CurrentSlot
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#getCurrentSlot"><span class="hs-identifier hs-var">getCurrentSlot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+-&gt; BlockchainTime IO
+forall (m :: * -&gt; *) addrNTN addrNTC blk.
+NodeKernel m addrNTN addrNTC blk -&gt; BlockchainTime m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.NodeKernel.html#%24sel%3AgetBlockchainTime%3ANodeKernel"><span class="hs-identifier hs-var">getBlockchainTime</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720811"><span class="hs-identifier hs-var">nk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720812"><span class="hs-identifier hs-var">mSlot</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>              </span><span id="local-6989586621681720814"><span class="annot"><span class="annottext">current :: CurrentSlot
+</span><a href="#local-6989586621681720814"><span class="hs-identifier hs-var">current</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span> </span><span id="local-6989586621681720815"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720815"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Bool
+</span><a href="#local-6989586621681720816"><span class="hs-identifier hs-var">isDifferentSlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720815"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CurrentSlot -&gt; STM CurrentSlot
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720814"><span class="hs-identifier hs-var">current</span></a></span><span>
+</span><span id="line-76"></span><span>              </span><span class="annot"><span class="annottext">CurrentSlot
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM CurrentSlot
+forall a. STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#retry"><span class="hs-identifier hs-var">retry</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeKernelData blk
+</span><a href="#local-6989586621681720796"><span class="hs-identifier hs-var">nodeKernelData</span></a></span><span>
+</span><span id="line-78"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>            </span><span id="local-6989586621681720816"><span class="annot"><span class="annottext">isDifferentSlotNo :: SlotNo -&gt; Bool
+</span><a href="#local-6989586621681720816"><span class="hs-identifier hs-var hs-var">isDifferentSlotNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="#local-6989586621681720810"><span class="hs-identifier hs-var">prev</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-80"></span><span>              </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlot"><span class="hs-identifier hs-type">CurrentSlot</span></a></span><span> </span><span id="local-6989586621681720819"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720819"><span class="hs-identifier hs-var">s</span></a></span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; SlotNo -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720819"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>              </span><span class="annot"><span class="annottext">CurrentSlot
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.BlockchainTime.API.html#CurrentSlotUnknown"><span class="hs-identifier hs-var">CurrentSlotUnknown</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; SlotNo -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">data</span><span> </span><span id="LedgerMetrics"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-var">LedgerMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span id="LedgerMetrics"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-var">LedgerMetrics</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-85"></span><span>        </span><span id="tsSlotNo"><span class="annot"><span class="annottext">LedgerMetrics -&gt; SlotNo
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsSlotNo"><span class="hs-identifier hs-var hs-var">tsSlotNo</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="tsUtxoSize"><span class="annot"><span class="annottext">LedgerMetrics -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsUtxoSize"><span class="hs-identifier hs-var hs-var">tsUtxoSize</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="tsDelegMapSize"><span class="annot"><span class="annottext">LedgerMetrics -&gt; Int
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsDelegMapSize"><span class="hs-identifier hs-var hs-var">tsDelegMapSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="tsChainDensity"><span class="annot"><span class="annottext">LedgerMetrics -&gt; Double
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsChainDensity"><span class="hs-identifier hs-var hs-var">tsChainDensity</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-89"></span><span class="hs-comment">{- see Note [GovMetrics]
+      , tsDRepCount    :: Int
+      , tsDRepMapSize  :: Int
+-}</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621681720642"><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#traceLedgerMetrics"><span class="hs-identifier hs-type">traceLedgerMetrics</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">(</span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Basics.html#IsLedger"><span class="hs-identifier hs-type">IsLedger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Basics.html#LedgerState"><span class="hs-identifier hs-type">LedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720642"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span>  </span><span class="annot"><a href="Cardano.Node.Queries.html#LedgerQueries"><span class="hs-identifier hs-type">LedgerQueries</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720642"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Block.html#HasHeader"><span class="hs-identifier hs-type">AF.HasHeader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720642"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">,</span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Block.html#HasHeader"><span class="hs-identifier hs-type">AF.HasHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720642"><span class="hs-identifier hs-type">blk</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Node.Queries.html#NodeKernelData"><span class="hs-identifier hs-type">NodeKernelData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681720642"><span class="hs-identifier hs-type">blk</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-104"></span><span id="traceLedgerMetrics"><span class="annot"><span class="annottext">traceLedgerMetrics :: forall blk.
+(IsLedger (LedgerState blk), LedgerQueries blk, HasHeader blk,
+ HasHeader (Header blk)) =&gt;
+NodeKernelData blk -&gt; SlotNo -&gt; Tracer IO LedgerMetrics -&gt; IO ()
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#traceLedgerMetrics"><span class="hs-identifier hs-var hs-var">traceLedgerMetrics</span></a></span></span><span> </span><span id="local-6989586621681720841"><span class="annot"><span class="annottext">NodeKernelData blk
+</span><a href="#local-6989586621681720841"><span class="hs-identifier hs-var">nodeKern</span></a></span></span><span> </span><span id="local-6989586621681720842"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720842"><span class="hs-identifier hs-var">slotNo</span></a></span></span><span> </span><span id="local-6989586621681720843"><span class="annot"><span class="annottext">Tracer IO LedgerMetrics
+</span><a href="#local-6989586621681720843"><span class="hs-identifier hs-var">tracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621681720844"><span class="annot"><span class="annottext">StrictMaybe (Int, Int, Rational)
+</span><a href="#local-6989586621681720844"><span class="hs-identifier hs-var">query</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(NodeKernel IO RemoteAddress LocalConnectionId blk
+ -&gt; IO (Int, Int, Rational))
+-&gt; NodeKernelData blk -&gt; IO (StrictMaybe (Int, Int, Rational))
+forall blk a.
+(NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO a)
+-&gt; NodeKernelData blk -&gt; IO (StrictMaybe a)
+</span><a href="Cardano.Node.Queries.html#mapNodeKernelDataIO"><span class="hs-identifier hs-var">mapNodeKernelDataIO</span></a></span><span>
+</span><span id="line-106"></span><span>              </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621681720845"><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720845"><span class="hs-identifier hs-var">nk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-107"></span><span>                </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- (,,,,)</span><span>
+</span><span id="line-108"></span><span>                  </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Rational -&gt; (Int, Int, Rational))
+-&gt; IO Int -&gt; IO (Int -&gt; Rational -&gt; (Int, Int, Rational))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Statistics -&gt; Int) -&gt; IO (Maybe Statistics) -&gt; IO Int
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; (Statistics -&gt; Int) -&gt; Maybe Statistics -&gt; Int
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Statistics -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.LedgerDB.Forker.html#ledgerTableSize"><span class="hs-identifier hs-var">LedgerDB.ledgerTableSize</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainDB IO blk -&gt; IO (Maybe Statistics)
+forall (m :: * -&gt; *) blk. ChainDB m blk -&gt; m (Maybe Statistics)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Storage.ChainDB.API.html#getStatistics"><span class="hs-identifier hs-var">ChainDB.getStatistics</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainDB IO blk -&gt; IO (Maybe Statistics))
+-&gt; ChainDB IO blk -&gt; IO (Maybe Statistics)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; ChainDB IO blk
+forall (m :: * -&gt; *) addrNTN addrNTC blk.
+NodeKernel m addrNTN addrNTC blk -&gt; ChainDB m blk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-diffusion-0.26.0.0-cf8bfa5c8bef41c95b5a622c0c9758ba23413a2b86e1f3014f9e0735ea09b4f7/share/doc/html/src/Ouroboros.Consensus.NodeKernel.html#%24sel%3AgetChainDB%3ANodeKernel"><span class="hs-identifier hs-var">getChainDB</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720845"><span class="hs-identifier hs-var">nk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>                  </span><span class="annot"><span class="annottext">IO (Int -&gt; Rational -&gt; (Int, Int, Rational))
+-&gt; IO Int -&gt; IO (Rational -&gt; (Int, Int, Rational))
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(ExtLedgerState blk EmptyMK -&gt; Int)
+-&gt; NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO Int
+forall blk a.
+(ExtLedgerState blk EmptyMK -&gt; a)
+-&gt; NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO a
+</span><a href="Cardano.Node.Queries.html#nkQueryLedger"><span class="hs-identifier hs-var">nkQueryLedger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LedgerState blk EmptyMK -&gt; Int
+forall blk. LedgerQueries blk =&gt; LedgerState blk EmptyMK -&gt; Int
+</span><a href="Cardano.Node.Queries.html#ledgerDelegMapSize"><span class="hs-identifier hs-var">ledgerDelegMapSize</span></a></span><span> </span><span class="annot"><span class="annottext">(LedgerState blk EmptyMK -&gt; Int)
+-&gt; (ExtLedgerState blk EmptyMK -&gt; LedgerState blk EmptyMK)
+-&gt; ExtLedgerState blk EmptyMK
+-&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ExtLedgerState blk EmptyMK -&gt; LedgerState blk EmptyMK
+forall blk (mk :: MapKind).
+ExtLedgerState blk mk -&gt; LedgerState blk mk
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.Extended.html#ledgerState"><span class="hs-identifier hs-var">ledgerState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720845"><span class="hs-identifier hs-var">nk</span></a></span><span>
+</span><span id="line-110"></span><span>                  </span><span class="annot"><span class="annottext">IO (Rational -&gt; (Int, Int, Rational))
+-&gt; IO Rational -&gt; IO (Int, Int, Rational)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(AnchoredFragment (Header blk) -&gt; Rational)
+-&gt; NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO Rational
+forall blk a.
+(AnchoredFragment (Header blk) -&gt; a)
+-&gt; NodeKernel IO RemoteAddress LocalConnectionId blk -&gt; IO a
+</span><a href="Cardano.Node.Queries.html#nkQueryChain"><span class="hs-identifier hs-var">nkQueryChain</span></a></span><span> </span><span class="annot"><span class="annottext">AnchoredFragment (Header blk) -&gt; Rational
+forall blk.
+HasHeader (Header blk) =&gt;
+AnchoredFragment (Header blk) -&gt; Rational
+</span><a href="Cardano.Node.Tracing.Tracers.ChainDB.html#fragmentChainDensity"><span class="hs-identifier hs-var">fragmentChainDensity</span></a></span><span> </span><span class="annot"><span class="annottext">NodeKernel IO RemoteAddress LocalConnectionId blk
+</span><a href="#local-6989586621681720845"><span class="hs-identifier hs-var">nk</span></a></span><span>
+</span><span id="line-111"></span><span class="hs-comment">{- see Note [GovMetrics]
+                  &lt;*&gt; nkQueryLedger (ledgerDRepCount . ledgerState) nk
+                  &lt;*&gt; nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
+-}</span><span>
+</span><span id="line-115"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>              </span><span class="annot"><span class="annottext">NodeKernelData blk
+</span><a href="#local-6989586621681720841"><span class="hs-identifier hs-var">nodeKern</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (Int, Int, Rational)
+</span><a href="#local-6989586621681720844"><span class="hs-identifier hs-var">query</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe (Int, Int, Rational)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.6.0-e1471692a7d59360a7fad2dc1a25ffc60d986df4f428121d569869d02f61878c/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.6.0-e1471692a7d59360a7fad2dc1a25ffc60d986df4f428121d569869d02f61878c/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681720851"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720851"><span class="hs-identifier hs-var">utxoSize</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681720852"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720852"><span class="hs-identifier hs-var">delegMapSize</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-comment">{- drepCount, drepMapSize, -}</span><span> </span><span id="local-6989586621681720853"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621681720853"><span class="hs-identifier hs-var">chainDensity</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681720856"><span class="annot"><span class="annottext">msg :: LedgerMetrics
+</span><a href="#local-6989586621681720856"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Int -&gt; Int -&gt; Double -&gt; LedgerMetrics
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-var">LedgerMetrics</span></a></span><span>
+</span><span id="line-121"></span><span>                    </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720842"><span class="hs-identifier hs-var">slotNo</span></a></span><span>
+</span><span id="line-122"></span><span>                    </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720851"><span class="hs-identifier hs-var">utxoSize</span></a></span><span>
+</span><span id="line-123"></span><span>                    </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720852"><span class="hs-identifier hs-var">delegMapSize</span></a></span><span>
+</span><span id="line-124"></span><span class="hs-comment">{- see Note [GovMetrics]
+                    drepCount
+                    drepMapSize
+-}</span><span>
+</span><span id="line-128"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Double
+forall a. Fractional a =&gt; Rational -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromRational"><span class="hs-identifier hs-var">fromRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621681720853"><span class="hs-identifier hs-var">chainDensity</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Tracer IO LedgerMetrics -&gt; LedgerMetrics -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><a href="file:///nix/store/dw82f4zk05rz9wv621l7iic8d0as34sh-contra-tracer-lib-contra-tracer-0.1.0.2-haddock-doc/share/doc/contra-tracer/html/src/Control.Tracer.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer IO LedgerMetrics
+</span><a href="#local-6989586621681720843"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerMetrics
+</span><a href="#local-6989586621681720856"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- LedgerMetrics</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LogFormatting"><span class="hs-identifier hs-type">LogFormatting</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621681720897"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; LedgerMetrics -&gt; Object
+</span><a href="#local-6989586621681720897"><span class="hs-identifier hs-var hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span id="local-6989586621681720899"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621681720899"><span class="hs-identifier hs-var">_dtal</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681720900"><span id="local-6989586621681720901"><span id="local-6989586621681720902"><span id="local-6989586621681720903"><span class="annot"><span class="annottext">Double
+Int
+SlotNo
+tsSlotNo :: LedgerMetrics -&gt; SlotNo
+tsUtxoSize :: LedgerMetrics -&gt; Int
+tsDelegMapSize :: LedgerMetrics -&gt; Int
+tsChainDensity :: LedgerMetrics -&gt; Double
+tsSlotNo :: SlotNo
+tsUtxoSize :: Int
+tsDelegMapSize :: Int
+tsChainDensity :: Double
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsSlotNo"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span>
+</span><span id="line-138"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;slot&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier hs-var">unSlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621681720900"><span class="hs-identifier hs-var">tsSlotNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;utxoSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">Number</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720901"><span class="hs-identifier hs-var">tsUtxoSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delegMapSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">Number</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720902"><span class="hs-identifier hs-var">tsDelegMapSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;chainDensity&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">Number</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Scientific
+forall a. Fractional a =&gt; Rational -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromRational"><span class="hs-identifier hs-var">fromRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Rational
+forall a. Real a =&gt; a -&gt; Rational
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#toRational"><span class="hs-identifier hs-var">toRational</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621681720903"><span class="hs-identifier hs-var">tsChainDensity</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span class="hs-comment">{- see Note [GovMetrics]
+                , &quot;drepCount&quot; .= Number (fromIntegral tsDRepCount)
+                , &quot;drepMapSize&quot; .= Number (fromIntegral tsDRepMapSize)
+-}</span><span>
+</span><span id="line-146"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-147"></span><span>  </span><span id="local-6989586621681720921"><span class="annot"><span class="annottext">forHuman :: LedgerMetrics -&gt; Text
+</span><a href="#local-6989586621681720921"><span class="hs-identifier hs-var hs-var hs-var hs-var">forHuman</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681720923"><span id="local-6989586621681720924"><span id="local-6989586621681720925"><span id="local-6989586621681720926"><span class="annot"><span class="annottext">Double
+Int
+SlotNo
+tsSlotNo :: LedgerMetrics -&gt; SlotNo
+tsUtxoSize :: LedgerMetrics -&gt; Int
+tsDelegMapSize :: LedgerMetrics -&gt; Int
+tsChainDensity :: LedgerMetrics -&gt; Double
+tsSlotNo :: SlotNo
+tsUtxoSize :: Int
+tsDelegMapSize :: Int
+tsChainDensity :: Double
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsSlotNo"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Ledger metrics &quot;</span></span><span>
+</span><span id="line-149"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; utxoSize &quot;</span></span><span>     </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720924"><span class="hs-identifier hs-var">tsUtxoSize</span></a></span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; delegMapSize &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720925"><span class="hs-identifier hs-var">tsDelegMapSize</span></a></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; chainDensity &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Utils.html#showT"><span class="hs-identifier hs-var">showT</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621681720926"><span class="hs-identifier hs-var">tsChainDensity</span></a></span><span>
+</span><span id="line-152"></span><span class="hs-comment">{- see Note [GovMetrics]
+      &lt;&gt; &quot; drepCount&quot;     &lt;&gt; showT tsDRepCount
+      &lt;&gt; &quot; drepMapSize&quot;   &lt;&gt; showT tsDRepMapSize
+-}</span><span>
+</span><span id="line-156"></span><span>  </span><span id="local-6989586621681720935"><span class="annot"><span class="annottext">asMetrics :: LedgerMetrics -&gt; [Metric]
+</span><a href="#local-6989586621681720935"><span class="hs-identifier hs-var hs-var hs-var hs-var">asMetrics</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621681720937"><span id="local-6989586621681720938"><span id="local-6989586621681720939"><span id="local-6989586621681720940"><span class="annot"><span class="annottext">Double
+Int
+SlotNo
+tsSlotNo :: LedgerMetrics -&gt; SlotNo
+tsUtxoSize :: LedgerMetrics -&gt; Int
+tsDelegMapSize :: LedgerMetrics -&gt; Int
+tsChainDensity :: LedgerMetrics -&gt; Double
+tsSlotNo :: SlotNo
+tsUtxoSize :: Int
+tsDelegMapSize :: Int
+tsChainDensity :: Double
+</span><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#tsSlotNo"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;utxoSize&quot;</span></span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720938"><span class="hs-identifier hs-var">tsUtxoSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;delegMapSize&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681720939"><span class="hs-identifier hs-var">tsDelegMapSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span class="hs-comment">{- see Note [GovMetrics]
+    , IntM &quot;drepCount&quot;    (fromIntegral tsDRepCount)
+    , IntM &quot;drepMapSize&quot;  (fromIntegral tsDRepMapSize)
+-}</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681720945"><span id="local-6989586621681720949"><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621681720956"><span class="annot"><span class="annottext">namespaceFor :: LedgerMetrics -&gt; Namespace LedgerMetrics
+</span><a href="#local-6989586621681720956"><span class="hs-identifier hs-var hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Node.Tracing.Tracers.LedgerMetrics.html#LedgerMetrics"><span class="hs-identifier hs-type">LedgerMetrics</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace LedgerMetrics
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-167"></span><span>  </span><span id="local-6989586621681720962"><span class="annot"><span class="annottext">severityFor :: Namespace LedgerMetrics -&gt; Maybe LedgerMetrics -&gt; Maybe SeverityS
+</span><a href="#local-6989586621681720962"><span class="hs-identifier hs-var hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621681720971"><span class="annot"><span class="annottext">metricsDocFor :: Namespace LedgerMetrics -&gt; [(Text, Text)]
+</span><a href="#local-6989586621681720971"><span class="hs-identifier hs-var hs-var hs-var hs-var">metricsDocFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-171"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;utxoSize&quot;</span></span><span class="hs-special">,</span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UTxO set size&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;delegMapSize&quot;</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Delegation map size&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span class="hs-comment">{- see Note [GovMetrics]
+      , (&quot;drepCount&quot;,     &quot;Number of DReps&quot;)
+      , (&quot;drepMapSize&quot;,   &quot;Number of DRep delegations&quot;)
+-}</span><span>
+</span><span id="line-177"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#metricsDocFor"><span class="hs-identifier hs-var">metricsDocFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span>  </span><span id="local-6989586621681720977"><span class="annot"><span class="annottext">documentFor :: Namespace LedgerMetrics -&gt; Maybe Text
+</span><a href="#local-6989586621681720977"><span class="hs-identifier hs-var hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#unlines"><span class="hs-identifier hs-var">Text.unlines</span></a></span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Periodic trace emitted every Nth slot, approximately 700 milliseconds after slot start.&quot;</span></span><span>
+</span><span id="line-182"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;It queries the current ledger and chain to report metrics such as UTxO set and delegation map sizes.&quot;</span></span><span>
+</span><span id="line-183"></span><span class="hs-comment">{- see Note [GovMetrics]
+      , &quot;Additionally, it provides DRep-related metrics to help monitor governance dynamics.&quot;
+-}</span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace LedgerMetrics
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span>  </span><span id="local-6989586621681720981"><span class="annot"><span class="annottext">allNamespaces :: [Namespace LedgerMetrics]
+</span><a href="#local-6989586621681720981"><span class="hs-identifier hs-var hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace LedgerMetrics
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;LedgerMetrics&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- Note [GovMetrics]</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- ---------------------------</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- Governenance / DRep-related fields are currently excluded.</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- There hasn't been a decision as to their usefulness as metrics (vs. the existing route, CLI queries);</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- furthermore, their performance impact (if any) hasn't been assessed in benchmarks.</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- If ever needed, they can be trivially enabled by uncommenting all places referencing this note.</span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- Note [Interval]</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- ---------------------------</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- NB. The hardcoded delay interval of 700ms is meant to represent &quot;0.7 * slot duration&quot;. If running with other</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- durations than 1 second, this has to be accounted for. Especially when running with durations &lt; 700ms, this</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- tracer will produce erroneous values and should be disabled by setting `TraceOptionLedgerMetricsFrequency = 0` in the config.</span><span>
+</span><span id="line-205"></span><span class="hs-comment">--</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- The interval has been picked as the best from different candidates, based on benchmarks that compared performance impact on block production and diffusion.</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- The previous state of affairs (which would correspond to a delay of 0ms) has shown to possess the least beneficial impact on performance.</span><span>
+</span><span id="line-208"></span></pre></body></html>

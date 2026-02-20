@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Settings</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#incompleteEmailSettings"><span class="hs-identifier">incompleteEmailSettings</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEmailSettings"><span class="hs-identifier">readSavedEmailSettings</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEventsSettings"><span class="hs-identifier">readSavedEventsSettings</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEmailSettingsOnDisk"><span class="hs-identifier">saveEmailSettingsOnDisk</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEventsSettingsOnDisk"><span class="hs-identifier">saveEventsSettingsOnDisk</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Types</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.System.html"><span class="hs-identifier">Cardano.Tracer.Handlers.System</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html"><span class="hs-identifier">Control.Exception.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#ignore"><span class="hs-identifier">ignore</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#try_"><span class="hs-identifier">try_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">decodeStrict'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encode</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encodeFile</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEmailSettings"><span class="hs-identifier hs-type">readSavedEmailSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-25"></span><span id="readSavedEmailSettings"><span class="annot"><span class="annottext">readSavedEmailSettings :: Maybe FilePath -&gt; IO EmailSettings
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEmailSettings"><span class="hs-identifier hs-var hs-var">readSavedEmailSettings</span></a></span></span><span> </span><span id="local-6989586621679181368"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181368"><span class="hs-identifier hs-var">rtvSD</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679181369"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181369"><span class="hs-identifier hs-var">pathToEmailSettings</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO (FilePath, FilePath)
+</span><a href="Cardano.Tracer.Handlers.System.html#getPathsToNotificationsSettings"><span class="hs-identifier hs-var">getPathsToNotificationsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181368"><span class="hs-identifier hs-var">rtvSD</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">IO ByteString -&gt; IO (Either SomeException ByteString)
+forall a. IO a -&gt; IO (Either SomeException a)
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#try_"><span class="hs-identifier hs-var">try_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181369"><span class="hs-identifier hs-var">pathToEmailSettings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Either SomeException ByteString)
+-&gt; (Either SomeException ByteString -&gt; IO EmailSettings)
+-&gt; IO EmailSettings
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; IO EmailSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181372"><span class="hs-identifier hs-var">defaultSettings</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679181373"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679181373"><span class="hs-identifier hs-var">jsonSettings</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-30"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe EmailSettings
+forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">decodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679181373"><span class="hs-identifier hs-var">jsonSettings</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-31"></span><span>        </span><span class="annot"><span class="annottext">Maybe EmailSettings
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; IO EmailSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181372"><span class="hs-identifier hs-var">defaultSettings</span></a></span><span>
+</span><span id="line-32"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679181374"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181374"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; IO EmailSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181374"><span class="hs-identifier hs-var">settings</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">-- Right encryptedSettings -&gt;</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">--   case decryptJSON encryptedSettings of</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">--     Left _ -&gt; return defaultSettings</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-comment">--     Right jsonSettings -&gt;</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">--       case decodeStrict' jsonSettings of</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">--         Nothing -&gt; return defaultSettings</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">--         Just (settings :: EmailSettings) -&gt; return settings</span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679181372"><span class="annot"><span class="annottext">defaultSettings :: EmailSettings
+</span><a href="#local-6989586621679181372"><span class="hs-identifier hs-var hs-var">defaultSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">esSMTPHost :: Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#esSMTPHost"><span class="hs-identifier hs-var">esSMTPHost</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSMTPPort :: Int
+</span><a href="#local-6989586621679181387"><span class="hs-identifier hs-var">esSMTPPort</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esUsername :: Text
+</span><a href="#local-6989586621679181388"><span class="hs-identifier hs-var">esUsername</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esPassword :: Text
+</span><a href="#local-6989586621679181389"><span class="hs-identifier hs-var">esPassword</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSSL :: EmailSSL
+</span><a href="#local-6989586621679181390"><span class="hs-identifier hs-var">esSSL</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EmailSSL
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#TLS"><span class="hs-identifier hs-var">TLS</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esEmailFrom :: Text
+</span><a href="#local-6989586621679181392"><span class="hs-identifier hs-var">esEmailFrom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esEmailTo :: Text
+</span><a href="#local-6989586621679181393"><span class="hs-identifier hs-var">esEmailTo</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSubject :: Text
+</span><a href="#local-6989586621679181394"><span class="hs-identifier hs-var">esSubject</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-comment">-- decryptJSON :: BS.ByteString -&gt; Either CryptoError BS.ByteString</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">-- decryptJSON = encryptJSON -- Encryption/decryption is symmetric.</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#incompleteEmailSettings"><span class="hs-identifier hs-type">incompleteEmailSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-56"></span><span id="incompleteEmailSettings"><span class="annot"><span class="annottext">incompleteEmailSettings :: EmailSettings -&gt; Bool
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#incompleteEmailSettings"><span class="hs-identifier hs-var hs-var">incompleteEmailSettings</span></a></span></span><span> </span><span id="local-6989586621679181395"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181395"><span class="hs-identifier hs-var">emailSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">T.null</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Bool) -&gt; Text -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#esSMTPHost"><span class="hs-identifier hs-var">esSMTPHost</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181395"><span class="hs-identifier hs-var">emailSettings</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- encryptJSON :: BS.ByteString -&gt; Either CryptoError BS.ByteString</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- encryptJSON plainJSON = ctrCombine</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   &lt;$&gt; cInit</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   &lt;*&gt; pure nullIV</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   &lt;*&gt; pure plainJSON</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--  where</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--   cInit :: Either CryptoError AES256</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--   cInit = eitherCryptoError $ cipherInit key</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--   -- The length must be exactly 32 bytes (256 bits).</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--   key :: BS.ByteString</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--   key = &quot;n3+d6^jrodGe$1Ljwt;iBtsi_mxzp-47&quot;</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEventsSettings"><span class="hs-identifier hs-type">readSavedEventsSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span>
+</span><span id="line-72"></span><span id="readSavedEventsSettings"><span class="annot"><span class="annottext">readSavedEventsSettings :: Maybe FilePath -&gt; IO EventsSettings
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEventsSettings"><span class="hs-identifier hs-var hs-var">readSavedEventsSettings</span></a></span></span><span> </span><span id="local-6989586621679181397"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181397"><span class="hs-identifier hs-var">rtvSD</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181398"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181398"><span class="hs-identifier hs-var">pathToEventsSettings</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO (FilePath, FilePath)
+</span><a href="Cardano.Tracer.Handlers.System.html#getPathsToNotificationsSettings"><span class="hs-identifier hs-var">getPathsToNotificationsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181397"><span class="hs-identifier hs-var">rtvSD</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">IO ByteString -&gt; IO (Either SomeException ByteString)
+forall a. IO a -&gt; IO (Either SomeException a)
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#try_"><span class="hs-identifier hs-var">try_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181398"><span class="hs-identifier hs-var">pathToEventsSettings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Either SomeException ByteString)
+-&gt; (Either SomeException ByteString -&gt; IO EventsSettings)
+-&gt; IO EventsSettings
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; IO EventsSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181399"><span class="hs-identifier hs-var">defaultSettings</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679181400"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679181400"><span class="hs-identifier hs-var">jsonSettings</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe EventsSettings
+forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">decodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679181400"><span class="hs-identifier hs-var">jsonSettings</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">Maybe EventsSettings
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; IO EventsSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181399"><span class="hs-identifier hs-var">defaultSettings</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679181401"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181401"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; IO EventsSettings
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181401"><span class="hs-identifier hs-var">settings</span></a></span><span>
+</span><span id="line-80"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679181399"><span class="annot"><span class="annottext">defaultSettings :: EventsSettings
+</span><a href="#local-6989586621679181399"><span class="hs-identifier hs-var hs-var">defaultSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">evsWarnings :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsErrors :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsCriticals :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsAlerts :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsEmergencies :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evsNodeDisconnected :: (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var">defaultState</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679181404"><span class="annot"><span class="annottext">defaultState :: (Bool, PeriodInSec)
+</span><a href="#local-6989586621679181404"><span class="hs-identifier hs-var hs-var">defaultState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><span class="hs-number">1800</span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEmailSettingsOnDisk"><span class="hs-identifier hs-type">saveEmailSettingsOnDisk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span id="saveEmailSettingsOnDisk"><span class="annot"><span class="annottext">saveEmailSettingsOnDisk :: TracerEnv -&gt; EmailSettings -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEmailSettingsOnDisk"><span class="hs-identifier hs-var hs-var">saveEmailSettingsOnDisk</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679181413"><span class="annot"><span class="annottext">Maybe FilePath
+teStateDir :: Maybe FilePath
+teStateDir :: TracerEnv -&gt; Maybe FilePath
+</span><a href="#local-6989586621679181413"><span class="hs-identifier hs-var hs-var">teStateDir</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679181415"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181415"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#ignore"><span class="hs-identifier hs-var">ignore</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679181416"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181416"><span class="hs-identifier hs-var">pathToEmailSettings</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO (FilePath, FilePath)
+</span><a href="Cardano.Tracer.Handlers.System.html#getPathsToNotificationsSettings"><span class="hs-identifier hs-var">getPathsToNotificationsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181413"><span class="hs-identifier hs-var">teStateDir</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#writeFile"><span class="hs-identifier hs-var">LBS.writeFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181416"><span class="hs-identifier hs-var">pathToEmailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ByteString -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181415"><span class="hs-identifier hs-var">settings</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- Encrypt JSON-content to avoid saving user's private data in &quot;plain mode&quot;.</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-comment">-- case encryptJSON . LBS.toStrict . encode $ settings of</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-comment">--   Right encryptedJSON -&gt; BS.writeFile pathToEmailSettings encryptedJSON</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-comment">--   Left _ -&gt; return ()</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEventsSettingsOnDisk"><span class="hs-identifier hs-type">saveEventsSettingsOnDisk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsSettings"><span class="hs-identifier hs-type">EventsSettings</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span id="saveEventsSettingsOnDisk"><span class="annot"><span class="annottext">saveEventsSettingsOnDisk :: TracerEnv -&gt; EventsSettings -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#saveEventsSettingsOnDisk"><span class="hs-identifier hs-var hs-var">saveEventsSettingsOnDisk</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679181418"><span class="annot"><span class="annottext">Maybe FilePath
+teStateDir :: TracerEnv -&gt; Maybe FilePath
+teStateDir :: Maybe FilePath
+</span><a href="Cardano.Tracer.Environment.html#teStateDir"><span class="hs-identifier hs-var hs-var">teStateDir</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679181419"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181419"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#ignore"><span class="hs-identifier hs-var">ignore</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181420"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181420"><span class="hs-identifier hs-var">pathToEventsSettings</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO (FilePath, FilePath)
+</span><a href="Cardano.Tracer.Handlers.System.html#getPathsToNotificationsSettings"><span class="hs-identifier hs-var">getPathsToNotificationsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679181418"><span class="hs-identifier hs-var">teStateDir</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; EventsSettings -&gt; IO ()
+forall a. ToJSON a =&gt; FilePath -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">encodeFile</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679181420"><span class="hs-identifier hs-var">pathToEventsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679181419"><span class="hs-identifier hs-var">settings</span></a></span><span>
+</span><span id="line-104"></span></pre></body></html>

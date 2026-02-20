@@ -1,0 +1,321 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">{- HLINT ignore &quot;Evaluate&quot; -}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Analysis.API.Dictionary</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html"><span class="hs-identifier">Cardano.Analysis.API.Dictionary</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Field.html"><span class="hs-identifier">Cardano.Analysis.API.Field</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Types.html"><span class="hs-identifier">Cardano.Analysis.API.Types</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Metrics.html"><span class="hs-identifier">Cardano.Analysis.API.Metrics</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Util.html#showText"><span class="hs-identifier">showText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="DictEntry"><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-var">DictEntry</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span id="DictEntry"><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-var">DictEntry</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="deField"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deField"><span class="hs-identifier hs-var hs-var">deField</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="deShortDesc"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deShortDesc"><span class="hs-identifier hs-var hs-var">deShortDesc</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="deDescription"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deDescription"><span class="hs-identifier hs-var hs-var">deDescription</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="deLogScale"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deLogScale"><span class="hs-identifier hs-var hs-var">deLogScale</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="deRange"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deRange"><span class="hs-identifier hs-var hs-var">deRange</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="deUnit"><span class="annot"><span class="annottext">DictEntry -&gt; Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deUnit"><span class="hs-identifier hs-var hs-var">deUnit</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-type">DictEntry</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679442643"><span id="local-6989586621679442645"><span class="annot"><span class="annottext">(forall x. DictEntry -&gt; Rep DictEntry x)
+-&gt; (forall x. Rep DictEntry x -&gt; DictEntry) -&gt; Generic DictEntry
+forall x. Rep DictEntry x -&gt; DictEntry
+forall x. DictEntry -&gt; Rep DictEntry x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. DictEntry -&gt; Rep DictEntry x
+from :: forall x. DictEntry -&gt; Rep DictEntry x
+$cto :: forall x. Rep DictEntry x -&gt; DictEntry
+to :: forall x. Rep DictEntry x -&gt; DictEntry
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442649"><span id="local-6989586621679442656"><span id="local-6989586621679442659"><span class="annot"><span class="annottext">Maybe DictEntry
+Value -&gt; Parser [DictEntry]
+Value -&gt; Parser DictEntry
+(Value -&gt; Parser DictEntry)
+-&gt; (Value -&gt; Parser [DictEntry])
+-&gt; Maybe DictEntry
+-&gt; FromJSON DictEntry
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser DictEntry
+parseJSON :: Value -&gt; Parser DictEntry
+$cparseJSONList :: Value -&gt; Parser [DictEntry]
+parseJSONList :: Value -&gt; Parser [DictEntry]
+$comittedField :: Maybe DictEntry
+omittedField :: Maybe DictEntry
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442774"><span id="local-6989586621679442781"><span id="local-6989586621679442784"><span id="local-6989586621679442787"><span id="local-6989586621679442790"><span class="annot"><span class="annottext">[DictEntry] -&gt; Value
+[DictEntry] -&gt; Encoding
+DictEntry -&gt; Bool
+DictEntry -&gt; Value
+DictEntry -&gt; Encoding
+(DictEntry -&gt; Value)
+-&gt; (DictEntry -&gt; Encoding)
+-&gt; ([DictEntry] -&gt; Value)
+-&gt; ([DictEntry] -&gt; Encoding)
+-&gt; (DictEntry -&gt; Bool)
+-&gt; ToJSON DictEntry
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: DictEntry -&gt; Value
+toJSON :: DictEntry -&gt; Value
+$ctoEncoding :: DictEntry -&gt; Encoding
+toEncoding :: DictEntry -&gt; Encoding
+$ctoJSONList :: [DictEntry] -&gt; Value
+toJSONList :: [DictEntry] -&gt; Value
+$ctoEncodingList :: [DictEntry] -&gt; Encoding
+toEncodingList :: [DictEntry] -&gt; Encoding
+$comitField :: DictEntry -&gt; Bool
+omitField :: DictEntry -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442929"><span id="local-6989586621679442940"><span id="local-6989586621679442944"><span class="annot"><span class="annottext">Int -&gt; DictEntry -&gt; ShowS
+[DictEntry] -&gt; ShowS
+DictEntry -&gt; String
+(Int -&gt; DictEntry -&gt; ShowS)
+-&gt; (DictEntry -&gt; String)
+-&gt; ([DictEntry] -&gt; ShowS)
+-&gt; Show DictEntry
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DictEntry -&gt; ShowS
+showsPrec :: Int -&gt; DictEntry -&gt; ShowS
+$cshow :: DictEntry -&gt; String
+show :: DictEntry -&gt; String
+$cshowList :: [DictEntry] -&gt; ShowS
+showList :: [DictEntry] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="ChartArgs"><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#ChartArgs"><span class="hs-identifier hs-var">ChartArgs</span></a></span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="Dictionary"><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#Dictionary"><span class="hs-identifier hs-var">Dictionary</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="Dictionary"><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#Dictionary"><span class="hs-identifier hs-var">Dictionary</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="dBlockProp"><span class="annot"><span class="annottext">Dictionary -&gt; Map Text DictEntry
+</span><a href="Cardano.Analysis.API.Dictionary.html#dBlockProp"><span class="hs-identifier hs-var hs-var">dBlockProp</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-type">DictEntry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="dClusterPerf"><span class="annot"><span class="annottext">Dictionary -&gt; Map Text DictEntry
+</span><a href="Cardano.Analysis.API.Dictionary.html#dClusterPerf"><span class="hs-identifier hs-var hs-var">dClusterPerf</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-type">DictEntry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#Dictionary"><span class="hs-identifier hs-type">Dictionary</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679442952"><span id="local-6989586621679442954"><span class="annot"><span class="annottext">(forall x. Dictionary -&gt; Rep Dictionary x)
+-&gt; (forall x. Rep Dictionary x -&gt; Dictionary) -&gt; Generic Dictionary
+forall x. Rep Dictionary x -&gt; Dictionary
+forall x. Dictionary -&gt; Rep Dictionary x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Dictionary -&gt; Rep Dictionary x
+from :: forall x. Dictionary -&gt; Rep Dictionary x
+$cto :: forall x. Rep Dictionary x -&gt; Dictionary
+to :: forall x. Rep Dictionary x -&gt; Dictionary
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679442957"><span id="local-6989586621679442964"><span id="local-6989586621679442967"><span class="annot"><span class="annottext">Maybe Dictionary
+Value -&gt; Parser [Dictionary]
+Value -&gt; Parser Dictionary
+(Value -&gt; Parser Dictionary)
+-&gt; (Value -&gt; Parser [Dictionary])
+-&gt; Maybe Dictionary
+-&gt; FromJSON Dictionary
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser Dictionary
+parseJSON :: Value -&gt; Parser Dictionary
+$cparseJSONList :: Value -&gt; Parser [Dictionary]
+parseJSONList :: Value -&gt; Parser [Dictionary]
+$comittedField :: Maybe Dictionary
+omittedField :: Maybe Dictionary
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443019"><span id="local-6989586621679443026"><span id="local-6989586621679443029"><span id="local-6989586621679443032"><span id="local-6989586621679443035"><span class="annot"><span class="annottext">[Dictionary] -&gt; Value
+[Dictionary] -&gt; Encoding
+Dictionary -&gt; Bool
+Dictionary -&gt; Value
+Dictionary -&gt; Encoding
+(Dictionary -&gt; Value)
+-&gt; (Dictionary -&gt; Encoding)
+-&gt; ([Dictionary] -&gt; Value)
+-&gt; ([Dictionary] -&gt; Encoding)
+-&gt; (Dictionary -&gt; Bool)
+-&gt; ToJSON Dictionary
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: Dictionary -&gt; Value
+toJSON :: Dictionary -&gt; Value
+$ctoEncoding :: Dictionary -&gt; Encoding
+toEncoding :: Dictionary -&gt; Encoding
+$ctoJSONList :: [Dictionary] -&gt; Value
+toJSONList :: [Dictionary] -&gt; Value
+$ctoEncodingList :: [Dictionary] -&gt; Encoding
+toEncodingList :: [Dictionary] -&gt; Encoding
+$comitField :: Dictionary -&gt; Bool
+omitField :: Dictionary -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679443100"><span id="local-6989586621679443108"><span id="local-6989586621679443112"><span class="annot"><span class="annottext">Int -&gt; Dictionary -&gt; ShowS
+[Dictionary] -&gt; ShowS
+Dictionary -&gt; String
+(Int -&gt; Dictionary -&gt; ShowS)
+-&gt; (Dictionary -&gt; String)
+-&gt; ([Dictionary] -&gt; ShowS)
+-&gt; Show Dictionary
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Dictionary -&gt; ShowS
+showsPrec :: Int -&gt; Dictionary -&gt; ShowS
+$cshow :: Dictionary -&gt; String
+show :: Dictionary -&gt; String
+$cshowList :: [Dictionary] -&gt; ShowS
+showList :: [Dictionary] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#metricDictionary"><span class="hs-identifier hs-type">metricDictionary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#Dictionary"><span class="hs-identifier hs-type">Dictionary</span></a></span><span>
+</span><span id="line-39"></span><span id="metricDictionary"><span class="annot"><span class="annottext">metricDictionary :: Dictionary
+</span><a href="Cardano.Analysis.API.Dictionary.html#metricDictionary"><span class="hs-identifier hs-var hs-var">metricDictionary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#Dictionary"><span class="hs-identifier hs-type">Dictionary</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">dBlockProp :: Map Text DictEntry
+</span><a href="Cardano.Analysis.API.Dictionary.html#dBlockProp"><span class="hs-identifier hs-var">dBlockProp</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (a :: (* -&gt; *) -&gt; *) (p :: * -&gt; *).
+CDFFields a p =&gt;
+[Field DSelect p a]
+</span><a href="Cardano.Analysis.API.Field.html#cdfFields"><span class="hs-identifier hs-var">cdfFields</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Analysis.API.Types.html#BlockProp"><span class="hs-identifier hs-type">BlockProp</span></a></span><span> </span><span class="annot"><span class="annottext">[Field DSelect Any BlockProp]
+-&gt; (Field DSelect Any BlockProp -&gt; (Text, DictEntry))
+-&gt; [(Text, DictEntry)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Field DSelect Any BlockProp -&gt; (Text, DictEntry)
+forall (p :: * -&gt; *) (a :: (* -&gt; *) -&gt; *).
+Field DSelect p a -&gt; (Text, DictEntry)
+</span><a href="#local-6989586621679443117"><span class="hs-identifier hs-var">extractEntry</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, DictEntry)]
+-&gt; ([(Text, DictEntry)] -&gt; Map Text DictEntry)
+-&gt; Map Text DictEntry
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, DictEntry)] -&gt; Map Text DictEntry
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">M.fromList</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">dClusterPerf :: Map Text DictEntry
+</span><a href="Cardano.Analysis.API.Dictionary.html#dClusterPerf"><span class="hs-identifier hs-var">dClusterPerf</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (a :: (* -&gt; *) -&gt; *) (p :: * -&gt; *).
+CDFFields a p =&gt;
+[Field DSelect p a]
+</span><a href="Cardano.Analysis.API.Field.html#cdfFields"><span class="hs-identifier hs-var">cdfFields</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Analysis.API.Types.html#MachPerf"><span class="hs-identifier hs-type">MachPerf</span></a></span><span>  </span><span class="annot"><span class="annottext">[Field DSelect Any MachPerf]
+-&gt; (Field DSelect Any MachPerf -&gt; (Text, DictEntry))
+-&gt; [(Text, DictEntry)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Field DSelect Any MachPerf -&gt; (Text, DictEntry)
+forall (p :: * -&gt; *) (a :: (* -&gt; *) -&gt; *).
+Field DSelect p a -&gt; (Text, DictEntry)
+</span><a href="#local-6989586621679443117"><span class="hs-identifier hs-var">extractEntry</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, DictEntry)]
+-&gt; ([(Text, DictEntry)] -&gt; Map Text DictEntry)
+-&gt; Map Text DictEntry
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, DictEntry)] -&gt; Map Text DictEntry
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">M.fromList</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679442578"><span id="local-6989586621679442579"><span class="annot"><a href="#local-6989586621679443117"><span class="hs-identifier hs-type">extractEntry</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Field.html#DSelect"><span class="hs-identifier hs-type">DSelect</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679442578"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679442579"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-type">DictEntry</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-45"></span><span>       </span><span id="local-6989586621679443117"><span class="annot"><span class="annottext">extractEntry :: forall (p :: * -&gt; *) (a :: (* -&gt; *) -&gt; *).
+Field DSelect p a -&gt; (Text, DictEntry)
+</span><a href="#local-6989586621679443117"><span class="hs-identifier hs-var hs-var">extractEntry</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Field.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span class="hs-special">{</span><span id="local-6989586621679443134"><span id="local-6989586621679443135"><span id="local-6989586621679443136"><span id="local-6989586621679443137"><span id="local-6989586621679443138"><span id="local-6989586621679443139"><span id="local-6989586621679443140"><span id="local-6989586621679443141"><span id="local-6989586621679443142"><span id="local-6989586621679443143"><span id="local-6989586621679443144"><span class="annot"><span class="annottext">Text
+DSelect p a
+Precision
+Width
+Unit
+Range
+Scale
+fId :: Text
+fHead1 :: Text
+fHead2 :: Text
+fWidth :: Width
+fUnit :: Unit
+fPrecision :: Precision
+fScale :: Scale
+fRange :: Range
+fSelect :: DSelect p a
+fShortDesc :: Text
+fDescription :: Text
+fId :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Text
+fHead1 :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Text
+fHead2 :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Text
+fWidth :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Width
+fUnit :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Unit
+fPrecision :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Precision
+fScale :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Scale
+fRange :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Range
+fSelect :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; s p a
+fShortDesc :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Text
+fDescription :: forall k (s :: (* -&gt; *) -&gt; k -&gt; *) (p :: * -&gt; *) (a :: k).
+Field s p a -&gt; Text
+</span><a href="#local-6989586621679443134"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679443134"><span class="hs-identifier hs-var">fId</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DictEntry -&gt; (Text, DictEntry)) -&gt; DictEntry -&gt; (Text, DictEntry)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-46"></span><span>         </span><span class="annot"><a href="Cardano.Analysis.API.Dictionary.html#DictEntry"><span class="hs-identifier hs-type">DictEntry</span></a></span><span>
+</span><span id="line-47"></span><span>         </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">deField :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deField"><span class="hs-identifier hs-var">deField</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679443134"><span class="hs-identifier hs-var">fId</span></a></span><span>
+</span><span id="line-48"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deShortDesc :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deShortDesc"><span class="hs-identifier hs-var">deShortDesc</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679443143"><span class="hs-identifier hs-var">fShortDesc</span></a></span><span>
+</span><span id="line-49"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deDescription :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deDescription"><span class="hs-identifier hs-var">deDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679443144"><span class="hs-identifier hs-var">fDescription</span></a></span><span>
+</span><span id="line-50"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deLogScale :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deLogScale"><span class="hs-identifier hs-var">deLogScale</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Scale
+</span><a href="#local-6989586621679443140"><span class="hs-identifier hs-var">fScale</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-51"></span><span>                             </span><span class="annot"><span class="annottext">Scale
+</span><a href="Cardano.Analysis.API.Field.html#Log"><span class="hs-identifier hs-var">Log</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;true&quot;</span></span><span>
+</span><span id="line-52"></span><span>                             </span><span class="annot"><span class="annottext">Scale
+</span><a href="Cardano.Analysis.API.Field.html#Lin"><span class="hs-identifier hs-var">Lin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;false&quot;</span></span><span>
+</span><span id="line-53"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deRange :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deRange"><span class="hs-identifier hs-var">deRange</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Range
+</span><a href="#local-6989586621679443141"><span class="hs-identifier hs-var">fRange</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>                             </span><span class="annot"><span class="annottext">Range
+</span><a href="Cardano.Analysis.API.Field.html#Free"><span class="hs-identifier hs-var">Free</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-55"></span><span>                             </span><span class="annot"><a href="Cardano.Analysis.API.Field.html#Z0"><span class="hs-identifier hs-type">Z0</span></a></span><span> </span><span id="local-6989586621679443160"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443160"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Util.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443160"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-56"></span><span>                             </span><span class="annot"><a href="Cardano.Analysis.API.Field.html#Z1"><span class="hs-identifier hs-type">Z1</span></a></span><span> </span><span id="local-6989586621679443162"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443162"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Util.html#showText"><span class="hs-identifier hs-var">showText</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679443162"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-57"></span><span>                             </span><span class="annot"><span class="annottext">Range
+</span><a href="Cardano.Analysis.API.Field.html#R01"><span class="hs-identifier hs-var">R01</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;0:1&quot;</span></span><span>
+</span><span id="line-58"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deUnit :: Text
+</span><a href="Cardano.Analysis.API.Dictionary.html#deUnit"><span class="hs-identifier hs-var">deUnit</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Unit -&gt; Text
+</span><a href="Cardano.Analysis.API.Field.html#renderUnit"><span class="hs-identifier hs-var">renderUnit</span></a></span><span> </span><span class="annot"><span class="annottext">Unit
+</span><a href="#local-6989586621679443138"><span class="hs-identifier hs-var">fUnit</span></a></span><span>
+</span><span id="line-59"></span><span>         </span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span></pre></body></html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Chan.Unagi.Constants</span><span> </span><span>
+</span><span id="line-2"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Constants for boxed and unboxed unagi.</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#assert"><span class="hs-identifier">assert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#divMod_sEGMENT_LENGTH"><span class="hs-identifier hs-type">divMod_sEGMENT_LENGTH</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#divMod_sEGMENT_LENGTH"><span class="hs-pragma hs-type">divMod_sEGMENT_LENGTH</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-11"></span><span id="divMod_sEGMENT_LENGTH"><span class="annot"><span class="annottext">divMod_sEGMENT_LENGTH :: Int -&gt; (Int, Int)
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#divMod_sEGMENT_LENGTH"><span class="hs-identifier hs-var hs-var">divMod_sEGMENT_LENGTH</span></a></span></span><span> </span><span id="local-6989586621679051521"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051521"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051524"><span class="annot"><span class="annottext">d :: Int
+</span><a href="#local-6989586621679051524"><span class="hs-identifier hs-var hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051521"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#unsafeShiftR"><span class="hs-operator hs-var">`unsafeShiftR`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#lOG_SEGMENT_LENGTH"><span class="hs-identifier hs-var">lOG_SEGMENT_LENGTH</span></a></span><span>
+</span><span id="line-12"></span><span>                              </span><span id="local-6989586621679051528"><span class="annot"><span class="annottext">m :: Int
+</span><a href="#local-6989586621679051528"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051521"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH_MN_1"><span class="hs-identifier hs-var">sEGMENT_LENGTH_MN_1</span></a></span><span>
+</span><span id="line-13"></span><span>                           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051524"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int, Int) -&gt; (Int, Int)
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051528"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int, Int) -&gt; (Int, Int)
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-operator hs-var">`seq`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051524"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051528"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Nexttant for now: back-of-envelope considerations:</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--   - making most of constant factor for cloning array of *any* size</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--   - make most of overheads of moving to the next segment, etc.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--   - provide enough runway for creating next segment when 32 simultaneous writers </span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   - the larger this the larger one-time cost for the lucky writer</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   - as arrays collect in heap, performance might suffer, so bigger arrays</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--     give us a constant factor edge there. see:</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--       http://stackoverflow.com/q/23462004/176841</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-type">sEGMENT_LENGTH</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-pragma hs-type">sEGMENT_LENGTH</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-26"></span><span id="sEGMENT_LENGTH"><span class="annot"><span class="annottext">sEGMENT_LENGTH :: Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var hs-var">sEGMENT_LENGTH</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="hs-comment">-- NOTE: THIS MUST REMAIN A POWER OF 2!</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Number of reads on which to spin for new segment creation.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- Back-of-envelope (time_to_create_new_segment / time_for_read_IOref) + margin.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- See usage site.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- NOTE: this was calculated for boxed Unagi, but it probably doesn't make a</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- measurable difference that we use it for Unagi.Unboxed too.</span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#nEW_SEGMENT_WAIT"><span class="hs-identifier hs-type">nEW_SEGMENT_WAIT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-35"></span><span id="nEW_SEGMENT_WAIT"><span class="annot"><span class="annottext">nEW_SEGMENT_WAIT :: Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#nEW_SEGMENT_WAIT"><span class="hs-identifier hs-var hs-var">nEW_SEGMENT_WAIT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Float -&gt; Int
+forall b. Integral b =&gt; Float -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">14.6</span></span><span class="hs-glyph">::</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier hs-type">Float</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">0.3</span></span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span class="annot"><span class="annottext">Int -&gt; Float
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var">sEGMENT_LENGTH</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">3.7</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#lOG_SEGMENT_LENGTH"><span class="hs-identifier hs-type">lOG_SEGMENT_LENGTH</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-38"></span><span id="lOG_SEGMENT_LENGTH"><span class="annot"><span class="annottext">lOG_SEGMENT_LENGTH :: Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#lOG_SEGMENT_LENGTH"><span class="hs-identifier hs-var hs-var">lOG_SEGMENT_LENGTH</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679051538"><span class="annot"><span class="annottext">x :: Int
+</span><a href="#local-6989586621679051538"><span class="hs-identifier hs-var hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>  </span><span class="hs-comment">-- ...pre-computed from...</span><span>
+</span><span id="line-40"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Int -&gt; Int
+forall a. (?callStack::CallStack) =&gt; Bool -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#assert"><span class="hs-identifier hs-var hs-var">assert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051538"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Float -&gt; Int
+forall b. Integral b =&gt; Float -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="annot"><span class="annottext">(Float -&gt; Int) -&gt; Float -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Floating a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#logBase"><span class="hs-identifier hs-var">logBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">2</span></span><span class="hs-glyph">::</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier hs-type">Float</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Float -&gt; Float) -&gt; Float -&gt; Float
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Float
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var">sEGMENT_LENGTH</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>         </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679051538"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH_MN_1"><span class="hs-identifier hs-type">sEGMENT_LENGTH_MN_1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-44"></span><span id="sEGMENT_LENGTH_MN_1"><span class="annot"><span class="annottext">sEGMENT_LENGTH_MN_1 :: Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH_MN_1"><span class="hs-identifier hs-var hs-var">sEGMENT_LENGTH_MN_1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var">sEGMENT_LENGTH</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-45"></span></pre></body></html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Ingredient for listing test names</span></span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Ingredients.ListTests</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier">ListTests</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#testsNames"><span class="hs-identifier">testsNames</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#listingTests"><span class="hs-identifier">listingTests</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html"><span class="hs-identifier">Test.Tasty.Core</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html"><span class="hs-identifier">Test.Tasty.Options</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html"><span class="hs-identifier">Test.Tasty.Ingredients</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | This option, when set to 'True', specifies that we should run in the</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- &#171;list tests&#187; mode.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="ListTests"><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-var">ListTests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ListTests"><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-var">ListTests</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679096394"><span id="local-6989586621679096399"><span class="annot"><span class="annottext">ListTests -&gt; ListTests -&gt; Bool
+(ListTests -&gt; ListTests -&gt; Bool)
+-&gt; (ListTests -&gt; ListTests -&gt; Bool) -&gt; Eq ListTests
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ListTests -&gt; ListTests -&gt; Bool
+== :: ListTests -&gt; ListTests -&gt; Bool
+$c/= :: ListTests -&gt; ListTests -&gt; Bool
+/= :: ListTests -&gt; ListTests -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679096407"><span id="local-6989586621679096412"><span id="local-6989586621679096416"><span id="local-6989586621679096420"><span id="local-6989586621679096424"><span id="local-6989586621679096428"><span id="local-6989586621679096432"><span class="annot"><span class="annottext">Eq ListTests
+Eq ListTests =&gt;
+(ListTests -&gt; ListTests -&gt; Ordering)
+-&gt; (ListTests -&gt; ListTests -&gt; Bool)
+-&gt; (ListTests -&gt; ListTests -&gt; Bool)
+-&gt; (ListTests -&gt; ListTests -&gt; Bool)
+-&gt; (ListTests -&gt; ListTests -&gt; Bool)
+-&gt; (ListTests -&gt; ListTests -&gt; ListTests)
+-&gt; (ListTests -&gt; ListTests -&gt; ListTests)
+-&gt; Ord ListTests
+ListTests -&gt; ListTests -&gt; Bool
+ListTests -&gt; ListTests -&gt; Ordering
+ListTests -&gt; ListTests -&gt; ListTests
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ListTests -&gt; ListTests -&gt; Ordering
+compare :: ListTests -&gt; ListTests -&gt; Ordering
+$c&lt; :: ListTests -&gt; ListTests -&gt; Bool
+&lt; :: ListTests -&gt; ListTests -&gt; Bool
+$c&lt;= :: ListTests -&gt; ListTests -&gt; Bool
+&lt;= :: ListTests -&gt; ListTests -&gt; Bool
+$c&gt; :: ListTests -&gt; ListTests -&gt; Bool
+&gt; :: ListTests -&gt; ListTests -&gt; Bool
+$c&gt;= :: ListTests -&gt; ListTests -&gt; Bool
+&gt;= :: ListTests -&gt; ListTests -&gt; Bool
+$cmax :: ListTests -&gt; ListTests -&gt; ListTests
+max :: ListTests -&gt; ListTests -&gt; ListTests
+$cmin :: ListTests -&gt; ListTests -&gt; ListTests
+min :: ListTests -&gt; ListTests -&gt; ListTests
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679096444"><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-type">ListTests</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679096448"><span class="annot"><span class="annottext">defaultValue :: ListTests
+</span><a href="#local-6989586621679096448"><span class="hs-identifier hs-var hs-var hs-var hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ListTests
+</span><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-var">ListTests</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679096452"><span class="annot"><span class="annottext">parseValue :: TestName -&gt; Maybe ListTests
+</span><a href="#local-6989586621679096452"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; ListTests) -&gt; Maybe Bool -&gt; Maybe ListTests
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; ListTests
+</span><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-var">ListTests</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Maybe ListTests)
+-&gt; (TestName -&gt; Maybe Bool) -&gt; TestName -&gt; Maybe ListTests
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Maybe Bool
+</span><a href="Test.Tasty.Options.html#safeReadBool"><span class="hs-identifier hs-var">safeReadBool</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621679096458"><span class="annot"><span class="annottext">optionName :: Tagged ListTests TestName
+</span><a href="#local-6989586621679096458"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Tagged ListTests TestName
+forall a. a -&gt; Tagged ListTests a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;list-tests&quot;</span></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679096461"><span class="annot"><span class="annottext">optionHelp :: Tagged ListTests TestName
+</span><a href="#local-6989586621679096461"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionHelp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Tagged ListTests TestName
+forall a. a -&gt; Tagged ListTests a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Do not run the tests; just print their names&quot;</span></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679096466"><span class="annot"><span class="annottext">optionCLParser :: Parser ListTests
+</span><a href="#local-6989586621679096466"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionCLParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod FlagFields ListTests -&gt; ListTests -&gt; Parser ListTests
+forall v. IsOption v =&gt; Mod FlagFields v -&gt; v -&gt; Parser v
+</span><a href="Test.Tasty.Options.html#mkFlagCLParser"><span class="hs-identifier hs-var">mkFlagCLParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Mod FlagFields ListTests
+forall (f :: * -&gt; *) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'l'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; ListTests
+</span><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-var">ListTests</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Obtain the list of all tests in the suite.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#testsNames"><span class="hs-identifier hs-type">testsNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Core.html#TestName"><span class="hs-identifier hs-type">TestName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span id="testsNames"><span class="annot"><span class="annottext">testsNames :: OptionSet -&gt; TestTree -&gt; [TestName]
+</span><a href="Test.Tasty.Ingredients.ListTests.html#testsNames"><span class="hs-identifier hs-var hs-var">testsNames</span></a></span></span><span> </span><span class="hs-comment">{- opts -}</span><span> </span><span class="hs-comment">{- tree -}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">TreeFold [TestName] -&gt; OptionSet -&gt; TestTree -&gt; [TestName]
+forall b. Monoid b =&gt; TreeFold b -&gt; OptionSet -&gt; TestTree -&gt; b
+</span><a href="Test.Tasty.Core.html#foldTestTree"><span class="hs-identifier hs-var">foldTestTree</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">TreeFold [TestName]
+forall b. Monoid b =&gt; TreeFold b
+</span><a href="Test.Tasty.Core.html#trivialFold"><span class="hs-identifier hs-var">trivialFold</span></a></span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#foldSingle"><span class="hs-identifier hs-var">foldSingle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096473"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096473"><span class="hs-identifier hs-var">_opts</span></a></span></span><span> </span><span id="local-6989586621679096474"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679096474"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679096475"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679096475"><span class="hs-identifier hs-var">_test</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679096474"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#foldGroup"><span class="hs-identifier hs-var">foldGroup</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096477"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096477"><span class="hs-identifier hs-var">_opts</span></a></span></span><span> </span><span id="local-6989586621679096478"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679096478"><span class="hs-identifier hs-var">groupName</span></a></span></span><span> </span><span id="local-6989586621679096479"><span class="annot"><span class="annottext">[[TestName]]
+</span><a href="#local-6989586621679096479"><span class="hs-identifier hs-var">names</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(TestName -&gt; TestName) -&gt; [TestName] -&gt; [TestName]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679096478"><span class="hs-identifier hs-var">groupName</span></a></span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestName -&gt; TestName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;.&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestName -&gt; TestName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[TestName]] -&gt; [TestName]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="annot"><span class="annottext">[[TestName]]
+</span><a href="#local-6989586621679096479"><span class="hs-identifier hs-var">names</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | The ingredient that provides the test listing functionality.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#listingTests"><span class="hs-identifier hs-type">listingTests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span>
+</span><span id="line-45"></span><span id="listingTests"><span class="annot"><span class="annottext">listingTests :: Ingredient
+</span><a href="Test.Tasty.Ingredients.ListTests.html#listingTests"><span class="hs-identifier hs-var hs-var">listingTests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+-&gt; (OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)) -&gt; Ingredient
+</span><a href="Test.Tasty.Ingredients.html#TestManager"><span class="hs-identifier hs-var">TestManager</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Proxy ListTests -&gt; OptionDescription
+forall v. IsOption v =&gt; Proxy v -&gt; OptionDescription
+</span><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-var">Option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ListTests
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-type">ListTests</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">((OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)) -&gt; Ingredient)
+-&gt; (OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)) -&gt; Ingredient
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">\</span><span id="local-6989586621679096484"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096484"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679096485"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096485"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; ListTests
+forall v. IsOption v =&gt; OptionSet -&gt; v
+</span><a href="Test.Tasty.Options.html#lookupOption"><span class="hs-identifier hs-var">lookupOption</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096484"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-type">ListTests</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (IO Bool)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier hs-type">ListTests</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Maybe (IO Bool)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; Maybe (IO Bool)) -&gt; IO Bool -&gt; Maybe (IO Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">(TestName -&gt; IO ()) -&gt; [TestName] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="annot"><span class="annottext">TestName -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">([TestName] -&gt; IO ()) -&gt; [TestName] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; [TestName]
+</span><a href="Test.Tasty.Ingredients.ListTests.html#testsNames"><span class="hs-identifier hs-var">testsNames</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096484"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096485"><span class="hs-identifier hs-var">tree</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-52"></span></pre></body></html>
