@@ -205,7 +205,7 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
 
   let maxSlot = 150
       epochLength = 300
-      slotLen = 0.01
+      slotLen = 0.1
   let fastTestnetOptions = def
         { cardanoNodes =
             SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
