@@ -62,7 +62,7 @@ let
           cabal
           actionlint
           shellcheck
-          scriv
+          # scriv # FIXME
           stylish-haskell
         ];
 

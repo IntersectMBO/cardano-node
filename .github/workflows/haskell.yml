@@ -101,13 +101,13 @@ jobs:
 
     - name: Install gRPC dependencies
       # TODO pin this action version
-      uses: intersectmbo/cardano-api/.github/actions/grpc-deps@mgalazyn/chore/split-out-grpc-deps-gha
+      uses: intersectmbo/cardano-api/.github/actions/grpc-deps@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
 
     - uses: actions/checkout@v4
 
     - name: Cache and install Cabal dependencies
       # TODO pin this action version
-      uses: intersectmbo/cardano-api/.github/actions/cabal-cache@master
+      uses: intersectmbo/cardano-api/.github/actions/cabal-cache@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
       with:
         cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
         cache-version: ${{ env.CABAL_CACHE_VERSION }}
