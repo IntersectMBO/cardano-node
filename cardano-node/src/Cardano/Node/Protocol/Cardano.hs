@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -37,6 +38,7 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
 import           Prelude
 

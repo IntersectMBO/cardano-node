@@ -17,6 +17,8 @@ import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 
+import           Ouroboros.Network.Block (HeaderHash)
+
 import           Control.DeepSeq (NFData)
 import           Data.Aeson
 import           GHC.Generics (Generic)
@@ -45,6 +47,8 @@ data SomeConsensusProtocol where
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
+                                          , Api.ToCBOR (HeaderHash blk)
+                                          , Api.FromCBOR (HeaderHash blk)
                                           )
                            => Api.BlockType blk
                            -> Api.ProtocolInfoArgs blk
