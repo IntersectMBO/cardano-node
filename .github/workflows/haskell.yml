@@ -36,21 +36,23 @@ jobs:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        # TODO add 9.8 again to the versions list when GHC-9.8 gets released with stm > 2.5.2,
-        # see https://github.com/haskell/stm/issues/76
-        ghc: ["9.6", "9.12"]
-        cabal: ["3.12"]
+        ghc: [&ghc-stable "9.6", "9.10", &ghc-latest "9.12"]
+        cabal: [&cabal-version "3.16"]
         sys:
-          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
           - { os: ubuntu-latest, shell: bash }
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          - cabal: "3.12"
-            ghc: "9.6"
+          - ghc: *ghc-stable
+            cabal: *cabal-version
             sys:
               os: macos-latest
               shell: bash
+          - ghc: *ghc-latest
+            cabal: *cabal-version
+            sys:
+              os: windows-latest
+              shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
     defaults:
       run:
         shell: ${{ matrix.sys.shell }}
@@ -99,66 +101,11 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    - name: Cabal update
-      run: cabal update
-
-    - name: Configure build
-      run: |
-        cp .github/workflows/cabal.project.local.ci cabal.project.local
-        echo "# cabal.project.local"
-        cat cabal.project.local
-
-    # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
-    # indices to generate an install plan.
-    - name: Build dry run
-      run: cabal build all --enable-tests --dry-run --minimize-conflict-set
-
-    # From the install plan we generate a dependency list.
-    - name: Record dependencies
-      id: record-deps
-      run: |
-        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
-
-    # Use a fresh cache each month
-    - name: Store month number and GHC version as environment variables used in cache version
-      run: |
-        cat <<EOF >> $GITHUB_ENV
-        MONTHNUM=$(date -u '+%m')
-        GHC=$(ghc --numeric-version)
-        EOF
-
-    # From the dependency list we restore the cached dependencies.
-    # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
-    # until the `index-state` values in the `cabal.project` file changes.
-    - name: Restore cached dependencies
-      uses: actions/cache/restore@v4
-      id: cache
+    - name: Cache and install Cabal dependencies
+      uses: intersectmbo/cardano-api/.github/actions/cabal-cache@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
       with:
-        path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
-        key:
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
-        # try to restore previous cache from this month if there's no cache for the dependencies set
-        restore-keys: |
-          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ env.MONTHNUM }}-
-
-    # Now we install the dependencies. If the cache was found and restored in the previous step,
-    # this should be a no-op, but if the cache key was not found we need to build stuff so we can
-    # cache it for the next step.
-    - name: Install dependencies
-      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
-
-    # Always store the cabal cache.
-    # This can fail (benign failure) if there is already a hash at that key.
-    - name: Cache Cabal store
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
-        key:
-          ${{ steps.cache.outputs.cache-primary-key }}
+        cabal-store: ${{ steps.setup-haskell.outputs.cabal-store }}
+        cache-version: ${{ env.CABAL_CACHE_VERSION }}
 
     # Now we build.
     - name: Build all
@@ -230,9 +177,9 @@ jobs:
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
     # - name: Setup tmate session
-    #  if: ${{ failure() }}
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
     #     limit-access-to-actor: true
 
   build-complete:

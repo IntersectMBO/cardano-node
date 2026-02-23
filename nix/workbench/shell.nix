@@ -121,7 +121,7 @@ project.shellFor {
   # Packages in need of a newer versions compared to flake's nixpkgs.
   # Pinning "nixos-25.11" to avoid cache misses when entering the shell.
   # To update use `curl -L https://channels.nixos.org/nixos-25.11/git-revision`
-  ++ (with (builtins.getFlake "github:NixOS/nixpkgs/999ca0e5484922624254294ea1adc2b90081579e").legacyPackages.${pkgs.system}; [
+  ++ (with (builtins.getFlake "github:NixOS/nixpkgs/999ca0e5484922624254294ea1adc2b90081579e").legacyPackages.${pkgs.stdenv.hostPlatform.system}; [
        # Will be removed once nixpkgs is bumped to a suitable version.
        typst
      ])
