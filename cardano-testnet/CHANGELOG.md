@@ -1,6 +1,6 @@
 # Changelog for cardano-testnet
 
-## Next version
+## 10.1.0
 
 * [Fix discrepancy in security parameter between Byron and Shelley genesis files](https://github.com/IntersectMBO/cardano-node/pull/6188)
 * [Add an option to dump/load configuration sandbox](https://github.com/IntersectMBO/cardano-node/pull/6239)
@@ -11,9 +11,6 @@
 ## 10.0.0
 
 * Bump for node 10
-
-##
-
 * Update `cardano-ping` dependency
 * Add `--num-dreps` parameter
 

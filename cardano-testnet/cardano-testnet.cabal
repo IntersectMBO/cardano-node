@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                10.0.1
+version:                10.1.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
@@ -134,6 +134,7 @@ library
                         Testnet.Start.Types
                         Testnet.SubmitApi
                         Testnet.TestQueryCmds
+                        Testnet.TxGenRuntime
                         Testnet.Types
 
   other-modules:        Parsers.Cardano
