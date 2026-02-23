@@ -99,6 +99,9 @@ jobs:
       with:
         use-sodium-vrf: true # default is true
 
+    - name: Install gRPC dependencies
+      uses: intersectmbo/cardano-api/.github/actions/grpc-deps@a7bd74dfa6ccb1eb04f69791f978a3b9e0cc63ca
+
     - uses: actions/checkout@v4
 
     - name: Cache and install Cabal dependencies
