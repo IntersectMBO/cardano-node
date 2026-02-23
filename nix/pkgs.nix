@@ -214,4 +214,14 @@ in with final;
       });
     };
   };
+
+  # Apply upstream patch to scriv for Click 8.2+ compatibility (NixOS/nixpkgs#467359)
+  scriv = prev.scriv.overrideAttrs (old: {
+    patches = (old.patches or []) ++ [
+      (prev.fetchpatch {
+        url = "https://github.com/nedbat/scriv/commit/04ac45da9e1adb24a95ad9643099fe537b3790fd.diff";
+        hash = "sha256-Gle3zWC/WypGHsKmVlqedRAZVWsBjGpzMq3uKuG9+SY=";
+      })
+    ];
+  });
 }
