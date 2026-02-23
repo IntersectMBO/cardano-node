@@ -552,7 +552,7 @@ instance HasSeverityAnnotation (ConnMgr.Trace addr (ConnectionHandlerTrace versi
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
           TrConnectionHandlerError _ _ ShutdownNode            -> Critical
-          TrConnectionHandlerError _ _ ShutdownPeer            -> Info
+          TrConnectionHandlerError _ _ ShutdownPeer            -> Error
 
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
@@ -600,7 +600,7 @@ instance HasSeverityAnnotation (InboundGovernor.Trace addr) where
       InboundGovernor.TrDemotedToWarmRemote {}     -> Info
       InboundGovernor.TrWaitIdleRemote {}          -> Debug
       InboundGovernor.TrMuxCleanExit {}            -> Debug
-      InboundGovernor.TrMuxErrored {}              -> Info
+      InboundGovernor.TrMuxErrored {}              -> Error
       InboundGovernor.TrInboundGovernorCounters {} -> Info
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
