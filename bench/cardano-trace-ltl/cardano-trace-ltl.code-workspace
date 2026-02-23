@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "cardano-trace-ltl",
+			"path": "."
+		},
+		{
+			"name": "lance",
+			"path": "../lance"
+		}
+	],
+	"settings": {}
+}
