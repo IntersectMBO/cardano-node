@@ -23,17 +23,22 @@ import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
-import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
 import           Data.Proxy (Proxy (..))
-import           Data.Time (DiffTime)
 import           Data.Text (pack)
+import           Data.Time (DiffTime)
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
+
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx,
+                   messageLeiosFetchToObject, prettyEbHash)
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer
@@ -466,3 +471,81 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
+
+-----
+
+instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
+
+instance LogFormatting (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+  forHuman = showT
+
+  forMachine _dtal (AnyMessageAndAgency _stok msg) = case msg of
+
+    LN.MsgLeiosNotificationRequestNext ->
+      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
+              ]
+
+    LN.MsgLeiosBlockAnnouncement () ->
+      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
+              ]
+    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
+      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "ebBytesSize" .= ebBytesSize
+              ]
+    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LN.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+instance LogFormatting (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+  forHuman = showT
+
+  forMachine _dtal (AnyMessageAndAgency _stok msg) =
+    messageLeiosFetchToObject msg
+
+instance MetaTrace (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
+      LN.MsgLeiosNotificationRequestNext {} -> Namespace [] ["RequestNext"]
+      LN.MsgLeiosBlockAnnouncement {} -> Namespace [] ["BlockAnnouncement"]
+      LN.MsgLeiosBlockOffer {} -> Namespace [] ["BlockOffer"]
+      LN.MsgLeiosBlockTxsOffer {} -> Namespace [] ["BlockTxsOffer"]
+      LN.MsgDone -> Namespace [] ["Done"]
+
+    severityFor _ _ = Just Debug
+
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["RequestNext"]
+      , Namespace [] ["BlockAnnouncement"]
+      , Namespace [] ["BlockOffer"]
+      , Namespace [] ["BlockTxsOffer"]
+      , Namespace [] ["Done"]
+      ]
+
+instance MetaTrace (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+    namespaceFor (AnyMessageAndAgency _stok msg) = case msg of
+      LF.MsgLeiosBlockRequest {} -> Namespace [] ["BlockRequest"]
+      LF.MsgLeiosBlock {} -> Namespace [] ["Block"]
+      LF.MsgLeiosBlockTxsRequest {} -> Namespace [] ["BlockTxsRequest"]
+      LF.MsgLeiosBlockTxs {} -> Namespace [] ["BlockTxs"]
+      LF.MsgDone -> Namespace [] ["Done"]
+
+    severityFor _ _ = Just Debug
+
+    documentFor _ = Nothing
+
+    allNamespaces = [
+        Namespace [] ["BlockRequest"]
+      , Namespace [] ["Block"]
+      , Namespace [] ["BlockTxsRequest"]
+      , Namespace [] ["BlockTxs"]
+      , Namespace [] ["Done"]
+      ]

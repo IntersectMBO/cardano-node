@@ -1,6 +1,7 @@
 # catch-all
 
-* @intersectmbo/cardano-node-maintainers
+# FIXME: codeowners disabled for leios-prototype
+# * @intersectmbo/cardano-node-maintainers
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence

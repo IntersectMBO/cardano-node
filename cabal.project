@@ -96,3 +96,38 @@ if impl (ghc >= 9.12)
 
 constraints:
     hedgehog-extras == 0.7.0.0
+
+-- Points to ouroboros-consensus/leios-prototype
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: aaacf6ddd27e7e17c756a53d60446a0612ad3d3d
+  --sha256: sha256-mnQ3hl2ECvb2sF+oYB8k56wUoD7+udTVlK7zS00lZuw=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-observe
+    sop-extras
+    strict-sop-core
+
+-- Points to ouroboros-network/leios-prototype
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: fb5f16f48af84950db0c2ecefd8cbda532c77d1a
+  --sha256: sha256-0LWD1zwOzhdcPJtBuw7pRDVcBd9CKJOFjm9o4BvsIMM=
+  subdir:
+    cardano-ping
+    monoidal-synchronisation
+    quickcheck-monoids
+    network-mux
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    ntp-client
+    cardano-client

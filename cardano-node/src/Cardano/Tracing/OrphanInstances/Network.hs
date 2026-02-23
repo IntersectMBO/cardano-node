@@ -27,20 +27,20 @@ module Cardano.Tracing.OrphanInstances.Network
   , FetchDecisionToJSON (..)
   ) where
 
+import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
+import           Cardano.Network.Types (LedgerStateJudgement (..))
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
+import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
+import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxs (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
-import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers(..))
-import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable(..))
-import           Cardano.Network.Types (LedgerStateJudgement(..))
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Ouroboros.Cardano.Network.PeerSelection.Governor.Types as Cardano
-import qualified Ouroboros.Cardano.Network.PublicRootPeers as Cardano.PublicRootPeers
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block
@@ -51,15 +51,14 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import qualified Ouroboros.Network.BlockFetch.Decision.Trace as BlockFetch
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.ConnMap (ConnMap (..), LocalAddr (..))
+import           Ouroboros.Network.ConnectionManager.Core as ConnMgr (Trace (..))
 import           Ouroboros.Network.ConnectionManager.State (ConnStateId (..))
 import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
-                   ConnectionManagerCounters (..),
-                   OperationResult (..))
+                   ConnectionManagerCounters (..), OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
-import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import qualified Ouroboros.Network.Diffusion.Common as Diffusion
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
@@ -73,10 +72,10 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..), DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
-                   PeerSelectionTargets (..), PeerSelectionView (..), TracePeerSelection (..),
-                   peerSelectionStateToCounters)
+import           Ouroboros.Network.PeerSelection.Governor (AssociationMode (..),
+                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
+                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
+                   TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -89,7 +88,7 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
 import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   LocalRootPeers, WarmValency (..), LocalRootConfig (..))
+                   LocalRootConfig (..), LocalRootPeers, WarmValency (..))
 import qualified Ouroboros.Network.PeerSelection.State.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
@@ -140,7 +139,11 @@ import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessage (AnyMessageAndAgency))
 import qualified Network.TypedProtocol.Stateful.Codec as Stateful
 
-{- HLINT ignore "Use record patterns" -}
+import qualified LeiosDemoOnlyTestFetch as LF
+import qualified LeiosDemoOnlyTestNotify as LN
+import           LeiosDemoTypes (EbHash (..), LeiosEb, LeiosPoint (..), LeiosTx, TraceLeiosKernel,
+                   TraceLeiosPeer, messageLeiosFetchToObject, prettyEbHash,
+                   traceLeiosKernelToObject, traceLeiosPeerToObject)
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
@@ -549,7 +552,7 @@ instance HasSeverityAnnotation (ConnMgr.Trace addr (ConnectionHandlerTrace versi
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
           TrConnectionHandlerError _ _ ShutdownNode            -> Critical
-          TrConnectionHandlerError _ _ ShutdownPeer            -> Info
+          TrConnectionHandlerError _ _ ShutdownPeer            -> Error
 
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
@@ -597,7 +600,7 @@ instance HasSeverityAnnotation (InboundGovernor.Trace addr) where
       InboundGovernor.TrDemotedToWarmRemote {}     -> Info
       InboundGovernor.TrWaitIdleRemote {}          -> Debug
       InboundGovernor.TrMuxCleanExit {}            -> Debug
-      InboundGovernor.TrMuxErrored {}              -> Info
+      InboundGovernor.TrMuxErrored {}              -> Error
       InboundGovernor.TrInboundGovernorCounters {} -> Info
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
@@ -1437,19 +1440,21 @@ instance (ToJSON peer, ConvertRawHash header)
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
-  toObject verb (TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
+  toObject verb (TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
 
 instance ToObject (Stateful.AnyMessage ps f)
       => ToObject (Stateful.TraceSendRecv ps f) where
-  toObject verb (Stateful.TraceSendMsg m) = mconcat
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (Stateful.TraceRecvMsg m) = mconcat
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (Stateful.TraceSendMsg tm m) = mconcat
+    [ "kind" .= String "Send" , "msg" .= toObject verb m, "mux_at" .= jsonTime tm  ]
+  toObject verb (Stateful.TraceRecvMsg mbTm m) = mconcat
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m, "mux_at" Aeson..?= fmap jsonTime mbTm ]
 
+jsonTime :: Time -> Double
+jsonTime (Time x) = realToFrac x
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected count) =
@@ -2871,3 +2876,72 @@ instance FromJSON PeerTrustable where
 instance ToJSON PeerTrustable where
   toJSON IsTrustable = Bool True
   toJSON IsNotTrustable = Bool False
+
+-----
+
+instance ToJSON EbHash where toJSON = toJSON . prettyEbHash
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LN.LeiosNotify LeiosPoint ()))) where
+  trTransformer = trStructured
+
+instance ToObject (AnyMessage (LN.LeiosNotify LeiosPoint ())) where
+  toObject _verb (AnyMessageAndAgency _stok msg) = case msg of
+
+    LN.MsgLeiosNotificationRequestNext ->
+      mconcat [ "kind" .= String "MsgLeiosNotificationRequestNext"
+              ]
+
+    LN.MsgLeiosBlockAnnouncement () ->
+      mconcat [ "kind" .= String "MsgLeiosBlockAnnouncement"
+              ]
+    LN.MsgLeiosBlockOffer (MkLeiosPoint ebSlot ebHash) ebBytesSize ->
+      mconcat [ "kind" .= String "MsgLeiosBlockOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              , "ebBytesSize" .= ebBytesSize
+              ]
+    LN.MsgLeiosBlockTxsOffer (MkLeiosPoint ebSlot ebHash) ->
+      mconcat [ "kind" .= String "MsgLeiosBlockTxsOffer"
+              , "ebSlot" .= ebSlot
+              , "ebHash" .= ebHash
+              ]
+
+    LN.MsgDone ->
+      mconcat [ "kind" .= String "MsgDone"
+              ]
+
+--    where
+--      agency :: Aeson.Object
+--      agency = "agency" .= show stok
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx))) where
+  trTransformer = trStructured
+
+instance ToObject (AnyMessage (LF.LeiosFetch LeiosPoint LeiosEb LeiosTx)) where
+  toObject _verb (AnyMessageAndAgency _stok msg) =
+    messageLeiosFetchToObject msg
+
+instance Transformable Text IO TraceLeiosKernel where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosKernel where
+  toObject _verb = traceLeiosKernelToObject
+
+instance HasPrivacyAnnotation TraceLeiosKernel
+
+instance HasSeverityAnnotation TraceLeiosKernel where
+  getSeverityAnnotation _ = Debug
+
+instance ToObject peer
+     => Transformable Text IO (TraceLabelPeer peer TraceLeiosPeer) where
+  trTransformer = trStructured
+
+instance ToObject TraceLeiosPeer where
+  toObject _verb = traceLeiosPeerToObject
+
+instance HasPrivacyAnnotation TraceLeiosPeer
+
+instance HasSeverityAnnotation TraceLeiosPeer where
+  getSeverityAnnotation _ = Debug
