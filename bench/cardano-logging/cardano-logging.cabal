@@ -1,0 +1,41 @@
+cabal-version: 3.0
+
+name:                   cardano-logging
+version:                0.0.1
+synopsis:               Cardano logging tools
+description:            Cardano logging tools.
+category:               Cardano,
+                        Test,
+copyright:              2026-2026 Intersect / Input Output Global Inc (IOG).
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+data-files:
+
+common project-config
+  build-depends:        base >= 4.14 && < 5
+  default-language:     Haskell2010
+  default-extensions:
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wwarn=deprecations
+
+executable schema-validator
+  import:               project-config
+  hs-source-dirs:       app/
+  main-is:              schema-validator.hs
+  build-depends:        aeson
+                      , async
+                      , base
+                      , filepath
+                      , directory
+                      , process
+

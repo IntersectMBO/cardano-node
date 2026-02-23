@@ -26,6 +26,7 @@ packages:
   cardano-submit-api
   cardano-testnet
   cardano-tracer
+  bench/cardano-logging
   bench/cardano-profile
   bench/cardano-topology
   bench/locli
