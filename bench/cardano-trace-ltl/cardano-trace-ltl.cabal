@@ -1,0 +1,170 @@
+cabal-version:      3.4
+name:               cardano-trace-ltl
+description:        Cardano declarative conformance testing.
+version:            0.1.0.0
+license-file:       LICENSE
+author:             Jutaro & Russoul
+maintainer:         xxx@iohk.io
+
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options:      -Wall
+
+    if impl(ghc >= 9.8)
+      ghc-options:
+        -Wno-x-partial
+
+    default-language: Haskell2010
+
+    default-extensions:
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      OverloadedRecordDot
+      RecordWildCards
+      ScopedTypeVariables
+      BangPatterns
+      NumericUnderscores
+      TypeApplications
+      FunctionalDependencies
+
+      Strict
+
+library
+    import:           warnings
+    exposed-modules:
+                      Cardano.LTL.Check
+                    , Cardano.LTL.Lang.Formula
+                    , Cardano.LTL.Lang.Formula.Parser
+                    , Cardano.LTL.Lang.Formula.Prec
+                    , Cardano.LTL.Lang.Formula.Yaml
+                    , Cardano.LTL.Lang.Fragment
+                    , Cardano.LTL.Lang.Fragment.Fragment0
+                    , Cardano.LTL.Lang.Fragment.Fragment1
+                    , Cardano.LTL.Lang.Fragment.Fragment2
+                    , Cardano.LTL.Lang.HomogeneousFormula
+                    , Cardano.LTL.Occurs
+                    , Cardano.LTL.Pretty
+                    , Cardano.LTL.Progress
+                    , Cardano.LTL.Rewrite
+                    , Cardano.LTL.Satisfy
+                    , Cardano.LTL.Subst
+
+                    , Cardano.Trace.Feed
+                    , Cardano.Trace.Ingest
+
+    other-modules:
+    other-extensions:
+
+    build-depends:    base
+                    , containers
+                    , text
+                    , directory
+                    , trace-dispatcher ^>= 2.11
+                    , serialise
+                    , bytestring
+                    , time
+                    , stm
+                    , aeson
+                    , streaming
+                    , megaparsec
+                    , unagi-chan
+                    , yaml
+
+    hs-source-dirs:   src
+
+    ghc-options:      -O2
+
+
+executable cardano-trace-ltl-sanitizer
+    import:           warnings
+    main-is:          TraceSanitizer.hs
+
+    other-modules:
+    other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+      , text
+      , containers
+      , cardano-trace-ltl
+      , trace-dispatcher ^>= 2.11
+      , aeson
+      , streaming
+
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+
+executable cardano-trace-ltl-parser
+    import:           warnings
+    main-is:          Parser.hs
+
+    other-modules:
+    other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+      , text
+      , containers
+      , cardano-trace-ltl
+      , trace-dispatcher ^>= 2.11
+      , aeson
+      , streaming
+      , megaparsec
+      , scientific
+
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+executable cardano-trace-ltl-verifier
+    import:           warnings
+    main-is:          TraceVerifier.hs
+
+    ghc-options:      -O2
+                      -threaded
+                      -rtsopts
+                      -- limit to 2 cores for now
+                      "-with-rtsopts=-N2"
+
+    other-modules:
+        TraceVerifier.TraceMessage
+      , TraceVerifier.Cli
+      , TraceVerifier.Common
+    other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+      , text
+      , containers
+      , cardano-trace-ltl
+      , trace-dispatcher ^>= 2.11
+      , aeson
+      , streaming
+      , async
+      , optparse-applicative
+      , aeson-pretty
+
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+test-suite cardano-trace-ltl-test
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Unit.hs
+  build-depends:
+      base
+    , cardano-trace-ltl
+    , containers
+    , tasty
+    , tasty-hunit
+    , text
+    , megaparsec
