@@ -21,6 +21,7 @@ main = do
   imtr    <- inMemoryTracers configState
   tlTr    <- timeLimitedTracers configState stdioTr
   ekgTr   <- ekgTracers configState
+  ekgTrNew <- ekgTracersNew configState
   defaultMain [
     bgroup "tracer" [
                         bench "sendMessageStdout1"  $ whnfIO (sendMessage 1 tr)
@@ -45,6 +46,11 @@ main = do
                       , bench "sendEKG 5/10"  $ whnfIO (sendMessage 10 ekgTr)
                       , bench "sendEKG 5/100"  $ whnfIO (sendMessage 100 ekgTr)
                       , bench "sendEKG 5/1000"  $ whnfIO (sendMessage 1000 ekgTr)
+
+                      , bench "sendEKGNew 5/1"  $ whnfIO (sendMessage 1 ekgTrNew)
+                      , bench "sendEKGNew 5/10"  $ whnfIO (sendMessage 10 ekgTrNew)
+                      , bench "sendEKGNew 5/100"  $ whnfIO (sendMessage 100 ekgTrNew)
+                      , bench "sendEKGNew 5/1000"  $ whnfIO (sendMessage 1000 ekgTrNew)
                     ]
               ]
 
@@ -106,6 +112,22 @@ ekgTracers confState = do
     forwardTracer'  <- testTracer forwardTrRef
     store           <- newStore
     trEkg           <- ekgTracer emptyTraceConfig store
+    tr              <- mkCardanoTracer
+                        stdoutTracer'
+                        forwardTracer'
+                        (Just trEkg)
+                        ["Test"]
+    configureTracers confState config4 [tr]
+    pure tr
+
+ekgTracersNew :: ConfigReflection -> IO (Trace IO Message)
+ekgTracersNew confState = do
+    stdoutTrRef     <- newIORef []
+    stdoutTracer'   <- testTracer stdoutTrRef
+    forwardTrRef    <- newIORef []
+    forwardTracer'  <- testTracer forwardTrRef
+    store           <- newStore
+    trEkg           <- ekgTracerNew emptyTraceConfig store
     tr              <- mkCardanoTracer
                         stdoutTracer'
                         forwardTracer'

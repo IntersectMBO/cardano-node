@@ -201,7 +201,8 @@ data Metric
   -- the metric will be represented as "prometheus_metric{key1=\"value1\",key2=\"value2\"} 1"
 
     | PrometheusM Text [(Text, Text)]
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData)
 
 
 getMetricName :: Metric -> Text
