@@ -5,6 +5,7 @@
 , incl
 , CHaP
 , macOS-security
+, windowsCompilerNixName
 }:
 let
 
@@ -18,10 +19,30 @@ let
                                        , buildProject
                                        , ...
                                        }:
-    {
+    let
+      # Fetch proto-lens with submodules and fix symlinks for plan and build phases
+      protoLensSrc = pkgs.fetchgit {
+        url = "https://github.com/google/proto-lens";
+        rev = "20de5227947b0c37dd6852dcc6f2db1cd5889cee";
+        sha256 = "sha256-VUYU2swjU7L8Zdu6Zfz6jo2ulW5uPhAamt2GjH5hZRY=";
+        fetchSubmodules = true;
+      };
+      fixProtoLensSrc = pkgs.runCommand "proto-lens-fixed" {} ''
+        mkdir -p $out
+        cp -a ${protoLensSrc}/. $out/
+        chmod -R +w $out
+        # Fix proto-lens-imports symlink in proto-lens
+        rm -rf $out/proto-lens/proto-lens-imports/google
+        cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens/proto-lens-imports/
+        # Fix proto-src symlink in proto-lens-protobuf-types
+        rm -rf $out/proto-lens-protobuf-types/proto-src
+        cp -r ${protoLensSrc}/google/protobuf/src $out/proto-lens-protobuf-types/proto-src
+        chmod -R -w $out
+      '';
+    in {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then "ghc9122" else "ghc967");
+      compiler-nix-name = lib.mkDefault (if pkgs.stdenv.hostPlatform.isWindows then windowsCompilerNixName else "ghc967");
       # Extra-compilers
       # flake.variants = lib.genAttrs ["ghc$VERSION"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
@@ -46,6 +67,7 @@ let
       '';
       inputMap = {
         "https://chap.intersectmbo.org/" = CHaP;
+        "https://github.com/google/proto-lens/20de5227947b0c37dd6852dcc6f2db1cd5889cee" = fixProtoLensSrc;
       };
       shell = {
         name = lib.mkDefault "cabal-dev-shell";
@@ -310,7 +332,11 @@ let
                   # also needs them to be quoted)
                   export WORKDIR=$TMP/testTracerExt
               '';
-            })
+          })
+          ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [ pkgs.buildPackages.protobuf ];
+              packages.cardano-rpc.components.library.build-tools = [ pkgs.buildPackages.protobuf ];
+          })
           ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
             # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
@@ -368,6 +394,30 @@ let
           # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
           # not build for windows on a per package bases (rather than using --disable-tests).
           # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
+
+          # TODO remove this module when removing proto-lens SRP
+          # Override proto-lens source to use fixed symlinks (inputMap provides the fixed
+          # source for plan computation; this module provides it for the build phase)
+          ({lib, config, ...}: let
+            protoLensPackages = [
+              "proto-lens"
+              "proto-lens-arbitrary"
+              "proto-lens-discrimination"
+              "proto-lens-optparse"
+              "proto-lens-protobuf-types"
+              "proto-lens-protoc"
+              "proto-lens-runtime"
+              "proto-lens-setup"
+              "proto-lens-tests-dep"
+              "proto-lens-tests"
+              "discrimination-ieee754"
+              "proto-lens-benchmarks"
+            ];
+          in {
+            packages = lib.genAttrs
+              (builtins.filter (p: config.packages ? ${p}) protoLensPackages)
+              (p: { src = lib.mkForce (fixProtoLensSrc + "/${p}"); });
+          })
         ];
     });
 in
