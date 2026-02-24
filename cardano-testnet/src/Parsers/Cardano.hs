@@ -71,14 +71,27 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-  <*> ( OA.flag' GenerateTemplateConfigForTxGenerator
-          (   OA.long "generate-tx-generator-config"
-          <>  OA.help "Generate a template configuration file for tx-generator."
-          )
-      <|> OA.flag' GenerateAndRunTxGenerator
-          (   OA.long "run-tx-generator"
-          <>  OA.help "Generate a configuration file for tx-generator and run it."
-          )
+  <*> ( TxGeneratorSupport <$>
+            ( TxGeneratorOptions
+            <$> ( OA.flag' GenerateTemplateConfig
+                    (   OA.long "generate-tx-generator-config"
+                    <>  OA.help "Generate a template configuration file for tx-generator."
+                    )
+                <|> OA.flag' GenerateAndRun
+                    (   OA.long "run-tx-generator"
+                    <>  OA.help "Generate a configuration file for tx-generator and run it."
+                    )
+                )
+            <*> optional (OA.strOption
+                    (   OA.long "tx-generator-config"
+                    <>  OA.help ("A partial configuration file for tx-generator. " ++
+                                 "Missing but required fields will be filled with defaults. " ++
+                                 "And the following testnet-specific fields will be overridden to match the generated testnet: " ++
+                                 "\"nodeConfigFile\", \"sigKey\", \"localNodeSocketPath\", and \"targetNodes\"")
+                    <>  OA.metavar "FILEPATH"
+                    )
+                )
+            )
       <|> pure NoTxGeneratorSupport
       )
   <*> (maybe NoUserProvidedEnv UserProvidedEnv <$> optional (OA.strOption

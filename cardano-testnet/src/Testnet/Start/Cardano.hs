@@ -397,15 +397,16 @@ cardanoTestnet
 
   case cardanoEnableTxGenerator testnetOptions of
     NoTxGeneratorSupport -> pure ()
-    GenerateTemplateConfigForTxGenerator ->
-      void $ generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-    GenerateAndRunTxGenerator -> do
+    TxGeneratorSupport (TxGeneratorOptions { txGeneratorCmd, txGeneratorConfig = _ }) -> do
       configFile <- generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-      hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
-        [ "json_highlevel"
-        , configFile
-        ]
-      liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
+      case txGeneratorCmd of
+        GenerateTemplateConfig -> pure ()
+        GenerateAndRun -> do
+          hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
+                      [ "json_highlevel"
+                      , configFile
+                      ]
+          liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
 
   pure runtime
 
