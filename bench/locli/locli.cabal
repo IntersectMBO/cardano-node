@@ -220,3 +220,38 @@ test-suite test-locli
   other-modules:        Test.Analysis.CDF
                         Test.Unlog.LogObjectDB
                         Test.Unlog.Org
+
+benchmark bench-locli-cdf
+  import:               project-config
+                      , extensions
+
+  hs-source-dirs:       bench
+  main-is:              BenchCDF.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        criterion
+                      , deepseq
+                      , fingertree
+                      , locli
+                      , sop-core
+                      , vector
+
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
+
+benchmark bench-locli-e2e
+  import:               project-config
+                      , extensions
+
+  hs-source-dirs:       bench
+  main-is:              BenchEndToEnd.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        aeson
+                      , bytestring
+                      , cardano-prelude
+                      , criterion
+                      , deepseq
+                      , directory
+                      , locli
+
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
