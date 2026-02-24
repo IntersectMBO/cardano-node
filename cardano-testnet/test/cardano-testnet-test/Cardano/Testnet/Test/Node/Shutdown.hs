@@ -204,14 +204,16 @@ hprop_shutdownOnSlotSynced = integrationRetryWorkspace 2 "shutdown-on-slot-synce
   conf <- mkConf tempAbsBasePath'
 
   let maxSlot = 150
-      slotLen = 0.01
+      epochLength = 300
+      slotLen = 0.1
   let fastTestnetOptions = def
         { cardanoNodes =
             SpoNodeOptions ["--shutdown-on-slot-synced", show maxSlot] :| []
         }
       shelleyOptions = def
-        { genesisEpochLength = 300
+        { genesisEpochLength = epochLength
         , genesisSlotLength = slotLen
+        , genesisActiveSlotsCoeff = 50.0 / fromIntegral epochLength
         }
   testnetRuntime <- createAndRunTestnet fastTestnetOptions shelleyOptions conf
   let allNodes = testnetNodes testnetRuntime
