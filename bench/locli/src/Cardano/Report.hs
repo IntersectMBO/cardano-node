@@ -130,9 +130,9 @@ summaryReportSection summ =
   STable summ (ISel @SummaryOne $ iFields sumFieldsReport) "Parameter" "Value"   "summary" "summary.org"
     "Overall run parameters"
 
-machPerfSection :: MachPerf (CDF I) -> Section
+machPerfSection :: ClusterPerf -> Section
 machPerfSection mp =
-  STable mp (DSel @MachPerf     $ dFields mtFieldsReport)  "metric"  "average"    "perf" "clusterperf.report.org"
+  STable mp (DSel @(MachPerf 'Complete) $ dFields mtFieldsReport)  "metric"  "average"    "perf" "clusterperf.report.org"
     "Resource Usage"
 
 blockPropSections :: BlockProp f -> [Section]
@@ -150,7 +150,7 @@ blockPropSections bp =
     "End-to-end propagation"
   ]
 
-analysesReportSections :: MachPerf (CDF I) -> BlockProp f -> [Section]
+analysesReportSections :: ClusterPerf -> BlockProp f -> [Section]
 analysesReportSections mp bp =
   machPerfSection mp : blockPropSections bp
 

@@ -131,8 +131,8 @@ library
                       , sop-core
                       , split
                       , sqlite-easy >= 1.1.0.1
-                      , statistics
                       , strict-sop-core
+                      , t-digest
                       , text
                       , text-short
                       , time

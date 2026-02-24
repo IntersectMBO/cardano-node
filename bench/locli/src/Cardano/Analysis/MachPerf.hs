@@ -568,42 +568,87 @@ slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
 
 -- * 4. Summarise SlotStats & SlotStatsSummary into MachPerf:
 --
+
+-- | Empty accumulator for single-pass MachPerf construction.
+--   All CDF fields start as 'emptyCdfAccum'; metadata fields are @()@.
+emptyMachPerfAccum :: MachPerf 'Accumulating I
+emptyMachPerfAccum = MachPerf
+  { mpVersion = (), mpDomainSlots = (), mpDomainCDFSlots = ()
+  , cdfHostSlots = e, cdfStarts = e, cdfLeads = e, cdfUtxo = e
+  , cdfDensity = e, cdfStarted = e, cdfBlkCtx = e, cdfLgrState = e
+  , cdfLgrView = e, cdfLeading = e, cdfBlockGap = e
+  , cdfSpanLensCpu = e, cdfSpanLensCpuEpoch = e, cdfSpanLensCpuRwd = e
+  , mpResourceCDFs = pure e
+  }
+  where e = emptyCdfAccum
+
+-- | Fold a single slot's data into the accumulator.
+--   Per-slot projections and resource metrics are fed to their respective
+--   'CdfAccum' fields.  Fields that depend on global analysis (spans,
+--   host slot count) are untouched and filled in at finalisation.
+accumSlot :: MachPerf 'Accumulating I -> SlotStats NominalDiffTime
+          -> MachPerf 'Accumulating I
+accumSlot acc slot = acc
+  { cdfStarts   = addS (cdfStarts acc)   (fromIntegral $ slCountStarts slot)
+  , cdfLeads    = addS (cdfLeads acc)    (fromIntegral $ slCountLeads slot)
+  , cdfUtxo     = addS (cdfUtxo acc)     (fromIntegral $ slUtxoSize slot)
+  , cdfDensity  = addS (cdfDensity acc)  (slDensity slot)
+  , cdfStarted  = smaybe (cdfStarted acc)  (addS (cdfStarted acc)  . toDouble) (slStarted slot)
+  , cdfBlkCtx   = smaybe (cdfBlkCtx acc)   (addS (cdfBlkCtx acc)   . toDouble) (slBlkCtx slot)
+  , cdfLgrState = smaybe (cdfLgrState acc) (addS (cdfLgrState acc) . toDouble) (slLgrState slot)
+  , cdfLgrView  = smaybe (cdfLgrView acc)  (addS (cdfLgrView acc)  . toDouble) (slLgrView slot)
+  , cdfLeading  = smaybe (cdfLeading acc)  (addS (cdfLeading acc)  . toDouble) (slLeading slot)
+  , cdfBlockGap = addS (cdfBlockGap acc) (fromIntegral $ slBlockGap slot)
+  , mpResourceCDFs = smaybe (mpResourceCDFs acc)
+      (liftA2 (\a v -> addS a (fromIntegral v)) (mpResourceCDFs acc))
+      (slResources slot)
+  }
+  where addS = addCdfSample
+
+-- | Finalise the fold accumulator into a complete 'MachPerfOne'.
+--   Per-slot CDF fields are finalised from their accumulators; span fields
+--   and host-slot count are computed separately (they require the full slot
+--   list or domain, not per-slot accumulation).
+finaliseMachPerf :: Run -> [SlotStats NominalDiffTime]
+                 -> DataDomain I SlotNo -> MachPerf 'Accumulating I
+                 -> MachPerfOne
+finaliseMachPerf run slots domSlots acc =
+  MachPerf
+  { mpVersion        = getLocliVersion
+  , mpDomainSlots    = domSlots
+  , mpDomainCDFSlots = domSlots
+  , cdfHostSlots     = fin [fromIntegral . unI $ ddFilteredCount domSlots]
+  , cdfStarts        = finAcc (cdfStarts acc)
+  , cdfLeads         = finAcc (cdfLeads acc)
+  , cdfUtxo          = finAcc (cdfUtxo acc)
+  , cdfDensity       = finAcc (cdfDensity acc)
+  , cdfStarted       = finAcc (cdfStarted acc)
+  , cdfBlkCtx        = finAcc (cdfBlkCtx acc)
+  , cdfLgrState      = finAcc (cdfLgrState acc)
+  , cdfLgrView       = finAcc (cdfLgrView acc)
+  , cdfLeading       = finAcc (cdfLeading acc)
+  , cdfBlockGap      = finAcc (cdfBlockGap acc)
+  , cdfSpanLensCpu      = fin sssSpanLensCpu
+  , cdfSpanLensCpuEpoch = fin sssSpanLensCpuEpoch
+  , cdfSpanLensCpuRwd   = fin sssSpanLensCpuRwd
+  , mpResourceCDFs      = finaliseCdfAccum stdCentiles <$> mpResourceCDFs acc
+  }
+ where
+   fin :: Divisible a => [a] -> CDF I a
+   fin = cdfZ stdCentiles
+   finAcc :: Divisible a => CdfAccum -> CDF I a
+   finAcc = finaliseCdfAccum stdCentiles
+   SlotStatsSummary{..} = slotStatsSummary run slots
+
 slotStatsMachPerf :: Run -> (LogObjectSource, [SlotStats NominalDiffTime]) -> Either Text (LogObjectSource, MachPerfOne)
 slotStatsMachPerf _ (f, []) =
   Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack (logObjectSourceFile f)
 slotStatsMachPerf run (f, slots) =
-  Right (f, MachPerf
-    { mpVersion            = getLocliVersion
-    , mpDomainSlots        = domSlots
-    , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
-    , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
-    --
-    , cdfStarts            = dist (slCountStarts <$> slots)
-    , cdfLeads             = dist (slCountLeads <$> slots)
-    , cdfUtxo              = dist (slUtxoSize <$> slots)
-    , cdfDensity           = dist (slDensity <$> slots)
-    , cdfStarted           = dist (slStarted `mapSMaybe` slots)
-    , cdfBlkCtx            = dist (slBlkCtx `mapSMaybe` slots)
-    , cdfLgrState          = dist (slLgrState `mapSMaybe` slots)
-    , cdfLgrView           = dist (slLgrView `mapSMaybe` slots)
-    , cdfLeading           = dist (slLeading `mapSMaybe` slots)
-    , cdfBlockGap          = dist (slBlockGap <$> slots)
-    , cdfSpanLensCpu       = dist sssSpanLensCpu
-    , cdfSpanLensCpuEpoch  = dist sssSpanLensCpuEpoch
-    , cdfSpanLensCpuRwd    = dist sssSpanLensCpuRwd
-    , mpResourceCDFs       = computeResCDF stdCentiles slResources slots
-    , ..
-    }
-  )
+  Right (f, finaliseMachPerf run slots domSlots acc)
  where
+   acc      = foldl' accumSlot emptyMachPerfAccum slots
    domSlots = mkDataDomainInj sFirst sLast (fromIntegral . unSlotNo)
-
    (,) sFirst sLast = (slSlot . head &&& slSlot . last) slots
-
-   dist :: Divisible a => [a] -> CDF I a
-   dist = cdfZ stdCentiles
-
-   SlotStatsSummary{..} = slotStatsSummary run slots
 
 -- * 5. Multi-machine & multi-run summaries:
 --

@@ -452,7 +452,7 @@ mtFieldsReport :: [FieldName]
 mtFieldsReport =
   [ "CentiCpu", "CentiGC", "CentiMut", "cdfSpanLensCpu", "RSS", "Heap", "Live", "Alloc", "GcsMinor", "GcsMajor", "NetRd", "NetWr", "FsRd", "FsWr", "cdfStarts" ]
 
-instance CDFFields MachPerf p where
+instance CDFFields (MachPerf 'Complete) p where
   cdfFields =
       fBoth "cdfStarts" "Loop" "starts" W4 Uni P0 Lin (Z0 1)  (DWord64 cdfStarts)
       "Forge loop starts"

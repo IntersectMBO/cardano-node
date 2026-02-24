@@ -9,6 +9,7 @@ import Cardano.Prelude
 import Data.Aeson
 import Data.Map.Strict qualified as M
 
+import Data.CDF (CdfPhase(..))
 import Cardano.Analysis.API.Field
 import Cardano.Analysis.API.Types
 import Cardano.Analysis.API.Metrics ()
@@ -39,7 +40,7 @@ metricDictionary :: Dictionary
 metricDictionary =
   Dictionary
   { dBlockProp   = cdfFields @BlockProp <&> extractEntry & M.fromList
-  , dClusterPerf = cdfFields @MachPerf  <&> extractEntry & M.fromList
+  , dClusterPerf = cdfFields @(MachPerf 'Complete) <&> extractEntry & M.fromList
   }
  where extractEntry :: Field DSelect p a -> (Text, DictEntry)
        extractEntry Field{..} = (fId,) $

@@ -148,35 +148,41 @@ type MultiBlockProp = BlockProp (CDF I)
 data SomeBlockProp  = forall f. KnownCDF f => SomeBlockProp (BlockProp f)
 
 -- | The top-level representation of the machine timeline analysis results.
-data MachPerf f
+--
+--   Parameterised by a 'CdfPhase' (@p@) and an arity functor (@f@).
+--   At @''Accumulating@, every CDF field holds a 'CdfAccum' and metadata
+--   fields are @()@, enabling single-pass fold construction.
+--   At @''Complete@, the type reduces to its previous shape: CDF fields
+--   are @'CDF' f a@ and metadata fields carry their actual values.
+data MachPerf (p :: CdfPhase) f
   = MachPerf
-    { mpVersion            :: !Cardano.Analysis.API.LocliVersion.LocliVersion
-    , mpDomainSlots        :: !(CDFList f (DataDomain I SlotNo))
-    , mpDomainCDFSlots     :: !(DataDomain f SlotNo)
-    , cdfHostSlots         :: !(CDF f Word64)
+    { mpVersion            :: !(MetaField p Cardano.Analysis.API.LocliVersion.LocliVersion)
+    , mpDomainSlots        :: !(MetaField p (CDFList f (DataDomain I SlotNo)))
+    , mpDomainCDFSlots     :: !(MetaField p (DataDomain f SlotNo))
+    , cdfHostSlots         :: !(CdfField p f Word64)
     -- distributions
-    , cdfStarts            :: !(CDF f Word64)
-    , cdfLeads             :: !(CDF f Word64)
-    , cdfUtxo              :: !(CDF f Word64)
-    , cdfDensity           :: !(CDF f Double)
-    , cdfStarted           :: !(CDF f NominalDiffTime)
-    , cdfBlkCtx            :: !(CDF f NominalDiffTime)
-    , cdfLgrState          :: !(CDF f NominalDiffTime)
-    , cdfLgrView           :: !(CDF f NominalDiffTime)
-    , cdfLeading           :: !(CDF f NominalDiffTime)
-    , cdfBlockGap          :: !(CDF f Word64)
-    , cdfSpanLensCpu       :: !(CDF f Int)
-    , cdfSpanLensCpuEpoch  :: !(CDF f Int)
-    , cdfSpanLensCpuRwd    :: !(CDF f Int)
-    , mpResourceCDFs       :: !(Resources (CDF f Word64))
+    , cdfStarts            :: !(CdfField p f Word64)
+    , cdfLeads             :: !(CdfField p f Word64)
+    , cdfUtxo              :: !(CdfField p f Word64)
+    , cdfDensity           :: !(CdfField p f Double)
+    , cdfStarted           :: !(CdfField p f NominalDiffTime)
+    , cdfBlkCtx            :: !(CdfField p f NominalDiffTime)
+    , cdfLgrState          :: !(CdfField p f NominalDiffTime)
+    , cdfLgrView           :: !(CdfField p f NominalDiffTime)
+    , cdfLeading           :: !(CdfField p f NominalDiffTime)
+    , cdfBlockGap          :: !(CdfField p f Word64)
+    , cdfSpanLensCpu       :: !(CdfField p f Int)
+    , cdfSpanLensCpuEpoch  :: !(CdfField p f Int)
+    , cdfSpanLensCpuRwd    :: !(CdfField p f Int)
+    , mpResourceCDFs       :: !(Resources (CdfField p f Word64))
     }
   deriving (Generic)
 
 -- | One machine's performance
-type    MachPerfOne  = MachPerf I
+type    MachPerfOne  = MachPerf 'Complete I
 
 -- | Bunch'a machines performances
-type    ClusterPerf  = MachPerf (CDF I)
+type    ClusterPerf  = MachPerf 'Complete (CDF I)
 
 -- | Bunch'a bunches'a machine performances.
 --   Same as above, since we collapse [CDF I] into CDF I -- just with more statistical confidence.
@@ -354,10 +360,10 @@ data RunScalars
 
 -- * MachPerf / ClusterPef
 --
-deriving instance (forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))) => FromJSON (MachPerf f)
-deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf f)
-deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf f)
-deriving instance (forall a.     Show a =>     Show (f a),     Show (CDFList f (DataDomain I SlotNo))) =>     Show (MachPerf f)
+deriving instance (forall a. FromJSON a => FromJSON (f a), FromJSON (CDFList f (DataDomain I SlotNo))) => FromJSON (MachPerf 'Complete f)
+deriving instance (forall a.   ToJSON a =>   ToJSON (f a),   ToJSON (CDFList f (DataDomain I SlotNo))) =>   ToJSON (MachPerf 'Complete f)
+deriving instance (forall a.   NFData a =>   NFData (f a),   NFData (CDFList f (DataDomain I SlotNo))) =>   NFData (MachPerf 'Complete f)
+deriving instance (forall a.     Show a =>     Show (f a),     Show (CDFList f (DataDomain I SlotNo))) =>     Show (MachPerf 'Complete f)
 
 data SlotStats a
   = SlotStats

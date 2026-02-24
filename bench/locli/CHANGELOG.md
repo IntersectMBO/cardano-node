@@ -5,6 +5,8 @@
 * Added support for `typst` reports to the `compare` CLI command: They're now automatically created alongside Org mode reports. Includes `*.ede` templates to generate them; `typst >= 0.14` required for their compilation to PDF.
 * Change some report fields' unit and metric descriptions to be more concise.
 * Adjust the selection of charts plotted for a report, excluding some less meaningful ones.
+* Fuse Welford online mean/variance with merging t-digest into single-pass `CdfAccum` — O(δ) ≈ 3 KB space regardless of input size, eliminating the O(n) memory footprint that caused 16–64 GB usage on large production workloads. Quantiles are approximate (sub-1% rank error at δ=100); mean, stddev, and range remain exact.
+* Add `CdfPhase` type parameter to `MachPerf` for single-pass multi-metric fold.
 
 ## 2.2 -- May 2025
 

@@ -54,19 +54,26 @@ module Data.CDF
   , collapseCDF
   , collapseCDFs
   , cdf2OfCDFs
+  -- * CdfPhase machinery for single-pass HKD accumulation
+  , CdfPhase (..)
+  , CdfField
+  , MetaField
+  , CdfAccum
+  , emptyCdfAccum
+  , addCdfSample
+  , finaliseCdfAccum
   --
   , module Data.SOP.Strict
   ) where
 
-import Prelude ((!!), show)
-import Cardano.Prelude hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
+import           Cardano.Util
 
-import Data.SOP.Strict
-import Data.Tuple.Extra (both)
-import Data.Vector qualified as Vec
-import Statistics.Sample qualified as Stat
+import           Prelude (show, (!!))
 
-import Cardano.Util
+import           Data.SOP.Strict
+import qualified Data.TDigest as TD
+import           Data.Tuple.Extra (both)
 
 
 -- | Centile specifier: a fractional in range of [0; 1].
@@ -115,10 +122,6 @@ runCentile :: Int -> Double -> Int
 runCentile n centile = floor (fromIntegral n * centile)
                        & min (n - 1)
 
-{-# INLINE vecCentile #-}
-vecCentile :: Vec.Vector a -> Int -> Centile -> a
-vecCentile vec n (Centile c) = vec Vec.! runCentile n c
-
 --
 -- | Avoiding `Fractional`
 --
@@ -151,6 +154,95 @@ instance Divisible NominalDiffTime where
   fromDouble = secondsToNominalDiffTime
 
 deriving newtype instance Divisible RUTCTime
+
+-- | Fused accumulator: Welford's online mean\/variance + a merging t-digest.
+--   Consumed in a single pass over the input; the t-digest maintains O(δ)
+--   centroids regardless of input size, providing constant-space quantile
+--   estimation.  Mean and standard deviation are computed exactly via Welford's
+--   algorithm.
+--
+--   Memory is O(δ) ≈ 3 KB at δ=100, regardless of the number of samples.
+data CdfAccum = CdfAccum
+  { caCount  :: !Int           -- ^ Number of samples inserted
+  , caMean   :: !Double        -- ^ Running mean  (Welford)
+  , caM2     :: !Double        -- ^ Running M2    (Welford)
+  , caDigest :: !TD.TDigest    -- ^ Merging t-digest (O(δ) space)
+  }
+
+instance NFData CdfAccum where
+  rnf (CdfAccum _ _ _ d) = rnf d
+
+emptyCdfAccum :: CdfAccum
+emptyCdfAccum = CdfAccum 0 0.0 0.0 TD.empty
+
+addCdfSample :: CdfAccum -> Double -> CdfAccum
+addCdfSample (CdfAccum n m s td) x = CdfAccum n' m' s' (TD.add x td)
+ where n'     = n + 1
+       delta  = x - m
+       m'     = m + delta / fromIntegral n'
+       s'     = s + delta * (x - m')
+
+accumMean :: CdfAccum -> Double
+accumMean CdfAccum{caCount=0} = 0
+accumMean CdfAccum{caMean=m}  = m
+
+-- | Sample standard deviation (n-1 denominator), matching Statistics.Sample.stdDev.
+accumStdDev :: CdfAccum -> Double
+accumStdDev CdfAccum{caCount=n, caM2=s}
+  | n < 2     = 0
+  | otherwise = sqrt (s / fromIntegral (n - 1))
+
+accumSize :: CdfAccum -> Int
+accumSize = caCount
+
+-- | Phase tag for HKD types (e.g. @MachPerf@) that can exist as either an
+--   in-flight fold accumulator or a finalised CDF structure.
+--
+--   At @'Accumulating@, every CDF field holds a 'CdfAccum'; at @'Complete@,
+--   every CDF field holds a @'CDF' f a@.
+data CdfPhase
+  = Accumulating  -- ^ Fold in progress: CDF fields hold 'CdfAccum'
+  | Complete      -- ^ Finalised: CDF fields hold @'CDF' f a@
+
+-- | Maps 'CdfPhase' to the representation of a CDF-valued field.
+--
+--   @'CdfField' ''Accumulating' f a  =  'CdfAccum'@
+--   @'CdfField' ''Complete'     f a  =  'CDF' f a@
+type family CdfField (p :: CdfPhase) (f :: Type -> Type) (a :: Type) :: Type where
+  CdfField 'Accumulating f a = CdfAccum
+  CdfField 'Complete     f a = CDF f a
+
+-- | Maps 'CdfPhase' to the representation of a metadata (non-CDF) field.
+--
+--   @'MetaField' ''Accumulating' a  =  ()@
+--   @'MetaField' ''Complete'     a  =  a@
+type family MetaField (p :: CdfPhase) (a :: Type) :: Type where
+  MetaField 'Accumulating a = ()
+  MetaField 'Complete     a = a
+
+-- | Finalise a 'CdfAccum' into a @'CDF' 'I' a@.  Queries quantiles from
+--   the merging t-digest (approximate, sub-1% rank error at δ=100).  Welford
+--   mean and variance are exact and carried through without extra work.
+--   Min\/max are exact (maintained incrementally by the digest).
+finaliseCdfAccum :: forall a. Divisible a => [Centile] -> CdfAccum -> CDF I a
+finaliseCdfAccum centiles acc =
+  CDF
+  { cdfSize    = size
+  , cdfAverage = I . fromDouble $ accumMean acc
+  , cdfMedian  = sampleQuantile 0.5
+  , cdfStddev  = accumStdDev acc
+  , cdfRange   = Interval mini maxi
+  , cdfSamples = centiles <&> \spec -> (spec, I $ sampleQuantile (unCentile spec))
+  }
+ where
+   size = accumSize acc
+   td   = caDigest acc
+   sampleQuantile q
+     | size == 0 = 0
+     | otherwise = fromDouble $ fromMaybe 0 (TD.quantile q td)
+   (,) mini maxi
+     | size == 0 = (0, 0)
+     | otherwise = (fromDouble $ TD.tdMin td, fromDouble $ TD.tdMax td)
 
 weightedAverage :: forall b. (Divisible b) => [(Int, b)] -> b
 weightedAverage xs =
@@ -224,28 +316,14 @@ zeroCDF =
   }
 
 -- | Simple, monomorphic, first-order CDF.
+--
+-- Centile sampling uses a single-pass fold ('CdfAccum') that accumulates
+-- samples into a merging t-digest and computes mean\/variance via Welford's
+-- algorithm.  Memory is O(δ) regardless of input size.  Quantiles are
+-- approximate (sub-1% rank error at δ=100); mean, stddev, and range are exact.
 cdf :: forall a. Divisible a => [Centile] -> [a] -> CDF I a
-cdf centiles (sort -> sorted) =
-  CDF
-  { cdfSize        = size
-  , cdfAverage     = I . fromDouble $ Stat.mean doubleVec
-  , cdfMedian      = vecCentile vec size (Centile 0.5)
-  , cdfStddev      = Stat.stdDev doubleVec
-  , cdfRange       = Interval mini maxi
-  , cdfSamples =
-    centiles <&>
-      \spec ->
-        let sample = if size == 0 then 0
-                     else vecCentile vec size spec
-        in (,) spec (I sample)
-  }
- where vec         = Vec.fromList sorted
-       size        = length vec
-       doubleVec   = fromRational . toRational <$> vec
-       (,) mini maxi =
-         if size == 0
-         then (0,           0)
-         else (vec Vec.! 0, Vec.last vec)
+cdf centiles xs =
+  finaliseCdfAccum centiles (foldl' addCdfSample emptyCdfAccum (toDouble <$> xs))
 
 cdfZ :: forall a. Divisible a => [Centile] -> [a] -> CDF I a
 cdfZ cs [] = zeroCDF { cdfSamples = fmap (,I 0) cs }
