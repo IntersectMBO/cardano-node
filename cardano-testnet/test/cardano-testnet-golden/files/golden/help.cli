@@ -22,8 +22,6 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
-  [(--generate-tx-generator-config | --run-tx-generator)
-    [--tx-generator-config FILEPATH]]
   [--output-dir DIRECTORY]
   [--testnet-magic INT]
   [--epoch-length SLOTS]

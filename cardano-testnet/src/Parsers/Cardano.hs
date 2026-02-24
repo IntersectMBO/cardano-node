@@ -27,16 +27,17 @@ import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
 
+
 optsTestnet :: Parser CardanoTestnetCliOptions
 optsTestnet = CardanoTestnetCliOptions
-  <$> pCardanoTestnetCliOptions
+  <$> pCardanoTestnetCliOptions RunTestnet
   <*> pGenesisOptions
   <*> pNodeEnvironment
   <*> pUpdateTimestamps
 
 optsCreateTestnet :: Parser CardanoTestnetCreateEnvOptions
 optsCreateTestnet = CardanoTestnetCreateEnvOptions
-  <$> pCardanoTestnetCliOptions
+  <$> pCardanoTestnetCliOptions ConfigOnly
   <*> pGenesisOptions
   <*> pEnvOutputDir
   <*> pCreateEnvOptions
@@ -47,8 +48,8 @@ pCreateEnvOptions :: Parser CreateEnvOptions
 pCreateEnvOptions = CreateEnvOptions
   <$> pOnChainParams
 
-pCardanoTestnetCliOptions :: Parser CardanoTestnetOptions
-pCardanoTestnetCliOptions = CardanoTestnetOptions
+pCardanoTestnetCliOptions :: TestnetMode -> Parser CardanoTestnetOptions
+pCardanoTestnetCliOptions mode = CardanoTestnetOptions
   <$> pTestnetNodeOptions
   <*> pure (AnyShelleyBasedEra defaultEra)
   <*> pMaxLovelaceSupply
@@ -71,29 +72,30 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-  <*> ( TxGeneratorSupport <$>
-            ( TxGeneratorOptions
-            <$> ( OA.flag' GenerateTemplateConfig
+  <*> case mode of
+      RunTestnet ->
+        TxGeneratorSupport <$>
+              ( TxGeneratorOptions
+              <$> (OA.flag' GenerateTemplateConfig
                     (   OA.long "generate-tx-generator-config"
                     <>  OA.help "Generate a template configuration file for tx-generator."
                     )
-                <|> OA.flag' GenerateAndRun
+                  <|> OA.flag' GenerateAndRun
                     (   OA.long "run-tx-generator"
                     <>  OA.help "Generate a configuration file for tx-generator and run it."
-                    )
-                )
-            <*> optional (OA.strOption
-                    (   OA.long "tx-generator-config"
-                    <>  OA.help ("A partial configuration file for tx-generator. " ++
-                                 "Missing but required fields will be filled with defaults. " ++
-                                 "And the following testnet-specific fields will be overridden to match the generated testnet: " ++
-                                 "\"nodeConfigFile\", \"sigKey\", \"localNodeSocketPath\", and \"targetNodes\"")
-                    <>  OA.metavar "FILEPATH"
-                    )
-                )
-            )
-      <|> pure NoTxGeneratorSupport
-      )
+                    ))
+              <*> optional (OA.strOption
+                      (   OA.long "tx-generator-config"
+                      <>  OA.help ("A partial configuration file for tx-generator. " ++
+                                   "Missing but required fields will be filled with defaults. " ++
+                                   "And the following testnet-specific fields will be overridden to match the generated testnet: " ++
+                                   "\"nodeConfigFile\", \"sigKey\", \"localNodeSocketPath\", and \"targetNodes\"")
+                      <>  OA.metavar "FILEPATH"
+                      )
+                  )
+              )
+        <|> pure NoTxGeneratorSupport
+      ConfigOnly -> pure NoTxGeneratorSupport
   <*> (maybe NoUserProvidedEnv UserProvidedEnv <$> optional (OA.strOption
       (   OA.long "output-dir"
       <>  OA.help "Directory where to store files, sockets, and so on. It is created if it doesn't exist. If unset, a temporary directory is used."

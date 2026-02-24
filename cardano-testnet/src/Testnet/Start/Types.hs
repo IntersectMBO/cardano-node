@@ -14,6 +14,7 @@ module Testnet.Start.Types
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
+  , TestnetMode(..)
   , TxGeneratorCmd(..)
   , TxGeneratorOptions(..)
   , TxGeneratorSupport(..)
@@ -168,6 +169,13 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   , createEnvOutputDir :: FilePath
   , createEnvCreateEnvOptions :: CreateEnvOptions
   } deriving (Eq, Show)
+
+-- | Whether we should only generate the configuration
+-- or also run the testnet.
+data TestnetMode
+  = ConfigOnly  -- ^ Only generate configuration
+  | RunTestnet  -- ^ Generate configuration and run the testnet
+  deriving (Eq, Show)
 
 data TxGeneratorCmd
   = GenerateTemplateConfig
