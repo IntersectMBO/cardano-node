@@ -122,6 +122,7 @@ library
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
@@ -143,6 +144,7 @@ library
                       , plutus-ledger-api
                       , plutus-tx
                       , random
+                      , typed-protocols ^>= 1.2
                       , serialise
                       , streaming
                       , cardano-ledger-shelley
