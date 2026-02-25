@@ -10,7 +10,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   [--node-env FILEPATH]
-  [--update-time]
+  [--update-time | --no-update-time]
 
   Start a testnet and keep it running until stopped
 
@@ -51,5 +51,7 @@ Available options:
                            with the 'create-env' command, then modify it and
                            pass it with this argument.
   --update-time            Update the time stamps in genesis files to current
-                           date
+                           date (default, kept for backward compatibility)
+  --no-update-time         Do not update the time stamps in genesis files to
+                           current date.
   -h,--help                Show this help text
