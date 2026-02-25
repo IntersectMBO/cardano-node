@@ -67,7 +67,7 @@ cardano-cli mary transaction build-raw \
             --out-file tx4.txbody
 
 # Sign the transaction body with the two genesis delegate keys,
-# and the the uxto spending key.
+# and the uxto spending key.
 
 cardano-cli mary transaction sign \
             --signing-key-file addresses/user1.skey \

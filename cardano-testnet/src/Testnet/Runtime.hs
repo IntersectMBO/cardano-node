@@ -277,7 +277,7 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
 -- Pretty JSON logs will be placed in:
 -- 1. <tmp workspace directory>/logs/ledger-new-epoch-state.log
 -- 2. <tmp workspace directory>/logs/ledger-new-epoch-state-diffs.log
--- NB: The diffs represent the the changes in the 'NewEpochState' between each
+-- NB: The diffs represent the changes in the 'NewEpochState' between each
 -- block or turn of the epoch. We have excluded the 'stashedAVVMAddresses'
 -- field of 'NewEpochState' in the JSON rendering.
 -- The logging thread will be cancelled when `MonadResource` releases all resources.
