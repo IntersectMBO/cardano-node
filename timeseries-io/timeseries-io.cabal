@@ -1,0 +1,103 @@
+cabal-version:      3.0
+name:               timeseries-io
+version:            0.1.0.0
+author:             Russoul
+maintainer:         ruslan.feizerakhmanov@iohk.io
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common common
+    ghc-options:
+      -Wall
+
+      -- to ease development only
+      -Wno-unused-matches
+      -Wno-unused-top-binds
+      -Wno-unused-local-binds
+      -Wno-unused-imports
+
+    default-language: GHC2021
+
+    default-extensions:
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      Strict
+
+library
+    import: common
+    hs-source-dirs: src
+
+    build-depends:
+      base ^>=4.18.2.1,
+      attoparsec,
+      vector,
+      text,
+      serialise,
+      statistics,
+      time,
+      containers,
+      mtl,
+      trace-resources,
+      trace-dispatcher,
+      deepseq
+
+    exposed-modules:
+      Cardano.Timeseries.Domain.Instant,
+      Cardano.Timeseries.Domain.Interval,
+      Cardano.Timeseries.Domain.Timeseries,
+      Cardano.Timeseries.Domain.Types,
+      Cardano.Timeseries.Domain.Identifier,
+      Cardano.Timeseries.Import.PlainCBOR,
+      Cardano.Timeseries.Query,
+      Cardano.Timeseries.Query.Expr,
+      Cardano.Timeseries.Query.Parser,
+      Cardano.Timeseries.Query.Value,
+      Cardano.Timeseries.Query.BinaryRelation,
+      Cardano.Timeseries.Store,
+      Cardano.Timeseries.Store.Flat,
+      Cardano.Timeseries.Store.Tree,
+      Cardano.Timeseries.Store.Parser,
+      Cardano.Timeseries.Util,
+
+executable timeseries-io
+    -- Import common source files and warning flags.
+    import: common
+    ghc-options: -rtsopts
+    hs-source-dirs: app
+    main-is: Main.hs
+
+    build-depends:
+      base ^>=4.18.2.1,
+      attoparsec,
+      vector,
+      text,
+      serialise,
+      statistics,
+      time,
+      containers,
+      mtl,
+      trace-resources,
+      trace-dispatcher,
+      timeseries-io
+
+benchmark timeseries-io-bench
+    import: common
+    type: exitcode-stdio-1.0
+    hs-source-dirs: bench
+    main-is: Bench.hs
+
+    build-depends:
+      base ^>=4.18.2.1,
+      attoparsec,
+      vector,
+      text,
+      serialise,
+      statistics,
+      time,
+      containers,
+      mtl,
+      trace-resources,
+      trace-dispatcher,
+      timeseries-io,
+      criterion
