@@ -30,7 +30,7 @@
   ghc-options: -Wall -Wextra -Wcompat
 -}
 
--- `nix build .#project.x86_64-linux.plan-nix.json` is a reliable way to
+-- `nix build .#project.x86_64-linux.plan-nix` is a reliable way to
 -- generate the `plan.json` to be fed to this script.
 
 module Main (main) where
