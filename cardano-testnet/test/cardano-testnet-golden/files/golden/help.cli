@@ -13,7 +13,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--slot-length SECONDS]
   [--active-slots-coeff DOUBLE]
   [--node-env FILEPATH]
-  [--update-time]
+  [--preserve-timestamps]
   [--params-file FILEPATH | --params-mainnet]
 
   Start a testnet and keep it running until stopped
