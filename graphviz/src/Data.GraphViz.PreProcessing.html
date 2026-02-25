@@ -1,0 +1,541 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.PreProcessing
+   Description : Pre-process imported Dot code.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   \&quot;Real life\&quot; Dot code contains various items that are not directly
+   parseable by this library.  This module defines the 'preProcess'
+   function to remove these components, which include:
+
+     * Comments (both @\/\* ... *\/@ style and @\/\/ ... @ style);
+
+     * Pre-processor lines (lines starting with a @#@);
+
+     * Split lines (by inserting a @\\@ the rest of that \&quot;line\&quot; is
+       continued on the next line).
+
+     * Strings concatenated together using @\&quot;...\&quot; + \&quot;...\&quot;@; these
+       are concatenated into one big string.
+-}</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.PreProcessing</span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.PreProcessing.html#preProcess"><span class="hs-identifier">preProcess</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Exception.html"><span class="hs-identifier">Data.GraphViz.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Exception.html#GraphvizException"><span class="hs-identifier">GraphvizException</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Exception.html#NotDotCode"><span class="hs-identifier">NotDotCode</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.html#throw"><span class="hs-identifier">throw</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html"><span class="hs-identifier">Data.GraphViz.Parsing</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span class="hs-cpp">
+
+#if !(MIN_VERSION_base(4,8,0))
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">mconcat</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Filtering out unwanted Dot items such as comments</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Remove unparseable features of Dot, such as comments and</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   multi-line strings (which are converted to single-line strings).</span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Data.GraphViz.PreProcessing.html#preProcess"><span class="hs-identifier hs-type">preProcess</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-44"></span><span id="preProcess"><span class="annot"><span class="annottext">preProcess :: Text -&gt; Text
+</span><a href="Data.GraphViz.PreProcessing.html#preProcess"><span class="hs-identifier hs-var hs-var">preProcess</span></a></span></span><span> </span><span id="local-6989586621679197813"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679197813"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(Either String Builder, Text) -&gt; Either String Builder
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Either String Builder, Text) -&gt; Either String Builder)
+-&gt; (Either String Builder, Text) -&gt; Either String Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder -&gt; Text -&gt; (Either String Builder, Text)
+forall a. Parse a -&gt; Text -&gt; (Either String a, Text)
+</span><a href="Data.GraphViz.Parsing.html#runParser"><span class="hs-identifier hs-var">runParser</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseOutUnwanted"><span class="hs-identifier hs-var">parseOutUnwanted</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679197813"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-45"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679197817"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197817"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier hs-var">B.toLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197817"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-46"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679197819"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679197819"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GraphvizException -&gt; Text
+forall a e. Exception e =&gt; e -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.html#throw"><span class="hs-identifier hs-var">throw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; GraphvizException
+</span><a href="Data.GraphViz.Exception.html#NotDotCode"><span class="hs-identifier hs-var">NotDotCode</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679197819"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>               </span><span class="hs-comment">-- snd should be null</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Parse out comments and make quoted strings spread over multiple</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--   lines only over a single line.  Should parse the /entire/ input</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   'Text'.</span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseOutUnwanted"><span class="hs-identifier hs-type">parseOutUnwanted</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-53"></span><span id="parseOutUnwanted"><span class="annot"><span class="annottext">parseOutUnwanted :: Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseOutUnwanted"><span class="hs-identifier hs-var hs-var">parseOutUnwanted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder)
+-&gt; Parser GraphvizState [Builder] -&gt; Parse Builder
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parser GraphvizState [Builder]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="#local-6989586621679197822"><span class="hs-identifier hs-var">getNext</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679197822"><span class="annot"><span class="annottext">getNext :: Parse Builder
+</span><a href="#local-6989586621679197822"><span class="hs-identifier hs-var hs-var">getNext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse Builder
+forall {s}. Parser s Builder
+</span><a href="#local-6989586621679197825"><span class="hs-identifier hs-var">parseOK</span></a></span><span>
+</span><span id="line-56"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-57"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseConcatStrings"><span class="hs-identifier hs-var">parseConcatStrings</span></a></span><span>
+</span><span id="line-58"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-59"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseHTML"><span class="hs-identifier hs-var">parseHTML</span></a></span><span>
+</span><span id="line-60"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseUnwanted"><span class="hs-identifier hs-var">parseUnwanted</span></a></span><span>
+</span><span id="line-62"></span><span>              </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-63"></span><span>              </span><span class="annot"><span class="annottext">(Char -&gt; Builder) -&gt; Parser GraphvizState Char -&gt; Parse Builder
+forall a b.
+(a -&gt; b) -&gt; Parser GraphvizState a -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#singleton"><span class="hs-identifier hs-var">B.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char
+forall s. Parser s Char
+</span><span class="hs-identifier hs-var">next</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679197825"><span class="annot"><span class="annottext">parseOK :: Parser s Builder
+</span><a href="#local-6989586621679197825"><span class="hs-identifier hs-var hs-var">parseOK</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier hs-var">B.fromLazyText</span></a></span><span>
+</span><span id="line-66"></span><span>              </span><span class="annot"><span class="annottext">(Text -&gt; Builder) -&gt; Parser s Text -&gt; Parser s Builder
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Parser s Text
+forall s. (Char -&gt; Bool) -&gt; Parser s Text
+</span><span class="hs-identifier hs-var">many1Satisfy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#notElem"><span class="hs-operator hs-var">`notElem`</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\r'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&lt;'</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Parses an unwanted part of the Dot code (comments and</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--   pre-processor lines; also un-splits lines).</span><span>
+</span><span id="line-70"></span><span id="local-6989586621679197758"><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseUnwanted"><span class="hs-identifier hs-type">parseUnwanted</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197758"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197758"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-71"></span><span id="parseUnwanted"><span class="annot"><span class="annottext">parseUnwanted :: forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseUnwanted"><span class="hs-identifier hs-var hs-var">parseUnwanted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Parser GraphvizState m] -&gt; Parser GraphvizState m
+forall (p :: * -&gt; *) a. PolyParse p =&gt; [p a] -&gt; p a
+</span><span class="hs-identifier hs-var">oneOf</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState m
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseLineComment"><span class="hs-identifier hs-var">parseLineComment</span></a></span><span>
+</span><span id="line-72"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState m
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseMultiLineComment"><span class="hs-identifier hs-var">parseMultiLineComment</span></a></span><span>
+</span><span id="line-73"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState m
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parsePreProcessor"><span class="hs-identifier hs-var">parsePreProcessor</span></a></span><span>
+</span><span id="line-74"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState m
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseSplitLine"><span class="hs-identifier hs-var">parseSplitLine</span></a></span><span>
+</span><span id="line-75"></span><span>                      </span><span class="hs-special">]</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Remove pre-processor lines (that is, those that start with a</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   @#@).  Will consume the newline from the beginning of the</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--   previous line, but will leave the one from the pre-processor line</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--   there (so in the end it just removes the line).</span><span>
+</span><span id="line-81"></span><span id="local-6989586621679197851"><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parsePreProcessor"><span class="hs-identifier hs-type">parsePreProcessor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197851"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197851"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-82"></span><span id="parsePreProcessor"><span class="annot"><span class="annottext">parsePreProcessor :: forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parsePreProcessor"><span class="hs-identifier hs-var hs-var">parsePreProcessor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="Data.GraphViz.Parsing.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parser GraphvizState Char -&gt; Parser GraphvizState Char
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'#'</span></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char
+-&gt; Parser GraphvizState Text -&gt; Parser GraphvizState Text
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Text
+</span><a href="Data.GraphViz.Parsing.html#consumeLine"><span class="hs-identifier hs-var">consumeLine</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Text
+-&gt; Parser GraphvizState m -&gt; Parser GraphvizState m
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; Parser GraphvizState m
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><span class="hs-comment">-- | Parse @//@-style comments.</span></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679197862"><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseLineComment"><span class="hs-identifier hs-type">parseLineComment</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197862"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197862"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-86"></span><span id="parseLineComment"><span class="annot"><span class="annottext">parseLineComment :: forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseLineComment"><span class="hs-identifier hs-var hs-var">parseLineComment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parse ()
+</span><a href="Data.GraphViz.Parsing.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;//&quot;</span></span><span>
+</span><span id="line-87"></span><span>                   </span><span class="hs-comment">-- Note: do /not/ consume the newlines, as they're</span><span>
+</span><span id="line-88"></span><span>                   </span><span class="hs-comment">-- needed in case the next line is a pre-processor</span><span>
+</span><span id="line-89"></span><span>                   </span><span class="hs-comment">-- line.</span><span>
+</span><span id="line-90"></span><span>                   </span><span class="annot"><span class="annottext">Parse () -&gt; Parser GraphvizState Text -&gt; Parser GraphvizState Text
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Text
+</span><a href="Data.GraphViz.Parsing.html#consumeLine"><span class="hs-identifier hs-var">consumeLine</span></a></span><span>
+</span><span id="line-91"></span><span>                   </span><span class="annot"><span class="annottext">Parser GraphvizState Text
+-&gt; Parser GraphvizState m -&gt; Parser GraphvizState m
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; Parser GraphvizState m
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | Parse @/* ... */@-style comments.</span><span>
+</span><span id="line-94"></span><span id="local-6989586621679197869"><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseMultiLineComment"><span class="hs-identifier hs-type">parseMultiLineComment</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197869"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197869"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-95"></span><span id="parseMultiLineComment"><span class="annot"><span class="annottext">parseMultiLineComment :: forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseMultiLineComment"><span class="hs-identifier hs-var hs-var">parseMultiLineComment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse ()
+-&gt; Parse ()
+-&gt; Parser GraphvizState [()]
+-&gt; Parser GraphvizState [()]
+forall (p :: * -&gt; *) bra ket a.
+PolyParse p =&gt;
+p bra -&gt; p ket -&gt; p a -&gt; p a
+</span><span class="hs-identifier hs-var">bracket</span></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="#local-6989586621679197877"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="#local-6989586621679197878"><span class="hs-identifier hs-var">end</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parse () -&gt; Parser GraphvizState [()]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="#local-6989586621679197879"><span class="hs-identifier hs-var">inner</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [()]
+-&gt; Parser GraphvizState m -&gt; Parser GraphvizState m
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; Parser GraphvizState m
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679197877"><span class="annot"><span class="annottext">start :: Parse ()
+</span><a href="#local-6989586621679197877"><span class="hs-identifier hs-var hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parse ()
+</span><a href="Data.GraphViz.Parsing.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;/*&quot;</span></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679197878"><span class="annot"><span class="annottext">end :: Parse ()
+</span><a href="#local-6989586621679197878"><span class="hs-identifier hs-var hs-var">end</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parse ()
+</span><a href="Data.GraphViz.Parsing.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;*/&quot;</span></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679197879"><span class="annot"><span class="annottext">inner :: Parse ()
+</span><a href="#local-6989586621679197879"><span class="hs-identifier hs-var hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Parser GraphvizState Text
+forall s. (Char -&gt; Bool) -&gt; Parser s Text
+</span><span class="hs-identifier hs-var">many1Satisfy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'*'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Text -&gt; Parse () -&gt; Parse ()
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; Parse ()
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>            </span><span class="annot"><span class="annottext">Parse () -&gt; Parse () -&gt; Parse ()
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-101"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'*'</span></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char
+-&gt; Parser GraphvizState Char -&gt; Parser GraphvizState Char
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Parser GraphvizState Char
+forall s. (Char -&gt; Bool) -&gt; Parser s Char
+</span><span class="hs-identifier hs-var">satisfy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'/'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char -&gt; Parse () -&gt; Parse ()
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="#local-6989586621679197879"><span class="hs-identifier hs-var">inner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseConcatStrings"><span class="hs-identifier hs-type">parseConcatStrings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-104"></span><span id="parseConcatStrings"><span class="annot"><span class="annottext">parseConcatStrings :: Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseConcatStrings"><span class="hs-identifier hs-var hs-var">parseConcatStrings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder
+</span><a href="#local-6989586621679197888"><span class="hs-identifier hs-var">wrapQuotes</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Builder)
+-&gt; ([Builder] -&gt; Builder) -&gt; [Builder] -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder)
+-&gt; Parser GraphvizState [Builder] -&gt; Parse Builder
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+-&gt; Parser GraphvizState [()] -&gt; Parser GraphvizState [Builder]
+forall (p :: * -&gt; *) a sep. PolyParse p =&gt; p a -&gt; p sep -&gt; p [a]
+</span><span class="hs-identifier hs-var">sepBy1</span></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="#local-6989586621679197891"><span class="hs-identifier hs-var">parseString</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [()]
+</span><a href="#local-6989586621679197892"><span class="hs-identifier hs-var">parseConcat</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>    </span><span id="local-6989586621679197896"><span class="annot"><span class="annottext">qParse :: Parser GraphvizState a -&gt; Parser GraphvizState a
+</span><a href="#local-6989586621679197896"><span class="hs-identifier hs-var hs-var">qParse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char
+-&gt; Parser GraphvizState Char
+-&gt; Parser GraphvizState a
+-&gt; Parser GraphvizState a
+forall (p :: * -&gt; *) bra ket a.
+PolyParse p =&gt;
+p bra -&gt; p ket -&gt; p a -&gt; p a
+</span><span class="hs-identifier hs-var">bracket</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser GraphvizState Char -&gt; Parser GraphvizState Char
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState a
+forall (p :: * -&gt; *) a. Commitment p =&gt; p a -&gt; p a
+</span><span class="hs-identifier hs-var">commit</span></span><span> </span><span class="annot"><span class="annottext">(Parser GraphvizState Char -&gt; Parser GraphvizState Char)
+-&gt; Parser GraphvizState Char -&gt; Parser GraphvizState Char
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679197891"><span class="annot"><span class="annottext">parseString :: Parse Builder
+</span><a href="#local-6989586621679197891"><span class="hs-identifier hs-var hs-var">parseString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState a
+</span><a href="#local-6989586621679197896"><span class="hs-identifier hs-var">qParse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder)
+-&gt; Parser GraphvizState [Builder] -&gt; Parse Builder
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parser GraphvizState [Builder]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="#local-6989586621679197901"><span class="hs-identifier hs-var">parseInner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679197901"><span class="annot"><span class="annottext">parseInner :: Parse Builder
+</span><a href="#local-6989586621679197901"><span class="hs-identifier hs-var hs-var">parseInner</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Parse ()
+</span><a href="Data.GraphViz.Parsing.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\\&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parse Builder -&gt; Parse Builder
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Parse Builder
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier hs-var">B.fromLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Builder) -&gt; Text -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\\&quot;&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>                 </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-110"></span><span>                 </span><span class="hs-comment">-- Need to parse an explicit `\', in case it ends the</span><span>
+</span><span id="line-111"></span><span>                 </span><span class="hs-comment">-- string (and thus the next step would get parsed by the</span><span>
+</span><span id="line-112"></span><span>                 </span><span class="hs-comment">-- previous option).</span><span>
+</span><span id="line-113"></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Parse ()
+</span><a href="Data.GraphViz.Parsing.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\\\&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parse Builder -&gt; Parse Builder
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Parse Builder
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier hs-var">B.fromLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Builder) -&gt; Text -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\\\&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>                 </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-115"></span><span>                 </span><span class="annot"><span class="annottext">Parse Builder
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseSplitLine"><span class="hs-identifier hs-var">parseSplitLine</span></a></span><span> </span><span class="hs-comment">-- in case there's a split mid-quote</span><span>
+</span><span id="line-116"></span><span>                 </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-117"></span><span>                 </span><span class="annot"><span class="annottext">(Char -&gt; Builder) -&gt; Parser GraphvizState Char -&gt; Parse Builder
+forall a b.
+(a -&gt; b) -&gt; Parser GraphvizState a -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#singleton"><span class="hs-identifier hs-var">B.singleton</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Parser GraphvizState Char
+forall s. (Char -&gt; Bool) -&gt; Parser s Char
+</span><span class="hs-identifier hs-var">satisfy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="Data.GraphViz.Parsing.html#quoteChar"><span class="hs-identifier hs-var">quoteChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679197892"><span class="annot"><span class="annottext">parseConcat :: Parser GraphvizState [()]
+</span><a href="#local-6989586621679197892"><span class="hs-identifier hs-var hs-var">parseConcat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [()]
+</span><a href="#local-6989586621679197913"><span class="hs-identifier hs-var">parseSep</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [()]
+-&gt; Parser GraphvizState Char -&gt; Parser GraphvizState Char
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'+'</span></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char
+-&gt; Parser GraphvizState [()] -&gt; Parser GraphvizState [()]
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [()]
+</span><a href="#local-6989586621679197913"><span class="hs-identifier hs-var">parseSep</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679197913"><span class="annot"><span class="annottext">parseSep :: Parser GraphvizState [()]
+</span><a href="#local-6989586621679197913"><span class="hs-identifier hs-var hs-var">parseSep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parser GraphvizState [()]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">(Parse () -&gt; Parser GraphvizState [()])
+-&gt; Parse () -&gt; Parser GraphvizState [()]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="Data.GraphViz.Parsing.html#whitespace1"><span class="hs-identifier hs-var">whitespace1</span></a></span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parse () -&gt; Parse ()
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span> </span><span class="annot"><span class="annottext">Parse ()
+forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseUnwanted"><span class="hs-identifier hs-var">parseUnwanted</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679197888"><span class="annot"><span class="annottext">wrapQuotes :: Builder -&gt; Builder
+</span><a href="#local-6989586621679197888"><span class="hs-identifier hs-var hs-var">wrapQuotes</span></a></span></span><span> </span><span id="local-6989586621679197920"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197920"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197921"><span class="hs-identifier hs-var">qc</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197920"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197921"><span class="hs-identifier hs-var">qc</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679197921"><span class="annot"><span class="annottext">qc :: Builder
+</span><a href="#local-6989586621679197921"><span class="hs-identifier hs-var hs-var">qc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#singleton"><span class="hs-identifier hs-var">B.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><span class="hs-comment">-- | Lines can be split with a @\\@ at the end of the line.</span></span><span>
+</span><span id="line-124"></span><span id="local-6989586621679197922"><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseSplitLine"><span class="hs-identifier hs-type">parseSplitLine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197922"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679197922"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-125"></span><span id="parseSplitLine"><span class="annot"><span class="annottext">parseSplitLine :: forall m. Monoid m =&gt; Parse m
+</span><a href="Data.GraphViz.PreProcessing.html#parseSplitLine"><span class="hs-identifier hs-var hs-var">parseSplitLine</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser GraphvizState Char
+</span><a href="Data.GraphViz.Parsing.html#character"><span class="hs-identifier hs-var">character</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState Char -&gt; Parse () -&gt; Parse ()
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parse ()
+</span><a href="Data.GraphViz.Parsing.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">Parse () -&gt; Parser GraphvizState m -&gt; Parser GraphvizState m
+forall a b.
+Parser GraphvizState a
+-&gt; Parser GraphvizState b -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; Parser GraphvizState m
+forall a. a -&gt; Parser GraphvizState a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">m
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Data.GraphViz.PreProcessing.html#parseHTML"><span class="hs-identifier hs-type">parseHTML</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Parsing.html#Parse"><span class="hs-identifier hs-type">Parse</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-128"></span><span id="parseHTML"><span class="annot"><span class="annottext">parseHTML :: Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseHTML"><span class="hs-identifier hs-var hs-var">parseHTML</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Builder] -&gt; Builder)
+-&gt; Parser GraphvizState [Builder] -&gt; Parse Builder
+forall a b.
+(a -&gt; b) -&gt; Parser GraphvizState a -&gt; Parser GraphvizState b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder -&gt; Builder
+</span><a href="#local-6989586621679197928"><span class="hs-identifier hs-var">addAngled</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Builder)
+-&gt; ([Builder] -&gt; Builder) -&gt; [Builder] -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>            </span><span class="annot"><span class="annottext">(Parser GraphvizState [Builder] -&gt; Parse Builder)
+-&gt; (Parser GraphvizState [Builder]
+    -&gt; Parser GraphvizState [Builder])
+-&gt; Parser GraphvizState [Builder]
+-&gt; Parse Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Parser GraphvizState [Builder] -&gt; Parser GraphvizState [Builder]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState a
+</span><a href="Data.GraphViz.Parsing.html#parseAngled"><span class="hs-identifier hs-var">parseAngled</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser GraphvizState [Builder] -&gt; Parse Builder)
+-&gt; Parser GraphvizState [Builder] -&gt; Parse Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parser GraphvizState [Builder]
+forall a. Parser GraphvizState a -&gt; Parser GraphvizState [a]
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#many"><span class="hs-identifier hs-var">many</span></a></span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="#local-6989586621679197930"><span class="hs-identifier hs-var">inner</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679197930"><span class="annot"><span class="annottext">inner :: Parse Builder
+</span><a href="#local-6989586621679197930"><span class="hs-identifier hs-var hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parse Builder
+</span><a href="Data.GraphViz.PreProcessing.html#parseHTML"><span class="hs-identifier hs-var">parseHTML</span></a></span><span>
+</span><span id="line-132"></span><span>            </span><span class="annot"><span class="annottext">Parse Builder -&gt; Parse Builder -&gt; Parse Builder
+forall s a. Parser s a -&gt; Parser s a -&gt; Parser s a
+</span><span class="hs-operator hs-var">`onFail`</span></span><span>
+</span><span id="line-133"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#fromLazyText"><span class="hs-identifier hs-var">B.fromLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Builder) -&gt; Parser GraphvizState Text -&gt; Parse Builder
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Parser GraphvizState Text
+forall s. (Char -&gt; Bool) -&gt; Parser s Text
+</span><span class="hs-identifier hs-var">many1Satisfy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679197934"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197934"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197934"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197935"><span class="hs-identifier hs-var">open</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197934"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197937"><span class="hs-identifier hs-var">close</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>    </span><span id="local-6989586621679197928"><span class="annot"><span class="annottext">addAngled :: Builder -&gt; Builder
+</span><a href="#local-6989586621679197928"><span class="hs-identifier hs-var hs-var">addAngled</span></a></span></span><span> </span><span id="local-6989586621679197940"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197940"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#singleton"><span class="hs-identifier hs-var">B.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197935"><span class="hs-identifier hs-var">open</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679197940"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#singleton"><span class="hs-identifier hs-var">B.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679197937"><span class="hs-identifier hs-var">close</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679197935"><span class="annot"><span class="annottext">open :: Char
+</span><a href="#local-6989586621679197935"><span class="hs-identifier hs-var hs-var">open</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&lt;'</span></span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621679197937"><span class="annot"><span class="annottext">close :: Char
+</span><a href="#local-6989586621679197937"><span class="hs-identifier hs-var hs-var">close</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&gt;'</span></span><span>
+</span><span id="line-137"></span></pre></body></html>

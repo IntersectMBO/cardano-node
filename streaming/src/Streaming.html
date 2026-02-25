@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Streaming</span><span>
+</span><span id="line-4"></span><span>   </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>   </span><span class="annot"><span class="hs-comment">-- * An iterable streaming monad transformer</span></span><span>
+</span><span id="line-6"></span><span>   </span><span class="annot"><span class="hs-comment">-- $stream</span></span><span>
+</span><span id="line-7"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#Stream"><span class="hs-identifier">Stream</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Constructing a 'Stream' on a given functor</span></span><span>
+</span><span id="line-9"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#yields"><span class="hs-identifier">yields</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#effect"><span class="hs-identifier">effect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#wrap"><span class="hs-identifier">wrap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#replicates"><span class="hs-identifier">replicates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#repeats"><span class="hs-identifier">repeats</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#repeatsM"><span class="hs-identifier">repeatsM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#unfold"><span class="hs-identifier">unfold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#never"><span class="hs-identifier">never</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#untilJust"><span class="hs-identifier">untilJust</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#streamBuild"><span class="hs-identifier">streamBuild</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#delays"><span class="hs-identifier">delays</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Transforming streams</span></span><span>
+</span><span id="line-22"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#maps"><span class="hs-identifier">maps</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#mapsPost"><span class="hs-identifier">mapsPost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#mapsM"><span class="hs-identifier">mapsM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#mapsMPost"><span class="hs-identifier">mapsMPost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>   </span><span class="annot"><a href="Streaming.Prelude.html#mapped"><span class="hs-identifier">mapped</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>   </span><span class="annot"><a href="Streaming.Prelude.html#mappedPost"><span class="hs-identifier">mappedPost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#hoistUnexposed"><span class="hs-identifier">hoistUnexposed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#distribute"><span class="hs-identifier">distribute</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#groups"><span class="hs-identifier">groups</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Inspecting a stream</span></span><span>
+</span><span id="line-33"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#inspect"><span class="hs-identifier">inspect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Splitting and joining 'Stream's</span></span><span>
+</span><span id="line-36"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#splitsAt"><span class="hs-identifier">splitsAt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#takes"><span class="hs-identifier">takes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#chunksOf"><span class="hs-identifier">chunksOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#concats"><span class="hs-identifier">concats</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#intercalates"><span class="hs-identifier">intercalates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#cutoff"><span class="hs-identifier">cutoff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>   </span><span class="hs-comment">-- period,</span><span>
+</span><span id="line-43"></span><span>   </span><span class="hs-comment">-- periods,</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Zipping, unzipping, separating and unseparating streams</span></span><span>
+</span><span id="line-47"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#zipsWith"><span class="hs-identifier">zipsWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#zipsWith%27"><span class="hs-identifier">zipsWith'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#zips"><span class="hs-identifier">zips</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#unzips"><span class="hs-identifier">unzips</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#interleaves"><span class="hs-identifier">interleaves</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#separate"><span class="hs-identifier">separate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#unseparate"><span class="hs-identifier">unseparate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#decompose"><span class="hs-identifier">decompose</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#expand"><span class="hs-identifier">expand</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#expandPost"><span class="hs-identifier">expandPost</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Eliminating a 'Stream'</span></span><span>
+</span><span id="line-60"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#mapsM_"><span class="hs-identifier">mapsM_</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#run"><span class="hs-identifier">run</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#streamFold"><span class="hs-identifier">streamFold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#iterTM"><span class="hs-identifier">iterTM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#iterT"><span class="hs-identifier">iterT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>   </span><span class="annot"><a href="Streaming.Internal.html#destroy"><span class="hs-identifier">destroy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>   </span><span class="annot"><span class="hs-comment">-- * Base functor for streams of individual items</span></span><span>
+</span><span id="line-68"></span><span>   </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>   </span><span class="annot"><a href="Streaming.Prelude.html#lazily"><span class="hs-identifier">lazily</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>   </span><span class="annot"><a href="Streaming.Prelude.html#strictly"><span class="hs-identifier">strictly</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>   </span><span class="annot"><span class="hs-comment">-- * re-exports</span></span><span>
+</span><span id="line-73"></span><span>   </span><span class="annot"><span class="hs-identifier">MFunctor</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>   </span><span class="annot"><span class="hs-identifier">MMonad</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#MonadTrans"><span class="hs-identifier">MonadTrans</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Compose.html#Compose"><span class="hs-identifier">Compose</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Sum.html#Sum"><span class="hs-identifier">Sum</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier">Identity</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Alternative"><span class="hs-identifier">Alternative</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator">(&lt;|&gt;)</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#Bifunctor"><span class="hs-identifier">Bifunctor</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier">join</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM"><span class="hs-identifier">liftM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM2"><span class="hs-identifier">liftM2</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier">liftA2</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA3"><span class="hs-identifier">liftA3</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-90"></span><span>   </span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Streaming.Internal.html"><span class="hs-identifier">Streaming.Internal</span></a></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Streaming.Prelude.html"><span class="hs-identifier">Streaming.Prelude</span></a></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Morph</span></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator">(&lt;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Trans.html"><span class="hs-identifier">Control.Monad.Trans</span></a></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Compose.html"><span class="hs-identifier">Data.Functor.Compose</span></a></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Sum.html"><span class="hs-identifier">Data.Functor.Sum</span></a></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><span class="hs-comment">{- $stream
+
+    The 'Stream' data type can be used to represent any effectful
+    succession of steps arising in some monad.
+    The form of the steps is specified by the first (\&quot;functor\&quot;)
+    parameter in @Stream f m r@. The monad of the underlying effects
+    is expressed by the second parameter.
+
+    This module exports combinators that pertain to that general case.
+    Some of these are quite abstract and pervade any use of the library,
+    e.g.
+
+&gt;   maps    :: (forall x . f x -&gt; g x)     -&gt; Stream f m r -&gt; Stream g m r
+&gt;   mapped  :: (forall x . f x -&gt; m (g x)) -&gt; Stream f m r -&gt; Stream g m r
+&gt;   hoist   :: (forall x . m x -&gt; n x)     -&gt; Stream f m r -&gt; Stream f n r -- from the MFunctor instance
+&gt;   concats :: Stream (Stream f m) m r     -&gt; Stream f m r
+
+    (assuming here and thoughout that @m@ or @n@ satisfies a @Monad@ constraint, and
+    @f@ or @g@ a @Functor@ constraint.)
+
+    Others are surprisingly determinate in content:
+
+&gt;   chunksOf     :: Int -&gt; Stream f m r -&gt; Stream (Stream f m) m r
+&gt;   splitsAt     :: Int -&gt; Stream f m r -&gt; Stream f m (Stream f m r)
+&gt;   zipsWith     :: (forall x y. f x -&gt; g y -&gt; h (x, y))
+&gt;                -&gt; Stream f m r -&gt; Stream g m r -&gt; Stream h m r
+&gt;   zipsWith'    :: (forall x y p. (x -&gt; y -&gt; p) -&gt; f x -&gt; g y -&gt; h p)
+&gt;                -&gt; Stream f m r -&gt; Stream g m r -&gt; Stream h m r
+&gt;   intercalates :: Stream f m () -&gt; Stream (Stream f m) m r -&gt; Stream f m r
+&gt;   unzips       :: Stream (Compose f g) m r -&gt;  Stream f (Stream g m) r
+&gt;   separate     :: Stream (Sum f g) m r -&gt; Stream f (Stream g m) r  -- cp. partitionEithers
+&gt;   unseparate   :: Stream f (Stream g) m r -&gt; Stream (Sum f g) m r
+&gt;   groups       :: Stream (Sum f g) m r -&gt; Stream (Sum (Stream f m) (Stream g m)) m r
+
+    One way to see that /any/ streaming library needs some such general type is
+    that it is required to represent the segmentation of a stream, and to
+    express the equivalents of @Prelude/Data.List@ combinators that involve
+    'lists of lists' and the like. See for example this
+    &lt;http://www.haskellforall.com/2013/09/perfect-streaming-using-pipes-bytestring.html post&gt;
+    on the correct expression of a streaming \'lines\' function.
+
+    The module @Streaming.Prelude@ exports combinators relating to
+
+&gt; Stream (Of a) m r
+
+    where @Of a r = !a :&gt; r@ is a left-strict pair.
+
+
+   This expresses the concept of a 'Producer' or 'Source' or 'Generator' and
+   easily inter-operates with types with such names in e.g. 'conduit',
+   'iostreams' and 'pipes'.
+-}</span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><span class="hs-comment">{-| Map a stream to its church encoding; compare @Data.List.foldr@
+
+    Typical @FreeT@ operators can be defined in terms of @destroy@
+    e.g.
+
+&gt; iterT :: (Functor f, Monad m) =&gt; (f (m a) -&gt; m a) -&gt; Stream f m a -&gt; m a
+&gt; iterT out stream = destroy stream out join return
+&gt; iterTM ::  (Functor f, Monad m, MonadTrans t, Monad (t m)) =&gt; (f (t m a) -&gt; t m a) -&gt; Stream f m a -&gt; t m a
+&gt; iterTM out stream = destroy stream out (join . lift) return
+&gt; concats :: (Monad m, MonadTrans t, Monad (t m)) =&gt; Stream (t m) m a -&gt; t m a
+&gt; concats stream = destroy stream join (join . lift) return
+-}</span></span><span>
+</span><span id="line-170"></span></pre></body></html>

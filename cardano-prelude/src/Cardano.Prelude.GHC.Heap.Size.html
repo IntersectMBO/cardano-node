@@ -1,0 +1,562 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE UnboxedTuples #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UnliftedFFITypes #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Prelude.GHC.Heap.Size</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#CountFailure"><span class="hs-identifier">CountFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#PerformGC"><span class="hs-identifier">PerformGC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize"><span class="hs-identifier">computeHeapSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize%27"><span class="hs-identifier">computeHeapSize'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSizeWorkList"><span class="hs-identifier">computeHeapSizeWorkList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Prelude.Base.html"><span class="hs-identifier">Cardano.Prelude.Base</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.Internal.html#Any"><span class="hs-identifier">Any</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Prelude.Base.html#map"><span class="hs-identifier">map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html"><span class="hs-identifier">Foreign.C.Types</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.Marshal.Alloc.html"><span class="hs-identifier">Foreign.Marshal.Alloc</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.StablePtr.html"><span class="hs-identifier">Foreign.StablePtr</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.Storable.html"><span class="hs-identifier">Foreign.Storable</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.ClosureTypes.html"><span class="hs-identifier">GHC.Exts.Heap.ClosureTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.ClosureTypes.html#ClosureType"><span class="hs-identifier">ClosureType</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html"><span class="hs-identifier">GHC.Prim</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html"><span class="hs-identifier">GHC.Types</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html"><span class="hs-identifier">System.Mem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html#performMajorGC"><span class="hs-identifier">performMajorGC</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  Failure
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#cNO_FAILURE"><span class="hs-identifier hs-type">cNO_FAILURE</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#cWORK_LIST_FULL"><span class="hs-identifier hs-type">cWORK_LIST_FULL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#cVISITED_FULL"><span class="hs-identifier hs-type">cVISITED_FULL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#cOUT_OF_MEMORY"><span class="hs-identifier hs-type">cOUT_OF_MEMORY</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#cUNSUPPORTED_CLOSURE"><span class="hs-identifier hs-type">cUNSUPPORTED_CLOSURE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span>
+</span><span id="line-32"></span><span id="cNO_FAILURE"><span class="annot"><span class="annottext">cNO_FAILURE :: CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cNO_FAILURE"><span class="hs-identifier hs-var hs-var">cNO_FAILURE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-33"></span><span id="cWORK_LIST_FULL"><span class="annot"><span class="annottext">cWORK_LIST_FULL :: CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cWORK_LIST_FULL"><span class="hs-identifier hs-var hs-var">cWORK_LIST_FULL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-34"></span><span id="cVISITED_FULL"><span class="annot"><span class="annottext">cVISITED_FULL :: CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cVISITED_FULL"><span class="hs-identifier hs-var hs-var">cVISITED_FULL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-35"></span><span id="cOUT_OF_MEMORY"><span class="annot"><span class="annottext">cOUT_OF_MEMORY :: CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cOUT_OF_MEMORY"><span class="hs-identifier hs-var hs-var">cOUT_OF_MEMORY</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-36"></span><span id="cUNSUPPORTED_CLOSURE"><span class="annot"><span class="annottext">cUNSUPPORTED_CLOSURE :: CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cUNSUPPORTED_CLOSURE"><span class="hs-identifier hs-var hs-var">cUNSUPPORTED_CLOSURE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">data</span><span> </span><span id="CountFailure"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#CountFailure"><span class="hs-identifier hs-var">CountFailure</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="WorkListFull"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#WorkListFull"><span class="hs-identifier hs-var">WorkListFull</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="VisitedFull"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#VisitedFull"><span class="hs-identifier hs-var">VisitedFull</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="OutOfMemory"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#OutOfMemory"><span class="hs-identifier hs-var">OutOfMemory</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UnsupportedClosure"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#UnsupportedClosure"><span class="hs-identifier hs-var">UnsupportedClosure</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.ClosureTypes.html#ClosureType"><span class="hs-identifier hs-type">ClosureType</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095477"><span id="local-6989586621679095483"><span id="local-6989586621679095487"><span class="annot"><span class="annottext">Int -&gt; CountFailure -&gt; ShowS
+[CountFailure] -&gt; ShowS
+CountFailure -&gt; String
+(Int -&gt; CountFailure -&gt; ShowS)
+-&gt; (CountFailure -&gt; String)
+-&gt; ([CountFailure] -&gt; ShowS)
+-&gt; Show CountFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CountFailure -&gt; ShowS
+showsPrec :: Int -&gt; CountFailure -&gt; ShowS
+$cshow :: CountFailure -&gt; String
+show :: CountFailure -&gt; String
+$cshowList :: [CountFailure] -&gt; ShowS
+showList :: [CountFailure] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095491"><span id="local-6989586621679095495"><span class="annot"><span class="annottext">CountFailure -&gt; CountFailure -&gt; Bool
+(CountFailure -&gt; CountFailure -&gt; Bool)
+-&gt; (CountFailure -&gt; CountFailure -&gt; Bool) -&gt; Eq CountFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CountFailure -&gt; CountFailure -&gt; Bool
+== :: CountFailure -&gt; CountFailure -&gt; Bool
+$c/= :: CountFailure -&gt; CountFailure -&gt; Bool
+/= :: CountFailure -&gt; CountFailure -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#toCountFailure"><span class="hs-identifier hs-type">toCountFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#CountFailure"><span class="hs-identifier hs-type">CountFailure</span></a></span><span>
+</span><span id="line-46"></span><span id="toCountFailure"><span class="annot"><span class="annottext">toCountFailure :: CUInt -&gt; Maybe CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#toCountFailure"><span class="hs-identifier hs-var hs-var">toCountFailure</span></a></span></span><span> </span><span id="local-6989586621679095500"><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cNO_FAILURE"><span class="hs-identifier hs-var">cNO_FAILURE</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe CountFailure
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cWORK_LIST_FULL"><span class="hs-identifier hs-var">cWORK_LIST_FULL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CountFailure -&gt; Maybe CountFailure
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(CountFailure -&gt; Maybe CountFailure)
+-&gt; CountFailure -&gt; Maybe CountFailure
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#WorkListFull"><span class="hs-identifier hs-var">WorkListFull</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cVISITED_FULL"><span class="hs-identifier hs-var">cVISITED_FULL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CountFailure -&gt; Maybe CountFailure
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(CountFailure -&gt; Maybe CountFailure)
+-&gt; CountFailure -&gt; Maybe CountFailure
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#VisitedFull"><span class="hs-identifier hs-var">VisitedFull</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cOUT_OF_MEMORY"><span class="hs-identifier hs-var">cOUT_OF_MEMORY</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CountFailure -&gt; Maybe CountFailure
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(CountFailure -&gt; Maybe CountFailure)
+-&gt; CountFailure -&gt; Maybe CountFailure
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#OutOfMemory"><span class="hs-identifier hs-var">OutOfMemory</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cUNSUPPORTED_CLOSURE"><span class="hs-identifier hs-var">cUNSUPPORTED_CLOSURE</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CountFailure -&gt; Maybe CountFailure
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(CountFailure -&gt; Maybe CountFailure)
+-&gt; CountFailure -&gt; Maybe CountFailure
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureType -&gt; CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#UnsupportedClosure"><span class="hs-identifier hs-var">UnsupportedClosure</span></a></span><span> </span><span class="annot"><span class="annottext">ClosureType
+</span><a href="#local-6989586621679095501"><span class="hs-identifier hs-var">typ</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe CountFailure
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;getCountFailure: impossible&quot;</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="#local-6989586621679095501"><span class="hs-identifier hs-type">typ</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-heap-9.6.7/src/GHC.Exts.Heap.ClosureTypes.html#ClosureType"><span class="hs-identifier hs-type">ClosureType</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679095501"><span class="annot"><span class="annottext">typ :: ClosureType
+</span><a href="#local-6989586621679095501"><span class="hs-identifier hs-var hs-var">typ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ClosureType
+forall a. Enum a =&gt; Int -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#toEnum"><span class="hs-identifier hs-var">toEnum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CUInt -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095500"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; CUInt
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">CUInt
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#cUNSUPPORTED_CLOSURE"><span class="hs-identifier hs-var">cUNSUPPORTED_CLOSURE</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  Main API
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Bind to the C function to count the closure size</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- It is crucial that this function is marked unsafe, because GHC guarantees</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- that garbage collection will not occur during an unsafe call</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- (see &lt;https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/ffi-chap.html#guaranteed-call-safety&gt;),</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- which is crucial for reliable counting (Haskell's GC moves objects around,</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- and so if a GC occurred during counting, we might end up counting objects</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- more than once or indeed miss them in the count if they happen to be moved to</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- a location we marked as already visited. This is also the reason that we</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- count the size of the object in C rather than in Haskell.</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-keyword">ccall</span></span><span> </span><span class="annot"><span class="hs-keyword">unsafe</span></span><span> </span><span class="annot"><span class="hs-string">&quot;hs_cardanoprelude_closureSize&quot;</span></span><span>
+</span><span id="line-72"></span><span>  </span><span id="closureSize_"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#closureSize_"><span class="hs-identifier hs-var">closureSize_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679095416"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stable.html#StablePtr"><span class="hs-identifier hs-type">StablePtr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679095416"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CULong"><span class="hs-identifier hs-type">CULong</span></a></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><span class="hs-comment">-- | Should we perform a GC call before counting the size?</span></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">data</span><span> </span><span id="PerformGC"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#PerformGC"><span class="hs-identifier hs-var">PerformGC</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Yes, first perform GC before counting</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- This should be used for most accurate results. Without calling GC first,</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- the computed size might be larger than expected due to leftover</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- indirections (black holes, selector thunks, etc.)</span><span>
+</span><span id="line-81"></span><span>    </span><span id="FirstPerformGC"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#FirstPerformGC"><span class="hs-identifier hs-var">FirstPerformGC</span></a></span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | No, do not perform GC before counting</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- If pinpoint accuracy is not requried, then GC can be skipped, making the</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- call much less expensive.</span><span>
+</span><span id="line-86"></span><span>    </span><span id="DontPerformGC"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#DontPerformGC"><span class="hs-identifier hs-var">DontPerformGC</span></a></span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Wrapper around 'closureSize_' that takes care of creating the stable ptr</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- We can't simply pass the address of the closure to the C function, because</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- we have no guarantee that GC will not happen in between taking that address</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- and the C call. We therefore create and pass a stable pointer instead.</span><span>
+</span><span id="line-93"></span><span id="local-6989586621679095406"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#closureSize"><span class="hs-identifier hs-type">closureSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#PerformGC"><span class="hs-identifier hs-type">PerformGC</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679095406"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CULong"><span class="hs-identifier hs-type">CULong</span></a></span></span><span>
+</span><span id="line-94"></span><span id="closureSize"><span class="annot"><span class="annottext">closureSize :: forall a.
+PerformGC -&gt; CUInt -&gt; CUInt -&gt; CUInt -&gt; Ptr CUInt -&gt; a -&gt; IO CULong
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#closureSize"><span class="hs-identifier hs-var hs-var">closureSize</span></a></span></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679095511"><span class="annot"><span class="annottext">PerformGC
+</span><a href="#local-6989586621679095511"><span class="hs-identifier hs-var">performGC</span></a></span></span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679095512"><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095512"><span class="hs-identifier hs-var">workListCapacity</span></a></span></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679095513"><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095513"><span class="hs-identifier hs-var">visitedInitCapacity</span></a></span></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679095514"><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095514"><span class="hs-identifier hs-var">visitedMaxCapacity</span></a></span></span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679095515"><span class="annot"><span class="annottext">Ptr CUInt
+</span><a href="#local-6989586621679095515"><span class="hs-identifier hs-var">err</span></a></span></span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679095516"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095516"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PerformGC
+</span><a href="#local-6989586621679095511"><span class="hs-identifier hs-var">performGC</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">PerformGC
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#FirstPerformGC"><span class="hs-identifier hs-var">FirstPerformGC</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Mem.html#performMajorGC"><span class="hs-identifier hs-var">performMajorGC</span></a></span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">PerformGC
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#DontPerformGC"><span class="hs-identifier hs-var">DontPerformGC</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">IO (StablePtr a)
+-&gt; (StablePtr a -&gt; IO ())
+-&gt; (StablePtr a -&gt; IO CULong)
+-&gt; IO CULong
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier hs-var">bracket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; IO (StablePtr a)
+forall a. a -&gt; IO (StablePtr a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stable.html#newStablePtr"><span class="hs-identifier hs-var">newStablePtr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095516"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StablePtr a -&gt; IO ()
+forall a. StablePtr a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stable.html#freeStablePtr"><span class="hs-identifier hs-var">freeStablePtr</span></a></span><span> </span><span class="annot"><span class="annottext">((StablePtr a -&gt; IO CULong) -&gt; IO CULong)
+-&gt; (StablePtr a -&gt; IO CULong) -&gt; IO CULong
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679095519"><span class="annot"><span class="annottext">StablePtr a
+</span><a href="#local-6989586621679095519"><span class="hs-identifier hs-var">stablePtr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">CUInt -&gt; CUInt -&gt; CUInt -&gt; Ptr CUInt -&gt; StablePtr a -&gt; IO CULong
+forall a.
+CUInt -&gt; CUInt -&gt; CUInt -&gt; Ptr CUInt -&gt; StablePtr a -&gt; IO CULong
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#closureSize_"><span class="hs-identifier hs-var">closureSize_</span></a></span><span>
+</span><span id="line-107"></span><span>          </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095512"><span class="hs-identifier hs-var">workListCapacity</span></a></span><span>
+</span><span id="line-108"></span><span>          </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095513"><span class="hs-identifier hs-var">visitedInitCapacity</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095514"><span class="hs-identifier hs-var">visitedMaxCapacity</span></a></span><span>
+</span><span id="line-110"></span><span>          </span><span class="annot"><span class="annottext">Ptr CUInt
+</span><a href="#local-6989586621679095515"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-111"></span><span>          </span><span class="annot"><span class="annottext">StablePtr a
+</span><a href="#local-6989586621679095519"><span class="hs-identifier hs-var">stablePtr</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- | Compute the size of the given closure</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- The size of the worklist should be set to the maximum expected /depth/ of</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- the closure; the size of the visited set should be set to the maximum /number</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- of nodes/ in the closure.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- 'computeHeapSizeWorkList' can be used to estimate the size of the worklist</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- required.</span><span>
+</span><span id="line-121"></span><span id="local-6989586621679095417"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize%27"><span class="hs-identifier hs-type">computeHeapSize'</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Should we call GC before counting?</span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#PerformGC"><span class="hs-identifier hs-type">PerformGC</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Capacity of the worklist</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Initial capacity of the visited set</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum capacity of the visited set</span></span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="#local-6989586621679095417"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#CountFailure"><span class="hs-identifier hs-type">CountFailure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-132"></span><span id="computeHeapSize%27"><span class="annot"><span class="annottext">computeHeapSize' :: forall a.
+PerformGC
+-&gt; Word -&gt; Word -&gt; Word -&gt; a -&gt; IO (Either CountFailure Word64)
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize%27"><span class="hs-identifier hs-var hs-var">computeHeapSize'</span></a></span></span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679095539"><span class="annot"><span class="annottext">PerformGC
+</span><a href="#local-6989586621679095539"><span class="hs-identifier hs-var">performGC</span></a></span></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679095540"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095540"><span class="hs-identifier hs-var">workListCapacity</span></a></span></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679095541"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095541"><span class="hs-identifier hs-var">visitedInitCapacity</span></a></span></span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621679095542"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095542"><span class="hs-identifier hs-var">visitedMaxCapacity</span></a></span></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679095543"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095543"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">(Ptr CUInt -&gt; IO (Either CountFailure Word64))
+-&gt; IO (Either CountFailure Word64)
+forall a b. Storable a =&gt; (Ptr a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.Marshal.Alloc.html#alloca"><span class="hs-identifier hs-var">alloca</span></a></span><span> </span><span class="annot"><span class="annottext">((Ptr CUInt -&gt; IO (Either CountFailure Word64))
+ -&gt; IO (Either CountFailure Word64))
+-&gt; (Ptr CUInt -&gt; IO (Either CountFailure Word64))
+-&gt; IO (Either CountFailure Word64)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679095545"><span class="annot"><span class="annottext">Ptr CUInt
+</span><a href="#local-6989586621679095545"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Ptr.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-140"></span><span>        </span><span id="local-6989586621679095546"><span class="annot"><span class="annottext">CULong
+</span><a href="#local-6989586621679095546"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-141"></span><span>          </span><span class="annot"><span class="annottext">PerformGC -&gt; CUInt -&gt; CUInt -&gt; CUInt -&gt; Ptr CUInt -&gt; a -&gt; IO CULong
+forall a.
+PerformGC -&gt; CUInt -&gt; CUInt -&gt; CUInt -&gt; Ptr CUInt -&gt; a -&gt; IO CULong
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#closureSize"><span class="hs-identifier hs-var">closureSize</span></a></span><span>
+</span><span id="line-142"></span><span>            </span><span class="annot"><span class="annottext">PerformGC
+</span><a href="#local-6989586621679095539"><span class="hs-identifier hs-var">performGC</span></a></span><span>
+</span><span id="line-143"></span><span>            </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095547"><span class="hs-identifier hs-var">workListCapacity'</span></a></span><span>
+</span><span id="line-144"></span><span>            </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095548"><span class="hs-identifier hs-var">visitedInitCapacity'</span></a></span><span>
+</span><span id="line-145"></span><span>            </span><span class="annot"><span class="annottext">CUInt
+</span><a href="#local-6989586621679095549"><span class="hs-identifier hs-var">visitedMaxCapacity'</span></a></span><span>
+</span><span id="line-146"></span><span>            </span><span class="annot"><span class="annottext">Ptr CUInt
+</span><a href="#local-6989586621679095545"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-147"></span><span>            </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095543"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-148"></span><span>        </span><span id="local-6989586621679095550"><span class="annot"><span class="annottext">Maybe CountFailure
+</span><a href="#local-6989586621679095550"><span class="hs-identifier hs-var">mFailure</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">CUInt -&gt; Maybe CountFailure
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#toCountFailure"><span class="hs-identifier hs-var">toCountFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(CUInt -&gt; Maybe CountFailure)
+-&gt; IO CUInt -&gt; IO (Maybe CountFailure)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr CUInt -&gt; IO CUInt
+forall a. Storable a =&gt; Ptr a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.Storable.html#peek"><span class="hs-identifier hs-var">peek</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr CUInt
+</span><a href="#local-6989586621679095545"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="annottext">Either CountFailure Word64 -&gt; IO (Either CountFailure Word64)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either CountFailure Word64 -&gt; IO (Either CountFailure Word64))
+-&gt; Either CountFailure Word64 -&gt; IO (Either CountFailure Word64)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe CountFailure
+</span><a href="#local-6989586621679095550"><span class="hs-identifier hs-var">mFailure</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-150"></span><span>          </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679095553"><span class="annot"><span class="annottext">CountFailure
+</span><a href="#local-6989586621679095553"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CountFailure -&gt; Either CountFailure Word64
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">CountFailure
+</span><a href="#local-6989586621679095553"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-151"></span><span>          </span><span class="annot"><span class="annottext">Maybe CountFailure
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Either CountFailure Word64
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CULong -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">CULong
+</span><a href="#local-6989586621679095546"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-153"></span><span>      </span><span class="annot"><a href="#local-6989586621679095547"><span class="hs-identifier hs-type">workListCapacity'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095548"><span class="hs-identifier hs-type">visitedInitCapacity'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095549"><span class="hs-identifier hs-type">visitedMaxCapacity'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Types.html#CUInt"><span class="hs-identifier hs-type">CUInt</span></a></span><span>
+</span><span id="line-154"></span><span>      </span><span id="local-6989586621679095547"><span class="annot"><span class="annottext">workListCapacity' :: CUInt
+</span><a href="#local-6989586621679095547"><span class="hs-identifier hs-var hs-var">workListCapacity'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; CUInt
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095540"><span class="hs-identifier hs-var">workListCapacity</span></a></span><span>
+</span><span id="line-155"></span><span>      </span><span id="local-6989586621679095548"><span class="annot"><span class="annottext">visitedInitCapacity' :: CUInt
+</span><a href="#local-6989586621679095548"><span class="hs-identifier hs-var hs-var">visitedInitCapacity'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; CUInt
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095541"><span class="hs-identifier hs-var">visitedInitCapacity</span></a></span><span>
+</span><span id="line-156"></span><span>      </span><span id="local-6989586621679095549"><span class="annot"><span class="annottext">visitedMaxCapacity' :: CUInt
+</span><a href="#local-6989586621679095549"><span class="hs-identifier hs-var hs-var">visitedMaxCapacity'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; CUInt
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095542"><span class="hs-identifier hs-var">visitedMaxCapacity</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | Compute the size of the given closure</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- This is a wrapper around 'computeHeapSize'' which sets some defaults for the</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- capacity of worklist and the visited set: it uses a worklist capacity of 10k</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- (which, assuming balanced data structures, should be more than enough), an</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- initial visited set capacity of 250k, and a maximum visited set capacity of</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- 16M. This means that this will use between 2 MB and 128 MB of heaps space.</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- It also does NOT perform GC before counting, for improved performance.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- Client code can call 'performMajorGC' manually or use 'computeHeapSize''.</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- Should these limits not be sufficient, or conversely, the memory requirements</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- be too large, use 'computeHeapSize'' directly.</span><span>
+</span><span id="line-171"></span><span id="local-6989586621679095428"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize"><span class="hs-identifier hs-type">computeHeapSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679095428"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#CountFailure"><span class="hs-identifier hs-type">CountFailure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-172"></span><span id="computeHeapSize"><span class="annot"><span class="annottext">computeHeapSize :: forall a. a -&gt; IO (Either CountFailure Word64)
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize"><span class="hs-identifier hs-var hs-var">computeHeapSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><span class="annottext">PerformGC
+-&gt; Word -&gt; Word -&gt; Word -&gt; a -&gt; IO (Either CountFailure Word64)
+forall a.
+PerformGC
+-&gt; Word -&gt; Word -&gt; Word -&gt; a -&gt; IO (Either CountFailure Word64)
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSize%27"><span class="hs-identifier hs-var">computeHeapSize'</span></a></span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="annottext">PerformGC
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#DontPerformGC"><span class="hs-identifier hs-var">DontPerformGC</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095566"><span class="hs-identifier hs-var">workListCapacity</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095567"><span class="hs-identifier hs-var">visitedInitCapacity</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679095568"><span class="hs-identifier hs-var">visitedMaxCapacity</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-comment">-- Memory usage assuming 64-bit (i.e. 8 byte) pointers</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><a href="#local-6989586621679095566"><span class="hs-identifier hs-type">workListCapacity</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095567"><span class="hs-identifier hs-type">visitedInitCapacity</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679095568"><span class="hs-identifier hs-type">visitedMaxCapacity</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span id="local-6989586621679095566"><span class="annot"><span class="annottext">workListCapacity :: Word
+</span><a href="#local-6989586621679095566"><span class="hs-identifier hs-var hs-var">workListCapacity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-comment">--  80 kB</span><span>
+</span><span id="line-182"></span><span>    </span><span id="local-6989586621679095567"><span class="annot"><span class="annottext">visitedInitCapacity :: Word
+</span><a href="#local-6989586621679095567"><span class="hs-identifier hs-var hs-var">visitedInitCapacity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">250</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-comment">--   2 MB</span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679095568"><span class="annot"><span class="annottext">visitedMaxCapacity :: Word
+</span><a href="#local-6989586621679095568"><span class="hs-identifier hs-var hs-var">visitedMaxCapacity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">16</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-comment">-- 128 MB</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  Compute the depth of the closure
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- | Upper bound on the required work list size to compute closure size</span><span>
+</span><span id="line-190"></span><span class="hs-comment">--</span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- NOTE: This ignores sharing, and so provides an upper bound only.</span><span>
+</span><span id="line-192"></span><span class="hs-comment">--</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- The size of a closure with no nested pointers can be computed without any</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- stack space.</span><span>
+</span><span id="line-195"></span><span class="hs-comment">--</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- When we have a closure with @(N + 1)@ nested pointers</span><span>
+</span><span id="line-197"></span><span class="hs-comment">--</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- &gt; p0 p1 .. pN</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- We will</span><span>
+</span><span id="line-201"></span><span class="hs-comment">--</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- * Push @pN, .., p1, p0@ onto the stack</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- * Pop off @p0@ and count its children</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- * Pop off @p1@ and count its children</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- * ..</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- until we have processed all children. This means that the stack space</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- required will be the maximum of</span><span>
+</span><span id="line-209"></span><span class="hs-comment">--</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- &gt; [ N + 1 -- For the initial list</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- &gt; , requiredWorkList p0 + (N + 1) - 1</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- &gt; , requiredWorkList p1 + (N + 1) - 2</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- &gt; , ..</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- &gt; , requiredWorkList pN + (N + 1) - (N + 1)</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- &gt; ]</span><span>
+</span><span id="line-216"></span><span class="hs-comment">--</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- For example, for a list, we would get that</span><span>
+</span><span id="line-218"></span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- &gt; requiredWorkList []     == 0</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- &gt; requiredWorkList (x:xs) == max [ 2</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- &gt;                                , requiredWorkList x + 1</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- &gt;                                , requiredWorkList xs</span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- &gt;                                ]</span><span>
+</span><span id="line-224"></span><span class="hs-comment">--</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- which, for a list of @Int@ (which requires only a stack of size 1), equals 2</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- (unless the list is empty).</span><span>
+</span><span id="line-227"></span><span class="hs-comment">--</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- Similarly, for binary trees, we get</span><span>
+</span><span id="line-229"></span><span class="hs-comment">--</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- &gt; requiredWorkList Leaf           == 0</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- &gt; requiredWorkList (Branch l x r) == max [ 3</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- &gt;                                        , requiredWorkList l + 2</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- &gt;                                        , requiredWorkList x + 1</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- &gt;                                        , requiredWorkList r</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- &gt;                                        ]</span><span>
+</span><span id="line-236"></span><span class="hs-comment">--</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- which, for a tree of @Int@, is bound by @(height * 2) + 1@.</span><span>
+</span><span id="line-238"></span><span id="local-6989586621679095430"><span class="annot"><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSizeWorkList"><span class="hs-identifier hs-type">computeHeapSizeWorkList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679095430"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span></span><span>
+</span><span id="line-239"></span><span id="computeHeapSizeWorkList"><span class="annot"><span class="annottext">computeHeapSizeWorkList :: forall a. a -&gt; Word64
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSizeWorkList"><span class="hs-identifier hs-var hs-var">computeHeapSizeWorkList</span></a></span></span><span> </span><span id="local-6989586621679095580"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095580"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>  </span><span class="annot"><span class="annottext">[Word64] -&gt; Word64
+forall a. Ord a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Ord a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#maximum"><span class="hs-identifier hs-var">maximum</span></a></span><span> </span><span class="annot"><span class="annottext">([Word64] -&gt; Word64) -&gt; [Word64] -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-241"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int# -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#I%23"><span class="hs-identifier hs-var">I#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Array# Any -&gt; Int#
+forall a. Array# a -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#sizeofArray%23"><span class="hs-identifier hs-var">sizeofArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Array# Any
+</span><a href="#local-6989586621679095582"><span class="hs-identifier hs-var">ptrs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>      </span><span class="annot"><span class="annottext">Word64 -&gt; [Word64] -&gt; [Word64]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">((Any, Word64) -&gt; Word64) -&gt; [(Any, Word64)] -&gt; [Word64]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(Any, Word64) -&gt; Word64
+</span><a href="#local-6989586621679095583"><span class="hs-identifier hs-var">nested</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Any, Word64)] -&gt; Int# -&gt; [(Any, Word64)]
+</span><a href="#local-6989586621679095584"><span class="hs-identifier hs-var">collect</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">0#</span></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><a href="#local-6989586621679095582"><span class="hs-identifier hs-type">ptrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#Array%23"><span class="hs-identifier hs-type">Array#</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Any"><span class="hs-identifier hs-type">Any</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679095585"><span class="annot"><span class="annottext">Addr#
+</span><a href="#local-6989586621679095585"><span class="hs-identifier hs-var">_addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095586"><span class="annot"><span class="annottext">ByteArray#
+</span><a href="#local-6989586621679095586"><span class="hs-identifier hs-var">_raw</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095582"><span class="annot"><span class="annottext">Array# Any
+</span><a href="#local-6989586621679095582"><span class="hs-identifier hs-var">ptrs</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; (# Addr#, ByteArray#, Array# Any #)
+forall a b. a -&gt; (# Addr#, ByteArray#, Array# b #)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#unpackClosure%23"><span class="hs-identifier hs-var">unpackClosure#</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679095580"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-246"></span><span>
+</span><span id="line-247"></span><span>    </span><span class="hs-comment">-- Recursive worklist size of nested pointer @p@, with additional stack @n@</span><span>
+</span><span id="line-248"></span><span>    </span><span class="annot"><a href="#local-6989586621679095583"><span class="hs-identifier hs-type">nested</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Any"><span class="hs-identifier hs-type">Any</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-249"></span><span>    </span><span id="local-6989586621679095583"><span class="annot"><span class="annottext">nested :: (Any, Word64) -&gt; Word64
+</span><a href="#local-6989586621679095583"><span class="hs-identifier hs-var hs-var">nested</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679095587"><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095587"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679095588"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679095588"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Any -&gt; Word64
+forall a. a -&gt; Word64
+</span><a href="Cardano.Prelude.GHC.Heap.Size.html#computeHeapSizeWorkList"><span class="hs-identifier hs-var">computeHeapSizeWorkList</span></a></span><span> </span><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095587"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679095588"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-comment">-- @collect [] 0@ will construct the sequence</span><span>
+</span><span id="line-252"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-253"></span><span>    </span><span class="hs-comment">-- &gt; [ (p0, (N + 1) - 1)</span><span>
+</span><span id="line-254"></span><span>    </span><span class="hs-comment">-- &gt; , (p1, (N + 1) - 2)</span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-comment">-- &gt; , ..</span><span>
+</span><span id="line-256"></span><span>    </span><span class="hs-comment">-- &gt; , (pN, (N + 1) - (N + 1))</span><span>
+</span><span id="line-257"></span><span>    </span><span class="hs-comment">-- &gt; ]</span><span>
+</span><span id="line-258"></span><span>    </span><span class="annot"><a href="#local-6989586621679095584"><span class="hs-identifier hs-type">collect</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Any"><span class="hs-identifier hs-type">Any</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#Int%23"><span class="hs-identifier hs-type">Int#</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Any"><span class="hs-identifier hs-type">Any</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-259"></span><span>    </span><span id="local-6989586621679095584"><span class="annot"><span class="annottext">collect :: [(Any, Word64)] -&gt; Int# -&gt; [(Any, Word64)]
+</span><a href="#local-6989586621679095584"><span class="hs-identifier hs-var hs-var">collect</span></a></span></span><span> </span><span id="local-6989586621679095590"><span class="annot"><span class="annottext">[(Any, Word64)]
+</span><a href="#local-6989586621679095590"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679095591"><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679095591"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-260"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679095591"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#%3C%23"><span class="hs-operator hs-var">&lt;#</span></a></span><span> </span><span class="annot"><span class="annottext">Array# Any -&gt; Int#
+forall a. Array# a -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#sizeofArray%23"><span class="hs-identifier hs-var">sizeofArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Array# Any
+</span><a href="#local-6989586621679095582"><span class="hs-identifier hs-var">ptrs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-261"></span><span>        </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">0#</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[(Any, Word64)]
+</span><a href="#local-6989586621679095590"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-262"></span><span>        </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-263"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679095592"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-264"></span><span>              </span><span class="hs-glyph">!</span><span id="local-6989586621679095592"><span class="annot"><span class="annottext">n :: Word64
+</span><a href="#local-6989586621679095592"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int# -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#I%23"><span class="hs-identifier hs-var">I#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Array# Any -&gt; Int#
+forall a. Array# a -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#sizeofArray%23"><span class="hs-identifier hs-var">sizeofArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Array# Any
+</span><a href="#local-6989586621679095582"><span class="hs-identifier hs-var">ptrs</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#-%23"><span class="hs-operator hs-var">-#</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679095591"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#%2B%23"><span class="hs-operator hs-var">+#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">1#</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-265"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Array# Any -&gt; Int# -&gt; (# Any #)
+forall a. Array# a -&gt; Int# -&gt; (# a #)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#indexArray%23"><span class="hs-identifier hs-var">indexArray#</span></a></span><span> </span><span class="annot"><span class="annottext">Array# Any
+</span><a href="#local-6989586621679095582"><span class="hs-identifier hs-var">ptrs</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679095591"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-266"></span><span>                </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679095593"><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095593"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[(Any, Word64)] -&gt; Int# -&gt; [(Any, Word64)]
+</span><a href="#local-6989586621679095584"><span class="hs-identifier hs-var">collect</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621679095593"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679095592"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Any, Word64) -&gt; [(Any, Word64)] -&gt; [(Any, Word64)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[(Any, Word64)]
+</span><a href="#local-6989586621679095590"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int#
+</span><a href="#local-6989586621679095591"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#%2B%23"><span class="hs-operator hs-var">+#</span></a></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">1#</span></span><span class="hs-special">)</span><span>
+</span><span id="line-267"></span></pre></body></html>

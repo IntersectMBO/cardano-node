@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Trace.Forward.Utils.DataPoint</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPoint"><span class="hs-identifier">DataPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointStore"><span class="hs-identifier">DataPointStore</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier">DataPointRequestor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#initDataPointStore"><span class="hs-identifier">initDataPointStore</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#initDataPointRequestor"><span class="hs-identifier">initDataPointRequestor</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#writeToStore"><span class="hs-identifier">writeToStore</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#readFromStore"><span class="hs-identifier">readFromStore</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#askForDataPoints"><span class="hs-identifier">askForDataPoints</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html"><span class="hs-identifier">Cardano.Logging.Tracer.DataPoint</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Monad.STM.html#check"><span class="hs-identifier">check</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#orElse"><span class="hs-identifier">orElse</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html"><span class="hs-identifier">Control.Concurrent.STM.TMVar</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html"><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Forwarder</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html"><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Type</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Read 'DataPoint's from the store. Please note that we don't care what's</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--   inside of 'DataPoint', we just know it can be encoded to JSON.</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#readFromStore"><span class="hs-identifier hs-type">readFromStore</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointStore"><span class="hs-identifier hs-type">DataPointStore</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-type">DataPointForwarder</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span id="readFromStore"><span class="annot"><span class="annottext">readFromStore :: DataPointStore -&gt; DataPointForwarder IO ()
+</span><a href="Trace.Forward.Utils.DataPoint.html#readFromStore"><span class="hs-identifier hs-var hs-var">readFromStore</span></a></span></span><span> </span><span id="local-6989586621679137425"><span class="annot"><span class="annottext">DataPointStore
+</span><a href="#local-6989586621679137425"><span class="hs-identifier hs-var">dpStore</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-type">DataPointForwarder</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">recvMsgDataPointsRequest :: [DataPointName] -&gt; IO DataPointValues
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#recvMsgDataPointsRequest"><span class="hs-identifier hs-var">recvMsgDataPointsRequest</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679137428"><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679137428"><span class="hs-identifier hs-var">dpNames</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>        </span><span id="local-6989586621679137429"><span class="annot"><span class="annottext">Map DataPointName DataPoint
+</span><a href="#local-6989586621679137429"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DataPointStore -&gt; IO (Map DataPointName DataPoint)
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointStore
+</span><a href="#local-6989586621679137425"><span class="hs-identifier hs-var">dpStore</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">DataPointValues -&gt; IO DataPointValues
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(DataPointValues -&gt; IO DataPointValues)
+-&gt; DataPointValues -&gt; IO DataPointValues
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(DataPointName -&gt; (DataPointName, Maybe DataPointValue))
+-&gt; [DataPointName] -&gt; DataPointValues
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map DataPointName DataPoint
+-&gt; DataPointName -&gt; (DataPointName, Maybe DataPointValue)
+forall {k}.
+Ord k =&gt;
+Map k DataPoint -&gt; k -&gt; (k, Maybe DataPointValue)
+</span><a href="#local-6989586621679137431"><span class="hs-identifier hs-var">lookupDataPoint</span></a></span><span> </span><span class="annot"><span class="annottext">Map DataPointName DataPoint
+</span><a href="#local-6989586621679137429"><span class="hs-identifier hs-var">store</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679137428"><span class="hs-identifier hs-var">dpNames</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">recvMsgDone :: IO ()
+</span><a href="#local-6989586621679137432"><span class="hs-identifier hs-var">recvMsgDone</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679137431"><span class="annot"><span class="annottext">lookupDataPoint :: Map k DataPoint -&gt; k -&gt; (k, Maybe DataPointValue)
+</span><a href="#local-6989586621679137431"><span class="hs-identifier hs-var hs-var">lookupDataPoint</span></a></span></span><span> </span><span id="local-6989586621679137440"><span class="annot"><span class="annottext">Map k DataPoint
+</span><a href="#local-6989586621679137440"><span class="hs-identifier hs-var">store</span></a></span></span><span> </span><span id="local-6989586621679137441"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679137441"><span class="hs-identifier hs-var">dpName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679137441"><span class="hs-identifier hs-var">dpName</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPoint"><span class="hs-identifier hs-type">DataPoint</span></a></span><span> </span><span id="local-6989586621679137445"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679137445"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DataPointValue -&gt; Maybe DataPointValue
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(DataPointValue -&gt; Maybe DataPointValue)
+-&gt; DataPointValue -&gt; Maybe DataPointValue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">v -&gt; DataPointValue
+forall a. ToJSON a =&gt; a -&gt; DataPointValue
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679137445"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DataPoint -&gt; Maybe DataPointValue)
+-&gt; Maybe DataPoint -&gt; Maybe DataPointValue
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k DataPoint -&gt; Maybe DataPoint
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679137441"><span class="hs-identifier hs-var">dpName</span></a></span><span> </span><span class="annot"><span class="annottext">Map k DataPoint
+</span><a href="#local-6989586621679137440"><span class="hs-identifier hs-var">store</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Since 'DataPointForward' protocol does not assume the stream of requests/replies,</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   we use the 'TVar's to provide to acceptor's side an ability to ask 'DataPoint's</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   explicitly.</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="DataPointRequestor"><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-var">DataPointRequestor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DataPointRequestor"><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-var">DataPointRequestor</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | The &quot;ask flag&quot;: we use it to notify that we want 'DataPoint's.</span></span><span>
+</span><span id="line-51"></span><span>    </span><span id="askDataPoints"><span class="annot"><span class="annottext">DataPointRequestor -&gt; TVar Bool
+</span><a href="Trace.Forward.Utils.DataPoint.html#askDataPoints"><span class="hs-identifier hs-var hs-var">askDataPoints</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The names of 'DataPoint's we need.</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="dataPointsNames"><span class="annot"><span class="annottext">DataPointRequestor -&gt; TVar [DataPointName]
+</span><a href="Trace.Forward.Utils.DataPoint.html#dataPointsNames"><span class="hs-identifier hs-var hs-var">dataPointsNames</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointName"><span class="hs-identifier hs-type">DataPointName</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- | The list of received 'DataPoint's' values.</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--   By default it's empty, but when 'DataPoint's</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">--   are received they will be stored here.</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="dataPointsReply"><span class="annot"><span class="annottext">DataPointRequestor -&gt; TMVar DataPointValues
+</span><a href="Trace.Forward.Utils.DataPoint.html#dataPointsReply"><span class="hs-identifier hs-var hs-var">dataPointsReply</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#TMVar"><span class="hs-identifier hs-type">TMVar</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointValues"><span class="hs-identifier hs-type">DataPointValues</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#initDataPointRequestor"><span class="hs-identifier hs-type">initDataPointRequestor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-type">DataPointRequestor</span></a></span><span>
+</span><span id="line-61"></span><span id="initDataPointRequestor"><span class="annot"><span class="annottext">initDataPointRequestor :: IO DataPointRequestor
+</span><a href="Trace.Forward.Utils.DataPoint.html#initDataPointRequestor"><span class="hs-identifier hs-var hs-var">initDataPointRequestor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TVar Bool
+-&gt; TVar [DataPointName]
+-&gt; TMVar DataPointValues
+-&gt; DataPointRequestor
+</span><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-var">DataPointRequestor</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">(TVar Bool
+ -&gt; TVar [DataPointName]
+ -&gt; TMVar DataPointValues
+ -&gt; DataPointRequestor)
+-&gt; IO (TVar Bool)
+-&gt; IO
+     (TVar [DataPointName]
+      -&gt; TMVar DataPointValues -&gt; DataPointRequestor)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO (TVar Bool)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">IO
+  (TVar [DataPointName]
+   -&gt; TMVar DataPointValues -&gt; DataPointRequestor)
+-&gt; IO (TVar [DataPointName])
+-&gt; IO (TMVar DataPointValues -&gt; DataPointRequestor)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName] -&gt; IO (TVar [DataPointName])
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">IO (TMVar DataPointValues -&gt; DataPointRequestor)
+-&gt; IO (TMVar DataPointValues) -&gt; IO DataPointRequestor
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (TMVar DataPointValues)
+forall a. IO (TMVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#newEmptyTMVarIO"><span class="hs-identifier hs-var">newEmptyTMVarIO</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#askForDataPoints"><span class="hs-identifier hs-type">askForDataPoints</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-type">DataPointRequestor</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointName"><span class="hs-identifier hs-type">DataPointName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointValues"><span class="hs-identifier hs-type">DataPointValues</span></a></span><span>
+</span><span id="line-70"></span><span id="askForDataPoints"><span class="annot"><span class="annottext">askForDataPoints :: DataPointRequestor -&gt; [DataPointName] -&gt; IO DataPointValues
+</span><a href="Trace.Forward.Utils.DataPoint.html#askForDataPoints"><span class="hs-identifier hs-var hs-var">askForDataPoints</span></a></span></span><span> </span><span class="annot"><span class="annottext">DataPointRequestor
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataPointValues -&gt; IO DataPointValues
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#askForDataPoints"><span class="hs-identifier hs-var">askForDataPoints</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-type">DataPointRequestor</span></a></span><span class="hs-special">{</span><span id="local-6989586621679137457"><span class="annot"><span class="annottext">TVar Bool
+askDataPoints :: DataPointRequestor -&gt; TVar Bool
+askDataPoints :: TVar Bool
+</span><a href="Trace.Forward.Utils.DataPoint.html#askDataPoints"><span class="hs-identifier hs-var hs-var">askDataPoints</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137458"><span class="annot"><span class="annottext">TVar [DataPointName]
+dataPointsNames :: DataPointRequestor -&gt; TVar [DataPointName]
+dataPointsNames :: TVar [DataPointName]
+</span><a href="Trace.Forward.Utils.DataPoint.html#dataPointsNames"><span class="hs-identifier hs-var hs-var">dataPointsNames</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679137459"><span class="annot"><span class="annottext">TMVar DataPointValues
+dataPointsReply :: DataPointRequestor -&gt; TMVar DataPointValues
+dataPointsReply :: TMVar DataPointValues
+</span><a href="Trace.Forward.Utils.DataPoint.html#dataPointsReply"><span class="hs-identifier hs-var hs-var">dataPointsReply</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679137460"><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679137460"><span class="hs-identifier hs-var">dpNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">TVar [DataPointName]
+-&gt; ([DataPointName] -&gt; [DataPointName]) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">TVar [DataPointName]
+</span><a href="#local-6989586621679137458"><span class="hs-identifier hs-var">dataPointsNames</span></a></span><span> </span><span class="annot"><span class="annottext">(([DataPointName] -&gt; [DataPointName]) -&gt; STM ())
+-&gt; ([DataPointName] -&gt; [DataPointName]) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName] -&gt; [DataPointName] -&gt; [DataPointName]
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679137460"><span class="hs-identifier hs-var">dpNames</span></a></span><span> </span><span class="hs-comment">-- Fill the names of 'DataPoint's we need.</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">TVar Bool -&gt; (Bool -&gt; Bool) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679137457"><span class="hs-identifier hs-var">askDataPoints</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool -&gt; Bool) -&gt; STM ()) -&gt; (Bool -&gt; Bool) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>      </span><span class="hs-comment">-- Ask them! The flag for acceptor's part</span><span>
+</span><span id="line-75"></span><span>                                                </span><span class="hs-comment">-- of the protocol, it's initiate the request.</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- Since the acceptor's part of the protocol already sent the request,</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-comment">-- we are waiting for reply: currently 'dataPointsReply' is empty,</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-comment">-- so we are stuck on 'retry'.</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">-- Unfortunately, it's possible that 'dataPointsReply' won't be filled by 'DataPointValues',</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-comment">-- because of some error (for example, network problems). To prevent an infinite 'retry',</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- we start a max timer in parallel.</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679137463"><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679137463"><span class="hs-identifier hs-var">maxTimer</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (TVar Bool)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.IO.html#registerDelay"><span class="hs-identifier hs-var">registerDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Trace.Forward.Utils.DataPoint.html#tenSeconds"><span class="hs-identifier hs-var">tenSeconds</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">STM DataPointValues -&gt; IO DataPointValues
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM DataPointValues -&gt; IO DataPointValues)
+-&gt; STM DataPointValues -&gt; IO DataPointValues
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">TMVar DataPointValues -&gt; STM DataPointValues
+forall a. TMVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#takeTMVar"><span class="hs-identifier hs-var">takeTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar DataPointValues
+</span><a href="#local-6989586621679137459"><span class="hs-identifier hs-var">dataPointsReply</span></a></span><span> </span><span class="hs-comment">-- If everything is OK, we'll have an answer earlier than 10 seconds.</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">STM DataPointValues -&gt; STM DataPointValues -&gt; STM DataPointValues
+forall a. STM a -&gt; STM a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#orElse"><span class="hs-operator hs-var">`orElse`</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar Bool -&gt; STM Bool
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679137463"><span class="hs-identifier hs-var">maxTimer</span></a></span><span> </span><span class="annot"><span class="annottext">STM Bool -&gt; (Bool -&gt; STM ()) -&gt; STM ()
+forall a b. STM a -&gt; (a -&gt; STM b) -&gt; STM b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Monad.STM.html#check"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="annot"><span class="annottext">STM () -&gt; STM DataPointValues -&gt; STM DataPointValues
+forall a b. STM a -&gt; STM b -&gt; STM b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointValues -&gt; STM DataPointValues
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- No later than after 10 seconds we return [].</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><span class="hs-comment">-- | If 'retry' takes more than 10 seconds - it's definitely a problem.</span></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Trace.Forward.Utils.DataPoint.html#tenSeconds"><span class="hs-identifier hs-type">tenSeconds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-91"></span><span id="tenSeconds"><span class="annot"><span class="annottext">tenSeconds :: Int
+</span><a href="Trace.Forward.Utils.DataPoint.html#tenSeconds"><span class="hs-identifier hs-var hs-var">tenSeconds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000000</span></span><span>
+</span><span id="line-92"></span></pre></body></html>

@@ -1,0 +1,519 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.DNS.IO</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Receiving DNS messages</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Network.DNS.IO.html#receive"><span class="hs-identifier">receive</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#receiveFrom"><span class="hs-identifier">receiveFrom</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#receiveVC"><span class="hs-identifier">receiveVC</span></a></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Sending pre-encoded messages</span></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#send"><span class="hs-identifier">send</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendTo"><span class="hs-identifier">sendTo</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendVC"><span class="hs-identifier">sendVC</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendAll"><span class="hs-identifier">sendAll</span></a></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Encoding queries for transmission</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#encodeQuestion"><span class="hs-identifier">encodeQuestion</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#encodeVC"><span class="hs-identifier">encodeVC</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating query response messages</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#responseA"><span class="hs-identifier">responseA</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#responseAAAA"><span class="hs-identifier">responseAAAA</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html"><span class="hs-identifier">Data.ByteString.Builder</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BB</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.IP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IPv4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">IPv6</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Time.System</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">timeCurrent</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Time.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Elapsed</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Seconds</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Socket</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SockAddr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.Socket.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">recv</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">recvFrom</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.Socket.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Socket</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html"><span class="hs-identifier">System.IO.Error</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Decode.html"><span class="hs-identifier">Network.DNS.Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier">decodeAt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Encode.html"><span class="hs-identifier">Network.DNS.Encode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.DNS.Encode.html#encode"><span class="hs-identifier">encode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Imports</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Types.Internal</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Receive and decode a single 'DNSMessage' from a UDP 'Socket', throwing away</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- the client address.  Messages longer than 'maxUdpSize' are silently</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- truncated, but this should not occur in practice, since we cap the advertised</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- EDNS UDP buffer size limit at the same value.  A 'DNSError' is raised if I/O</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- or message decoding fails.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Network.DNS.IO.html#receive"><span class="hs-identifier hs-type">receive</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span>
+</span><span id="line-48"></span><span id="receive"><span class="annot"><span class="annottext">receive :: Socket -&gt; IO DNSMessage
+</span><a href="Network.DNS.IO.html#receive"><span class="hs-identifier hs-var hs-var">receive</span></a></span></span><span> </span><span id="local-6989586621679073875"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073875"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073879"><span class="annot"><span class="annottext">bufsiz :: Int
+</span><a href="#local-6989586621679073879"><span class="hs-identifier hs-var hs-var">bufsiz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-identifier hs-var">maxUdpSize</span></span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679073880"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073880"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">recv</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073875"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073879"><span class="hs-identifier hs-var">bufsiz</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (IOException -&gt; IO ByteString) -&gt; IO ByteString
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#catch"><span class="hs-operator hs-var">`E.catch`</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679073882"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073882"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO ByteString
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(DNSError -&gt; IO ByteString) -&gt; DNSError -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; DNSError
+</span><span class="hs-identifier hs-var">NetworkFailure</span></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073882"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Elapsed</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seconds</span></span><span> </span><span id="local-6989586621679073887"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073887"><span class="hs-identifier hs-var">now</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Elapsed
+</span><span class="hs-identifier hs-var">timeCurrent</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-var">decodeAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073887"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073880"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span id="local-6989586621679073888"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073888"><span class="hs-identifier hs-var">e</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO DNSMessage
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073888"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679073889"><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073889"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSMessage -&gt; IO DNSMessage
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073889"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | Receive and decode a single 'DNSMessage' from a UDP 'Socket'.  Messages</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- longer than 'maxUdpSize' are silently truncated, but this should not occur</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- in practice, since we cap the advertised EDNS UDP buffer size limit at the</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- same value.  A 'DNSError' is raised if I/O or message decoding fails.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Network.DNS.IO.html#receiveFrom"><span class="hs-identifier hs-type">receiveFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SockAddr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span id="receiveFrom"><span class="annot"><span class="annottext">receiveFrom :: Socket -&gt; IO (DNSMessage, SockAddr)
+</span><a href="Network.DNS.IO.html#receiveFrom"><span class="hs-identifier hs-var hs-var">receiveFrom</span></a></span></span><span> </span><span id="local-6989586621679073890"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073890"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073893"><span class="annot"><span class="annottext">bufsiz :: Int
+</span><a href="#local-6989586621679073893"><span class="hs-identifier hs-var hs-var">bufsiz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-identifier hs-var">maxUdpSize</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679073894"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073894"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073895"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679073895"><span class="hs-identifier hs-var">client</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO (ByteString, SockAddr)
+</span><span class="hs-identifier hs-var">recvFrom</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073890"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073893"><span class="hs-identifier hs-var">bufsiz</span></a></span><span> </span><span class="annot"><span class="annottext">IO (ByteString, SockAddr)
+-&gt; (IOException -&gt; IO (ByteString, SockAddr))
+-&gt; IO (ByteString, SockAddr)
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#catch"><span class="hs-operator hs-var">`E.catch`</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679073896"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073896"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO (ByteString, SockAddr)
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(DNSError -&gt; IO (ByteString, SockAddr))
+-&gt; DNSError -&gt; IO (ByteString, SockAddr)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; DNSError
+</span><span class="hs-identifier hs-var">NetworkFailure</span></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073896"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Elapsed</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seconds</span></span><span> </span><span id="local-6989586621679073897"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073897"><span class="hs-identifier hs-var">now</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Elapsed
+</span><span class="hs-identifier hs-var">timeCurrent</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-var">decodeAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073897"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073894"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span id="local-6989586621679073898"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073898"><span class="hs-identifier hs-var">e</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO (DNSMessage, SockAddr)
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073898"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679073899"><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073899"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(DNSMessage, SockAddr) -&gt; IO (DNSMessage, SockAddr)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073899"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679073895"><span class="hs-identifier hs-var">client</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Receive and decode a single 'DNSMesage' from a virtual-circuit (TCP).  It</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- is up to the caller to implement any desired timeout. An 'DNSError' is</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- raised if I/O or message decoding fails.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Network.DNS.IO.html#receiveVC"><span class="hs-identifier hs-type">receiveVC</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span>
+</span><span id="line-75"></span><span id="receiveVC"><span class="annot"><span class="annottext">receiveVC :: Socket -&gt; IO DNSMessage
+</span><a href="Network.DNS.IO.html#receiveVC"><span class="hs-identifier hs-var hs-var">receiveVC</span></a></span></span><span> </span><span id="local-6989586621679073900"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073900"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679073901"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073901"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+forall {a}. Num a =&gt; ByteString -&gt; a
+</span><a href="#local-6989586621679073902"><span class="hs-identifier hs-var">toLen</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Int) -&gt; IO ByteString -&gt; IO Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ByteString
+</span><a href="Network.DNS.IO.html#recvDNS"><span class="hs-identifier hs-var">recvDNS</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073900"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679073905"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073905"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ByteString
+</span><a href="Network.DNS.IO.html#recvDNS"><span class="hs-identifier hs-var">recvDNS</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073900"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073901"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Elapsed</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seconds</span></span><span> </span><span id="local-6989586621679073906"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073906"><span class="hs-identifier hs-var">now</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Elapsed
+</span><span class="hs-identifier hs-var">timeCurrent</span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ByteString -&gt; Either DNSError DNSMessage
+</span><a href="Network.DNS.Decode.html#decodeAt"><span class="hs-identifier hs-var">decodeAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679073906"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073905"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679073907"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073907"><span class="hs-identifier hs-var">e</span></a></span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO DNSMessage
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679073907"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679073908"><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073908"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSMessage -&gt; IO DNSMessage
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">DNSMessage
+</span><a href="#local-6989586621679073908"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679073902"><span class="annot"><span class="annottext">toLen :: ByteString -&gt; a
+</span><a href="#local-6989586621679073902"><span class="hs-identifier hs-var hs-var">toLen</span></a></span></span><span> </span><span id="local-6989586621679073919"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073919"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#unpack"><span class="hs-identifier hs-var">B.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073919"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-special">[</span><span id="local-6989586621679073921"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679073921"><span class="hs-identifier hs-var">hi</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679073922"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679073922"><span class="hs-identifier hs-var">lo</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">256</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; a
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679073921"><span class="hs-identifier hs-var">hi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; a
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679073922"><span class="hs-identifier hs-var">lo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">[Word8]
+</span><span class="hs-identifier">_</span></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span>              </span><span class="hs-comment">-- never reached</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Network.DNS.IO.html#recvDNS"><span class="hs-identifier hs-type">recvDNS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-88"></span><span id="recvDNS"><span class="annot"><span class="annottext">recvDNS :: Socket -&gt; Int -&gt; IO ByteString
+</span><a href="Network.DNS.IO.html#recvDNS"><span class="hs-identifier hs-var hs-var">recvDNS</span></a></span></span><span> </span><span id="local-6989586621679073925"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073925"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span id="local-6989586621679073926"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073926"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO ByteString
+</span><a href="#local-6989586621679073927"><span class="hs-identifier hs-var">recv1</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (IOException -&gt; IO ByteString) -&gt; IO ByteString
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#catch"><span class="hs-operator hs-var">`E.catch`</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679073928"><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073928"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; IO ByteString
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(DNSError -&gt; IO ByteString) -&gt; DNSError -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IOException -&gt; DNSError
+</span><span class="hs-identifier hs-var">NetworkFailure</span></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073928"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679073927"><span class="annot"><span class="annottext">recv1 :: IO ByteString
+</span><a href="#local-6989586621679073927"><span class="hs-identifier hs-var hs-var">recv1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>        </span><span id="local-6989586621679073933"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073933"><span class="hs-identifier hs-var">bs1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ByteString
+</span><a href="#local-6989586621679073934"><span class="hs-identifier hs-var">recvCore</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073926"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073933"><span class="hs-identifier hs-var">bs1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073926"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-93"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073933"><span class="hs-identifier hs-var">bs1</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621679073936"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073933"><span class="hs-identifier hs-var">bs1</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679073936"><span class="annot"><span class="annottext">loop :: ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621679073936"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span id="local-6989586621679073940"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073940"><span class="hs-identifier hs-var">bs0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073942"><span class="annot"><span class="annottext">left :: Int
+</span><a href="#local-6989586621679073942"><span class="hs-identifier hs-var hs-var">left</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073926"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073940"><span class="hs-identifier hs-var">bs0</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span id="local-6989586621679073943"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073943"><span class="hs-identifier hs-var">bs1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ByteString
+</span><a href="#local-6989586621679073934"><span class="hs-identifier hs-var">recvCore</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073942"><span class="hs-identifier hs-var">left</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073944"><span class="annot"><span class="annottext">bs :: ByteString
+</span><a href="#local-6989586621679073944"><span class="hs-identifier hs-var hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073940"><span class="hs-identifier hs-var">bs0</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#append"><span class="hs-operator hs-var">`BS.append`</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073943"><span class="hs-identifier hs-var">bs1</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073944"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073926"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073944"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-keyword">else</span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+</span><a href="#local-6989586621679073936"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073944"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679073946"><span class="annot"><span class="annottext">eofE :: IOException
+</span><a href="#local-6989586621679073946"><span class="hs-identifier hs-var hs-var">eofE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IOErrorType
+-&gt; String -&gt; Maybe Handle -&gt; Maybe String -&gt; IOException
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html#mkIOError"><span class="hs-identifier hs-var">mkIOError</span></a></span><span> </span><span class="annot"><span class="annottext">IOErrorType
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Error.html#eofErrorType"><span class="hs-identifier hs-var">eofErrorType</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;connection terminated&quot;</span></span><span> </span><span class="annot"><span class="annottext">Maybe Handle
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679073934"><span class="annot"><span class="annottext">recvCore :: Int -&gt; IO ByteString
+</span><a href="#local-6989586621679073934"><span class="hs-identifier hs-var hs-var">recvCore</span></a></span></span><span> </span><span id="local-6989586621679073956"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073956"><span class="hs-identifier hs-var">len0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-106"></span><span>        </span><span id="local-6989586621679073957"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073957"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; Int -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">recv</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073925"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679073956"><span class="hs-identifier hs-var">len0</span></a></span><span>
+</span><span id="line-107"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073957"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-108"></span><span>            </span><span class="annot"><span class="annottext">IOException -&gt; IO ByteString
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">IOException
+</span><a href="#local-6989586621679073946"><span class="hs-identifier hs-var">eofE</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-keyword">else</span><span>
+</span><span id="line-110"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073957"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- | Send an encoded 'DNSMessage' datagram over UDP.  The message length is</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- implicit in the size of the UDP datagram.  With TCP you must use 'sendVC',</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- because TCP does not have message boundaries, and each message needs to be</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- prepended with an explicit length.  The socket must be explicitly connected</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- to the destination nameserver.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Network.DNS.IO.html#send"><span class="hs-identifier hs-type">send</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span id="send"><span class="annot"><span class="annottext">send :: Socket -&gt; ByteString -&gt; IO ()
+</span><a href="Network.DNS.IO.html#send"><span class="hs-identifier hs-var hs-var">send</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO Int -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Int -&gt; IO ()) -&gt; (ByteString -&gt; IO Int) -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span class="hs-special">)</span><span class="annot"><span class="annottext">((ByteString -&gt; IO Int) -&gt; ByteString -&gt; IO ())
+-&gt; (Socket -&gt; ByteString -&gt; IO Int)
+-&gt; Socket
+-&gt; ByteString
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; ByteString -&gt; IO Int
+</span><span class="hs-identifier hs-var">Socket.send</span></span><span>
+</span><span id="line-122"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#send"><span class="hs-pragma hs-type">send</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- | Send an encoded 'DNSMessage' datagram over UDP to a given address.  The</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- message length is implicit in the size of the UDP datagram.  With TCP you</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- must use 'sendVC', because TCP does not have message boundaries, and each</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- message needs to be prepended with an explicit length.</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--</span><span>
+</span><span id="line-129"></span><span class="annot"><a href="Network.DNS.IO.html#sendTo"><span class="hs-identifier hs-type">sendTo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SockAddr</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span id="sendTo"><span class="annot"><span class="annottext">sendTo :: Socket -&gt; ByteString -&gt; SockAddr -&gt; IO ()
+</span><a href="Network.DNS.IO.html#sendTo"><span class="hs-identifier hs-var hs-var">sendTo</span></a></span></span><span> </span><span id="local-6989586621679073961"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073961"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span id="local-6989586621679073962"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073962"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span id="local-6989586621679073963"><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679073963"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; ByteString -&gt; SockAddr -&gt; IO Int
+</span><span class="hs-identifier hs-var">Socket.sendTo</span></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679073961"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073962"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">SockAddr
+</span><a href="#local-6989586621679073963"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="annot"><span class="annottext">IO Int -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendTo"><span class="hs-pragma hs-type">sendTo</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- | Send a single encoded 'DNSMessage' over TCP.  An explicit length is</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- prepended to the encoded buffer before transmission.  If you want to</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- send a batch of multiple encoded messages back-to-back over a single</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- TCP connection, and then loop to collect the results, use 'encodeVC'</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- to prefix each message with a length, and then use 'sendAll' to send</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- a concatenated batch of the resulting encapsulated messages.</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--</span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Network.DNS.IO.html#sendVC"><span class="hs-identifier hs-type">sendVC</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span id="sendVC"><span class="annot"><span class="annottext">sendVC :: Socket -&gt; ByteString -&gt; IO ()
+</span><a href="Network.DNS.IO.html#sendVC"><span class="hs-identifier hs-var hs-var">sendVC</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; IO ())
+-&gt; (ByteString -&gt; ByteString) -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="Network.DNS.IO.html#encodeVC"><span class="hs-identifier hs-var">encodeVC</span></a></span><span class="hs-special">)</span><span class="annot"><span class="annottext">((ByteString -&gt; IO ()) -&gt; ByteString -&gt; IO ())
+-&gt; (Socket -&gt; ByteString -&gt; IO ()) -&gt; Socket -&gt; ByteString -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Socket -&gt; ByteString -&gt; IO ()
+</span><a href="Network.DNS.IO.html#sendAll"><span class="hs-identifier hs-var">sendAll</span></a></span><span>
+</span><span id="line-142"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendVC"><span class="hs-pragma hs-type">sendVC</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- | Send one or more encoded 'DNSMessage' buffers over TCP, each allready</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- encapsulated with an explicit length prefix (perhaps via 'encodeVC') and</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- then concatenated into a single buffer.  DO NOT use 'sendAll' with UDP.</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Network.DNS.IO.html#sendAll"><span class="hs-identifier hs-type">sendAll</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">BS.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span id="sendAll"><span class="annot"><span class="annottext">sendAll :: Socket -&gt; ByteString -&gt; IO ()
+</span><a href="Network.DNS.IO.html#sendAll"><span class="hs-identifier hs-var hs-var">sendAll</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; ByteString -&gt; IO ()
+</span><span class="hs-identifier hs-var">Socket.sendAll</span></span><span>
+</span><span id="line-150"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#sendAll"><span class="hs-pragma hs-type">sendAll</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- | The encoded 'DNSMessage' has the specified request ID.  The default values</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- of the RD, AD, CD and DO flag bits, as well as various EDNS features, can be</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- adjusted via the 'QueryControls' parameter.</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- The caller is responsible for generating the ID via a securely seeded</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- CSPRNG.</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--</span><span>
+</span><span id="line-159"></span><span class="annot"><a href="Network.DNS.IO.html#encodeQuestion"><span class="hs-identifier hs-type">encodeQuestion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identifier</span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Crypto random request id</span></span><span>
+</span><span id="line-160"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Question</span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Query name and type</span></span><span>
+</span><span id="line-161"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">QueryControls</span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Query flag and EDNS overrides</span></span><span>
+</span><span id="line-162"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-163"></span><span id="encodeQuestion"><span class="annot"><span class="annottext">encodeQuestion :: Word16 -&gt; Question -&gt; QueryControls -&gt; ByteString
+</span><a href="Network.DNS.IO.html#encodeQuestion"><span class="hs-identifier hs-var hs-var">encodeQuestion</span></a></span></span><span> </span><span id="local-6989586621679073968"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073968"><span class="hs-identifier hs-var">idt</span></a></span></span><span> </span><span id="local-6989586621679073969"><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073969"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679073970"><span class="annot"><span class="annottext">QueryControls
+</span><a href="#local-6989586621679073970"><span class="hs-identifier hs-var">ctls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSMessage -&gt; ByteString
+</span><a href="Network.DNS.Encode.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(DNSMessage -&gt; ByteString) -&gt; DNSMessage -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Question -&gt; QueryControls -&gt; DNSMessage
+</span><span class="hs-identifier hs-var">makeQuery</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073968"><span class="hs-identifier hs-var">idt</span></a></span><span> </span><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073969"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">QueryControls
+</span><a href="#local-6989586621679073970"><span class="hs-identifier hs-var">ctls</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | Encapsulate an encoded 'DNSMessage' buffer for transmission over a TCP</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- virtual circuit.  With TCP the buffer needs to start with an explicit</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- length (the length is implicit with UDP).</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Network.DNS.IO.html#encodeVC"><span class="hs-identifier hs-type">encodeVC</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-170"></span><span id="encodeVC"><span class="annot"><span class="annottext">encodeVC :: ByteString -&gt; ByteString
+</span><a href="Network.DNS.IO.html#encodeVC"><span class="hs-identifier hs-var hs-var">encodeVC</span></a></span></span><span> </span><span id="local-6989586621679073972"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073972"><span class="hs-identifier hs-var">legacyQuery</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679073977"><span class="annot"><span class="annottext">len :: ByteString
+</span><a href="#local-6989586621679073977"><span class="hs-identifier hs-var hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LBS.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (Builder -&gt; ByteString) -&gt; Builder -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#toLazyByteString"><span class="hs-identifier hs-var">BB.toLazyByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; ByteString) -&gt; Builder -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int16 -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#int16BE"><span class="hs-identifier hs-var">BB.int16BE</span></a></span><span> </span><span class="annot"><span class="annottext">(Int16 -&gt; Builder) -&gt; Int16 -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int16) -&gt; Int -&gt; Int16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073972"><span class="hs-identifier hs-var">legacyQuery</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073977"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073972"><span class="hs-identifier hs-var">legacyQuery</span></a></span><span>
+</span><span id="line-173"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Network.DNS.IO.html#encodeVC"><span class="hs-pragma hs-type">encodeVC</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- | Compose a response with a single IPv4 RRset.  If the query</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- had an EDNS pseudo-header, a suitable EDNS pseudo-header must</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- be added to the response message, or else a 'FormatErr' response</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- must be sent.  The response TTL defaults to 300 seconds, and</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- should be updated (to the same value across all the RRs) if some</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- other TTL value is more appropriate.</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--</span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Network.DNS.IO.html#responseA"><span class="hs-identifier hs-type">responseA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identifier</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Question</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv4</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span>
+</span><span id="line-185"></span><span id="responseA"><span class="annot"><span class="annottext">responseA :: Word16 -&gt; Question -&gt; [IPv4] -&gt; DNSMessage
+</span><a href="Network.DNS.IO.html#responseA"><span class="hs-identifier hs-var hs-var">responseA</span></a></span></span><span> </span><span id="local-6989586621679073982"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073982"><span class="hs-identifier hs-var">idt</span></a></span></span><span> </span><span id="local-6989586621679073983"><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073983"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679073984"><span class="annot"><span class="annottext">[IPv4]
+</span><a href="#local-6989586621679073984"><span class="hs-identifier hs-var">ips</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Question -&gt; Answers -&gt; DNSMessage
+</span><span class="hs-identifier hs-var">makeResponse</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073982"><span class="hs-identifier hs-var">idt</span></a></span><span> </span><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073983"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">Answers
+</span><a href="#local-6989586621679073986"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-187"></span><span>    </span><span id="local-6989586621679073987"><span class="annot"><span class="annottext">dom :: ByteString
+</span><a href="#local-6989586621679073987"><span class="hs-identifier hs-var hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Question -&gt; ByteString
+</span><span class="hs-identifier hs-var">qname</span></span><span> </span><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073983"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span id="local-6989586621679073986"><span class="annot"><span class="annottext">as :: Answers
+</span><a href="#local-6989586621679073986"><span class="hs-keyword hs-var hs-var">as</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; TYPE -&gt; Word16 -&gt; TTL -&gt; RData -&gt; ResourceRecord
+</span><span class="hs-identifier hs-var">ResourceRecord</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679073987"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">A</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-identifier hs-var">classIN</span></span><span> </span><span class="annot"><span class="annottext">TTL
+</span><span class="hs-number">300</span></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; ResourceRecord)
+-&gt; (IPv4 -&gt; RData) -&gt; IPv4 -&gt; ResourceRecord
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IPv4 -&gt; RData
+</span><span class="hs-identifier hs-var">RD_A</span></span><span> </span><span class="annot"><span class="annottext">(IPv4 -&gt; ResourceRecord) -&gt; [IPv4] -&gt; Answers
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[IPv4]
+</span><a href="#local-6989586621679073984"><span class="hs-identifier hs-var">ips</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- | Compose a response with a single IPv6 RRset.  If the query</span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- had an EDNS pseudo-header, a suitable EDNS pseudo-header must</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- be added to the response message, or else a 'FormatErr' response</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- must be sent.  The response TTL defaults to 300 seconds, and</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- should be updated (to the same value across all the RRs) if some</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- other TTL value is more appropriate.</span><span>
+</span><span id="line-196"></span><span class="hs-comment">--</span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Network.DNS.IO.html#responseAAAA"><span class="hs-identifier hs-type">responseAAAA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identifier</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Question</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv6</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSMessage</span></span><span>
+</span><span id="line-198"></span><span id="responseAAAA"><span class="annot"><span class="annottext">responseAAAA :: Word16 -&gt; Question -&gt; [IPv6] -&gt; DNSMessage
+</span><a href="Network.DNS.IO.html#responseAAAA"><span class="hs-identifier hs-var hs-var">responseAAAA</span></a></span></span><span> </span><span id="local-6989586621679073997"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073997"><span class="hs-identifier hs-var">idt</span></a></span></span><span> </span><span id="local-6989586621679073998"><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073998"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span id="local-6989586621679073999"><span class="annot"><span class="annottext">[IPv6]
+</span><a href="#local-6989586621679073999"><span class="hs-identifier hs-var">ips</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Question -&gt; Answers -&gt; DNSMessage
+</span><span class="hs-identifier hs-var">makeResponse</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679073997"><span class="hs-identifier hs-var">idt</span></a></span><span> </span><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073998"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">Answers
+</span><a href="#local-6989586621679074000"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-200"></span><span>    </span><span id="local-6989586621679074001"><span class="annot"><span class="annottext">dom :: ByteString
+</span><a href="#local-6989586621679074001"><span class="hs-identifier hs-var hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Question -&gt; ByteString
+</span><span class="hs-identifier hs-var">qname</span></span><span> </span><span class="annot"><span class="annottext">Question
+</span><a href="#local-6989586621679073998"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span id="local-6989586621679074000"><span class="annot"><span class="annottext">as :: Answers
+</span><a href="#local-6989586621679074000"><span class="hs-keyword hs-var hs-var">as</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; TYPE -&gt; Word16 -&gt; TTL -&gt; RData -&gt; ResourceRecord
+</span><span class="hs-identifier hs-var">ResourceRecord</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679074001"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">AAAA</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-identifier hs-var">classIN</span></span><span> </span><span class="annot"><span class="annottext">TTL
+</span><span class="hs-number">300</span></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; ResourceRecord)
+-&gt; (IPv6 -&gt; RData) -&gt; IPv6 -&gt; ResourceRecord
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IPv6 -&gt; RData
+</span><span class="hs-identifier hs-var">RD_AAAA</span></span><span> </span><span class="annot"><span class="annottext">(IPv6 -&gt; ResourceRecord) -&gt; [IPv6] -&gt; Answers
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[IPv6]
+</span><a href="#local-6989586621679073999"><span class="hs-identifier hs-var">ips</span></a></span><span>
+</span><span id="line-202"></span></pre></body></html>

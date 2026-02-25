@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Easy to use interface for SQLite3 using the @direct-sqlite@ library.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- This can be useful for your toy, hobby projects.</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Database.Sqlite.Easy</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Connect to the database</span></span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><span class="hs-comment">-- $connecting</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#withDb"><span class="hs-identifier">withDb</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#withDatabase"><span class="hs-identifier">withDatabase</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#openWith"><span class="hs-identifier">openWith</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#ConnectionString"><span class="hs-identifier">ConnectionString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Database</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Pooling connections</span></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- $pooling</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Pool</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#createSqlitePool"><span class="hs-identifier">createSqlitePool</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#createSqlitePoolWith"><span class="hs-identifier">createSqlitePoolWith</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#withPool"><span class="hs-identifier">withPool</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withResource</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">destroyAllResources</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Running statements and queries</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- $running</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#run"><span class="hs-identifier">run</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#runWith"><span class="hs-identifier">runWith</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#runWithMany"><span class="hs-identifier">runWithMany</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQLite"><span class="hs-identifier">SQLite</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier">fromString</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- ** Database types</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#SQL"><span class="hs-identifier">SQL</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SQLData</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SQLError</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ColumnType</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Running transactions</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- $transactions</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#transaction"><span class="hs-identifier">transaction</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#rollback"><span class="hs-identifier">rollback</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html#rollbackAll"><span class="hs-identifier">rollbackAll</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- * Migrations</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="hs-comment">-- $migrations</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Migrant</span></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-comment">-- * Fun types to export</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier">Int64</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Suggestions</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="hs-comment">-- $suggestions</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Pool</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pool</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">destroyAllResources</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withResource</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Database.SQLite3</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">SQLData</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Database</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">SQLError</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ColumnType</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Internal.html"><span class="hs-identifier">Database.Sqlite.Easy.Internal</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Database.Sqlite.Easy.Migrant.html"><span class="hs-identifier">Database.Sqlite.Easy.Migrant</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Migrant</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Database.Migrant</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Migrant</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">migrate</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Int.html#Int64"><span class="hs-identifier">Int64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><span class="hs-comment">{- $connecting
+
+The easiest way to run some statements on the database is using the
+'withDb' function. 'withDb' expects a connection string
+(such as a file with flags or @:memory:@, see sqlite3 docs:
+&lt;https://www.sqlite.org/c3ref/open.html&gt;), and SQLite action(s),
+such as queries and statements.
+It will open the connection to the database and run the SQLite actions
+on that database.
+
+=== Example
+
+&gt; do
+&gt;   results &lt;- withDb &quot;:memory:&quot; (run &quot;select 1 + 1&quot;)
+&gt;   case results of
+&gt;     [[SQLInteger n]] -&gt; print n
+&gt;     _ -&gt; error (&quot;Got unexpected results: &quot; &lt;&gt; show results)
+
+Note: use 'Data.String.fromString' to convert a 'String' to a 'ConnectionString'
+      or to 'SQL' if you prefer not to use @OverloadedStrings@.
+-}</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">{- $pooling
+
+An alternative to 'withDb' is to create a resource 'Pool'.
+A resource pool is an abstraction for automatically managing connections
+to a resource (such as a database).
+
+We can use the 'createSqlitePool' function to create a @Pool 'Database'@
+and pass that around until you are ready to use the database.
+
+We can use 'withPool' like we did with 'withDb' but passing a @Pool Database@
+instead of a 'ConnectionString'.
+
+=== Example
+
+&gt; do
+&gt;   pool &lt;- createSqlitePool &quot;:memory:&quot;
+&gt;   results &lt;- withPool pool (run &quot;select 1 + 1&quot;)
+&gt;   case results of
+&gt;     [[SQLInteger n]] -&gt; print n
+&gt;     _ -&gt; error (&quot;Got unexpected results: &quot; &lt;&gt; show results)
+
+Note: a resource pool disconnects automatically after some time,
+so if you are using @:memory:@ as your database, you will lose your
+data when the connection closes!
+
+-}</span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><span class="hs-comment">{- $running
+
+To execute a statement or query, use the 'run' or 'runWith' functions.
+
+'run' is used to execute a statement or query and fetch the results.
+
+'runWith' is similar to 'run', but lets us place parameters instead of
+places where we write @?@ in the query.
+If you want to pass user data, use 'runWith' to avoid SQL injection!
+
+The list of lists of SQLData returned from these functions are
+rows of columns of sqlite values. Sqlite only has a few possible
+values: integers, floating-point numbers, text, bytes and null.
+The 'SQLData' type encodes these options.
+
+=== Example
+
+&gt; do
+&gt;   results &lt;- withDb &quot;:memory:&quot; $ do
+&gt;     [] &lt;- run &quot;CREATE TABLE characters(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)&quot;
+&gt;     [] &lt;- run &quot;INSERT INTO characters(name) VALUES ('Scanlan'),('Nott'),('Fresh Cut Grass')&quot;
+&gt;     runWith &quot;SELECT * FROM characters WHERE id = ?&quot; [SQLInteger 2]
+&gt;
+&gt;   for_ results $ \case
+&gt;     [SQLInteger id', SQLText name] -&gt; putStrLn (show id' &lt;&gt; &quot;, &quot; &lt;&gt; show name)
+&gt;     row -&gt; hPutStrLn stderr (&quot;Unexpected row: &quot; &lt;&gt; show row)
+
+-}</span></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><span class="hs-comment">{- $transactions
+
+If you'd like to run multiple statements and queries atomically, use 'transaction'.
+
+=== Example
+
+&gt; withDb &quot;:memory:&quot; $ do
+&gt;   ( transaction $ do
+&gt;       [] &lt;- run &quot;CREATE TABLE t1(id INTEGER, name TEXT)&quot;
+&gt;       [] &lt;- run &quot;CREATE TABLE t2(id INTEGER, name TEXT)&quot;
+&gt;       [] &lt;- run &quot;CREATE TABLE t3id INTEGER, name TEXT)&quot; -- whoops
+&gt;       [] &lt;- run &quot;CREATE TABLE t4(id INTEGER, name TEXT)&quot;
+&gt;       pure ()
+&gt;     ) `catch` (\(SomeException e) -&gt; liftIO $ print (&quot;Transaction rolled back&quot;, e))
+&gt;   run &quot;select * from t1&quot; -- throws an exception (table not found) because the transaction was rolled back
+
+You can also decide to rollback the current transaction yourself by supplying the result value
+with 'rollback', or rollback all transactions with 'rollbackAll'.
+
+Note, catching an exception from within 'SQLite' as was done in the previous
+snippet is not recommended because it can mix with rollback code,
+but it can be done using the 'unliftio' package.
+
+-}</span></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="annot"><span class="hs-comment">{- $migrations
+
+Database migrations are a way to setup a database with the relevant information
+(such as table structure) needed for the application to start, and update it
+from a possible older version to a newer version (or even go the other direction).
+
+Migrations are a list of statements we run in order to upgrade or downgrade a database.
+We use the @migrant@ library to semi-automate this process - we write the upgrade
+and downgrade steps, and it runs them. For more information, consult the @migrant@
+documentation: &lt;https://github.com/tdammers/migrant&gt;.
+
+To create a migration we need to write the following things:
+
+1) A list of migration names
+
+&gt; migrations :: [MigrationName]
+&gt; migrations =
+&gt;   [ &quot;user-table&quot;
+&gt;   , &quot;article-table&quot;
+&gt;   ]
+
+2) Migration up steps - a mapping from migration name to what to do.
+
+&gt; migrateUp :: MigrationName -&gt; SQLite ()
+&gt; migrateUp = \case
+&gt;   &quot;user-table&quot; -&gt;
+&gt;     void (run &quot;CREATE TABLE user(id INTEGER, name TEXT)&quot;)
+&gt;   &quot;article-table&quot; -&gt;
+&gt;     void (run &quot;CREATE TABLE article(id integer, title TEXT, content TEXT, author_id integer)&quot;)
+&gt;   unknown -&gt;
+&gt;     error (&quot;Unexpected migration: &quot; &lt;&gt; show unknown)
+
+3) Migration down steps
+
+&gt; migrateDown :: MigrationName -&gt; SQLite ()
+&gt; migrateDown = \case
+&gt;   &quot;user-table&quot; -&gt;
+&gt;     void (run &quot;DROP TABLE user&quot;)
+&gt;   &quot;article-table&quot; -&gt;
+&gt;     void (run &quot;DROP TABLE article&quot;)
+&gt;   unknown -&gt;
+&gt;     error (&quot;Unexpected migration: &quot; &lt;&gt; show unknown)
+
+After doing that, we can run a migration with the 'migrate' function:
+
+&gt; runMigrations :: SQLite ()
+&gt; runMigrations = migrate migrations migrateUp migrateDown
+
+-}</span></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="annot"><span class="hs-comment">{- $suggestions
+
+A suggestion for the architecture of your database interactions: use the handle pattern!
+
+=== 1. Create a type for your API
+
+Think about what actions you want to perform on your database:
+
+For example:
+
+&gt; data DB
+&gt;   = DB
+&gt;     { getPost :: Id -&gt; IO (Id, Post)
+&gt;     , getPosts :: IO [(Id, Post)]
+&gt;     , insertPost :: Post -&gt; IO Id
+&gt;     , deletePostById :: Id -&gt; IO ()
+&gt;     }
+
+Note how we don't mention the database connection here!
+
+=== 2. Create a smart constructor
+
+This function should:
+
+1. Create a resource pool with the database
+2. Run the database migrations
+3. Return a @DB@ such that each function in the API is a closure over the pool
+
+For example:
+
+&gt; mkDB :: ConnectionString -&gt; IO DB
+&gt; mkDB connectionString = do
+&gt;   pool &lt;- createSqlitePool connectionString
+&gt;   withPool pool runMigrations
+&gt;   pure $ DB
+&gt;     { getPost = withPool pool . getPostFromDb
+&gt;     , getPosts = withPool pool getPostsFromDb
+&gt;     , insertPost = withPool pool . insertPostToDb
+&gt;     , deletePostById = withPool pool . deletePostByIdFromDb
+&gt;     }
+
+Where:
+
+&gt; getPostFromDb :: Id -&gt; SQLite (Id, Post)
+
+&gt; insertPostToDb :: Post -&gt; SQLite Id
+
+and so on.
+
+=== 3. Use the handle from your application code
+
+When you start the application, run @mkDB@ and get a handle, and pass it around
+(or use @ReaderT@). When you need to run a database command, call a field from @DB@:
+
+&gt; -- A page for a specific post
+&gt; [ Twain.get &quot;/post/:id&quot; $ do
+&gt;   postId &lt;- Twain.param &quot;id&quot;
+&gt;   post &lt;- liftIO $ getPost db postId -- (*)
+&gt;   Twain.send (displayPost post)
+&gt; ]
+
+Or, with @OverloadedRecordDot@,
+
+&gt;   post &lt;- liftIO $ db.getPost postId
+
+== Complete Example
+
+Visit this link for a more complete example:
+&lt;https://github.com/soupi/sqlite-easy-example-todo&gt;
+-}</span></span><span>
+</span><span id="line-284"></span></pre></body></html>

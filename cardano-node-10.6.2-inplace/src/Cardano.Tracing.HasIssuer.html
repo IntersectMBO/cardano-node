@@ -1,0 +1,258 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracing.HasIssuer</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier">BlockIssuerVerificationKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier">HasIssuer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#StakePoolVerificationKey"><span class="hs-identifier">StakePoolVerificationKey</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier">serialiseToRawBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#verificationKeyHash"><span class="hs-identifier">verificationKeyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.html"><span class="hs-identifier">Cardano.Api.Byron</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Key.html#ByronVerificationKey"><span class="hs-identifier">ByronVerificationKey</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Block.html"><span class="hs-identifier">Cardano.Chain.Block</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0-400a8be766b9aa8d53386c1888a7ac983e644a77fd4883db1c63d6ba7ec3a069/share/doc/html/src/Cardano.Ledger.Shelley.API.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Shelley</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0-51a53a6a1707cf8162e44e1646183a8736671db0cbda8d646401f8c7623a9ed6/share/doc/html/src/Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Ledger.Block.html"><span class="hs-identifier">Ouroboros.Consensus.Byron.Ledger.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Ledger.Block.html#ByronBlock"><span class="hs-identifier">ByronBlock</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier">Header</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.html"><span class="hs-identifier">Ouroboros.Consensus.HardFork.Combinator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.Basics.html#HardForkBlock"><span class="hs-identifier">HardForkBlock</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier">Header</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>                   </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#OneEraHeader"><span class="hs-identifier">OneEraHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Ledger.Block.html"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Ledger.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier">Header</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Ledger.Block.html#ShelleyBlock"><span class="hs-identifier">ShelleyBlock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Protocol.Abstract.html"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Protocol.Abstract</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.html"><span class="hs-identifier">Data.SOP</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | Block issuer verification key hash.</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="BlockIssuerVerificationKeyHash"><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier hs-var">BlockIssuerVerificationKeyHash</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BlockIssuerVerificationKeyHash"><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier hs-var">BlockIssuerVerificationKeyHash</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Serialized block issuer verification key hash.</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NoBlockIssuer"><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#NoBlockIssuer"><span class="hs-identifier hs-var">NoBlockIssuer</span></a></span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- ^ There is no block issuer.</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-comment">-- For example, this could be relevant for epoch boundary blocks (EBBs),</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-comment">-- genesis blocks, etc.</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681680598"><span id="local-6989586621681680602"><span class="annot"><span class="annottext">BlockIssuerVerificationKeyHash
+-&gt; BlockIssuerVerificationKeyHash -&gt; Bool
+(BlockIssuerVerificationKeyHash
+ -&gt; BlockIssuerVerificationKeyHash -&gt; Bool)
+-&gt; (BlockIssuerVerificationKeyHash
+    -&gt; BlockIssuerVerificationKeyHash -&gt; Bool)
+-&gt; Eq BlockIssuerVerificationKeyHash
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BlockIssuerVerificationKeyHash
+-&gt; BlockIssuerVerificationKeyHash -&gt; Bool
+== :: BlockIssuerVerificationKeyHash
+-&gt; BlockIssuerVerificationKeyHash -&gt; Bool
+$c/= :: BlockIssuerVerificationKeyHash
+-&gt; BlockIssuerVerificationKeyHash -&gt; Bool
+/= :: BlockIssuerVerificationKeyHash
+-&gt; BlockIssuerVerificationKeyHash -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681680607"><span id="local-6989586621681680613"><span id="local-6989586621681680617"><span class="annot"><span class="annottext">Int -&gt; BlockIssuerVerificationKeyHash -&gt; ShowS
+[BlockIssuerVerificationKeyHash] -&gt; ShowS
+BlockIssuerVerificationKeyHash -&gt; String
+(Int -&gt; BlockIssuerVerificationKeyHash -&gt; ShowS)
+-&gt; (BlockIssuerVerificationKeyHash -&gt; String)
+-&gt; ([BlockIssuerVerificationKeyHash] -&gt; ShowS)
+-&gt; Show BlockIssuerVerificationKeyHash
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BlockIssuerVerificationKeyHash -&gt; ShowS
+showsPrec :: Int -&gt; BlockIssuerVerificationKeyHash -&gt; ShowS
+$cshow :: BlockIssuerVerificationKeyHash -&gt; String
+show :: BlockIssuerVerificationKeyHash -&gt; String
+$cshowList :: [BlockIssuerVerificationKeyHash] -&gt; ShowS
+showList :: [BlockIssuerVerificationKeyHash] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- | Get the block issuer verification key hash from a block header.</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">class</span><span> </span><span id="HasIssuer"><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-var">HasIssuer</span></a></span></span><span> </span><span id="local-6989586621681680509"><span class="annot"><a href="#local-6989586621681680509"><span class="hs-identifier hs-type">blk</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-comment">-- | Given a block header, return the serialized block issuer verification</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-comment">-- key hash.</span><span>
+</span><span id="line-45"></span><span>  </span><span id="getIssuerVerificationKeyHash"><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#getIssuerVerificationKeyHash"><span class="hs-identifier hs-type">getIssuerVerificationKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Block.Abstract.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680509"><span class="hs-identifier hs-type">blk</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier hs-type">BlockIssuerVerificationKeyHash</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-type">HasIssuer</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Ledger.Block.html#ByronBlock"><span class="hs-identifier hs-type">ByronBlock</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621681680628"><span class="annot"><span class="annottext">getIssuerVerificationKeyHash :: Header ByronBlock -&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#getIssuerVerificationKeyHash"><span class="hs-identifier hs-var hs-var hs-var hs-var">getIssuerVerificationKeyHash</span></a></span></span><span> </span><span id="local-6989586621681680629"><span class="annot"><span class="annottext">Header ByronBlock
+</span><a href="#local-6989586621681680629"><span class="hs-identifier hs-var">byronBlkHdr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Header ByronBlock -&gt; ABlockOrBoundaryHdr ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Byron.Ledger.Block.html#byronHeaderRaw"><span class="hs-identifier hs-var">byronHeaderRaw</span></a></span><span> </span><span class="annot"><span class="annottext">Header ByronBlock
+</span><a href="#local-6989586621681680629"><span class="hs-identifier hs-var">byronBlkHdr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Block.Block.html#ABOBBlockHdr"><span class="hs-identifier hs-type">Byron.ABOBBlockHdr</span></a></span><span> </span><span id="local-6989586621681680632"><span class="annot"><span class="annottext">AHeader ByteString
+</span><a href="#local-6989586621681680632"><span class="hs-identifier hs-var">hdr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">ByteString -&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier hs-var">BlockIssuerVerificationKeyHash</span></a></span><span>
+</span><span id="line-52"></span><span>          </span><span class="annot"><span class="annottext">(ByteString -&gt; BlockIssuerVerificationKeyHash)
+-&gt; (VerificationKey -&gt; ByteString)
+-&gt; VerificationKey
+-&gt; BlockIssuerVerificationKeyHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ByronKey -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="annot"><span class="annottext">(Hash ByronKey -&gt; ByteString)
+-&gt; (VerificationKey -&gt; Hash ByronKey)
+-&gt; VerificationKey
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VerificationKey ByronKey -&gt; Hash ByronKey
+forall keyrole.
+Key keyrole =&gt;
+VerificationKey keyrole -&gt; Hash keyrole
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#verificationKeyHash"><span class="hs-identifier hs-var">verificationKeyHash</span></a></span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><span class="annottext">(VerificationKey ByronKey -&gt; Hash ByronKey)
+-&gt; (VerificationKey -&gt; VerificationKey ByronKey)
+-&gt; VerificationKey
+-&gt; Hash ByronKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; VerificationKey ByronKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Byron.Internal.Key.html#ByronVerificationKey"><span class="hs-identifier hs-var">ByronVerificationKey</span></a></span><span>
+</span><span id="line-55"></span><span>          </span><span class="annot"><span class="annottext">(VerificationKey -&gt; BlockIssuerVerificationKeyHash)
+-&gt; VerificationKey -&gt; BlockIssuerVerificationKeyHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AHeader ByteString -&gt; VerificationKey
+forall a. AHeader a -&gt; VerificationKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Block.Header.html#headerIssuer"><span class="hs-identifier hs-var">Byron.headerIssuer</span></a></span><span> </span><span class="annot"><span class="annottext">AHeader ByteString
+</span><a href="#local-6989586621681680632"><span class="hs-identifier hs-var">hdr</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-byron-1.2.0.0-fd00d145b0e400bda7885e803519ceb09a29e73ace5dfc8a81fec914f95eb1f6/share/doc/html/src/Cardano.Chain.Block.Block.html#ABOBBoundaryHdr"><span class="hs-identifier hs-type">Byron.ABOBBoundaryHdr</span></a></span><span> </span><span class="annot"><span class="annottext">ABoundaryHeader ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#NoBlockIssuer"><span class="hs-identifier hs-var">NoBlockIssuer</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621681680534"><span id="local-6989586621681680535"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Protocol.Abstract.html#ProtoCrypto"><span class="hs-identifier hs-type">ProtoCrypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680534"><span class="hs-identifier hs-type">protocol</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#~"><span class="hs-operator hs-type">~</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Protocol.Abstract.html#ProtocolHeaderSupportsProtocol"><span class="hs-identifier hs-type">ProtocolHeaderSupportsProtocol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680534"><span class="hs-identifier hs-type">protocol</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-type">HasIssuer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Ledger.Block.html#ShelleyBlock"><span class="hs-identifier hs-type">ShelleyBlock</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680534"><span class="hs-identifier hs-type">protocol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680535"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621681680645"><span class="annot"><span class="annottext">getIssuerVerificationKeyHash :: Header (ShelleyBlock protocol era)
+-&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#getIssuerVerificationKeyHash"><span class="hs-identifier hs-var hs-var hs-var hs-var">getIssuerVerificationKeyHash</span></a></span></span><span> </span><span id="local-6989586621681680646"><span class="annot"><span class="annottext">Header (ShelleyBlock protocol era)
+</span><a href="#local-6989586621681680646"><span class="hs-identifier hs-var">shelleyBlkHdr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#BlockIssuerVerificationKeyHash"><span class="hs-identifier hs-var">BlockIssuerVerificationKeyHash</span></a></span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">(ByteString -&gt; BlockIssuerVerificationKeyHash)
+-&gt; (VKey 'StakePool -&gt; ByteString)
+-&gt; VKey 'StakePool
+-&gt; BlockIssuerVerificationKeyHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Hash StakePoolKey -&gt; ByteString
+forall a. SerialiseAsRawBytes a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var">serialiseToRawBytes</span></a></span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><span class="annottext">(Hash StakePoolKey -&gt; ByteString)
+-&gt; (VKey 'StakePool -&gt; Hash StakePoolKey)
+-&gt; VKey 'StakePool
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VerificationKey StakePoolKey -&gt; Hash StakePoolKey
+forall keyrole.
+Key keyrole =&gt;
+VerificationKey keyrole -&gt; Hash keyrole
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#verificationKeyHash"><span class="hs-identifier hs-var">verificationKeyHash</span></a></span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">(VerificationKey StakePoolKey -&gt; Hash StakePoolKey)
+-&gt; (VKey 'StakePool -&gt; VerificationKey StakePoolKey)
+-&gt; VKey 'StakePool
+-&gt; Hash StakePoolKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'StakePool -&gt; VerificationKey StakePoolKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#StakePoolVerificationKey"><span class="hs-identifier hs-var">StakePoolVerificationKey</span></a></span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">(VKey 'StakePool -&gt; BlockIssuerVerificationKeyHash)
+-&gt; VKey 'StakePool -&gt; BlockIssuerVerificationKeyHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer -&gt; VKey 'StakePool
+</span><a href="#local-6989586621681680647"><span class="hs-identifier hs-var">toStakePoolKey</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer
+</span><a href="#local-6989586621681680648"><span class="hs-identifier hs-var">issuer</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-comment">-- We don't support a &quot;block issuer&quot; key role in @cardano-api@, so we'll</span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-comment">-- just convert it to a stake pool key.</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><a href="#local-6989586621681680647"><span class="hs-identifier hs-type">toStakePoolKey</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">Shelley.VKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#BlockIssuer"><span class="hs-identifier hs-type">Shelley.BlockIssuer</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">Shelley.VKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">Shelley.StakePool</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621681680647"><span class="annot"><span class="annottext">toStakePoolKey :: VKey 'BlockIssuer -&gt; VKey 'StakePool
+</span><a href="#local-6989586621681680647"><span class="hs-identifier hs-var hs-var">toStakePoolKey</span></a></span></span><span> </span><span id="local-6989586621681680649"><span class="annot"><span class="annottext">VKey 'BlockIssuer
+</span><a href="#local-6989586621681680649"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN -&gt; VKey 'StakePool
+forall (kd :: KeyRole). VerKeyDSIGN DSIGN -&gt; VKey kd
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">Shelley.VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VKey 'BlockIssuer -&gt; VerKeyDSIGN DSIGN
+forall (kd :: KeyRole). VKey kd -&gt; VerKeyDSIGN DSIGN
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#unVKey"><span class="hs-identifier hs-var">Shelley.unVKey</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer
+</span><a href="#local-6989586621681680649"><span class="hs-identifier hs-var">vk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>      </span><span id="local-6989586621681680648"><span class="annot"><span class="annottext">issuer :: VKey 'BlockIssuer
+</span><a href="#local-6989586621681680648"><span class="hs-identifier hs-var hs-var">issuer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyProtocolHeader protocol -&gt; VKey 'BlockIssuer
+forall proto.
+ProtocolHeaderSupportsProtocol proto =&gt;
+ShelleyProtocolHeader proto -&gt; VKey 'BlockIssuer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Protocol.Abstract.html#pHeaderIssuer"><span class="hs-identifier hs-var">pHeaderIssuer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Header (ShelleyBlock protocol era)
+-&gt; ShelleyProtocolHeader protocol
+forall proto era.
+Header (ShelleyBlock proto era) -&gt; ShelleyProtocolHeader proto
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-cardano-0.26.0.3-c1299e61dbe35139b3ab12f6ad87e7499578781d5f6ceb6d61879b70c5dc5065/share/doc/html/src/Ouroboros.Consensus.Shelley.Ledger.Block.html#shelleyHeaderRaw"><span class="hs-identifier hs-var">shelleyHeaderRaw</span></a></span><span> </span><span class="annot"><span class="annottext">Header (ShelleyBlock protocol era)
+</span><a href="#local-6989586621681680646"><span class="hs-identifier hs-var">shelleyBlkHdr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681680552"><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.Constraint.html#All"><span class="hs-identifier hs-type">All</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-type">HasIssuer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680552"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-type">HasIssuer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.Basics.html#HardForkBlock"><span class="hs-identifier hs-type">HardForkBlock</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681680552"><span class="hs-identifier hs-type">xs</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621681680665"><span class="annot"><span class="annottext">getIssuerVerificationKeyHash :: Header (HardForkBlock xs) -&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#getIssuerVerificationKeyHash"><span class="hs-identifier hs-var hs-var hs-var hs-var">getIssuerVerificationKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">NS (K BlockIssuerVerificationKeyHash) xs
+-&gt; CollapseTo NS BlockIssuerVerificationKeyHash
+NS (K BlockIssuerVerificationKeyHash) xs
+-&gt; BlockIssuerVerificationKeyHash
+forall (xs :: [*]) a.
+SListIN NS xs =&gt;
+NS (K a) xs -&gt; CollapseTo NS a
+forall k l (h :: (k -&gt; *) -&gt; l -&gt; *) (xs :: l) a.
+(HCollapse h, SListIN h xs) =&gt;
+h (K a) xs -&gt; CollapseTo h a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.Classes.html#hcollapse"><span class="hs-identifier hs-var">hcollapse</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">(NS (K BlockIssuerVerificationKeyHash) xs
+ -&gt; BlockIssuerVerificationKeyHash)
+-&gt; (Header (HardForkBlock xs)
+    -&gt; NS (K BlockIssuerVerificationKeyHash) xs)
+-&gt; Header (HardForkBlock xs)
+-&gt; BlockIssuerVerificationKeyHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy HasIssuer
+-&gt; (forall a.
+    HasIssuer a =&gt;
+    Header a -&gt; K BlockIssuerVerificationKeyHash a)
+-&gt; NS Header xs
+-&gt; NS (K BlockIssuerVerificationKeyHash) xs
+forall {k} {l} (h :: (k -&gt; *) -&gt; l -&gt; *) (c :: k -&gt; Constraint)
+       (xs :: l) (proxy :: (k -&gt; Constraint) -&gt; *) (f :: k -&gt; *)
+       (f' :: k -&gt; *).
+(AllN (Prod h) c xs, HAp h) =&gt;
+proxy c
+-&gt; (forall (a :: k). c a =&gt; f a -&gt; f' a) -&gt; h f xs -&gt; h f' xs
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.Classes.html#hcmap"><span class="hs-identifier hs-var">hcmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: * -&gt; Constraint). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Tracing.HasIssuer.html#HasIssuer"><span class="hs-identifier hs-type">HasIssuer</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockIssuerVerificationKeyHash
+-&gt; K BlockIssuerVerificationKeyHash a
+forall k a (b :: k). a -&gt; K a b
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#K"><span class="hs-identifier hs-var">K</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockIssuerVerificationKeyHash
+ -&gt; K BlockIssuerVerificationKeyHash a)
+-&gt; (Header a -&gt; BlockIssuerVerificationKeyHash)
+-&gt; Header a
+-&gt; K BlockIssuerVerificationKeyHash a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Header a -&gt; BlockIssuerVerificationKeyHash
+forall blk.
+HasIssuer blk =&gt;
+Header blk -&gt; BlockIssuerVerificationKeyHash
+</span><a href="Cardano.Tracing.HasIssuer.html#getIssuerVerificationKeyHash"><span class="hs-identifier hs-var">getIssuerVerificationKeyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">(NS Header xs -&gt; NS (K BlockIssuerVerificationKeyHash) xs)
+-&gt; (Header (HardForkBlock xs) -&gt; NS Header xs)
+-&gt; Header (HardForkBlock xs)
+-&gt; NS (K BlockIssuerVerificationKeyHash) xs
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">OneEraHeader xs -&gt; NS Header xs
+forall (xs :: [*]). OneEraHeader xs -&gt; NS Header xs
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#getOneEraHeader"><span class="hs-identifier hs-var">getOneEraHeader</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">(OneEraHeader xs -&gt; NS Header xs)
+-&gt; (Header (HardForkBlock xs) -&gt; OneEraHeader xs)
+-&gt; Header (HardForkBlock xs)
+-&gt; NS Header xs
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Header (HardForkBlock xs) -&gt; OneEraHeader xs
+forall (xs :: [*]). Header (HardForkBlock xs) -&gt; OneEraHeader xs
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.Block.html#getHardForkHeader"><span class="hs-identifier hs-var">getHardForkHeader</span></a></span><span>
+</span><span id="line-84"></span></pre></body></html>

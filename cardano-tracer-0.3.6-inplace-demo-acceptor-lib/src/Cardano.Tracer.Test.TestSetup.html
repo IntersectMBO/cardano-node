@@ -1,0 +1,451 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">{- HLINT ignore &quot;Functor law&quot; -}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Test.TestSetup</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html"><span class="hs-identifier">Cardano.Tracer.Test.TestSetup</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html"><span class="hs-identifier">Ouroboros.Network.Magic</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html"><span class="hs-identifier">Ouroboros.Network.Magic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier">NetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier">join</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html"><span class="hs-identifier">Data.Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator">(&lt;&amp;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.html"><span class="hs-identifier">Options.Applicative</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/r854w7xj7lpk6328gfh7baxr7fbc52f3-generic-data-lib-generic-data-1.1.0.2-haddock-doc/share/doc/generic-data/html/src/Generic.Data.html"><span class="hs-identifier">Generic.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/r854w7xj7lpk6328gfh7baxr7fbc52f3-generic-data-lib-generic-data-1.1.0.2-haddock-doc/share/doc/generic-data/html/src/Generic.Data.Internal.Prelude.html#gmappend"><span class="hs-identifier">gmappend</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="TestSetup"><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-var">TestSetup</span></a></span></span><span> </span><span id="local-6989586621679139185"><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TestSetup"><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-var">TestSetup</span></a></span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tsTime"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-identifier hs-var hs-var">tsTime</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsThreads"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsThreads"><span class="hs-identifier hs-var hs-var">tsThreads</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsMessages"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsMessages"><span class="hs-identifier hs-var hs-var">tsMessages</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsSockInternal"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsSockInternal"><span class="hs-identifier hs-var hs-var">tsSockInternal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsSockExternal"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsSockExternal"><span class="hs-identifier hs-var hs-var">tsSockExternal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsNetworkMagic"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsNetworkMagic"><span class="hs-identifier hs-var hs-var">tsNetworkMagic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tsWorkDir"><span class="annot"><span class="annottext">forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsWorkDir"><span class="hs-identifier hs-var hs-var">tsWorkDir</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139185"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679139347"><span id="local-6989586621679139349"><span class="annot"><span class="annottext">(forall x. TestSetup a -&gt; Rep (TestSetup a) x)
+-&gt; (forall x. Rep (TestSetup a) x -&gt; TestSetup a)
+-&gt; Generic (TestSetup a)
+forall x. Rep (TestSetup a) x -&gt; TestSetup a
+forall x. TestSetup a -&gt; Rep (TestSetup a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (a :: * -&gt; *) x. Rep (TestSetup a) x -&gt; TestSetup a
+forall (a :: * -&gt; *) x. TestSetup a -&gt; Rep (TestSetup a) x
+$cfrom :: forall (a :: * -&gt; *) x. TestSetup a -&gt; Rep (TestSetup a) x
+from :: forall x. TestSetup a -&gt; Rep (TestSetup a) x
+$cto :: forall (a :: * -&gt; *) x. Rep (TestSetup a) x -&gt; TestSetup a
+to :: forall x. Rep (TestSetup a) x -&gt; TestSetup a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139354"><span id="local-6989586621679139357"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-type">Last</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679139393"><span class="annot"><span class="annottext">&lt;&gt; :: TestSetup Last -&gt; TestSetup Last -&gt; TestSetup Last
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestSetup Last -&gt; TestSetup Last -&gt; TestSetup Last
+forall a. (Generic a, Semigroup (Rep a ())) =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/r854w7xj7lpk6328gfh7baxr7fbc52f3-generic-data-lib-generic-data-1.1.0.2-haddock-doc/share/doc/generic-data/html/src/Generic.Data.Internal.Prelude.html#gmappend"><span class="hs-identifier hs-var">gmappend</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span id="local-6989586621679139395"><span id="local-6989586621679139412"><span id="local-6989586621679139416"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#parseTestSetup"><span class="hs-identifier hs-type">parseTestSetup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Types.html#Parser"><span class="hs-identifier hs-type">Parser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-type">Last</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span id="parseTestSetup"><span class="annot"><span class="annottext">parseTestSetup :: Parser (TestSetup Last)
+</span><a href="Cardano.Tracer.Test.TestSetup.html#parseTestSetup"><span class="hs-identifier hs-var hs-var">parseTestSetup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">Last Double
+-&gt; Last Int
+-&gt; Last (Maybe Int)
+-&gt; Last FilePath
+-&gt; Last FilePath
+-&gt; Last NetworkMagic
+-&gt; Last FilePath
+-&gt; TestSetup Last
+forall (a :: * -&gt; *).
+a Double
+-&gt; a Int
+-&gt; a (Maybe Int)
+-&gt; a FilePath
+-&gt; a FilePath
+-&gt; a NetworkMagic
+-&gt; a FilePath
+-&gt; TestSetup a
+</span><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-var">TestSetup</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">(Last Double
+ -&gt; Last Int
+ -&gt; Last (Maybe Int)
+ -&gt; Last FilePath
+ -&gt; Last FilePath
+ -&gt; Last NetworkMagic
+ -&gt; Last FilePath
+ -&gt; TestSetup Last)
+-&gt; Parser (Last Double)
+-&gt; Parser
+     (Last Int
+      -&gt; Last (Maybe Int)
+      -&gt; Last FilePath
+      -&gt; Last FilePath
+      -&gt; Last NetworkMagic
+      -&gt; Last FilePath
+      -&gt; TestSetup Last)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Double -&gt; Last Double
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Double -&gt; Last Double)
+-&gt; Parser (Maybe Double) -&gt; Parser (Last Double)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Double -&gt; Parser (Maybe Double)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM Double -&gt; Mod OptionFields Double -&gt; Parser Double
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Double
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;time&quot;</span></span><span>          </span><span class="annot"><span class="annottext">Mod OptionFields Double
+-&gt; Mod OptionFields Double -&gt; Mod OptionFields Double
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Double
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SEC&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Last Int
+   -&gt; Last (Maybe Int)
+   -&gt; Last FilePath
+   -&gt; Last FilePath
+   -&gt; Last NetworkMagic
+   -&gt; Last FilePath
+   -&gt; TestSetup Last)
+-&gt; Parser (Last Int)
+-&gt; Parser
+     (Last (Maybe Int)
+      -&gt; Last FilePath
+      -&gt; Last FilePath
+      -&gt; Last NetworkMagic
+      -&gt; Last FilePath
+      -&gt; TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Int -&gt; Last Int
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; Last Int) -&gt; Parser (Maybe Int) -&gt; Parser (Last Int)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Int -&gt; Parser (Maybe Int)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM Int -&gt; Mod OptionFields Int -&gt; Parser Int
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Int
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;threads&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Mod OptionFields Int
+-&gt; Mod OptionFields Int -&gt; Mod OptionFields Int
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields Int
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;THRDS&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Last (Maybe Int)
+   -&gt; Last FilePath
+   -&gt; Last FilePath
+   -&gt; Last NetworkMagic
+   -&gt; Last FilePath
+   -&gt; TestSetup Last)
+-&gt; Parser (Last (Maybe Int))
+-&gt; Parser
+     (Last FilePath
+      -&gt; Last FilePath
+      -&gt; Last NetworkMagic
+      -&gt; Last FilePath
+      -&gt; TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (Maybe Int) -&gt; Last (Maybe Int)
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Maybe Int) -&gt; Last (Maybe Int))
+-&gt; Parser (Maybe (Maybe Int)) -&gt; Parser (Last (Maybe Int))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Int) -&gt; Parser (Maybe (Maybe Int))
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM (Maybe Int)
+-&gt; Mod OptionFields (Maybe Int) -&gt; Parser (Maybe Int)
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM (Maybe Int)
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields (Maybe Int)
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;messages&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Mod OptionFields (Maybe Int)
+-&gt; Mod OptionFields (Maybe Int) -&gt; Mod OptionFields (Maybe Int)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields (Maybe Int)
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;MSGS&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Last FilePath
+   -&gt; Last FilePath
+   -&gt; Last NetworkMagic
+   -&gt; Last FilePath
+   -&gt; TestSetup Last)
+-&gt; Parser (Last FilePath)
+-&gt; Parser
+     (Last FilePath
+      -&gt; Last NetworkMagic -&gt; Last FilePath -&gt; TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath -&gt; Last FilePath
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe FilePath -&gt; Last FilePath)
+-&gt; Parser (Maybe FilePath) -&gt; Parser (Last FilePath)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser FilePath -&gt; Parser (Maybe FilePath)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM FilePath -&gt; Mod OptionFields FilePath -&gt; Parser FilePath
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM FilePath
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;sock-internal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;FILE&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">Parser
+  (Last FilePath
+   -&gt; Last NetworkMagic -&gt; Last FilePath -&gt; TestSetup Last)
+-&gt; Parser (Last FilePath)
+-&gt; Parser (Last NetworkMagic -&gt; Last FilePath -&gt; TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath -&gt; Last FilePath
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe FilePath -&gt; Last FilePath)
+-&gt; Parser (Maybe FilePath) -&gt; Parser (Last FilePath)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser FilePath -&gt; Parser (Maybe FilePath)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM FilePath -&gt; Mod OptionFields FilePath -&gt; Parser FilePath
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM FilePath
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;sock-external&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;FILE&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">Parser (Last NetworkMagic -&gt; Last FilePath -&gt; TestSetup Last)
+-&gt; Parser (Last NetworkMagic)
+-&gt; Parser (Last FilePath -&gt; TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe NetworkMagic -&gt; Last NetworkMagic
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe NetworkMagic -&gt; Last NetworkMagic)
+-&gt; Parser (Maybe NetworkMagic) -&gt; Parser (Last NetworkMagic)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser NetworkMagic -&gt; Parser (Maybe NetworkMagic)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM NetworkMagic
+-&gt; Mod OptionFields NetworkMagic -&gt; Parser NetworkMagic
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; NetworkMagic
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-var">NetworkMagic</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; NetworkMagic) -&gt; ReadM Word32 -&gt; ReadM NetworkMagic
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Word32
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>                           </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NetworkMagic
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;network-magic&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields NetworkMagic
+-&gt; Mod OptionFields NetworkMagic -&gt; Mod OptionFields NetworkMagic
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields NetworkMagic
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;INT&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">Parser (Last FilePath -&gt; TestSetup Last)
+-&gt; Parser (Last FilePath) -&gt; Parser (TestSetup Last)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe FilePath -&gt; Last FilePath
+forall a. Maybe a -&gt; Last a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-var">Last</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe FilePath -&gt; Last FilePath)
+-&gt; Parser (Maybe FilePath) -&gt; Parser (Last FilePath)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser FilePath -&gt; Parser (Maybe FilePath)
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM FilePath -&gt; Mod OptionFields FilePath -&gt; Parser FilePath
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#option"><span class="hs-identifier hs-var">option</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM FilePath
+forall a. Read a =&gt; ReadM a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#auto"><span class="hs-identifier hs-var">auto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasName f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#long"><span class="hs-identifier hs-var">long</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;workdir&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Mod OptionFields FilePath
+-&gt; Mod OptionFields FilePath -&gt; Mod OptionFields FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Mod OptionFields FilePath
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; FilePath -&gt; Mod f a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#metavar"><span class="hs-identifier hs-var">metavar</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;DIR&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#mergeTestSetup"><span class="hs-identifier hs-type">mergeTestSetup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-type">Last</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span>
+</span><span id="line-57"></span><span id="mergeTestSetup"><span class="annot"><span class="annottext">mergeTestSetup :: TestSetup Last -&gt; TestSetup Identity
+</span><a href="Cardano.Tracer.Test.TestSetup.html#mergeTestSetup"><span class="hs-identifier hs-var hs-var">mergeTestSetup</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679139436"><span id="local-6989586621679139437"><span id="local-6989586621679139438"><span id="local-6989586621679139439"><span id="local-6989586621679139440"><span id="local-6989586621679139441"><span id="local-6989586621679139442"><span class="annot"><span class="annottext">Last Double
+Last Int
+Last FilePath
+Last (Maybe Int)
+Last NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Last Double
+tsThreads :: Last Int
+tsMessages :: Last (Maybe Int)
+tsSockInternal :: Last FilePath
+tsSockExternal :: Last FilePath
+tsNetworkMagic :: Last NetworkMagic
+tsWorkDir :: Last FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">tsTime :: Identity Double
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-identifier hs-var">tsTime</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last Double -&gt; Identity Double
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsTime&quot;</span></span><span>         </span><span class="annot"><span class="annottext">Last Double
+</span><a href="#local-6989586621679139436"><span class="hs-identifier hs-var">tsTime</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsThreads :: Identity Int
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsThreads"><span class="hs-identifier hs-var">tsThreads</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last Int -&gt; Identity Int
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsThreads&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Last Int
+</span><a href="#local-6989586621679139437"><span class="hs-identifier hs-var">tsThreads</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsMessages :: Identity (Maybe Int)
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsMessages"><span class="hs-identifier hs-var">tsMessages</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Identity (Maybe Int)
+forall a. a -&gt; Identity a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; Identity (Maybe Int))
+-&gt; (Maybe (Maybe Int) -&gt; Maybe Int)
+-&gt; Maybe (Maybe Int)
+-&gt; Identity (Maybe Int)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe Int) -&gt; Maybe Int
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Maybe Int) -&gt; Identity (Maybe Int))
+-&gt; Maybe (Maybe Int) -&gt; Identity (Maybe Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Last (Maybe Int) -&gt; Maybe (Maybe Int)
+forall a. Last a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#getLast"><span class="hs-identifier hs-var">getLast</span></a></span><span>    </span><span class="annot"><span class="annottext">Last (Maybe Int)
+</span><a href="#local-6989586621679139438"><span class="hs-identifier hs-var">tsMessages</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsSockInternal :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsSockInternal"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last FilePath -&gt; Identity FilePath
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsSockInternal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Last FilePath
+</span><a href="#local-6989586621679139439"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsSockExternal :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsSockExternal"><span class="hs-identifier hs-var">tsSockExternal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last FilePath -&gt; Identity FilePath
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsSockExternal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Last FilePath
+</span><a href="#local-6989586621679139440"><span class="hs-identifier hs-var">tsSockExternal</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsNetworkMagic :: Identity NetworkMagic
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsNetworkMagic"><span class="hs-identifier hs-var">tsNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last NetworkMagic -&gt; Identity NetworkMagic
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsNetworkMagic&quot;</span></span><span> </span><span class="annot"><span class="annottext">Last NetworkMagic
+</span><a href="#local-6989586621679139441"><span class="hs-identifier hs-var">tsNetworkMagic</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsWorkDir"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Last FilePath -&gt; Identity FilePath
+forall {b}. FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var">get</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing tsWorkDir&quot;</span></span><span>      </span><span class="annot"><span class="annottext">Last FilePath
+</span><a href="#local-6989586621679139442"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679139443"><span class="annot"><span class="annottext">get :: FilePath -&gt; Last b -&gt; Identity b
+</span><a href="#local-6989586621679139443"><span class="hs-identifier hs-var hs-var">get</span></a></span></span><span> </span><span id="local-6989586621679139451"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679139451"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Identity b
+forall a. a -&gt; Identity a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Identity b) -&gt; (Last b -&gt; b) -&gt; Last b -&gt; Identity b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; Maybe b -&gt; b
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; b
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; b) -&gt; FilePath -&gt; b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Missing &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679139451"><span class="hs-identifier hs-var">desc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe b -&gt; b) -&gt; (Last b -&gt; Maybe b) -&gt; Last b -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Last b -&gt; Maybe b
+forall a. Last a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#getLast"><span class="hs-identifier hs-var">getLast</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#getTestSetup"><span class="hs-identifier hs-type">getTestSetup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#Last"><span class="hs-identifier hs-type">Last</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span id="getTestSetup"><span class="annot"><span class="annottext">getTestSetup :: TestSetup Last -&gt; IO (TestSetup Identity)
+</span><a href="Cardano.Tracer.Test.TestSetup.html#getTestSetup"><span class="hs-identifier hs-var hs-var">getTestSetup</span></a></span></span><span> </span><span id="local-6989586621679139455"><span class="annot"><span class="annottext">TestSetup Last
+</span><a href="#local-6989586621679139455"><span class="hs-identifier hs-var">def</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">ParserPrefs -&gt; ParserInfo (TestSetup Last) -&gt; IO (TestSetup Last)
+forall a. ParserPrefs -&gt; ParserInfo a -&gt; IO a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Extra.html#customExecParser"><span class="hs-identifier hs-var">customExecParser</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PrefsMod -&gt; ParserPrefs
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#prefs"><span class="hs-identifier hs-var">prefs</span></a></span><span> </span><span class="annot"><span class="annottext">PrefsMod
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#showHelpOnEmpty"><span class="hs-identifier hs-var">showHelpOnEmpty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser (TestSetup Last)
+-&gt; InfoMod (TestSetup Last) -&gt; ParserInfo (TestSetup Last)
+forall a. Parser a -&gt; InfoMod a -&gt; ParserInfo a
+</span><a href="file:///nix/store/s1hpgrw6mf87735gs5cvv6m9wsq00x4w-optparse-applicative-lib-optparse-applicative-0.18.1.0-haddock-doc/share/doc/optparse-applicative/html/src/Options.Applicative.Builder.html#info"><span class="hs-identifier hs-var">info</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (TestSetup Last)
+</span><a href="Cardano.Tracer.Test.TestSetup.html#parseTestSetup"><span class="hs-identifier hs-var">parseTestSetup</span></a></span><span> </span><span class="annot"><span class="annottext">InfoMod (TestSetup Last)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">IO (TestSetup Last)
+-&gt; (TestSetup Last -&gt; TestSetup Last) -&gt; IO (TestSetup Last)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestSetup Last
+</span><a href="#local-6989586621679139455"><span class="hs-identifier hs-var">def</span></a></span><span> </span><span class="annot"><span class="annottext">TestSetup Last -&gt; TestSetup Last -&gt; TestSetup Last
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">IO (TestSetup Last)
+-&gt; (TestSetup Last -&gt; TestSetup Identity)
+-&gt; IO (TestSetup Identity)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TestSetup Last -&gt; TestSetup Identity
+</span><a href="Cardano.Tracer.Test.TestSetup.html#mergeTestSetup"><span class="hs-identifier hs-var">mergeTestSetup</span></a></span><span>
+</span><span id="line-77"></span></pre></body></html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Strict variant of SOP</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.SOP.Strict</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.SOP.Strict.NP.html"><span class="hs-identifier">Data.SOP.Strict.NP</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.SOP.Strict.NS.html"><span class="hs-identifier">Data.SOP.Strict.NS</span></a></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><span class="hs-comment">-- * fn</span></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Strict.html#fn_5"><span class="hs-identifier">fn_5</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Reexports</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Classes</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.SOP.Classes</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Data.SOP.Strict.NP.html"><span class="hs-identifier">Data.SOP.Strict.NP</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Data.SOP.Strict.NS.html"><span class="hs-identifier">Data.SOP.Strict.NS</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">{-------------------------------------------------------------------------------
+  fn
+-------------------------------------------------------------------------------}</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span id="local-6989586621679072777"><span id="local-6989586621679072778"><span id="local-6989586621679072779"><span id="local-6989586621679072780"><span id="local-6989586621679072781"><span id="local-6989586621679072782"><span id="local-6989586621679072783"><span class="annot"><a href="Data.SOP.Strict.html#fn_5"><span class="hs-identifier hs-type">fn_5</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072777"><span class="hs-identifier hs-type">f0</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072779"><span class="hs-identifier hs-type">f1</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">f2</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072781"><span class="hs-identifier hs-type">f3</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072782"><span class="hs-identifier hs-type">f4</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679072783"><span class="hs-identifier hs-type">f5</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679072777"><span class="hs-identifier hs-type">f0</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">-.-&gt;</span></span><span> </span><span class="annot"><a href="#local-6989586621679072779"><span class="hs-identifier hs-type">f1</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">-.-&gt;</span></span><span> </span><span class="annot"><a href="#local-6989586621679072780"><span class="hs-identifier hs-type">f2</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">-.-&gt;</span></span><span> </span><span class="annot"><a href="#local-6989586621679072781"><span class="hs-identifier hs-type">f3</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">-.-&gt;</span></span><span> </span><span class="annot"><a href="#local-6989586621679072782"><span class="hs-identifier hs-type">f4</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">-.-&gt;</span></span><span> </span><span class="annot"><a href="#local-6989586621679072783"><span class="hs-identifier hs-type">f5</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679072778"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-24"></span><span id="fn_5"><span class="annot"><span class="annottext">fn_5 :: forall {k} (f0 :: k -&gt; *) (a :: k) (f1 :: k -&gt; *) (f2 :: k -&gt; *)
+       (f3 :: k -&gt; *) (f4 :: k -&gt; *) (f5 :: k -&gt; *).
+(f0 a -&gt; f1 a -&gt; f2 a -&gt; f3 a -&gt; f4 a -&gt; f5 a)
+-&gt; (-.-&gt;) f0 (f1 -.-&gt; (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5)))) a
+</span><a href="Data.SOP.Strict.html#fn_5"><span class="hs-identifier hs-var hs-var">fn_5</span></a></span></span><span> </span><span id="local-6989586621679072801"><span class="annot"><span class="annottext">f0 a -&gt; f1 a -&gt; f2 a -&gt; f3 a -&gt; f4 a -&gt; f5 a
+</span><a href="#local-6989586621679072801"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f0 a -&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a)
+-&gt; (-.-&gt;) f0 (f1 -.-&gt; (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5)))) a
+forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (a :: k).
+(f a -&gt; g a) -&gt; (-.-&gt;) f g a
+</span><span class="hs-identifier hs-var">Fn</span></span><span> </span><span class="annot"><span class="annottext">((f0 a -&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a)
+ -&gt; (-.-&gt;) f0 (f1 -.-&gt; (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5)))) a)
+-&gt; (f0 a -&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a)
+-&gt; (-.-&gt;) f0 (f1 -.-&gt; (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5)))) a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679072803"><span class="annot"><span class="annottext">f0 a
+</span><a href="#local-6989586621679072803"><span class="hs-identifier hs-var">x0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-25"></span><span>         </span><span class="annot"><span class="annottext">(f1 a -&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a)
+-&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a
+forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (a :: k).
+(f a -&gt; g a) -&gt; (-.-&gt;) f g a
+</span><span class="hs-identifier hs-var">Fn</span></span><span> </span><span class="annot"><span class="annottext">((f1 a -&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a)
+ -&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a)
+-&gt; (f1 a -&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a)
+-&gt; (-.-&gt;) f1 (f2 -.-&gt; (f3 -.-&gt; (f4 -.-&gt; f5))) a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679072804"><span class="annot"><span class="annottext">f1 a
+</span><a href="#local-6989586621679072804"><span class="hs-identifier hs-var">x1</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-26"></span><span>         </span><span class="annot"><span class="annottext">(f2 a -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a)
+-&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a
+forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (a :: k).
+(f a -&gt; g a) -&gt; (-.-&gt;) f g a
+</span><span class="hs-identifier hs-var">Fn</span></span><span> </span><span class="annot"><span class="annottext">((f2 a -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a)
+ -&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a)
+-&gt; (f2 a -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a)
+-&gt; (-.-&gt;) f2 (f3 -.-&gt; (f4 -.-&gt; f5)) a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679072805"><span class="annot"><span class="annottext">f2 a
+</span><a href="#local-6989586621679072805"><span class="hs-identifier hs-var">x2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>         </span><span class="annot"><span class="annottext">(f3 a -&gt; (-.-&gt;) f4 f5 a) -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a
+forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (a :: k).
+(f a -&gt; g a) -&gt; (-.-&gt;) f g a
+</span><span class="hs-identifier hs-var">Fn</span></span><span> </span><span class="annot"><span class="annottext">((f3 a -&gt; (-.-&gt;) f4 f5 a) -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a)
+-&gt; (f3 a -&gt; (-.-&gt;) f4 f5 a) -&gt; (-.-&gt;) f3 (f4 -.-&gt; f5) a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679072806"><span class="annot"><span class="annottext">f3 a
+</span><a href="#local-6989586621679072806"><span class="hs-identifier hs-var">x3</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-28"></span><span>         </span><span class="annot"><span class="annottext">(f4 a -&gt; f5 a) -&gt; (-.-&gt;) f4 f5 a
+forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (a :: k).
+(f a -&gt; g a) -&gt; (-.-&gt;) f g a
+</span><span class="hs-identifier hs-var">Fn</span></span><span> </span><span class="annot"><span class="annottext">((f4 a -&gt; f5 a) -&gt; (-.-&gt;) f4 f5 a)
+-&gt; (f4 a -&gt; f5 a) -&gt; (-.-&gt;) f4 f5 a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679072807"><span class="annot"><span class="annottext">f4 a
+</span><a href="#local-6989586621679072807"><span class="hs-identifier hs-var">x4</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-29"></span><span>         </span><span class="annot"><span class="annottext">f0 a -&gt; f1 a -&gt; f2 a -&gt; f3 a -&gt; f4 a -&gt; f5 a
+</span><a href="#local-6989586621679072801"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">f0 a
+</span><a href="#local-6989586621679072803"><span class="hs-identifier hs-var">x0</span></a></span><span> </span><span class="annot"><span class="annottext">f1 a
+</span><a href="#local-6989586621679072804"><span class="hs-identifier hs-var">x1</span></a></span><span> </span><span class="annot"><span class="annottext">f2 a
+</span><a href="#local-6989586621679072805"><span class="hs-identifier hs-var">x2</span></a></span><span> </span><span class="annot"><span class="annottext">f3 a
+</span><a href="#local-6989586621679072806"><span class="hs-identifier hs-var">x3</span></a></span><span> </span><span class="annot"><span class="annottext">f4 a
+</span><a href="#local-6989586621679072807"><span class="hs-identifier hs-var">x4</span></a></span><span>
+</span><span id="line-30"></span></pre></body></html>

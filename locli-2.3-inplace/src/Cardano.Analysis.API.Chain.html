@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving#-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span class="hs-comment">{- HLINT ignore &quot;Use head&quot; -}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Analysis.API.Chain</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Chain.html"><span class="hs-identifier">Cardano.Analysis.API.Chain</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#head"><span class="hs-identifier">head</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Time</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html"><span class="hs-identifier">Cardano.Analysis.API.Context</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html"><span class="hs-identifier">Cardano.Analysis.API.Ground</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--   This is wrong, if you consider the reasons why epochLength can change.</span><span>
+</span><span id="line-17"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#unsafeParseSlot"><span class="hs-identifier hs-type">unsafeParseSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-type">EpochSlot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span id="unsafeParseSlot"><span class="annot"><span class="annottext">unsafeParseSlot :: Genesis -&gt; SlotNo -&gt; (EpochNo, EpochSlot)
+</span><a href="Cardano.Analysis.API.Chain.html#unsafeParseSlot"><span class="hs-identifier hs-var hs-var">unsafeParseSlot</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">{</span><span id="local-6989586621679423797"><span id="local-6989586621679423798"><span id="local-6989586621679423799"><span id="local-6989586621679423800"><span id="local-6989586621679423801"><span id="local-6989586621679423802"><span id="local-6989586621679423803"><span id="local-6989586621679423804"><span id="local-6989586621679423805"><span class="annot"><span class="annottext">Double
+Word64
+UTCTime
+NominalDiffTime
+PParams
+activeSlotsCoeff :: Double
+protocolParams :: PParams
+networkMagic :: Word64
+epochLength :: Word64
+systemStart :: UTCTime
+slotsPerKESPeriod :: Word64
+slotLength :: NominalDiffTime
+maxKESEvolutions :: Word64
+securityParam :: Word64
+activeSlotsCoeff :: Genesis -&gt; Double
+protocolParams :: Genesis -&gt; PParams
+networkMagic :: Genesis -&gt; Word64
+epochLength :: Genesis -&gt; Word64
+systemStart :: Genesis -&gt; UTCTime
+slotsPerKESPeriod :: Genesis -&gt; Word64
+slotLength :: Genesis -&gt; NominalDiffTime
+maxKESEvolutions :: Genesis -&gt; Word64
+securityParam :: Genesis -&gt; Word64
+</span><a href="#local-6989586621679423797"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679423815"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679423815"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-var">EpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423817"><span class="hs-identifier hs-var">epoch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochSlot
+</span><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-var">EpochSlot</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423819"><span class="hs-identifier hs-var">epochSlot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679423817"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423817"><span class="hs-identifier hs-var">epoch</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423819"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423819"><span class="hs-identifier hs-var">epochSlot</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier hs-var">unSlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679423815"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; (Word64, Word64)
+forall a. Integral a =&gt; a -&gt; a -&gt; (a, a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#divMod"><span class="hs-operator hs-var">`divMod`</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423800"><span class="hs-identifier hs-var">epochLength</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#slotEpochSafeInt"><span class="hs-identifier hs-type">slotEpochSafeInt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-type">EpochSlot</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSafeInt"><span class="hs-identifier hs-type">EpochSafeInt</span></a></span><span>
+</span><span id="line-24"></span><span id="slotEpochSafeInt"><span class="annot"><span class="annottext">slotEpochSafeInt :: Genesis -&gt; EpochSlot -&gt; EpochSafeInt
+</span><a href="Cardano.Analysis.API.Chain.html#slotEpochSafeInt"><span class="hs-identifier hs-var hs-var">slotEpochSafeInt</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">{</span><span id="local-6989586621679423823"><span id="local-6989586621679423824"><span id="local-6989586621679423825"><span id="local-6989586621679423826"><span id="local-6989586621679423827"><span id="local-6989586621679423828"><span id="local-6989586621679423829"><span id="local-6989586621679423830"><span id="local-6989586621679423831"><span class="annot"><span class="annottext">Double
+Word64
+UTCTime
+NominalDiffTime
+PParams
+activeSlotsCoeff :: Genesis -&gt; Double
+protocolParams :: Genesis -&gt; PParams
+networkMagic :: Genesis -&gt; Word64
+epochLength :: Genesis -&gt; Word64
+systemStart :: Genesis -&gt; UTCTime
+slotsPerKESPeriod :: Genesis -&gt; Word64
+slotLength :: Genesis -&gt; NominalDiffTime
+maxKESEvolutions :: Genesis -&gt; Word64
+securityParam :: Genesis -&gt; Word64
+activeSlotsCoeff :: Double
+protocolParams :: PParams
+networkMagic :: Word64
+epochLength :: Word64
+systemStart :: UTCTime
+slotsPerKESPeriod :: Word64
+slotLength :: NominalDiffTime
+maxKESEvolutions :: Word64
+securityParam :: Word64
+</span><a href="Cardano.Analysis.API.Context.html#activeSlotsCoeff"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#EpochSlot"><span class="hs-identifier hs-type">EpochSlot</span></a></span><span> </span><span id="local-6989586621679423832"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423832"><span class="hs-identifier hs-var">relSlot</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; EpochSafeInt
+</span><a href="Cardano.Analysis.API.Ground.html#EpochSafeInt"><span class="hs-identifier hs-var">EpochSafeInt</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; EpochSafeInt)
+-&gt; (Double -&gt; Word64) -&gt; Double -&gt; EpochSafeInt
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Word64
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#floor"><span class="hs-identifier hs-var">floor</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; EpochSafeInt) -&gt; Double -&gt; EpochSafeInt
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="annottext">Word64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423832"><span class="hs-identifier hs-var">relSlot</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679423831"><span class="hs-identifier hs-var">securityParam</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679423823"><span class="hs-identifier hs-var">activeSlotsCoeff</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">newtype</span><span> </span><span id="SlotStart"><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-var">SlotStart</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>  </span><span id="SlotStart"><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-var">SlotStart</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unSlotStart"><span class="annot"><span class="annottext">SlotStart -&gt; UTCTime
+</span><a href="Cardano.Analysis.API.Chain.html#unSlotStart"><span class="hs-identifier hs-var hs-var">unSlotStart</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423841"><span id="local-6989586621679423845"><span class="annot"><span class="annottext">SlotStart -&gt; SlotStart -&gt; Bool
+(SlotStart -&gt; SlotStart -&gt; Bool)
+-&gt; (SlotStart -&gt; SlotStart -&gt; Bool) -&gt; Eq SlotStart
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SlotStart -&gt; SlotStart -&gt; Bool
+== :: SlotStart -&gt; SlotStart -&gt; Bool
+$c/= :: SlotStart -&gt; SlotStart -&gt; Bool
+/= :: SlotStart -&gt; SlotStart -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423850"><span id="local-6989586621679423852"><span class="annot"><span class="annottext">(forall x. SlotStart -&gt; Rep SlotStart x)
+-&gt; (forall x. Rep SlotStart x -&gt; SlotStart) -&gt; Generic SlotStart
+forall x. Rep SlotStart x -&gt; SlotStart
+forall x. SlotStart -&gt; Rep SlotStart x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SlotStart -&gt; Rep SlotStart x
+from :: forall x. SlotStart -&gt; Rep SlotStart x
+$cto :: forall x. Rep SlotStart x -&gt; SlotStart
+to :: forall x. Rep SlotStart x -&gt; SlotStart
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423856"><span id="local-6989586621679423862"><span id="local-6989586621679423866"><span class="annot"><span class="annottext">Int -&gt; SlotStart -&gt; ShowS
+[SlotStart] -&gt; ShowS
+SlotStart -&gt; String
+(Int -&gt; SlotStart -&gt; ShowS)
+-&gt; (SlotStart -&gt; String)
+-&gt; ([SlotStart] -&gt; ShowS)
+-&gt; Show SlotStart
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SlotStart -&gt; ShowS
+showsPrec :: Int -&gt; SlotStart -&gt; ShowS
+$cshow :: SlotStart -&gt; String
+show :: SlotStart -&gt; String
+$cshowList :: [SlotStart] -&gt; ShowS
+showList :: [SlotStart] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423870"><span id="local-6989586621679423875"><span id="local-6989586621679423879"><span class="annot"><span class="annottext">Maybe SlotStart
+Value -&gt; Parser [SlotStart]
+Value -&gt; Parser SlotStart
+(Value -&gt; Parser SlotStart)
+-&gt; (Value -&gt; Parser [SlotStart])
+-&gt; Maybe SlotStart
+-&gt; FromJSON SlotStart
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser SlotStart
+parseJSON :: Value -&gt; Parser SlotStart
+$cparseJSONList :: Value -&gt; Parser [SlotStart]
+parseJSONList :: Value -&gt; Parser [SlotStart]
+$comittedField :: Maybe SlotStart
+omittedField :: Maybe SlotStart
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423885"><span class="annot"><span class="annottext">SlotStart -&gt; ()
+(SlotStart -&gt; ()) -&gt; NFData SlotStart
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: SlotStart -&gt; ()
+rnf :: SlotStart -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423892"><span id="local-6989586621679423897"><span id="local-6989586621679423901"><span id="local-6989586621679423905"><span id="local-6989586621679423909"><span class="annot"><span class="annottext">[SlotStart] -&gt; Value
+[SlotStart] -&gt; Encoding
+SlotStart -&gt; Bool
+SlotStart -&gt; Value
+SlotStart -&gt; Encoding
+(SlotStart -&gt; Value)
+-&gt; (SlotStart -&gt; Encoding)
+-&gt; ([SlotStart] -&gt; Value)
+-&gt; ([SlotStart] -&gt; Encoding)
+-&gt; (SlotStart -&gt; Bool)
+-&gt; ToJSON SlotStart
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: SlotStart -&gt; Value
+toJSON :: SlotStart -&gt; Value
+$ctoEncoding :: SlotStart -&gt; Encoding
+toEncoding :: SlotStart -&gt; Encoding
+$ctoJSONList :: [SlotStart] -&gt; Value
+toJSONList :: [SlotStart] -&gt; Value
+$ctoEncodingList :: [SlotStart] -&gt; Encoding
+toEncodingList :: [SlotStart] -&gt; Encoding
+$comitField :: SlotStart -&gt; Bool
+omitField :: SlotStart -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#slotStart"><span class="hs-identifier hs-type">slotStart</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-type">SlotStart</span></a></span><span>
+</span><span id="line-36"></span><span id="slotStart"><span class="annot"><span class="annottext">slotStart :: Genesis -&gt; SlotNo -&gt; SlotStart
+</span><a href="Cardano.Analysis.API.Chain.html#slotStart"><span class="hs-identifier hs-var hs-var">slotStart</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">{</span><span id="local-6989586621679423915"><span id="local-6989586621679423916"><span id="local-6989586621679423917"><span id="local-6989586621679423918"><span id="local-6989586621679423919"><span id="local-6989586621679423920"><span id="local-6989586621679423921"><span id="local-6989586621679423922"><span id="local-6989586621679423923"><span class="annot"><span class="annottext">Double
+Word64
+UTCTime
+NominalDiffTime
+PParams
+activeSlotsCoeff :: Genesis -&gt; Double
+protocolParams :: Genesis -&gt; PParams
+networkMagic :: Genesis -&gt; Word64
+epochLength :: Genesis -&gt; Word64
+systemStart :: Genesis -&gt; UTCTime
+slotsPerKESPeriod :: Genesis -&gt; Word64
+slotLength :: Genesis -&gt; NominalDiffTime
+maxKESEvolutions :: Genesis -&gt; Word64
+securityParam :: Genesis -&gt; Word64
+activeSlotsCoeff :: Double
+protocolParams :: PParams
+networkMagic :: Word64
+epochLength :: Word64
+systemStart :: UTCTime
+slotsPerKESPeriod :: Word64
+slotLength :: NominalDiffTime
+maxKESEvolutions :: Word64
+securityParam :: Word64
+</span><a href="Cardano.Analysis.API.Context.html#activeSlotsCoeff"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">UTCTime -&gt; SlotStart
+</span><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-var">SlotStart</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">(UTCTime -&gt; SlotStart)
+-&gt; (SlotNo -&gt; UTCTime) -&gt; SlotNo -&gt; SlotStart
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; UTCTime -&gt; UTCTime)
+-&gt; UTCTime -&gt; NominalDiffTime -&gt; UTCTime
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; UTCTime -&gt; UTCTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#addUTCTime"><span class="hs-identifier hs-var">Time.addUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423919"><span class="hs-identifier hs-var">systemStart</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; UTCTime)
+-&gt; (SlotNo -&gt; NominalDiffTime) -&gt; SlotNo -&gt; UTCTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NominalDiffTime -&gt; NominalDiffTime -&gt; NominalDiffTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679423921"><span class="hs-identifier hs-var">slotLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; NominalDiffTime)
+-&gt; (SlotNo -&gt; NominalDiffTime) -&gt; SlotNo -&gt; NominalDiffTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; NominalDiffTime
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="annottext">(Word64 -&gt; NominalDiffTime)
+-&gt; (SlotNo -&gt; Word64) -&gt; SlotNo -&gt; NominalDiffTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#unSlotNo"><span class="hs-identifier hs-var">unSlotNo</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#impliedSlot"><span class="hs-identifier hs-type">impliedSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-44"></span><span id="impliedSlot"><span class="annot"><span class="annottext">impliedSlot :: Genesis -&gt; UTCTime -&gt; SlotNo
+</span><a href="Cardano.Analysis.API.Chain.html#impliedSlot"><span class="hs-identifier hs-var hs-var">impliedSlot</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">{</span><span id="local-6989586621679423927"><span id="local-6989586621679423928"><span id="local-6989586621679423929"><span id="local-6989586621679423930"><span id="local-6989586621679423931"><span id="local-6989586621679423932"><span id="local-6989586621679423933"><span id="local-6989586621679423934"><span id="local-6989586621679423935"><span class="annot"><span class="annottext">Double
+Word64
+UTCTime
+NominalDiffTime
+PParams
+activeSlotsCoeff :: Genesis -&gt; Double
+protocolParams :: Genesis -&gt; PParams
+networkMagic :: Genesis -&gt; Word64
+epochLength :: Genesis -&gt; Word64
+systemStart :: Genesis -&gt; UTCTime
+slotsPerKESPeriod :: Genesis -&gt; Word64
+slotLength :: Genesis -&gt; NominalDiffTime
+maxKESEvolutions :: Genesis -&gt; Word64
+securityParam :: Genesis -&gt; Word64
+activeSlotsCoeff :: Double
+protocolParams :: PParams
+networkMagic :: Word64
+epochLength :: Word64
+systemStart :: UTCTime
+slotsPerKESPeriod :: Word64
+slotLength :: NominalDiffTime
+maxKESEvolutions :: Word64
+securityParam :: Word64
+</span><a href="Cardano.Analysis.API.Context.html#activeSlotsCoeff"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-7d95aa68251b4749c7c885473e32b2fdaa48da47c54ace6e445d67cadf09b4bf/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">(Word64 -&gt; SlotNo) -&gt; (UTCTime -&gt; Word64) -&gt; UTCTime -&gt; SlotNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; Word64
+forall b. Integral b =&gt; NominalDiffTime -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#floor"><span class="hs-identifier hs-var">floor</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; Word64)
+-&gt; (UTCTime -&gt; NominalDiffTime) -&gt; UTCTime -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NominalDiffTime -&gt; NominalDiffTime -&gt; NominalDiffTime
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679423933"><span class="hs-identifier hs-var">slotLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">(NominalDiffTime -&gt; NominalDiffTime)
+-&gt; (UTCTime -&gt; NominalDiffTime) -&gt; UTCTime -&gt; NominalDiffTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-operator hs-var">`Time.diffUTCTime`</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423931"><span class="hs-identifier hs-var">systemStart</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#sinceSlot"><span class="hs-identifier hs-type">sinceSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-type">SlotStart</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span>
+</span><span id="line-51"></span><span id="sinceSlot"><span class="annot"><span class="annottext">sinceSlot :: UTCTime -&gt; SlotStart -&gt; NominalDiffTime
+</span><a href="Cardano.Analysis.API.Chain.html#sinceSlot"><span class="hs-identifier hs-var hs-var">sinceSlot</span></a></span></span><span> </span><span id="local-6989586621679423939"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423939"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-type">SlotStart</span></a></span><span> </span><span id="local-6989586621679423940"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423940"><span class="hs-identifier hs-var">start</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; NominalDiffTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-identifier hs-var">Time.diffUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423939"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423940"><span class="hs-identifier hs-var">start</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#afterSlot"><span class="hs-identifier hs-type">afterSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-type">SlotStart</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-54"></span><span id="afterSlot"><span class="annot"><span class="annottext">afterSlot :: NominalDiffTime -&gt; SlotStart -&gt; UTCTime
+</span><a href="Cardano.Analysis.API.Chain.html#afterSlot"><span class="hs-identifier hs-var hs-var">afterSlot</span></a></span></span><span> </span><span id="local-6989586621679423942"><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679423942"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Chain.html#SlotStart"><span class="hs-identifier hs-type">SlotStart</span></a></span><span> </span><span id="local-6989586621679423943"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423943"><span class="hs-identifier hs-var">start</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NominalDiffTime -&gt; UTCTime -&gt; UTCTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#addUTCTime"><span class="hs-identifier hs-var">Time.addUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">NominalDiffTime
+</span><a href="#local-6989586621679423942"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679423943"><span class="hs-identifier hs-var">start</span></a></span><span>
+</span><span id="line-55"></span></pre></body></html>

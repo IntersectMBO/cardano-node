@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Attributes.Same
+   Description : Consider Attributes equal on constructors.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This module is used when @a1 == a2@ should return @True@ if they
+   are the same Attribute, even if they don't have the same value
+   (typically for 'Set's).
+-}</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Attributes.Same</span><span>
+</span><span id="line-15"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SameAttr"><span class="hs-identifier">SameAttr</span></a></span><span>
+</span><span id="line-16"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier">SAttrs</span></a></span><span>
+</span><span id="line-17"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#toSAttr"><span class="hs-identifier">toSAttr</span></a></span><span>
+</span><span id="line-18"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier">unSame</span></a></span><span>
+</span><span id="line-19"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#unSameSet"><span class="hs-identifier">unSameSet</span></a></span><span>
+</span><span id="line-20"></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html"><span class="hs-identifier">Data.GraphViz.Attributes.Complete</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attribute"><span class="hs-identifier">Attribute</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier">Attributes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#sameAttribute"><span class="hs-identifier">sameAttribute</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-identifier">on</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Defined as a wrapper around 'Attribute' where equality is based</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--   solely upon the constructor, not the contents.</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="SameAttr"><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SameAttr"><span class="hs-identifier hs-var">SameAttr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SA"><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SA"><span class="hs-identifier hs-var">SA</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getAttr"><span class="annot"><span class="annottext">SameAttr -&gt; Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#getAttr"><span class="hs-identifier hs-var hs-var">getAttr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attribute"><span class="hs-identifier hs-type">Attribute</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>                 </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220645"><span id="local-6989586621679220651"><span id="local-6989586621679220655"><span class="annot"><span class="annottext">Int -&gt; SameAttr -&gt; ShowS
+[SameAttr] -&gt; ShowS
+SameAttr -&gt; String
+(Int -&gt; SameAttr -&gt; ShowS)
+-&gt; (SameAttr -&gt; String) -&gt; ([SameAttr] -&gt; ShowS) -&gt; Show SameAttr
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SameAttr -&gt; ShowS
+showsPrec :: Int -&gt; SameAttr -&gt; ShowS
+$cshow :: SameAttr -&gt; String
+show :: SameAttr -&gt; String
+$cshowList :: [SameAttr] -&gt; ShowS
+showList :: [SameAttr] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220659"><span id="local-6989586621679220663"><span id="local-6989586621679220666"><span id="local-6989586621679220676"><span class="annot"><span class="annottext">ReadPrec [SameAttr]
+ReadPrec SameAttr
+Int -&gt; ReadS SameAttr
+ReadS [SameAttr]
+(Int -&gt; ReadS SameAttr)
+-&gt; ReadS [SameAttr]
+-&gt; ReadPrec SameAttr
+-&gt; ReadPrec [SameAttr]
+-&gt; Read SameAttr
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS SameAttr
+readsPrec :: Int -&gt; ReadS SameAttr
+$creadList :: ReadS [SameAttr]
+readList :: ReadS [SameAttr]
+$creadPrec :: ReadPrec SameAttr
+readPrec :: ReadPrec SameAttr
+$creadListPrec :: ReadPrec [SameAttr]
+readListPrec :: ReadPrec [SameAttr]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679220681"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SameAttr"><span class="hs-identifier hs-type">SameAttr</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679220685"><span class="annot"><span class="annottext">== :: SameAttr -&gt; SameAttr -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(==)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Attribute -&gt; Attribute -&gt; Bool
+</span><a href="Data.GraphViz.Attributes.Complete.html#sameAttribute"><span class="hs-identifier hs-var">sameAttribute</span></a></span><span> </span><span class="annot"><span class="annottext">(Attribute -&gt; Attribute -&gt; Bool)
+-&gt; (SameAttr -&gt; Attribute) -&gt; SameAttr -&gt; SameAttr -&gt; Bool
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr -&gt; Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#getAttr"><span class="hs-identifier hs-var">getAttr</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679220690"><span id="local-6989586621679220693"><span id="local-6989586621679220696"><span id="local-6989586621679220699"><span id="local-6989586621679220702"><span id="local-6989586621679220705"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SameAttr"><span class="hs-identifier hs-type">SameAttr</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679220711"><span class="annot"><span class="annottext">compare :: SameAttr -&gt; SameAttr -&gt; Ordering
+</span><a href="#local-6989586621679220711"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span id="local-6989586621679220713"><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220713"><span class="hs-identifier hs-var">sa1</span></a></span></span><span> </span><span id="local-6989586621679220714"><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220714"><span class="hs-identifier hs-var">sa2</span></a></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220713"><span class="hs-identifier hs-var">sa1</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr -&gt; SameAttr -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220714"><span class="hs-identifier hs-var">sa2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#EQ"><span class="hs-identifier hs-var">EQ</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Attribute -&gt; Attribute -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="annot"><span class="annottext">(Attribute -&gt; Attribute -&gt; Ordering)
+-&gt; (SameAttr -&gt; Attribute) -&gt; SameAttr -&gt; SameAttr -&gt; Ordering
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr -&gt; Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#getAttr"><span class="hs-identifier hs-var">getAttr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220713"><span class="hs-identifier hs-var">sa1</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr
+</span><a href="#local-6989586621679220714"><span class="hs-identifier hs-var">sa2</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">type</span><span> </span><span id="SAttrs"><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-var">SAttrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SameAttr"><span class="hs-identifier hs-type">SameAttr</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#toSAttr"><span class="hs-identifier hs-type">toSAttr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span>
+</span><span id="line-47"></span><span id="toSAttr"><span class="annot"><span class="annottext">toSAttr :: Attributes -&gt; SAttrs
+</span><a href="Data.GraphViz.Attributes.Same.html#toSAttr"><span class="hs-identifier hs-var hs-var">toSAttr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[SameAttr] -&gt; SAttrs
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([SameAttr] -&gt; SAttrs)
+-&gt; (Attributes -&gt; [SameAttr]) -&gt; Attributes -&gt; SAttrs
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Attribute -&gt; SameAttr) -&gt; Attributes -&gt; [SameAttr]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Attribute -&gt; SameAttr
+</span><a href="Data.GraphViz.Attributes.Same.html#SA"><span class="hs-identifier hs-var">SA</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-type">unSame</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span>
+</span><span id="line-50"></span><span id="unSame"><span class="annot"><span class="annottext">unSame :: SAttrs -&gt; Attributes
+</span><a href="Data.GraphViz.Attributes.Same.html#unSame"><span class="hs-identifier hs-var hs-var">unSame</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SameAttr -&gt; Attribute) -&gt; [SameAttr] -&gt; Attributes
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr -&gt; Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#getAttr"><span class="hs-identifier hs-var">getAttr</span></a></span><span> </span><span class="annot"><span class="annottext">([SameAttr] -&gt; Attributes)
+-&gt; (SAttrs -&gt; [SameAttr]) -&gt; SAttrs -&gt; Attributes
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SAttrs -&gt; [SameAttr]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#unSameSet"><span class="hs-identifier hs-type">unSameSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Same.html#SAttrs"><span class="hs-identifier hs-type">SAttrs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.Complete.html#Attribute"><span class="hs-identifier hs-type">Attribute</span></a></span><span>
+</span><span id="line-53"></span><span id="unSameSet"><span class="annot"><span class="annottext">unSameSet :: SAttrs -&gt; Set Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#unSameSet"><span class="hs-identifier hs-var hs-var">unSameSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SameAttr -&gt; Attribute) -&gt; SAttrs -&gt; Set Attribute
+forall a b. (a -&gt; b) -&gt; Set a -&gt; Set b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#mapMonotonic"><span class="hs-identifier hs-var">Set.mapMonotonic</span></a></span><span> </span><span class="annot"><span class="annottext">SameAttr -&gt; Attribute
+</span><a href="Data.GraphViz.Attributes.Same.html#getAttr"><span class="hs-identifier hs-var">getAttr</span></a></span><span>
+</span><span id="line-54"></span></pre></body></html>

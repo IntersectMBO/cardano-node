@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">{- | This modules provides concurrency abstractions for hedgehog tests. Using &quot;lifted-base&quot; one can execute
+expensive test actions concurrently.
+
+For example, the actions invoked inside 'mapConcurrently_' are invoked in the same 'MonadTest' as the outer
+monad of 'mapConcurrently_'.
+
+@
+import qualified Hedgehog.Extras.Test.Concurrent as H
+
+setUpEnvironment = H.mapConcurrently_ id
+  [ H.threadDelay 100 &gt;&gt; pure 1
+  , H.threadDelay 200 &gt;&gt; pure 2
+  , H.threadDelay 300 &gt;&gt; pure 3
+  ]
+@
+
+
+__Warning: Do not use this module for running concurrent checks!__ The 'MonadBaseControl' instance does not
+aggregate effects for 'PropertyT'. Consider the following code:
+
+@
+  LA.mapConcurrently_ id
+    [ do
+      H.note_ \&quot;FAIL1\&quot;
+      success
+    , do
+      IO.threadDelay 1_000_000
+      H.note_ \&quot;FAIL2\&quot;
+      failure
+    , do
+      H.note_ \&quot;FAIL3\&quot;
+      failure
+    ]
+@
+
+Executing this code will give you the following output in the test report:
+
+@
+66 &#9475;   LA.mapConcurrently_ id
+67 &#9475;     [ do
+68 &#9475;       H.note_ \&quot;FAIL1\&quot;
+   &#9475;       &#9474; FAIL1
+69 &#9475;       success
+70 &#9475;     , do
+71 &#9475;       IO.threadDelay 1_000_000
+72 &#9475;       H.note_ \&quot;FAIL2\&quot;
+   &#9475;       &#9474; FAIL2
+73 &#9475;       failure
+   &#9475;       ^^^^^^^
+74 &#9475;     , do
+75 &#9475;       H.note_ \&quot;FAIL3\&quot;
+76 &#9475;       failure
+77 &#9475;     ]
+@
+Please note that only @FAIL1@ and @FAIL2@ annotations were reported - @FAIL3@ annotation and the failure
+below was swallowed without any information.
+
+__Don't use concurrency abstractions from this module, when you need to aggregate and report failures!__
+
+-}</span></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Extras.Test.Concurrent</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Concurrent.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Concurrent.html#asyncRegister_"><span class="hs-identifier">asyncRegister_</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Re-exports of concurrency abstractions from @lifted-base@</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async.Lifted</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.MVar.Lifted</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">System.Timeout.Lifted</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async.Lifted</span></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Lifted</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.MVar.Lifted</span></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GHC</span></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier">IO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Timeout.Lifted</span></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Extras.Internal.Orphans.html"><span class="hs-identifier">Hedgehog.Extras.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier">MonadCatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Delay the thread by 'n' microseconds.</span></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679139174"><span class="annot"><a href="Hedgehog.Extras.Test.Concurrent.html#threadDelay"><span class="hs-identifier hs-type">threadDelay</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679139174"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139174"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139174"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-94"></span><span id="threadDelay"><span class="annot"><span class="annottext">threadDelay :: forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m, MonadIO m) =&gt;
+Int -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Concurrent.html#threadDelay"><span class="hs-identifier hs-var hs-var">threadDelay</span></a></span></span><span> </span><span id="local-6989586621679139231"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679139231"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m () -&gt; m ()
+(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">GHC.withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; (IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><span class="hs-identifier hs-var">H.evalIO</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+forall (m :: * -&gt; *). MonadBase IO m =&gt; Int -&gt; m ()
+</span><span class="hs-identifier hs-var">IO.threadDelay</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679139231"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><span class="hs-comment">-- | Runs an action in background, and registers its cancellation to 'MonadResource'.</span></span><span>
+</span><span id="line-97"></span><span id="local-6989586621679139189"><span id="local-6989586621679139192"><span class="annot"><a href="Hedgehog.Extras.Test.Concurrent.html#asyncRegister_"><span class="hs-identifier hs-type">asyncRegister_</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-98"></span><span>               </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679139189"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-99"></span><span>               </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadResource</span></span><span> </span><span class="annot"><a href="#local-6989586621679139189"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-100"></span><span>               </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier hs-type">MonadCatch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139189"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-101"></span><span>               </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139192"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Action to run in background</span></span><span>
+</span><span id="line-102"></span><span>               </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139189"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-103"></span><span id="asyncRegister_"><span class="annot"><span class="annottext">asyncRegister_ :: forall (m :: * -&gt; *) a.
+(HasCallStack, MonadTest m, MonadResource m, MonadCatch m) =&gt;
+IO a -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Concurrent.html#asyncRegister_"><span class="hs-identifier hs-var hs-var">asyncRegister_</span></a></span></span><span> </span><span id="local-6989586621679139249"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679139249"><span class="hs-identifier hs-var">act</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">GHC.withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m (ReleaseKey, Async a) -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m (ReleaseKey, Async a) -&gt; m ())
+-&gt; (m (ReleaseKey, Async a) -&gt; m (ReleaseKey, Async a))
+-&gt; m (ReleaseKey, Async a)
+-&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">m (ReleaseKey, Async a) -&gt; m (ReleaseKey, Async a)
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadCatch m, HasCallStack) =&gt;
+m a -&gt; m a
+</span><span class="hs-identifier hs-var">H.evalM</span></span><span> </span><span class="annot"><span class="annottext">(m (ReleaseKey, Async a) -&gt; m ())
+-&gt; m (ReleaseKey, Async a) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Async a) -&gt; (Async a -&gt; IO ()) -&gt; m (ReleaseKey, Async a)
+forall (m :: * -&gt; *) a.
+MonadResource m =&gt;
+IO a -&gt; (a -&gt; IO ()) -&gt; m (ReleaseKey, a)
+</span><span class="hs-identifier hs-var">allocate</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO a -&gt; IO (Async (StM IO a))
+forall (m :: * -&gt; *) a.
+MonadBaseControl IO m =&gt;
+m a -&gt; m (Async (StM m a))
+</span><span class="hs-identifier hs-var">async</span></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679139249"><span class="hs-identifier hs-var">act</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; IO ()
+forall a. Async a -&gt; IO ()
+</span><a href="#local-6989586621679139263"><span class="hs-identifier hs-var">cleanUp</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679139210"><span class="annot"><a href="#local-6989586621679139263"><span class="hs-identifier hs-type">cleanUp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Async</span></span><span> </span><span class="annot"><a href="#local-6989586621679139210"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-106"></span><span>    </span><span id="local-6989586621679139263"><span class="annot"><span class="annottext">cleanUp :: forall a. Async a -&gt; IO ()
+</span><a href="#local-6989586621679139263"><span class="hs-identifier hs-var hs-var">cleanUp</span></a></span></span><span> </span><span id="local-6989586621679139270"><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679139270"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Async a -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadBase IO m =&gt; Async a -&gt; m ()
+</span><span class="hs-identifier hs-var">cancel</span></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679139270"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Async a -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadBase IO m =&gt; Async a -&gt; m ()
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">Async a
+</span><a href="#local-6989586621679139270"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span></pre></body></html>

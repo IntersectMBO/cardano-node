@@ -1,0 +1,663 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span>  </span><span class="hs-identifier">Cardano.TxGenerator.PureExample</span><span>
+</span><span id="line-6"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#demo"><span class="hs-identifier">demo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-consensus-0.30.0.1-393078fc1fbfba699b7ad9870846847e7cdd73dd6e973c125d751b273e0e2acb/share/doc/html/src/Ouroboros.Consensus.Ledger.SupportsMempool.html#txId"><span class="hs-identifier">txId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html"><span class="hs-identifier">Cardano.TxGenerator.FundQueue</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.ProtocolParameters.html"><span class="hs-identifier">Cardano.TxGenerator.ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.ProtocolParameters.html#convertToLedgerProtocolParameters"><span class="hs-identifier">convertToLedgerProtocolParameters</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html"><span class="hs-identifier">Cardano.TxGenerator.Setup.SigningKey</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html"><span class="hs-identifier">Cardano.TxGenerator.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#genTx"><span class="hs-identifier">genTx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Tx.html#sourceToStoreTransaction"><span class="hs-identifier">sourceToStoreTransaction</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier">TxEnvironment</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenerator"><span class="hs-identifier">TxGenerator</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Utils.html"><span class="hs-identifier">Cardano.TxGenerator.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Utils.html#inputsToOutputsWithFee"><span class="hs-identifier">inputsToOutputsWithFee</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Utils.html#mkTxIn"><span class="hs-identifier">mkTxIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.UTxO.html"><span class="hs-identifier">Cardano.TxGenerator.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.UTxO.html#makeToUTxOList"><span class="hs-identifier">makeToUTxOList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.UTxO.html#mkUTxOVariant"><span class="hs-identifier">mkUTxOVariant</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#foldM"><span class="hs-identifier">foldM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html"><span class="hs-identifier">Control.Monad.Trans.State.Strict</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">eitherDecodeFileStrict'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html"><span class="hs-identifier">Data.Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#fromRight"><span class="hs-identifier">fromRight</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier">foldl'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier">fromString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#die"><span class="hs-identifier">die</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Paths_tx_generator.html"><span class="hs-identifier">Paths_tx_generator</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#demo"><span class="hs-identifier hs-type">demo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span id="demo"><span class="annot"><span class="annottext">demo :: IO ()
+</span><a href="Cardano.TxGenerator.PureExample.html#demo"><span class="hs-identifier hs-var hs-var">demo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO [Char]
+</span><a href="Paths_tx_generator.html#getDataFileName"><span class="hs-identifier hs-var">getDataFileName</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;data/protocol-parameters.json&quot;</span></span><span> </span><span class="annot"><span class="annottext">IO [Char] -&gt; ([Char] -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+</span><a href="Cardano.TxGenerator.PureExample.html#demo%27"><span class="hs-identifier hs-var">demo'</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#demo%27"><span class="hs-identifier hs-type">demo'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="demo%27"><span class="annot"><span class="annottext">demo' :: [Char] -&gt; IO ()
+</span><a href="Cardano.TxGenerator.PureExample.html#demo%27"><span class="hs-identifier hs-var hs-var">demo'</span></a></span></span><span> </span><span id="local-6989586621679924017"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679924017"><span class="hs-identifier hs-var">parametersFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679924018"><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679924018"><span class="hs-identifier hs-var">protocolParameters</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ProtocolParameters)
+-&gt; (ProtocolParameters -&gt; IO ProtocolParameters)
+-&gt; Either [Char] ProtocolParameters
+-&gt; IO ProtocolParameters
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ProtocolParameters
+forall a. [Char] -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#die"><span class="hs-identifier hs-var">die</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters -&gt; IO ProtocolParameters
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either [Char] ProtocolParameters -&gt; IO ProtocolParameters)
+-&gt; IO (Either [Char] ProtocolParameters) -&gt; IO ProtocolParameters
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO (Either [Char] ProtocolParameters)
+forall a. FromJSON a =&gt; [Char] -&gt; IO (Either [Char] a)
+</span><span class="hs-identifier hs-var">eitherDecodeFileStrict'</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679924017"><span class="hs-identifier hs-var">parametersFile</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><a href="#local-6989586621679924021"><span class="hs-identifier hs-type">demoEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span id="local-6989586621679924021"><span class="annot"><span class="annottext">demoEnv :: TxEnvironment BabbageEra
+</span><a href="#local-6989586621679924021"><span class="hs-identifier hs-var hs-var">demoEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="annottext">txEnvNetworkId :: NetworkId
+</span><a href="Cardano.TxGenerator.Types.html#txEnvNetworkId"><span class="hs-identifier hs-var">txEnvNetworkId</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Network.Internal.NetworkId.html#Mainnet"><span class="hs-identifier hs-var">Mainnet</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txEnvProtocolParams :: ProtocolParameters
+</span><a href="Cardano.TxGenerator.Types.html#txEnvProtocolParams"><span class="hs-identifier hs-var">txEnvProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679924018"><span class="hs-identifier hs-var">protocolParameters</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txEnvFee :: TxFee BabbageEra
+</span><a href="Cardano.TxGenerator.Types.html#txEnvFee"><span class="hs-identifier hs-var">txEnvFee</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; Coin -&gt; TxFee BabbageEra
+forall era. ShelleyBasedEra era -&gt; Coin -&gt; TxFee era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxFeeExplicit"><span class="hs-identifier hs-var">TxFeeExplicit</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-number">100000</span></span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txEnvMetadata :: TxMetadataInEra BabbageEra
+</span><a href="Cardano.TxGenerator.Types.html#txEnvMetadata"><span class="hs-identifier hs-var">txEnvMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxMetadataInEra BabbageEra
+forall era. TxMetadataInEra era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxMetadataNone"><span class="hs-identifier hs-var">TxMetadataNone</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679924031"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924031"><span class="hs-identifier hs-var">run1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; Int -&gt; IO FundQueue)
+-&gt; FundQueue -&gt; [Int] -&gt; IO FundQueue
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue -&gt; Int -&gt; IO FundQueue
+</span><a href="#local-6989586621679924032"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator (Either TxGenError (Tx BabbageEra))
+ -&gt; FundQueue -&gt; Int -&gt; IO FundQueue)
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue
+-&gt; Int
+-&gt; IO FundQueue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTx"><span class="hs-identifier hs-var">generateTx</span></a></span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+</span><a href="#local-6989586621679924021"><span class="hs-identifier hs-var">demoEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-operator hs-var">`insertFund`</span></a></span><span> </span><span class="annot"><span class="annottext">Fund
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisFund"><span class="hs-identifier hs-var">genesisFund</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679924037"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924037"><span class="hs-identifier hs-var">run2</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; Int -&gt; IO FundQueue)
+-&gt; FundQueue -&gt; [Int] -&gt; IO FundQueue
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue -&gt; Int -&gt; IO FundQueue
+</span><a href="#local-6989586621679924032"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator (Either TxGenError (Tx BabbageEra))
+ -&gt; FundQueue -&gt; Int -&gt; IO FundQueue)
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue
+-&gt; Int
+-&gt; IO FundQueue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTxM"><span class="hs-identifier hs-var">generateTxM</span></a></span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+</span><a href="#local-6989586621679924021"><span class="hs-identifier hs-var">demoEnv</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-operator hs-var">`insertFund`</span></a></span><span> </span><span class="annot"><span class="annottext">Fund
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisFund"><span class="hs-identifier hs-var">genesisFund</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ()) -&gt; [Char] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Are run results identical? &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FundQueue -&gt; [Fund]
+</span><a href="Cardano.TxGenerator.FundQueue.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924031"><span class="hs-identifier hs-var">run1</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund] -&gt; [Fund] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; [Fund]
+</span><a href="Cardano.TxGenerator.FundQueue.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924037"><span class="hs-identifier hs-var">run2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="#local-6989586621679924032"><span class="hs-identifier hs-type">worker</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-51"></span><span>         </span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-type">Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679924032"><span class="annot"><span class="annottext">worker :: Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue -&gt; Int -&gt; IO FundQueue
+</span><a href="#local-6989586621679924032"><span class="hs-identifier hs-var hs-var">worker</span></a></span></span><span> </span><span id="local-6989586621679924042"><span class="annot"><span class="annottext">Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="#local-6989586621679924042"><span class="hs-identifier hs-var">pureGenerator</span></a></span></span><span> </span><span id="local-6989586621679924043"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924043"><span class="hs-identifier hs-var">generatorState</span></a></span></span><span> </span><span id="local-6989586621679924044"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679924044"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ()) -&gt; [Char] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;running tx-generator. Iteration : &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679924044"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679924045"><span class="annot"><span class="annottext">Either TxGenError (Tx BabbageEra)
+</span><a href="#local-6989586621679924045"><span class="hs-identifier hs-var">res</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679924046"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924046"><span class="hs-identifier hs-var">newState</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Generator (Either TxGenError (Tx BabbageEra))
+-&gt; FundQueue -&gt; (Either TxGenError (Tx BabbageEra), FundQueue)
+forall s a. State s a -&gt; s -&gt; (a, s)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#runState"><span class="hs-identifier hs-var">runState</span></a></span><span> </span><span class="annot"><span class="annottext">Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="#local-6989586621679924042"><span class="hs-identifier hs-var">pureGenerator</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924043"><span class="hs-identifier hs-var">generatorState</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either TxGenError (Tx BabbageEra)
+</span><a href="#local-6989586621679924045"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679924048"><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924048"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; IO ()
+forall a. Show a =&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#print"><span class="hs-identifier hs-var">print</span></a></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924048"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679924049"><span class="annot"><span class="annottext">TxGenError
+</span><a href="#local-6989586621679924049"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; IO ()
+forall a. Show a =&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#print"><span class="hs-identifier hs-var">print</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenError
+</span><a href="#local-6989586621679924049"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">FundQueue -&gt; IO FundQueue
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924046"><span class="hs-identifier hs-var">newState</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#signingKey"><span class="hs-identifier hs-type">signingKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.Class.html#SigningKey"><span class="hs-identifier hs-type">SigningKey</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Key.Internal.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span>
+</span><span id="line-64"></span><span id="signingKey"><span class="annot"><span class="annottext">signingKey :: SigningKey PaymentKey
+</span><a href="Cardano.TxGenerator.PureExample.html#signingKey"><span class="hs-identifier hs-var hs-var">signingKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+-&gt; Either TxGenError (SigningKey PaymentKey)
+-&gt; SigningKey PaymentKey
+forall b a. b -&gt; Either a b -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#fromRight"><span class="hs-identifier hs-var">fromRight</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; SigningKey PaymentKey
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;signingKey: parseError&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either TxGenError (SigningKey PaymentKey)
+ -&gt; SigningKey PaymentKey)
+-&gt; Either TxGenError (SigningKey PaymentKey)
+-&gt; SigningKey PaymentKey
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier hs-var">parseSigningKeyTE</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelope
+</span><a href="#local-6989586621679924053"><span class="hs-identifier hs-var">keyData</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679924053"><span class="annot"><span class="annottext">keyData :: TextEnvelope
+</span><a href="#local-6989586621679924053"><span class="hs-identifier hs-var hs-var">keyData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">teType :: TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teType"><span class="hs-identifier hs-var">teType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeType"><span class="hs-identifier hs-var">TextEnvelopeType</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;GenesisUTxOSigningKey_ed25519&quot;</span></span><span>
+</span><span id="line-67"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teDescription :: TextEnvelopeDescr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teDescription"><span class="hs-identifier hs-var">teDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; TextEnvelopeDescr
+forall a. IsString a =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Genesis Initial UTxO Signing Key&quot;</span></span><span>
+</span><span id="line-68"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRawCBOR :: ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teRawCBOR"><span class="hs-identifier hs-var">teRawCBOR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&amp;\162&quot;</span></span><span class="hs-special">}</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#genesisTxIn"><span class="hs-identifier hs-type">genesisTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#genesisValue"><span class="hs-identifier hs-type">genesisValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Output.html#TxOutValue"><span class="hs-identifier hs-type">TxOutValue</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-special">(</span><span id="genesisTxIn"><span class="annot"><span class="annottext">TxIn
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisTxIn"><span class="hs-identifier hs-var">genesisTxIn</span></a></span></span><span class="hs-special">,</span><span> </span><span id="genesisValue"><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisValue"><span class="hs-identifier hs-var">genesisValue</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; TxIn
+Text -&gt; TxIn
+</span><a href="Cardano.TxGenerator.Utils.html#mkTxIn"><span class="hs-identifier hs-var">mkTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0&quot;</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; Coin -&gt; TxOutValue BabbageEra
+forall era. ShelleyBasedEra era -&gt; Coin -&gt; TxOutValue era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Output.html#lovelaceToTxOutValue"><span class="hs-identifier hs-var">lovelaceToTxOutValue</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; TxOutValue BabbageEra) -&gt; Coin -&gt; TxOutValue BabbageEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">90000000000000</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#genesisFund"><span class="hs-identifier hs-type">genesisFund</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span>
+</span><span id="line-79"></span><span id="genesisFund"><span class="annot"><span class="annottext">genesisFund :: Fund
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisFund"><span class="hs-identifier hs-var hs-var">genesisFund</span></a></span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InAnyCardanoEra FundInEra -&gt; Fund
+</span><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-var">Fund</span></a></span><span> </span><span class="annot"><span class="annottext">(InAnyCardanoEra FundInEra -&gt; Fund)
+-&gt; InAnyCardanoEra FundInEra -&gt; Fund
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra BabbageEra
+-&gt; FundInEra BabbageEra -&gt; InAnyCardanoEra FundInEra
+forall era (thing :: * -&gt; *).
+Typeable era =&gt;
+CardanoEra era -&gt; thing era -&gt; InAnyCardanoEra thing
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#InAnyCardanoEra"><span class="hs-identifier hs-var">InAnyCardanoEra</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-var">BabbageEra</span></a></span><span> </span><span class="annot"><span class="annottext">FundInEra BabbageEra
+</span><a href="#local-6989586621679924074"><span class="hs-identifier hs-var">fundInEra</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="#local-6989586621679924074"><span class="hs-identifier hs-type">fundInEra</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#FundInEra"><span class="hs-identifier hs-type">FundInEra</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679924074"><span class="annot"><span class="annottext">fundInEra :: FundInEra BabbageEra
+</span><a href="#local-6989586621679924074"><span class="hs-identifier hs-var hs-var">fundInEra</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#FundInEra"><span class="hs-identifier hs-type">FundInEra</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">_fundTxIn :: TxIn
+</span><a href="Cardano.TxGenerator.Fund.html#_fundTxIn"><span class="hs-identifier hs-var">_fundTxIn</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisTxIn"><span class="hs-identifier hs-var">genesisTxIn</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_fundVal :: TxOutValue BabbageEra
+</span><a href="Cardano.TxGenerator.Fund.html#_fundVal"><span class="hs-identifier hs-var">_fundVal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOutValue BabbageEra
+</span><a href="Cardano.TxGenerator.PureExample.html#genesisValue"><span class="hs-identifier hs-var">genesisValue</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_fundWitness :: Witness WitCtxTxIn BabbageEra
+</span><a href="Cardano.TxGenerator.Fund.html#_fundWitness"><span class="hs-identifier hs-var">_fundWitness</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyWitnessInCtx WitCtxTxIn -&gt; Witness WitCtxTxIn BabbageEra
+forall witctx era. KeyWitnessInCtx witctx -&gt; Witness witctx era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Plutus.Internal.Script.html#KeyWitness"><span class="hs-identifier hs-var">KeyWitness</span></a></span><span> </span><span class="annot"><span class="annottext">KeyWitnessInCtx WitCtxTxIn
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Plutus.Internal.Script.html#KeyWitnessForSpending"><span class="hs-identifier hs-var">KeyWitnessForSpending</span></a></span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_fundSigningKey :: Maybe (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Fund.html#_fundSigningKey"><span class="hs-identifier hs-var">_fundSigningKey</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey -&gt; Maybe (SigningKey PaymentKey)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="Cardano.TxGenerator.PureExample.html#signingKey"><span class="hs-identifier hs-var">signingKey</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">type</span><span> </span><span id="Generator"><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-var">Generator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#generateTx"><span class="hs-identifier hs-type">generateTx</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-93"></span><span>     </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-type">Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span id="generateTx"><span class="annot"><span class="annottext">generateTx :: TxEnvironment BabbageEra
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTx"><span class="hs-identifier hs-var hs-var">generateTx</span></a></span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span class="hs-special">{</span><span id="local-6989586621679924082"><span id="local-6989586621679924083"><span id="local-6989586621679924084"><span id="local-6989586621679924085"><span class="annot"><span class="annottext">NetworkId
+TxMetadataInEra BabbageEra
+TxFee BabbageEra
+ProtocolParameters
+txEnvNetworkId :: forall era. TxEnvironment era -&gt; NetworkId
+txEnvProtocolParams :: forall era. TxEnvironment era -&gt; ProtocolParameters
+txEnvFee :: forall era. TxEnvironment era -&gt; TxFee era
+txEnvMetadata :: forall era. TxEnvironment era -&gt; TxMetadataInEra era
+txEnvNetworkId :: NetworkId
+txEnvProtocolParams :: ProtocolParameters
+txEnvFee :: TxFee BabbageEra
+txEnvMetadata :: TxMetadataInEra BabbageEra
+</span><a href="Cardano.TxGenerator.Types.html#txEnvNetworkId"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxGenerator BabbageEra
+-&gt; FundSource (StateT FundQueue Identity)
+-&gt; ([Coin] -&gt; [Coin])
+-&gt; ToUTxOList BabbageEra [Coin]
+-&gt; FundToStoreList (StateT FundQueue Identity)
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+forall (m :: * -&gt; *) era split.
+Monad m =&gt;
+TxGenerator era
+-&gt; FundSource m
+-&gt; ([Coin] -&gt; split)
+-&gt; ToUTxOList era split
+-&gt; FundToStoreList m
+-&gt; m (Either TxGenError (Tx era))
+</span><a href="Cardano.TxGenerator.Tx.html#sourceToStoreTransaction"><span class="hs-identifier hs-var">sourceToStoreTransaction</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">TxGenerator BabbageEra
+</span><a href="#local-6989586621679924086"><span class="hs-identifier hs-var">generator</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">FundSource (StateT FundQueue Identity)
+</span><a href="#local-6989586621679924087"><span class="hs-identifier hs-var">consumeInputFunds</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">[Coin] -&gt; [Coin]
+</span><a href="#local-6989586621679924088"><span class="hs-identifier hs-var">computeOutputValues</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ToUTxO BabbageEra] -&gt; ToUTxOList BabbageEra [Coin]
+forall era. [ToUTxO era] -&gt; ToUTxOList era [Coin]
+</span><a href="Cardano.TxGenerator.UTxO.html#makeToUTxOList"><span class="hs-identifier hs-var">makeToUTxOList</span></a></span><span> </span><span class="annot"><span class="annottext">([ToUTxO BabbageEra] -&gt; ToUTxOList BabbageEra [Coin])
+-&gt; [ToUTxO BabbageEra] -&gt; ToUTxOList BabbageEra [Coin]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ToUTxO BabbageEra -&gt; [ToUTxO BabbageEra]
+forall a. a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#repeat"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="annot"><span class="annottext">ToUTxO BabbageEra
+</span><a href="#local-6989586621679924090"><span class="hs-identifier hs-var">computeUTxO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">FundToStoreList (StateT FundQueue Identity)
+</span><a href="#local-6989586621679924091"><span class="hs-identifier hs-var">addNewOutputFunds</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxFeeExplicit"><span class="hs-identifier hs-type">TxFeeExplicit</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679924092"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679924092"><span class="hs-identifier hs-var">fee</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxFee BabbageEra
+</span><a href="#local-6989586621679924084"><span class="hs-identifier hs-var">txEnvFee</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><a href="#local-6989586621679924086"><span class="hs-identifier hs-type">generator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenerator"><span class="hs-identifier hs-type">TxGenerator</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span id="local-6989586621679924086"><span class="annot"><span class="annottext">generator :: TxGenerator BabbageEra
+</span><a href="#local-6989586621679924086"><span class="hs-identifier hs-var hs-var">generator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; ProtocolParameters
+-&gt; Either
+     ProtocolParametersConversionError
+     (LedgerProtocolParameters BabbageEra)
+forall era.
+ShelleyBasedEra era
+-&gt; ProtocolParameters
+-&gt; Either
+     ProtocolParametersConversionError (LedgerProtocolParameters era)
+</span><a href="Cardano.TxGenerator.ProtocolParameters.html#convertToLedgerProtocolParameters"><span class="hs-identifier hs-var">convertToLedgerProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679924083"><span class="hs-identifier hs-var">txEnvProtocolParams</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679924094"><span class="annot"><span class="annottext">LedgerProtocolParameters BabbageEra
+</span><a href="#local-6989586621679924094"><span class="hs-identifier hs-var">ledgerParameters</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-109"></span><span>          </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; LedgerProtocolParameters BabbageEra
+-&gt; (TxInsCollateral BabbageEra, [Fund])
+-&gt; TxFee BabbageEra
+-&gt; TxMetadataInEra BabbageEra
+-&gt; TxGenerator BabbageEra
+forall era.
+IsShelleyBasedEra era =&gt;
+ShelleyBasedEra era
+-&gt; LedgerProtocolParameters era
+-&gt; (TxInsCollateral era, [Fund])
+-&gt; TxFee era
+-&gt; TxMetadataInEra era
+-&gt; TxGenerator era
+</span><a href="Cardano.TxGenerator.Tx.html#genTx"><span class="hs-identifier hs-var">genTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerProtocolParameters BabbageEra
+</span><a href="#local-6989586621679924094"><span class="hs-identifier hs-var">ledgerParameters</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInsCollateral BabbageEra, [Fund])
+</span><a href="#local-6989586621679924095"><span class="hs-identifier hs-var">collateralFunds</span></a></span><span> </span><span class="annot"><span class="annottext">TxFee BabbageEra
+</span><a href="#local-6989586621679924084"><span class="hs-identifier hs-var">txEnvFee</span></a></span><span> </span><span class="annot"><span class="annottext">TxMetadataInEra BabbageEra
+</span><a href="#local-6989586621679924085"><span class="hs-identifier hs-var">txEnvMetadata</span></a></span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679924096"><span class="annot"><span class="annottext">ProtocolParametersConversionError
+</span><a href="#local-6989586621679924096"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">[Fund]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[TxOut CtxTx BabbageEra]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; Either TxGenError (Tx BabbageEra, TxId)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersConversionError -&gt; TxGenError
+forall e. Error e =&gt; e -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#ApiError"><span class="hs-identifier hs-var">ApiError</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersConversionError
+</span><a href="#local-6989586621679924096"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-comment">-- collateralFunds are needed for Plutus transactions</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><a href="#local-6989586621679924095"><span class="hs-identifier hs-type">collateralFunds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxInsCollateral"><span class="hs-identifier hs-type">TxInsCollateral</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span id="local-6989586621679924095"><span class="annot"><span class="annottext">collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
+</span><a href="#local-6989586621679924095"><span class="hs-identifier hs-var hs-var">collateralFunds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxInsCollateral BabbageEra
+forall era. TxInsCollateral era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxInsCollateralNone"><span class="hs-identifier hs-var">TxInsCollateralNone</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- Create a transaction that uses all the available funds.</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621679924087"><span class="hs-identifier hs-type">consumeInputFunds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-type">Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679924087"><span class="annot"><span class="annottext">consumeInputFunds :: FundSource (StateT FundQueue Identity)
+</span><a href="#local-6989586621679924087"><span class="hs-identifier hs-var hs-var">consumeInputFunds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>      </span><span id="local-6989586621679924099"><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679924099"><span class="hs-identifier hs-var">funds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; [Fund]
+</span><a href="Cardano.TxGenerator.FundQueue.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; [Fund])
+-&gt; StateT FundQueue Identity FundQueue
+-&gt; StateT FundQueue Identity [Fund]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">StateT FundQueue Identity FundQueue
+forall (m :: * -&gt; *) s. Monad m =&gt; StateT s m s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#get"><span class="hs-identifier hs-var">get</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">FundQueue -&gt; StateT FundQueue Identity ()
+forall (m :: * -&gt; *) s. Monad m =&gt; s -&gt; StateT s m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#put"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">Either TxGenError [Fund] -&gt; FundSource (StateT FundQueue Identity)
+forall a. a -&gt; StateT FundQueue Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either TxGenError [Fund]
+ -&gt; FundSource (StateT FundQueue Identity))
+-&gt; Either TxGenError [Fund]
+-&gt; FundSource (StateT FundQueue Identity)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund] -&gt; Either TxGenError [Fund]
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679924099"><span class="hs-identifier hs-var">funds</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="#local-6989586621679924091"><span class="hs-identifier hs-type">addNewOutputFunds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-type">Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679924091"><span class="annot"><span class="annottext">addNewOutputFunds :: FundToStoreList (StateT FundQueue Identity)
+</span><a href="#local-6989586621679924091"><span class="hs-identifier hs-var hs-var">addNewOutputFunds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; StateT FundQueue Identity ()
+forall (m :: * -&gt; *) s. Monad m =&gt; s -&gt; StateT s m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#put"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; StateT FundQueue Identity ())
+-&gt; ([Fund] -&gt; FundQueue)
+-&gt; FundToStoreList (StateT FundQueue Identity)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; Fund -&gt; FundQueue)
+-&gt; FundQueue -&gt; [Fund] -&gt; FundQueue
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">List.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-identifier hs-var">insertFund</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><a href="#local-6989586621679924088"><span class="hs-identifier hs-type">computeOutputValues</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679924088"><span class="annot"><span class="annottext">computeOutputValues :: [Coin] -&gt; [Coin]
+</span><a href="#local-6989586621679924088"><span class="hs-identifier hs-var hs-var">computeOutputValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Int -&gt; [Coin] -&gt; [Coin]
+</span><a href="Cardano.TxGenerator.Utils.html#inputsToOutputsWithFee"><span class="hs-identifier hs-var">inputsToOutputsWithFee</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679924092"><span class="hs-identifier hs-var">fee</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679924104"><span class="hs-identifier hs-var">numOfOutputs</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679924104"><span class="annot"><span class="annottext">numOfOutputs :: Int
+</span><a href="#local-6989586621679924104"><span class="hs-identifier hs-var hs-var">numOfOutputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679924090"><span class="annot"><span class="annottext">computeUTxO :: ToUTxO BabbageEra
+</span><a href="#local-6989586621679924090"><span class="hs-identifier hs-var hs-var">computeUTxO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId -&gt; SigningKey PaymentKey -&gt; ToUTxO BabbageEra
+forall era.
+IsShelleyBasedEra era =&gt;
+NetworkId -&gt; SigningKey PaymentKey -&gt; ToUTxO era
+</span><a href="Cardano.TxGenerator.UTxO.html#mkUTxOVariant"><span class="hs-identifier hs-var">mkUTxOVariant</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679924082"><span class="hs-identifier hs-var">txEnvNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="Cardano.TxGenerator.PureExample.html#signingKey"><span class="hs-identifier hs-var">signingKey</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#generateTxM"><span class="hs-identifier hs-type">generateTxM</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#Generator"><span class="hs-identifier hs-type">Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span id="generateTxM"><span class="annot"><span class="annottext">generateTxM :: TxEnvironment BabbageEra
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTxM"><span class="hs-identifier hs-var hs-var">generateTxM</span></a></span></span><span> </span><span id="local-6989586621679924106"><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+</span><a href="#local-6989586621679924106"><span class="hs-identifier hs-var">txEnv</span></a></span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>      </span><span id="local-6989586621679924107"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924107"><span class="hs-identifier hs-var">inFunds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StateT FundQueue Identity FundQueue
+forall (m :: * -&gt; *) s. Monad m =&gt; StateT s m s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#get"><span class="hs-identifier hs-var">get</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+-&gt; FundQueue -&gt; Either TxGenError (Tx BabbageEra, FundQueue)
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTxPure"><span class="hs-identifier hs-var">generateTxPure</span></a></span><span> </span><span class="annot"><span class="annottext">TxEnvironment BabbageEra
+</span><a href="#local-6989586621679924106"><span class="hs-identifier hs-var">txEnv</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924107"><span class="hs-identifier hs-var">inFunds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679924109"><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924109"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679924110"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924110"><span class="hs-identifier hs-var">outFunds</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; StateT FundQueue Identity ()
+forall (m :: * -&gt; *) s. Monad m =&gt; s -&gt; StateT s m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.State.Strict.html#put"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924110"><span class="hs-identifier hs-var">outFunds</span></a></span><span> </span><span class="annot"><span class="annottext">StateT FundQueue Identity ()
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+forall a b.
+StateT FundQueue Identity a
+-&gt; StateT FundQueue Identity b -&gt; StateT FundQueue Identity b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Either TxGenError (Tx BabbageEra)
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+forall a. a -&gt; StateT FundQueue Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx BabbageEra -&gt; Either TxGenError (Tx BabbageEra)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924109"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679924111"><span class="annot"><span class="annottext">TxGenError
+</span><a href="#local-6989586621679924111"><span class="hs-identifier hs-var">err</span></a></span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either TxGenError (Tx BabbageEra)
+-&gt; Generator (Either TxGenError (Tx BabbageEra))
+forall a. a -&gt; StateT FundQueue Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxGenError -&gt; Either TxGenError (Tx BabbageEra)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenError
+</span><a href="#local-6989586621679924111"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Cardano.TxGenerator.PureExample.html#generateTxPure"><span class="hs-identifier hs-type">generateTxPure</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-144"></span><span>     </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.FundQueue.html#FundQueue"><span class="hs-identifier hs-type">FundQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span id="generateTxPure"><span class="annot"><span class="annottext">generateTxPure :: TxEnvironment BabbageEra
+-&gt; FundQueue -&gt; Either TxGenError (Tx BabbageEra, FundQueue)
+</span><a href="Cardano.TxGenerator.PureExample.html#generateTxPure"><span class="hs-identifier hs-var hs-var">generateTxPure</span></a></span></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxEnvironment"><span class="hs-identifier hs-type">TxEnvironment</span></a></span><span class="hs-special">{</span><span id="local-6989586621679924112"><span id="local-6989586621679924113"><span id="local-6989586621679924114"><span id="local-6989586621679924115"><span class="annot"><span class="annottext">NetworkId
+TxMetadataInEra BabbageEra
+TxFee BabbageEra
+ProtocolParameters
+txEnvNetworkId :: forall era. TxEnvironment era -&gt; NetworkId
+txEnvProtocolParams :: forall era. TxEnvironment era -&gt; ProtocolParameters
+txEnvFee :: forall era. TxEnvironment era -&gt; TxFee era
+txEnvMetadata :: forall era. TxEnvironment era -&gt; TxMetadataInEra era
+txEnvNetworkId :: NetworkId
+txEnvProtocolParams :: ProtocolParameters
+txEnvFee :: TxFee BabbageEra
+txEnvMetadata :: TxMetadataInEra BabbageEra
+</span><a href="Cardano.TxGenerator.Types.html#txEnvNetworkId"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679924116"><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924116"><span class="hs-identifier hs-var">inQueue</span></a></span></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-149"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679924117"><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924117"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679924118"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679924118"><span class="hs-identifier hs-var">txId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TxGenerator BabbageEra
+</span><a href="#local-6989586621679924119"><span class="hs-identifier hs-var">generator</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679924120"><span class="hs-identifier hs-var">inputs</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut CtxTx BabbageEra]
+</span><a href="#local-6989586621679924121"><span class="hs-identifier hs-var">outputs</span></a></span><span>
+</span><span id="line-150"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679924122"><span class="annot"><span class="annottext">outQueue :: FundQueue
+</span><a href="#local-6989586621679924122"><span class="hs-identifier hs-var hs-var">outQueue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FundQueue -&gt; Fund -&gt; FundQueue)
+-&gt; FundQueue -&gt; [Fund] -&gt; FundQueue
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">List.foldl'</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; Fund -&gt; FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#insertFund"><span class="hs-identifier hs-var">insertFund</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="Cardano.TxGenerator.FundQueue.html#emptyFundQueue"><span class="hs-identifier hs-var">emptyFundQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; [Fund]
+</span><a href="#local-6989586621679924123"><span class="hs-identifier hs-var">toFunds</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679924118"><span class="hs-identifier hs-var">txId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">(Tx BabbageEra, FundQueue)
+-&gt; Either TxGenError (Tx BabbageEra, FundQueue)
+forall a. a -&gt; Either TxGenError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679924117"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924122"><span class="hs-identifier hs-var">outQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679924120"><span class="annot"><span class="annottext">inputs :: [Fund]
+</span><a href="#local-6989586621679924120"><span class="hs-identifier hs-var hs-var">inputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FundQueue -&gt; [Fund]
+</span><a href="Cardano.TxGenerator.FundQueue.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">FundQueue
+</span><a href="#local-6989586621679924116"><span class="hs-identifier hs-var">inQueue</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxFeeExplicit"><span class="hs-identifier hs-type">TxFeeExplicit</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679924124"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679924124"><span class="hs-identifier hs-var">fee</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxFee BabbageEra
+</span><a href="#local-6989586621679924114"><span class="hs-identifier hs-var">txEnvFee</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><a href="#local-6989586621679924119"><span class="hs-identifier hs-type">generator</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenerator"><span class="hs-identifier hs-type">TxGenerator</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span id="local-6989586621679924119"><span class="annot"><span class="annottext">generator :: TxGenerator BabbageEra
+</span><a href="#local-6989586621679924119"><span class="hs-identifier hs-var hs-var">generator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; ProtocolParameters
+-&gt; Either
+     ProtocolParametersConversionError
+     (LedgerProtocolParameters BabbageEra)
+forall era.
+ShelleyBasedEra era
+-&gt; ProtocolParameters
+-&gt; Either
+     ProtocolParametersConversionError (LedgerProtocolParameters era)
+</span><a href="Cardano.TxGenerator.ProtocolParameters.html#convertToLedgerProtocolParameters"><span class="hs-identifier hs-var">convertToLedgerProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679924113"><span class="hs-identifier hs-var">txEnvProtocolParams</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679924125"><span class="annot"><span class="annottext">LedgerProtocolParameters BabbageEra
+</span><a href="#local-6989586621679924125"><span class="hs-identifier hs-var">ledgerParameters</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-160"></span><span>          </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+-&gt; LedgerProtocolParameters BabbageEra
+-&gt; (TxInsCollateral BabbageEra, [Fund])
+-&gt; TxFee BabbageEra
+-&gt; TxMetadataInEra BabbageEra
+-&gt; TxGenerator BabbageEra
+forall era.
+IsShelleyBasedEra era =&gt;
+ShelleyBasedEra era
+-&gt; LedgerProtocolParameters era
+-&gt; (TxInsCollateral era, [Fund])
+-&gt; TxFee era
+-&gt; TxMetadataInEra era
+-&gt; TxGenerator era
+</span><a href="Cardano.TxGenerator.Tx.html#genTx"><span class="hs-identifier hs-var">genTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerProtocolParameters BabbageEra
+</span><a href="#local-6989586621679924125"><span class="hs-identifier hs-var">ledgerParameters</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInsCollateral BabbageEra, [Fund])
+</span><a href="#local-6989586621679924126"><span class="hs-identifier hs-var">collateralFunds</span></a></span><span> </span><span class="annot"><span class="annottext">TxFee BabbageEra
+</span><a href="#local-6989586621679924114"><span class="hs-identifier hs-var">txEnvFee</span></a></span><span> </span><span class="annot"><span class="annottext">TxMetadataInEra BabbageEra
+</span><a href="#local-6989586621679924115"><span class="hs-identifier hs-var">txEnvMetadata</span></a></span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679924127"><span class="annot"><span class="annottext">ProtocolParametersConversionError
+</span><a href="#local-6989586621679924127"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">[Fund]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">[TxOut CtxTx BabbageEra]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; Either TxGenError (Tx BabbageEra, TxId)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersConversionError -&gt; TxGenError
+forall e. Error e =&gt; e -&gt; TxGenError
+</span><a href="Cardano.TxGenerator.Types.html#ApiError"><span class="hs-identifier hs-var">ApiError</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersConversionError
+</span><a href="#local-6989586621679924127"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-163"></span><span>        </span><span class="hs-comment">-- collateralFunds are needed for Plutus transactions</span><span>
+</span><span id="line-164"></span><span>        </span><span class="annot"><a href="#local-6989586621679924126"><span class="hs-identifier hs-type">collateralFunds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxInsCollateral"><span class="hs-identifier hs-type">TxInsCollateral</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.TxGenerator.Fund.html#Fund"><span class="hs-identifier hs-type">Fund</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>        </span><span id="local-6989586621679924126"><span class="annot"><span class="annottext">collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
+</span><a href="#local-6989586621679924126"><span class="hs-identifier hs-var hs-var">collateralFunds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxInsCollateral BabbageEra
+forall era. TxInsCollateral era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Tx.Internal.Body.html#TxInsCollateralNone"><span class="hs-identifier hs-var">TxInsCollateralNone</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span>    </span><span id="local-6989586621679924128"><span class="annot"><span class="annottext">outValues :: [Coin]
+</span><a href="#local-6989586621679924128"><span class="hs-identifier hs-var hs-var">outValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Coin] -&gt; [Coin]
+</span><a href="#local-6989586621679924129"><span class="hs-identifier hs-var">computeOutputValues</span></a></span><span> </span><span class="annot"><span class="annottext">([Coin] -&gt; [Coin]) -&gt; [Coin] -&gt; [Coin]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Fund -&gt; Coin) -&gt; [Fund] -&gt; [Coin]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Fund -&gt; Coin
+</span><a href="Cardano.TxGenerator.Fund.html#getFundCoin"><span class="hs-identifier hs-var">getFundCoin</span></a></span><span> </span><span class="annot"><span class="annottext">[Fund]
+</span><a href="#local-6989586621679924120"><span class="hs-identifier hs-var">inputs</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679924121"><span class="annot"><span class="annottext">[TxOut CtxTx BabbageEra]
+</span><a href="#local-6989586621679924121"><span class="hs-identifier hs-var">outputs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679924123"><span class="annot"><span class="annottext">TxId -&gt; [Fund]
+</span><a href="#local-6989586621679924123"><span class="hs-identifier hs-var">toFunds</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ToUTxO BabbageEra] -&gt; ToUTxOList BabbageEra [Coin]
+forall era. [ToUTxO era] -&gt; ToUTxOList era [Coin]
+</span><a href="Cardano.TxGenerator.UTxO.html#makeToUTxOList"><span class="hs-identifier hs-var">makeToUTxOList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ToUTxO BabbageEra -&gt; [ToUTxO BabbageEra]
+forall a. a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#repeat"><span class="hs-identifier hs-var">repeat</span></a></span><span> </span><span class="annot"><span class="annottext">ToUTxO BabbageEra
+</span><a href="#local-6989586621679924131"><span class="hs-identifier hs-var">computeUTxO</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Coin]
+</span><a href="#local-6989586621679924128"><span class="hs-identifier hs-var">outValues</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span>    </span><span class="annot"><a href="#local-6989586621679924129"><span class="hs-identifier hs-type">computeOutputValues</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-171"></span><span>    </span><span id="local-6989586621679924129"><span class="annot"><span class="annottext">computeOutputValues :: [Coin] -&gt; [Coin]
+</span><a href="#local-6989586621679924129"><span class="hs-identifier hs-var hs-var">computeOutputValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Int -&gt; [Coin] -&gt; [Coin]
+</span><a href="Cardano.TxGenerator.Utils.html#inputsToOutputsWithFee"><span class="hs-identifier hs-var">inputsToOutputsWithFee</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679924124"><span class="hs-identifier hs-var">fee</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679924132"><span class="hs-identifier hs-var">numOfOutputs</span></a></span><span>
+</span><span id="line-172"></span><span>      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679924132"><span class="annot"><span class="annottext">numOfOutputs :: Int
+</span><a href="#local-6989586621679924132"><span class="hs-identifier hs-var hs-var">numOfOutputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679924131"><span class="annot"><span class="annottext">computeUTxO :: ToUTxO BabbageEra
+</span><a href="#local-6989586621679924131"><span class="hs-identifier hs-var hs-var">computeUTxO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId -&gt; SigningKey PaymentKey -&gt; ToUTxO BabbageEra
+forall era.
+IsShelleyBasedEra era =&gt;
+NetworkId -&gt; SigningKey PaymentKey -&gt; ToUTxO era
+</span><a href="Cardano.TxGenerator.UTxO.html#mkUTxOVariant"><span class="hs-identifier hs-var">mkUTxOVariant</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679924112"><span class="hs-identifier hs-var">txEnvNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="Cardano.TxGenerator.PureExample.html#signingKey"><span class="hs-identifier hs-var">signingKey</span></a></span><span>
+</span><span id="line-175"></span></pre></body></html>

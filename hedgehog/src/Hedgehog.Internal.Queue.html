@@ -1,0 +1,512 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Queue</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier">TaskIndex</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier">TasksRemaining</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#runTasks"><span class="hs-identifier">runTasks</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#finalizeTask"><span class="hs-identifier">finalizeTask</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#runActiveFinalizers"><span class="hs-identifier">runActiveFinalizers</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#dequeueMVar"><span class="hs-identifier">dequeueMVar</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#updateNumCapabilities"><span class="hs-identifier">updateNumCapabilities</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html#rtsSupportsBoundThreads"><span class="hs-identifier">rtsSupportsBoundThreads</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">forConcurrently</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MVar</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Conc</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Hedgehog.Internal.Config.html"><span class="hs-identifier">Hedgehog.Internal.Config</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="TaskIndex"><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-var">TaskIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>  </span><span id="TaskIndex"><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-var">TaskIndex</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679492666"><span id="local-6989586621679492671"><span class="annot"><span class="annottext">TaskIndex -&gt; TaskIndex -&gt; Bool
+(TaskIndex -&gt; TaskIndex -&gt; Bool)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; Bool) -&gt; Eq TaskIndex
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TaskIndex -&gt; TaskIndex -&gt; Bool
+== :: TaskIndex -&gt; TaskIndex -&gt; Bool
+$c/= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+/= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492679"><span id="local-6989586621679492683"><span id="local-6989586621679492687"><span id="local-6989586621679492691"><span id="local-6989586621679492695"><span id="local-6989586621679492699"><span id="local-6989586621679492703"><span class="annot"><span class="annottext">Eq TaskIndex
+Eq TaskIndex =&gt;
+(TaskIndex -&gt; TaskIndex -&gt; Ordering)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; Bool)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; Bool)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; Bool)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; Bool)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; TaskIndex)
+-&gt; Ord TaskIndex
+TaskIndex -&gt; TaskIndex -&gt; Bool
+TaskIndex -&gt; TaskIndex -&gt; Ordering
+TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TaskIndex -&gt; TaskIndex -&gt; Ordering
+compare :: TaskIndex -&gt; TaskIndex -&gt; Ordering
+$c&lt; :: TaskIndex -&gt; TaskIndex -&gt; Bool
+&lt; :: TaskIndex -&gt; TaskIndex -&gt; Bool
+$c&lt;= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+&lt;= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+$c&gt; :: TaskIndex -&gt; TaskIndex -&gt; Bool
+&gt; :: TaskIndex -&gt; TaskIndex -&gt; Bool
+$c&gt;= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+&gt;= :: TaskIndex -&gt; TaskIndex -&gt; Bool
+$cmax :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+max :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+$cmin :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+min :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492709"><span id="local-6989586621679492714"><span id="local-6989586621679492718"><span id="local-6989586621679492722"><span id="local-6989586621679492726"><span id="local-6989586621679492730"><span id="local-6989586621679492734"><span id="local-6989586621679492738"><span class="annot"><span class="annottext">Int -&gt; TaskIndex
+TaskIndex -&gt; Int
+TaskIndex -&gt; [TaskIndex]
+TaskIndex -&gt; TaskIndex
+TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+TaskIndex -&gt; TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+(TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex)
+-&gt; (Int -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; Int)
+-&gt; (TaskIndex -&gt; [TaskIndex])
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; [TaskIndex])
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; [TaskIndex])
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; TaskIndex -&gt; [TaskIndex])
+-&gt; Enum TaskIndex
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: TaskIndex -&gt; TaskIndex
+succ :: TaskIndex -&gt; TaskIndex
+$cpred :: TaskIndex -&gt; TaskIndex
+pred :: TaskIndex -&gt; TaskIndex
+$ctoEnum :: Int -&gt; TaskIndex
+toEnum :: Int -&gt; TaskIndex
+$cfromEnum :: TaskIndex -&gt; Int
+fromEnum :: TaskIndex -&gt; Int
+$cenumFrom :: TaskIndex -&gt; [TaskIndex]
+enumFrom :: TaskIndex -&gt; [TaskIndex]
+$cenumFromThen :: TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+enumFromThen :: TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+$cenumFromTo :: TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+enumFromTo :: TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+$cenumFromThenTo :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+enumFromThenTo :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex -&gt; [TaskIndex]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492744"><span id="local-6989586621679492749"><span id="local-6989586621679492753"><span id="local-6989586621679492757"><span id="local-6989586621679492761"><span id="local-6989586621679492765"><span id="local-6989586621679492769"><span class="annot"><span class="annottext">Integer -&gt; TaskIndex
+TaskIndex -&gt; TaskIndex
+TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+(TaskIndex -&gt; TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex)
+-&gt; (TaskIndex -&gt; TaskIndex)
+-&gt; (Integer -&gt; TaskIndex)
+-&gt; Num TaskIndex
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
++ :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+$c- :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+- :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+$c* :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+* :: TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+$cnegate :: TaskIndex -&gt; TaskIndex
+negate :: TaskIndex -&gt; TaskIndex
+$cabs :: TaskIndex -&gt; TaskIndex
+abs :: TaskIndex -&gt; TaskIndex
+$csignum :: TaskIndex -&gt; TaskIndex
+signum :: TaskIndex -&gt; TaskIndex
+$cfromInteger :: Integer -&gt; TaskIndex
+fromInteger :: Integer -&gt; TaskIndex
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">newtype</span><span> </span><span id="TasksRemaining"><span class="annot"><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier hs-var">TasksRemaining</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>  </span><span id="TasksRemaining"><span class="annot"><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier hs-var">TasksRemaining</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621679492598"><span id="local-6989586621679492601"><span class="annot"><a href="Hedgehog.Internal.Queue.html#dequeueMVar"><span class="hs-identifier hs-type">dequeueMVar</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-40"></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679492598"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier hs-type">TasksRemaining</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492598"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492601"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679492601"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-43"></span><span id="dequeueMVar"><span class="annot"><span class="annottext">dequeueMVar :: forall a b.
+MVar [(TaskIndex, a)]
+-&gt; (TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b)
+-&gt; IO (Maybe (TaskIndex, b))
+</span><a href="Hedgehog.Internal.Queue.html#dequeueMVar"><span class="hs-identifier hs-var hs-var">dequeueMVar</span></a></span></span><span> </span><span id="local-6989586621679492780"><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+</span><a href="#local-6989586621679492780"><span class="hs-identifier hs-var">mvar</span></a></span></span><span> </span><span id="local-6989586621679492781"><span class="annot"><span class="annottext">TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b
+</span><a href="#local-6989586621679492781"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+-&gt; ([(TaskIndex, a)]
+    -&gt; IO ([(TaskIndex, a)], Maybe (TaskIndex, b)))
+-&gt; IO (Maybe (TaskIndex, b))
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">MVar.modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+</span><a href="#local-6989586621679492780"><span class="hs-identifier hs-var">mvar</span></a></span><span> </span><span class="annot"><span class="annottext">(([(TaskIndex, a)] -&gt; IO ([(TaskIndex, a)], Maybe (TaskIndex, b)))
+ -&gt; IO (Maybe (TaskIndex, b)))
+-&gt; ([(TaskIndex, a)]
+    -&gt; IO ([(TaskIndex, a)], Maybe (TaskIndex, b)))
+-&gt; IO (Maybe (TaskIndex, b))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">([(TaskIndex, a)], Maybe (TaskIndex, b))
+-&gt; IO ([(TaskIndex, a)], Maybe (TaskIndex, b))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (TaskIndex, b)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679492783"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492783"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492784"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679492784"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679492785"><span class="annot"><span class="annottext">[(TaskIndex, a)]
+</span><a href="#local-6989586621679492785"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>      </span><span id="local-6989586621679492786"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492786"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b
+</span><a href="#local-6989586621679492781"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; TasksRemaining
+</span><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier hs-var">TasksRemaining</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; TasksRemaining) -&gt; Int -&gt; TasksRemaining
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(TaskIndex, a)] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[(TaskIndex, a)]
+</span><a href="#local-6989586621679492785"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492783"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679492784"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">([(TaskIndex, a)], Maybe (TaskIndex, b))
+-&gt; IO ([(TaskIndex, a)], Maybe (TaskIndex, b))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(TaskIndex, a)]
+</span><a href="#local-6989586621679492785"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(TaskIndex, b) -&gt; Maybe (TaskIndex, b)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492783"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492786"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span id="local-6989586621679492614"><span id="local-6989586621679492615"><span id="local-6989586621679492616"><span class="annot"><a href="Hedgehog.Internal.Queue.html#runTasks"><span class="hs-identifier hs-type">runTasks</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-52"></span><span>     </span><span class="annot"><a href="Hedgehog.Internal.Config.html#WorkerCount"><span class="hs-identifier hs-type">WorkerCount</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679492614"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TasksRemaining"><span class="hs-identifier hs-type">TasksRemaining</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492614"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492615"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679492615"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679492615"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679492615"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492616"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679492616"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-59"></span><span id="runTasks"><span class="annot"><span class="annottext">runTasks :: forall a b c.
+WorkerCount
+-&gt; [a]
+-&gt; (TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b)
+-&gt; (b -&gt; IO ())
+-&gt; (b -&gt; IO ())
+-&gt; (b -&gt; IO c)
+-&gt; IO [c]
+</span><a href="Hedgehog.Internal.Queue.html#runTasks"><span class="hs-identifier hs-var hs-var">runTasks</span></a></span></span><span> </span><span id="local-6989586621679492806"><span class="annot"><span class="annottext">WorkerCount
+</span><a href="#local-6989586621679492806"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679492807"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679492807"><span class="hs-identifier hs-var">tasks</span></a></span></span><span> </span><span id="local-6989586621679492808"><span class="annot"><span class="annottext">TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b
+</span><a href="#local-6989586621679492808"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span id="local-6989586621679492809"><span class="annot"><span class="annottext">b -&gt; IO ()
+</span><a href="#local-6989586621679492809"><span class="hs-identifier hs-var">finish</span></a></span></span><span> </span><span id="local-6989586621679492810"><span class="annot"><span class="annottext">b -&gt; IO ()
+</span><a href="#local-6989586621679492810"><span class="hs-identifier hs-var">finalize</span></a></span></span><span> </span><span id="local-6989586621679492811"><span class="annot"><span class="annottext">b -&gt; IO c
+</span><a href="#local-6989586621679492811"><span class="hs-identifier hs-var">runTask</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679492812"><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+</span><a href="#local-6989586621679492812"><span class="hs-identifier hs-var">qvar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(TaskIndex, a)] -&gt; IO (MVar [(TaskIndex, a)])
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">MVar.newMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TaskIndex] -&gt; [a] -&gt; [(TaskIndex, a)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TaskIndex
+</span><span class="hs-number">0</span></span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679492807"><span class="hs-identifier hs-var">tasks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679492814"><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492814"><span class="hs-identifier hs-var">fvar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(TaskIndex, Map TaskIndex (IO ()))
+-&gt; IO (MVar (TaskIndex, Map TaskIndex (IO ())))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">MVar.newMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">TaskIndex
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679492823"><span class="annot"><span class="annottext">worker :: [c] -&gt; IO [c]
+</span><a href="#local-6989586621679492823"><span class="hs-identifier hs-var hs-var">worker</span></a></span></span><span> </span><span id="local-6989586621679492824"><span class="annot"><span class="annottext">[c]
+</span><a href="#local-6989586621679492824"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-65"></span><span>      </span><span id="local-6989586621679492825"><span class="annot"><span class="annottext">Maybe (TaskIndex, b)
+</span><a href="#local-6989586621679492825"><span class="hs-identifier hs-var">mx</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+-&gt; (TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b)
+-&gt; IO (Maybe (TaskIndex, b))
+forall a b.
+MVar [(TaskIndex, a)]
+-&gt; (TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b)
+-&gt; IO (Maybe (TaskIndex, b))
+</span><a href="Hedgehog.Internal.Queue.html#dequeueMVar"><span class="hs-identifier hs-var">dequeueMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar [(TaskIndex, a)]
+</span><a href="#local-6989586621679492812"><span class="hs-identifier hs-var">qvar</span></a></span><span> </span><span class="annot"><span class="annottext">TasksRemaining -&gt; TaskIndex -&gt; a -&gt; IO b
+</span><a href="#local-6989586621679492808"><span class="hs-identifier hs-var">start</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (TaskIndex, b)
+</span><a href="#local-6989586621679492825"><span class="hs-identifier hs-var">mx</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">Maybe (TaskIndex, b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-68"></span><span>          </span><span class="annot"><span class="annottext">[c] -&gt; IO [c]
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">[c]
+</span><a href="#local-6989586621679492824"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679492826"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492826"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492827"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492827"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>          </span><span id="local-6989586621679492828"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679492828"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">b -&gt; IO c
+</span><a href="#local-6989586621679492811"><span class="hs-identifier hs-var">runTask</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492827"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">b -&gt; IO ()
+</span><a href="#local-6989586621679492809"><span class="hs-identifier hs-var">finish</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492827"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+-&gt; TaskIndex -&gt; IO () -&gt; IO ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (TaskIndex, Map TaskIndex (IO ()))
+-&gt; TaskIndex -&gt; IO () -&gt; m ()
+</span><a href="Hedgehog.Internal.Queue.html#finalizeTask"><span class="hs-identifier hs-var">finalizeTask</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492814"><span class="hs-identifier hs-var">fvar</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492826"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; IO ()
+</span><a href="#local-6989586621679492810"><span class="hs-identifier hs-var">finalize</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679492827"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">[c] -&gt; IO [c]
+</span><a href="#local-6989586621679492823"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679492828"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; [c] -&gt; [c]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[c]
+</span><a href="#local-6989586621679492824"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- FIXME ensure all workers have finished running</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">([[c]] -&gt; [c]) -&gt; IO [[c]] -&gt; IO [c]
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[[c]] -&gt; [c]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [[c]] -&gt; IO [c])
+-&gt; ((WorkerCount -&gt; IO [c]) -&gt; IO [[c]])
+-&gt; (WorkerCount -&gt; IO [c])
+-&gt; IO [c]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[WorkerCount] -&gt; (WorkerCount -&gt; IO [c]) -&gt; IO [[c]]
+forall (t :: * -&gt; *) a b.
+Traversable t =&gt;
+t a -&gt; (a -&gt; IO b) -&gt; IO (t b)
+</span><span class="hs-identifier hs-var">forConcurrently</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">WorkerCount
+</span><span class="hs-number">1</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">WorkerCount -&gt; WorkerCount -&gt; WorkerCount
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">WorkerCount
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">WorkerCount
+</span><a href="#local-6989586621679492806"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">((WorkerCount -&gt; IO [c]) -&gt; IO [c])
+-&gt; (WorkerCount -&gt; IO [c]) -&gt; IO [c]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679492832"><span class="annot"><span class="annottext">WorkerCount
+</span><a href="#local-6989586621679492832"><span class="hs-identifier hs-var">_ix</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">[c] -&gt; IO [c]
+</span><a href="#local-6989586621679492823"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679492639"><span class="annot"><a href="Hedgehog.Internal.Queue.html#runActiveFinalizers"><span class="hs-identifier hs-type">runActiveFinalizers</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-80"></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492639"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492639"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-83"></span><span id="runActiveFinalizers"><span class="annot"><span class="annottext">runActiveFinalizers :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (TaskIndex, Map TaskIndex (IO ())) -&gt; m ()
+</span><a href="Hedgehog.Internal.Queue.html#runActiveFinalizers"><span class="hs-identifier hs-var hs-var">runActiveFinalizers</span></a></span></span><span> </span><span id="local-6989586621679492845"><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492845"><span class="hs-identifier hs-var">mvar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679492847"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679492847"><span class="hs-identifier hs-var">again</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+-&gt; ((TaskIndex, Map TaskIndex (IO ()))
+    -&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool))
+-&gt; IO Bool
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">MVar.modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492845"><span class="hs-identifier hs-var">mvar</span></a></span><span> </span><span class="annot"><span class="annottext">(((TaskIndex, Map TaskIndex (IO ()))
+  -&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool))
+ -&gt; IO Bool)
+-&gt; ((TaskIndex, Map TaskIndex (IO ()))
+    -&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool))
+-&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679492848"><span class="annot"><span class="annottext">original :: (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492848"><span class="hs-identifier hs-var">original</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679492849"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492849"><span class="hs-identifier hs-var">minIx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492850"><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492850"><span class="hs-identifier hs-var">finalizers0</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+-&gt; Maybe ((TaskIndex, IO ()), Map TaskIndex (IO ()))
+forall k a. Map k a -&gt; Maybe ((k, a), Map k a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#minViewWithKey"><span class="hs-identifier hs-var">Map.minViewWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492850"><span class="hs-identifier hs-var">finalizers0</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>          </span><span class="annot"><span class="annottext">Maybe ((TaskIndex, IO ()), Map TaskIndex (IO ()))
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>            </span><span class="annot"><span class="annottext">((TaskIndex, Map TaskIndex (IO ())), Bool)
+-&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492848"><span class="hs-identifier hs-var">original</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679492852"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492852"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492853"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679492853"><span class="hs-identifier hs-var">finalize</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492854"><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492854"><span class="hs-identifier hs-var">finalizers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492852"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex -&gt; TaskIndex -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492849"><span class="hs-identifier hs-var">minIx</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex -&gt; TaskIndex -&gt; TaskIndex
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>              </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679492853"><span class="hs-identifier hs-var">finalize</span></a></span><span>
+</span><span id="line-94"></span><span>              </span><span class="annot"><span class="annottext">((TaskIndex, Map TaskIndex (IO ())), Bool)
+-&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492852"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492854"><span class="hs-identifier hs-var">finalizers</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>            </span><span class="hs-keyword">else</span><span>
+</span><span id="line-96"></span><span>              </span><span class="annot"><span class="annottext">((TaskIndex, Map TaskIndex (IO ())), Bool)
+-&gt; IO ((TaskIndex, Map TaskIndex (IO ())), Bool)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492848"><span class="hs-identifier hs-var">original</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679492847"><span class="hs-identifier hs-var">again</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ())) -&gt; IO ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (TaskIndex, Map TaskIndex (IO ())) -&gt; m ()
+</span><a href="Hedgehog.Internal.Queue.html#runActiveFinalizers"><span class="hs-identifier hs-var">runActiveFinalizers</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492845"><span class="hs-identifier hs-var">mvar</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span id="local-6989586621679492627"><span class="annot"><a href="Hedgehog.Internal.Queue.html#finalizeTask"><span class="hs-identifier hs-type">finalizeTask</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-102"></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679492627"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Queue.html#TaskIndex"><span class="hs-identifier hs-type">TaskIndex</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679492627"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-107"></span><span id="finalizeTask"><span class="annot"><span class="annottext">finalizeTask :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (TaskIndex, Map TaskIndex (IO ()))
+-&gt; TaskIndex -&gt; IO () -&gt; m ()
+</span><a href="Hedgehog.Internal.Queue.html#finalizeTask"><span class="hs-identifier hs-var hs-var">finalizeTask</span></a></span></span><span> </span><span id="local-6989586621679492864"><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492864"><span class="hs-identifier hs-var">mvar</span></a></span></span><span> </span><span id="local-6989586621679492865"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492865"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span id="local-6989586621679492866"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679492866"><span class="hs-identifier hs-var">finalize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ())
+-&gt; (((TaskIndex, Map TaskIndex (IO ()))
+     -&gt; IO (TaskIndex, Map TaskIndex (IO ())))
+    -&gt; IO ())
+-&gt; ((TaskIndex, Map TaskIndex (IO ()))
+    -&gt; IO (TaskIndex, Map TaskIndex (IO ())))
+-&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+-&gt; ((TaskIndex, Map TaskIndex (IO ()))
+    -&gt; IO (TaskIndex, Map TaskIndex (IO ())))
+-&gt; IO ()
+forall a. MVar a -&gt; (a -&gt; IO a) -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#modifyMVar_"><span class="hs-identifier hs-var">MVar.modifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492864"><span class="hs-identifier hs-var">mvar</span></a></span><span> </span><span class="annot"><span class="annottext">(((TaskIndex, Map TaskIndex (IO ()))
+  -&gt; IO (TaskIndex, Map TaskIndex (IO ())))
+ -&gt; m ())
+-&gt; ((TaskIndex, Map TaskIndex (IO ()))
+    -&gt; IO (TaskIndex, Map TaskIndex (IO ())))
+-&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679492868"><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492868"><span class="hs-identifier hs-var">minIx</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679492869"><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492869"><span class="hs-identifier hs-var">finalizers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">(TaskIndex, Map TaskIndex (IO ()))
+-&gt; IO (TaskIndex, Map TaskIndex (IO ()))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492868"><span class="hs-identifier hs-var">minIx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TaskIndex
+-&gt; IO () -&gt; Map TaskIndex (IO ()) -&gt; Map TaskIndex (IO ())
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">TaskIndex
+</span><a href="#local-6989586621679492865"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679492866"><span class="hs-identifier hs-var">finalize</span></a></span><span> </span><span class="annot"><span class="annottext">Map TaskIndex (IO ())
+</span><a href="#local-6989586621679492869"><span class="hs-identifier hs-var">finalizers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ())) -&gt; m ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (TaskIndex, Map TaskIndex (IO ())) -&gt; m ()
+</span><a href="Hedgehog.Internal.Queue.html#runActiveFinalizers"><span class="hs-identifier hs-var">runActiveFinalizers</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (TaskIndex, Map TaskIndex (IO ()))
+</span><a href="#local-6989586621679492864"><span class="hs-identifier hs-var">mvar</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Update the number of capabilities but never set it lower than it already</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--   is.</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Hedgehog.Internal.Queue.html#updateNumCapabilities"><span class="hs-identifier hs-type">updateNumCapabilities</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Config.html#WorkerCount"><span class="hs-identifier hs-type">WorkerCount</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span id="updateNumCapabilities"><span class="annot"><span class="annottext">updateNumCapabilities :: WorkerCount -&gt; IO ()
+</span><a href="Hedgehog.Internal.Queue.html#updateNumCapabilities"><span class="hs-identifier hs-var hs-var">updateNumCapabilities</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Config.html#WorkerCount"><span class="hs-identifier hs-type">WorkerCount</span></a></span><span> </span><span id="local-6989586621679492872"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492872"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.html#rtsSupportsBoundThreads"><span class="hs-identifier hs-var">rtsSupportsBoundThreads</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621679492873"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492873"><span class="hs-identifier hs-var">ncaps</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#getNumCapabilities"><span class="hs-identifier hs-var">Conc.getNumCapabilities</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#setNumCapabilities"><span class="hs-identifier hs-var">Conc.setNumCapabilities</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492872"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679492873"><span class="hs-identifier hs-var">ncaps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span></pre></body></html>

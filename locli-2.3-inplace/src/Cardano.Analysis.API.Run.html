@@ -1,0 +1,431 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Analysis.API.Run</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html"><span class="hs-identifier">Cardano.Analysis.API.Run</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html"><span class="hs-identifier">Cardano.Analysis.API.ChainFilter</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html"><span class="hs-identifier">Cardano.Analysis.API.Context</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html"><span class="hs-identifier">Cardano.Analysis.API.Ground</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Types.html"><span class="hs-identifier">Cardano.Analysis.API.Types</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="AnalysisCmdError"><span class="annot"><a href="Cardano.Analysis.API.Run.html#AnalysisCmdError"><span class="hs-identifier hs-var">AnalysisCmdError</span></a></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="AnalysisCmdError"><span class="annot"><a href="Cardano.Analysis.API.Run.html#AnalysisCmdError"><span class="hs-identifier hs-var">AnalysisCmdError</span></a></span></span><span>                                   </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MissingRunContext"><span class="annot"><a href="Cardano.Analysis.API.Run.html#MissingRunContext"><span class="hs-identifier hs-var">MissingRunContext</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MissingLogfiles"><span class="annot"><a href="Cardano.Analysis.API.Run.html#MissingLogfiles"><span class="hs-identifier hs-var">MissingLogfiles</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RunMetaParseError"><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunMetaParseError"><span class="hs-identifier hs-var">RunMetaParseError</span></a></span></span><span>      </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#JsonInputFile"><span class="hs-identifier hs-type">JsonInputFile</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunPartial"><span class="hs-identifier hs-type">RunPartial</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisParseError"><span class="annot"><a href="Cardano.Analysis.API.Run.html#GenesisParseError"><span class="hs-identifier hs-var">GenesisParseError</span></a></span></span><span>      </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#JsonInputFile"><span class="hs-identifier hs-type">JsonInputFile</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ChainFiltersParseError"><span class="annot"><a href="Cardano.Analysis.API.Run.html#ChainFiltersParseError"><span class="hs-identifier hs-var">ChainFiltersParseError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Analysis.API.ChainFilter.html#JsonFilterFile"><span class="hs-identifier hs-type">JsonFilterFile</span></a></span><span>             </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679439887"><span id="local-6989586621679439904"><span id="local-6989586621679439908"><span class="annot"><span class="annottext">Int -&gt; AnalysisCmdError -&gt; ShowS
+[AnalysisCmdError] -&gt; ShowS
+AnalysisCmdError -&gt; String
+(Int -&gt; AnalysisCmdError -&gt; ShowS)
+-&gt; (AnalysisCmdError -&gt; String)
+-&gt; ([AnalysisCmdError] -&gt; ShowS)
+-&gt; Show AnalysisCmdError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AnalysisCmdError -&gt; ShowS
+showsPrec :: Int -&gt; AnalysisCmdError -&gt; ShowS
+$cshow :: AnalysisCmdError -&gt; String
+show :: AnalysisCmdError -&gt; String
+$cshowList :: [AnalysisCmdError] -&gt; ShowS
+showList :: [AnalysisCmdError] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="ARunWith"><span class="annot"><a href="Cardano.Analysis.API.Run.html#ARunWith"><span class="hs-identifier hs-var">ARunWith</span></a></span></span><span> </span><span id="local-6989586621679439639"><span class="annot"><a href="#local-6989586621679439639"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Run"><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-var">Run</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="genesisSpec"><span class="annot"><span class="annottext">forall a. ARunWith a -&gt; GenesisSpec
+</span><a href="Cardano.Analysis.API.Run.html#genesisSpec"><span class="hs-identifier hs-var hs-var">genesisSpec</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#GenesisSpec"><span class="hs-identifier hs-type">GenesisSpec</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="generatorProfile"><span class="annot"><span class="annottext">forall a. ARunWith a -&gt; GeneratorProfile
+</span><a href="Cardano.Analysis.API.Run.html#generatorProfile"><span class="hs-identifier hs-var hs-var">generatorProfile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#GeneratorProfile"><span class="hs-identifier hs-type">GeneratorProfile</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="metadata"><span class="annot"><span class="annottext">forall a. ARunWith a -&gt; Metadata
+</span><a href="Cardano.Analysis.API.Run.html#metadata"><span class="hs-identifier hs-var hs-var">metadata</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Metadata"><span class="hs-identifier hs-type">Metadata</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="genesis"><span class="annot"><span class="annottext">forall a. ARunWith a -&gt; a
+</span><a href="Cardano.Analysis.API.Run.html#genesis"><span class="hs-identifier hs-var hs-var">genesis</span></a></span></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679439639"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679439917"><span id="local-6989586621679439919"><span class="annot"><span class="annottext">(forall x. ARunWith a -&gt; Rep (ARunWith a) x)
+-&gt; (forall x. Rep (ARunWith a) x -&gt; ARunWith a)
+-&gt; Generic (ARunWith a)
+forall x. Rep (ARunWith a) x -&gt; ARunWith a
+forall x. ARunWith a -&gt; Rep (ARunWith a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (ARunWith a) x -&gt; ARunWith a
+forall a x. ARunWith a -&gt; Rep (ARunWith a) x
+$cfrom :: forall a x. ARunWith a -&gt; Rep (ARunWith a) x
+from :: forall x. ARunWith a -&gt; Rep (ARunWith a) x
+$cto :: forall a x. Rep (ARunWith a) x -&gt; ARunWith a
+to :: forall x. Rep (ARunWith a) x -&gt; ARunWith a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679439924"><span id="local-6989586621679439934"><span id="local-6989586621679439938"><span class="annot"><span class="annottext">Int -&gt; ARunWith a -&gt; ShowS
+[ARunWith a] -&gt; ShowS
+ARunWith a -&gt; String
+(Int -&gt; ARunWith a -&gt; ShowS)
+-&gt; (ARunWith a -&gt; String)
+-&gt; ([ARunWith a] -&gt; ShowS)
+-&gt; Show (ARunWith a)
+forall a. Show a =&gt; Int -&gt; ARunWith a -&gt; ShowS
+forall a. Show a =&gt; [ARunWith a] -&gt; ShowS
+forall a. Show a =&gt; ARunWith a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; ARunWith a -&gt; ShowS
+showsPrec :: Int -&gt; ARunWith a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; ARunWith a -&gt; String
+show :: ARunWith a -&gt; String
+$cshowList :: forall a. Show a =&gt; [ARunWith a] -&gt; ShowS
+showList :: [ARunWith a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679439942"><span id="local-6989586621679439948"><span id="local-6989586621679439951"><span id="local-6989586621679439954"><span id="local-6989586621679439957"><span class="annot"><span class="annottext">[ARunWith a] -&gt; Value
+[ARunWith a] -&gt; Encoding
+ARunWith a -&gt; Bool
+ARunWith a -&gt; Value
+ARunWith a -&gt; Encoding
+(ARunWith a -&gt; Value)
+-&gt; (ARunWith a -&gt; Encoding)
+-&gt; ([ARunWith a] -&gt; Value)
+-&gt; ([ARunWith a] -&gt; Encoding)
+-&gt; (ARunWith a -&gt; Bool)
+-&gt; ToJSON (ARunWith a)
+forall a. ToJSON a =&gt; [ARunWith a] -&gt; Value
+forall a. ToJSON a =&gt; [ARunWith a] -&gt; Encoding
+forall a. ToJSON a =&gt; ARunWith a -&gt; Bool
+forall a. ToJSON a =&gt; ARunWith a -&gt; Value
+forall a. ToJSON a =&gt; ARunWith a -&gt; Encoding
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: forall a. ToJSON a =&gt; ARunWith a -&gt; Value
+toJSON :: ARunWith a -&gt; Value
+$ctoEncoding :: forall a. ToJSON a =&gt; ARunWith a -&gt; Encoding
+toEncoding :: ARunWith a -&gt; Encoding
+$ctoJSONList :: forall a. ToJSON a =&gt; [ARunWith a] -&gt; Value
+toJSONList :: [ARunWith a] -&gt; Value
+$ctoEncodingList :: forall a. ToJSON a =&gt; [ARunWith a] -&gt; Encoding
+toEncodingList :: [ARunWith a] -&gt; Encoding
+$comitField :: forall a. ToJSON a =&gt; ARunWith a -&gt; Bool
+omitField :: ARunWith a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">type</span><span> </span><span id="RunPartial"><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunPartial"><span class="hs-identifier hs-var">RunPartial</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#ARunWith"><span class="hs-identifier hs-type">ARunWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">type</span><span> </span><span id="Run"><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-var">Run</span></a></span></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#ARunWith"><span class="hs-identifier hs-type">ARunWith</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679440094"><span id="local-6989586621679440097"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunPartial"><span class="hs-identifier hs-type">RunPartial</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679440121"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser RunPartial
+</span><a href="#local-6989586621679440121"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser RunPartial) -&gt; Value -&gt; Parser RunPartial
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Run&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser RunPartial) -&gt; Value -&gt; Parser RunPartial)
+-&gt; (Object -&gt; Parser RunPartial) -&gt; Value -&gt; Parser RunPartial
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679440124"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679440124"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679440125"><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679440125"><span class="hs-identifier hs-var">metadata</span></a></span></span><span>         </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679440124"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Metadata
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;meta&quot;</span></span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679440127"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679440127"><span class="hs-identifier hs-var">generator</span></a></span></span><span>        </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Metadata -&gt; Object
+</span><a href="Cardano.Analysis.API.Context.html#profile_content"><span class="hs-identifier hs-var">profile_content</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679440125"><span class="hs-identifier hs-var">metadata</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Object
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;generator&quot;</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679440129"><span class="annot"><span class="annottext">GenesisSpec
+</span><a href="#local-6989586621679440129"><span class="hs-identifier hs-var">genesisSpec</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Metadata -&gt; Object
+</span><a href="Cardano.Analysis.API.Context.html#profile_content"><span class="hs-identifier hs-var">profile_content</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679440125"><span class="hs-identifier hs-var">metadata</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser GenesisSpec
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;genesis&quot;</span></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679440130"><span class="annot"><span class="annottext">GeneratorProfile
+</span><a href="#local-6989586621679440130"><span class="hs-identifier hs-var">generatorProfile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser GeneratorProfile
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">parseJSON</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser GeneratorProfile)
+-&gt; Value -&gt; Parser GeneratorProfile
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.Object</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679440127"><span class="hs-identifier hs-var">generator</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679440132"><span class="annot"><span class="annottext">genesis :: ()
+</span><a href="#local-6989586621679440132"><span class="hs-identifier hs-var hs-var">genesis</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">RunPartial -&gt; Parser RunPartial
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">()
+Metadata
+GeneratorProfile
+GenesisSpec
+genesisSpec :: GenesisSpec
+generatorProfile :: GeneratorProfile
+metadata :: Metadata
+genesis :: ()
+metadata :: Metadata
+genesisSpec :: GenesisSpec
+generatorProfile :: GeneratorProfile
+genesis :: ()
+</span><a href="Cardano.Analysis.API.Run.html#genesisSpec"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Given a Summary object,</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--   produce a JSON file readable by the above RunPartial FromJSON instance.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   Keep in sync.  Better still, automate it so it's not necessary.</span><span>
+</span><span id="line-52"></span><span id="local-6989586621679439798"><span class="annot"><a href="Cardano.Analysis.API.Run.html#summaryMetaJson"><span class="hs-identifier hs-type">summaryMetaJson</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Types.html#Summary"><span class="hs-identifier hs-type">Summary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679439798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span><span>
+</span><span id="line-53"></span><span id="summaryMetaJson"><span class="annot"><span class="annottext">summaryMetaJson :: forall (f :: * -&gt; *). Summary f -&gt; Value
+</span><a href="Cardano.Analysis.API.Run.html#summaryMetaJson"><span class="hs-identifier hs-var hs-var">summaryMetaJson</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Types.html#Summary"><span class="hs-identifier hs-type">Summary</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">sumMeta :: forall (f :: * -&gt; *). Summary f -&gt; Metadata
+</span><a href="Cardano.Analysis.API.Types.html#sumMeta"><span class="hs-identifier hs-var">sumMeta</span></a></span><span class="hs-glyph">=</span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Metadata"><span class="hs-identifier hs-type">Metadata</span></a></span><span class="hs-special">{</span><span id="local-6989586621679440174"><span id="local-6989586621679440175"><span id="local-6989586621679440176"><span id="local-6989586621679440177"><span id="local-6989586621679440178"><span id="local-6989586621679440179"><span id="local-6989586621679440180"><span id="local-6989586621679440181"><span class="annot"><span class="annottext">Text
+Object
+Manifest
+profile_content :: Metadata -&gt; Object
+tag :: Text
+batch :: Text
+ident :: Text
+node_ghc_version :: Text
+profile :: Text
+era :: Text
+manifest :: Manifest
+profile_content :: Object
+tag :: Metadata -&gt; Text
+batch :: Metadata -&gt; Text
+ident :: Metadata -&gt; Text
+node_ghc_version :: Metadata -&gt; Text
+profile :: Metadata -&gt; Text
+era :: Metadata -&gt; Text
+manifest :: Metadata -&gt; Manifest
+</span><a href="Cardano.Analysis.API.Context.html#profile_content"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679440189"><span id="local-6989586621679440190"><span id="local-6989586621679440191"><span id="local-6989586621679440192"><span id="local-6989586621679440193"><span id="local-6989586621679440194"><span id="local-6989586621679440195"><span id="local-6989586621679440196"><span id="local-6989586621679440197"><span id="local-6989586621679440198"><span id="local-6989586621679440199"><span id="local-6989586621679440200"><span id="local-6989586621679440201"><span id="local-6989586621679440202"><span id="local-6989586621679440203"><span id="local-6989586621679440204"><span id="local-6989586621679440205"><span id="local-6989586621679440206"><span id="local-6989586621679440207"><span class="annot"><span class="annottext">f (Count Host)
+f (Count LogObject)
+f (Count BlockEvents)
+[(ChainFilter, Int)]
+Maybe (ProfilingData (CDF I))
+([FilterName], [ChainFilter])
+UTCTime
+GeneratorProfile
+Genesis
+GenesisSpec
+CDF f Double
+CDF f Int
+CDF f NominalDiffTime
+DataDomain f BlockNo
+DataDomain f RUTCTime
+DataDomain (CDF I) SlotNo
+sumAnalysisTime :: UTCTime
+sumGenesis :: Genesis
+sumGenesisSpec :: GenesisSpec
+sumWorkload :: GeneratorProfile
+sumHosts :: f (Count Host)
+sumLogObjectsTotal :: f (Count LogObject)
+sumFilters :: ([FilterName], [ChainFilter])
+sumChainRejectionStats :: [(ChainFilter, Int)]
+sumBlocksRejected :: f (Count BlockEvents)
+sumDomainTime :: DataDomain f RUTCTime
+sumStartSpread :: DataDomain f RUTCTime
+sumStopSpread :: DataDomain f RUTCTime
+sumDomainSlots :: DataDomain (CDF I) SlotNo
+sumDomainBlocks :: DataDomain f BlockNo
+sumProfilingData :: Maybe (ProfilingData (CDF I))
+cdfLogObjectsEmitted :: CDF f Int
+cdfLogObjects :: CDF f Int
+cdfRuntime :: CDF f NominalDiffTime
+cdfLogLineRate :: CDF f Double
+sumAnalysisTime :: forall (f :: * -&gt; *). Summary f -&gt; UTCTime
+sumGenesis :: forall (f :: * -&gt; *). Summary f -&gt; Genesis
+sumGenesisSpec :: forall (f :: * -&gt; *). Summary f -&gt; GenesisSpec
+sumWorkload :: forall (f :: * -&gt; *). Summary f -&gt; GeneratorProfile
+sumHosts :: forall (f :: * -&gt; *). Summary f -&gt; f (Count Host)
+sumLogObjectsTotal :: forall (f :: * -&gt; *). Summary f -&gt; f (Count LogObject)
+sumFilters :: forall (f :: * -&gt; *). Summary f -&gt; ([FilterName], [ChainFilter])
+sumChainRejectionStats :: forall (f :: * -&gt; *). Summary f -&gt; [(ChainFilter, Int)]
+sumBlocksRejected :: forall (f :: * -&gt; *). Summary f -&gt; f (Count BlockEvents)
+sumDomainTime :: forall (f :: * -&gt; *). Summary f -&gt; DataDomain f RUTCTime
+sumStartSpread :: forall (f :: * -&gt; *). Summary f -&gt; DataDomain f RUTCTime
+sumStopSpread :: forall (f :: * -&gt; *). Summary f -&gt; DataDomain f RUTCTime
+sumDomainSlots :: forall (f :: * -&gt; *). Summary f -&gt; DataDomain (CDF I) SlotNo
+sumDomainBlocks :: forall (f :: * -&gt; *). Summary f -&gt; DataDomain f BlockNo
+sumProfilingData :: forall (f :: * -&gt; *). Summary f -&gt; Maybe (ProfilingData (CDF I))
+cdfLogObjectsEmitted :: forall (f :: * -&gt; *). Summary f -&gt; CDF f Int
+cdfLogObjects :: forall (f :: * -&gt; *). Summary f -&gt; CDF f Int
+cdfRuntime :: forall (f :: * -&gt; *). Summary f -&gt; CDF f NominalDiffTime
+cdfLogLineRate :: forall (f :: * -&gt; *). Summary f -&gt; CDF f Double
+</span><a href="#local-6989586621679440189"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;meta&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679440228"><span class="hs-identifier hs-var">meta</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679440228"><span class="annot"><span class="annottext">meta :: Value
+</span><a href="#local-6989586621679440228"><span class="hs-identifier hs-var hs-var">meta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>         </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="annot"><span class="annottext">([Pair] -&gt; Value) -&gt; [Pair] -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-57"></span><span>         </span><span class="hs-comment">-- keep in sync with 'data Metadata'</span><span>
+</span><span id="line-58"></span><span>         </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;tag&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679440174"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-59"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;batch&quot;</span></span><span>     </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679440175"><span class="hs-identifier hs-var">batch</span></a></span><span>
+</span><span id="line-60"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;profile&quot;</span></span><span>   </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679440178"><span class="hs-identifier hs-var">profile</span></a></span><span>
+</span><span id="line-61"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;era&quot;</span></span><span>       </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679440179"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-62"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;manifest&quot;</span></span><span>  </span><span class="annot"><span class="annottext">Key -&gt; Manifest -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Manifest
+</span><a href="#local-6989586621679440180"><span class="hs-identifier hs-var">manifest</span></a></span><span>
+</span><span id="line-63"></span><span>         </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; [Pair] -&gt; [Pair]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-64"></span><span>         </span><span class="hs-comment">-- keep in sync with the above instance</span><span>
+</span><span id="line-65"></span><span>         </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;profile_content&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span>
+</span><span id="line-66"></span><span>           </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span>
+</span><span id="line-67"></span><span>           </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;generator&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">GeneratorProfile -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">GeneratorProfile
+</span><a href="#local-6989586621679440192"><span class="hs-identifier hs-var">sumWorkload</span></a></span><span>
+</span><span id="line-68"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;genesis&quot;</span></span><span>   </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">GenesisSpec -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">GenesisSpec
+</span><a href="#local-6989586621679440191"><span class="hs-identifier hs-var">sumGenesisSpec</span></a></span><span>
+</span><span id="line-69"></span><span>           </span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>         </span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Cardano.Analysis.API.Run.html#readRun"><span class="hs-identifier hs-type">readRun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#JsonInputFile"><span class="hs-identifier hs-type">JsonInputFile</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#JsonInputFile"><span class="hs-identifier hs-type">JsonInputFile</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunPartial"><span class="hs-identifier hs-type">RunPartial</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#AnalysisCmdError"><span class="hs-identifier hs-type">AnalysisCmdError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span>
+</span><span id="line-73"></span><span id="readRun"><span class="annot"><span class="annottext">readRun :: JsonInputFile Genesis
+-&gt; JsonInputFile RunPartial -&gt; ExceptT AnalysisCmdError IO Run
+</span><a href="Cardano.Analysis.API.Run.html#readRun"><span class="hs-identifier hs-var hs-var">readRun</span></a></span></span><span> </span><span id="local-6989586621679440231"><span class="annot"><span class="annottext">JsonInputFile Genesis
+</span><a href="#local-6989586621679440231"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span></span><span> </span><span id="local-6989586621679440232"><span class="annot"><span class="annottext">JsonInputFile RunPartial
+</span><a href="#local-6989586621679440232"><span class="hs-identifier hs-var">runmeta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679440233"><span class="annot"><span class="annottext">RunPartial
+</span><a href="#local-6989586621679440233"><span class="hs-identifier hs-var">runPartial</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">JsonInputFile RunPartial
+-&gt; (Text -&gt; AnalysisCmdError)
+-&gt; ExceptT AnalysisCmdError IO RunPartial
+forall a b.
+FromJSON a =&gt;
+JsonInputFile a -&gt; (Text -&gt; b) -&gt; ExceptT b IO a
+</span><a href="Cardano.Analysis.API.Ground.html#readJsonData"><span class="hs-identifier hs-var">readJsonData</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile RunPartial
+</span><a href="#local-6989586621679440232"><span class="hs-identifier hs-var">runmeta</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonInputFile RunPartial -&gt; Text -&gt; AnalysisCmdError
+</span><a href="Cardano.Analysis.API.Run.html#RunMetaParseError"><span class="hs-identifier hs-var">RunMetaParseError</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile RunPartial
+</span><a href="#local-6989586621679440232"><span class="hs-identifier hs-var">runmeta</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; F -&gt; ExceptT AnalysisCmdError IO ()
+forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; F -&gt; m ()
+</span><a href="Cardano.Util.html#progress"><span class="hs-identifier hs-var">progress</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;meta&quot;</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; F
+</span><a href="Cardano.Util.html#Q"><span class="hs-identifier hs-var">Q</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; F) -&gt; String -&gt; F
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile RunPartial -&gt; String
+forall a. JsonInputFile a -&gt; String
+</span><a href="Cardano.Analysis.API.Ground.html#unJsonInputFile"><span class="hs-identifier hs-var">unJsonInputFile</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile RunPartial
+</span><a href="#local-6989586621679440232"><span class="hs-identifier hs-var">runmeta</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679440238"><span class="annot"><span class="annottext">Run
+</span><a href="#local-6989586621679440238"><span class="hs-identifier hs-var">run</span></a></span></span><span>        </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">JsonInputFile Genesis
+-&gt; (Text -&gt; AnalysisCmdError)
+-&gt; ExceptT AnalysisCmdError IO Genesis
+forall a b.
+FromJSON a =&gt;
+JsonInputFile a -&gt; (Text -&gt; b) -&gt; ExceptT b IO a
+</span><a href="Cardano.Analysis.API.Ground.html#readJsonData"><span class="hs-identifier hs-var">readJsonData</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile Genesis
+</span><a href="#local-6989586621679440231"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonInputFile Genesis -&gt; Text -&gt; AnalysisCmdError
+</span><a href="Cardano.Analysis.API.Run.html#GenesisParseError"><span class="hs-identifier hs-var">GenesisParseError</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile Genesis
+</span><a href="#local-6989586621679440231"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>                </span><span class="annot"><span class="annottext">ExceptT AnalysisCmdError IO Genesis
+-&gt; (Genesis -&gt; Run) -&gt; ExceptT AnalysisCmdError IO Run
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">RunPartial -&gt; Genesis -&gt; Run
+</span><a href="#local-6989586621679440240"><span class="hs-identifier hs-var">completeRun</span></a></span><span> </span><span class="annot"><span class="annottext">RunPartial
+</span><a href="#local-6989586621679440233"><span class="hs-identifier hs-var">runPartial</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; F -&gt; ExceptT AnalysisCmdError IO ()
+forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; F -&gt; m ()
+</span><a href="Cardano.Util.html#progress"><span class="hs-identifier hs-var">progress</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;genesis&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; F
+</span><a href="Cardano.Util.html#Q"><span class="hs-identifier hs-var">Q</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; F) -&gt; String -&gt; F
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile Genesis -&gt; String
+forall a. JsonInputFile a -&gt; String
+</span><a href="Cardano.Analysis.API.Ground.html#unJsonInputFile"><span class="hs-identifier hs-var">unJsonInputFile</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile Genesis
+</span><a href="#local-6989586621679440231"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; F -&gt; ExceptT AnalysisCmdError IO ()
+forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; F -&gt; m ()
+</span><a href="Cardano.Util.html#progress"><span class="hs-identifier hs-var">progress</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;run&quot;</span></span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Run -&gt; F
+forall a. ToJSON a =&gt; a -&gt; F
+</span><a href="Cardano.Util.html#J"><span class="hs-identifier hs-var">J</span></a></span><span> </span><span class="annot"><span class="annottext">Run
+</span><a href="#local-6989586621679440238"><span class="hs-identifier hs-var">run</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="annottext">Run -&gt; ExceptT AnalysisCmdError IO Run
+forall a. a -&gt; ExceptT AnalysisCmdError IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Run
+</span><a href="#local-6989586621679440238"><span class="hs-identifier hs-var">run</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>   </span><span class="annot"><a href="#local-6989586621679440240"><span class="hs-identifier hs-type">completeRun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#RunPartial"><span class="hs-identifier hs-type">RunPartial</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Context.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span>
+</span><span id="line-84"></span><span>   </span><span id="local-6989586621679440240"><span class="annot"><span class="annottext">completeRun :: RunPartial -&gt; Genesis -&gt; Run
+</span><a href="#local-6989586621679440240"><span class="hs-identifier hs-var hs-var">completeRun</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span class="hs-special">{</span><span id="local-6989586621679440242"><span id="local-6989586621679440243"><span id="local-6989586621679440244"><span id="local-6989586621679440245"><span class="annot"><span class="annottext">()
+Metadata
+GeneratorProfile
+GenesisSpec
+genesisSpec :: forall a. ARunWith a -&gt; GenesisSpec
+generatorProfile :: forall a. ARunWith a -&gt; GeneratorProfile
+metadata :: forall a. ARunWith a -&gt; Metadata
+genesis :: forall a. ARunWith a -&gt; a
+genesisSpec :: GenesisSpec
+generatorProfile :: GeneratorProfile
+metadata :: Metadata
+genesis :: ()
+</span><a href="Cardano.Analysis.API.Run.html#genesisSpec"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679440246"><span class="annot"><span class="annottext">Genesis
+</span><a href="#local-6989586621679440246"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Run.html#Run"><span class="hs-identifier hs-type">Run</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">genesis :: Genesis
+</span><a href="Cardano.Analysis.API.Run.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Genesis
+</span><a href="#local-6989586621679440246"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Metadata
+GeneratorProfile
+GenesisSpec
+genesisSpec :: GenesisSpec
+generatorProfile :: GeneratorProfile
+metadata :: Metadata
+genesisSpec :: GenesisSpec
+generatorProfile :: GeneratorProfile
+metadata :: Metadata
+</span><a href="Cardano.Analysis.API.Run.html#genesisSpec"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-85"></span></pre></body></html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans -Wno-partial-fields #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.DataDomain</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.DataDomain.html"><span class="hs-identifier">Data.DataDomain</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/y8433fvy9yc7501glqcx8pvy1n1f66p4-witherable-lib-witherable-0.5-haddock-doc/share/doc/witherable/html/src/Witherable.html"><span class="hs-identifier">Witherable</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Wither</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.CDF.html"><span class="hs-identifier">Data.CDF</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- * DataDomain</span></span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="DataDomain"><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-var">DataDomain</span></a></span></span><span> </span><span id="local-6989586621679417786"><span class="annot"><a href="#local-6989586621679417786"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679417787"><span class="annot"><a href="#local-6989586621679417787"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="DataDomain"><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-var">DataDomain</span></a></span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="ddRaw"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var hs-var">ddRaw</span></a></span></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679417786"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417787"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddFiltered"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. DataDomain f a -&gt; Maybe (Interval (f a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var hs-var">ddFiltered</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679417786"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417787"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddRawCount"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var hs-var">ddRawCount</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679417786"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddFilteredCount"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var hs-var">ddFilteredCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679417786"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679418156"><span id="local-6989586621679418158"><span class="annot"><span class="annottext">(forall x. DataDomain f a -&gt; Rep (DataDomain f a) x)
+-&gt; (forall x. Rep (DataDomain f a) x -&gt; DataDomain f a)
+-&gt; Generic (DataDomain f a)
+forall x. Rep (DataDomain f a) x -&gt; DataDomain f a
+forall x. DataDomain f a -&gt; Rep (DataDomain f a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (f :: * -&gt; *) a x. Rep (DataDomain f a) x -&gt; DataDomain f a
+forall (f :: * -&gt; *) a x. DataDomain f a -&gt; Rep (DataDomain f a) x
+$cfrom :: forall (f :: * -&gt; *) a x. DataDomain f a -&gt; Rep (DataDomain f a) x
+from :: forall x. DataDomain f a -&gt; Rep (DataDomain f a) x
+$cto :: forall (f :: * -&gt; *) a x. Rep (DataDomain f a) x -&gt; DataDomain f a
+to :: forall x. Rep (DataDomain f a) x -&gt; DataDomain f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679418163"><span id="local-6989586621679418172"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; DataDomain f a -&gt; DataDomain f b)
+-&gt; (forall a b. a -&gt; DataDomain f b -&gt; DataDomain f a)
+-&gt; Functor (DataDomain f)
+forall a b. a -&gt; DataDomain f b -&gt; DataDomain f a
+forall a b. (a -&gt; b) -&gt; DataDomain f a -&gt; DataDomain f b
+forall (f :: * -&gt; *) a b.
+Functor f =&gt;
+a -&gt; DataDomain f b -&gt; DataDomain f a
+forall (f :: * -&gt; *) a b.
+Functor f =&gt;
+(a -&gt; b) -&gt; DataDomain f a -&gt; DataDomain f b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall (f :: * -&gt; *) a b.
+Functor f =&gt;
+(a -&gt; b) -&gt; DataDomain f a -&gt; DataDomain f b
+fmap :: forall a b. (a -&gt; b) -&gt; DataDomain f a -&gt; DataDomain f b
+$c&lt;$ :: forall (f :: * -&gt; *) a b.
+Functor f =&gt;
+a -&gt; DataDomain f b -&gt; DataDomain f a
+&lt;$ :: forall a b. a -&gt; DataDomain f b -&gt; DataDomain f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Perhaps:  Plutus.V1.Ledger.Slot.SlotRange = Interval Slot</span><span>
+</span><span id="line-29"></span><span id="local-6989586621679417915"><span id="local-6989586621679417916"><span id="local-6989586621679418183"><span id="local-6989586621679418191"><span id="local-6989586621679418195"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679417818"><span class="annot"><a href="#local-6989586621679417818"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679417818"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679417915"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417818"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679417916"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417915"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417916"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679418017"><span id="local-6989586621679418018"><span id="local-6989586621679418304"><span id="local-6989586621679418312"><span id="local-6989586621679418316"><span id="local-6989586621679418320"><span id="local-6989586621679418324"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679417922"><span class="annot"><a href="#local-6989586621679417922"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>   </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679417922"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>   </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418017"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679417922"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>   </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679418018"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>   </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418017"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418018"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span><span>
+</span><span id="line-31"></span><span id="local-6989586621679418038"><span id="local-6989586621679418039"><span id="local-6989586621679418453"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418023"><span class="annot"><a href="#local-6989586621679418023"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418023"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418038"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418023"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418039"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418038"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418039"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-32"></span><span id="local-6989586621679418047"><span id="local-6989586621679418048"><span id="local-6989586621679418486"><span id="local-6989586621679418498"><span id="local-6989586621679418503"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418044"><span class="annot"><a href="#local-6989586621679418044"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418044"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418044"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418048"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418047"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418048"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">-- | Key decision of DataDomain merging policy.</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">data</span><span> </span><span id="DataDomainComb"><span class="annot"><a href="Data.DataDomain.html#DataDomainComb"><span class="hs-identifier hs-var">DataDomainComb</span></a></span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="DataDomainComb"><span class="annot"><a href="Data.DataDomain.html#DataDomainComb"><span class="hs-identifier hs-var">DataDomainComb</span></a></span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="ddcMergeIntervals"><span class="annot"><span class="annottext">DataDomainComb
+-&gt; forall a. Ord a =&gt; [Interval (I a)] -&gt; Interval (I a)
+</span><a href="Data.DataDomain.html#ddcMergeIntervals"><span class="hs-identifier hs-var hs-var">ddcMergeIntervals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418050"><span class="annot"><a href="#local-6989586621679418050"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418050"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-38"></span><span>                             </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418050"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418050"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddcMergeCounts"><span class="annot"><span class="annottext">DataDomainComb -&gt; [I Int] -&gt; I Int
+</span><a href="Data.DataDomain.html#ddcMergeCounts"><span class="hs-identifier hs-var hs-var">ddcMergeCounts</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddcProjInterval"><span class="annot"><span class="annottext">DataDomainComb -&gt; forall a. Interval (CDF I a) -&gt; Interval (I a)
+</span><a href="Data.DataDomain.html#ddcProjInterval"><span class="hs-identifier hs-var hs-var">ddcProjInterval</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418053"><span class="annot"><a href="#local-6989586621679418053"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-41"></span><span>                             </span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.CDF.html#CDF"><span class="hs-identifier hs-type">CDF</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418053"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-type">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418053"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ddcProjCount"><span class="annot"><span class="annottext">DataDomainComb -&gt; CDF I Int -&gt; I Int
+</span><a href="Data.DataDomain.html#ddcProjCount"><span class="hs-identifier hs-var hs-var">ddcProjCount</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.CDF.html#CDF"><span class="hs-identifier hs-type">CDF</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span id="local-6989586621679418056"><span class="annot"><a href="Data.DataDomain.html#summariseDataDomains"><span class="hs-identifier hs-type">summariseDataDomains</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.CDF.html#Divisible"><span class="hs-identifier hs-type">Divisible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418056"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418056"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.CDF.html#CDF"><span class="hs-identifier hs-type">CDF</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679418056"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-46"></span><span id="summariseDataDomains"><span class="annot"><span class="annottext">summariseDataDomains :: forall a. Divisible a =&gt; [DataDomain I a] -&gt; DataDomain (CDF I) a
+</span><a href="Data.DataDomain.html#summariseDataDomains"><span class="hs-identifier hs-var hs-var">summariseDataDomains</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall b. Divisible b =&gt; [I b] -&gt; CDF I b)
+-&gt; [DataDomain I a] -&gt; DataDomain (CDF I) a
+forall a (h :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *).
+(Divisible a, Witherable h) =&gt;
+(forall b. Divisible b =&gt; h (f b) -&gt; g b)
+-&gt; h (DataDomain f a) -&gt; DataDomain g a
+</span><a href="Data.DataDomain.html#traverseDataDomain"><span class="hs-identifier hs-var">traverseDataDomain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Centile] -&gt; [b] -&gt; CDF I b
+forall a. Divisible a =&gt; [Centile] -&gt; [a] -&gt; CDF I a
+</span><a href="Data.CDF.html#cdf"><span class="hs-identifier hs-var">cdf</span></a></span><span> </span><span class="annot"><span class="annottext">[Centile]
+</span><a href="Data.CDF.html#briefCentiles"><span class="hs-identifier hs-var">briefCentiles</span></a></span><span> </span><span class="annot"><span class="annottext">([b] -&gt; CDF I b) -&gt; ([I b] -&gt; [b]) -&gt; [I b] -&gt; CDF I b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(I b -&gt; b) -&gt; [I b] -&gt; [b]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">I b -&gt; b
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span id="local-6989586621679418061"><span id="local-6989586621679418062"><span id="local-6989586621679418063"><span id="local-6989586621679418064"><span class="annot"><a href="Data.DataDomain.html#traverseDataDomain"><span class="hs-identifier hs-type">traverseDataDomain</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Data.CDF.html#Divisible"><span class="hs-identifier hs-type">Divisible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418061"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/y8433fvy9yc7501glqcx8pvy1n1f66p4-witherable-lib-witherable-0.5-haddock-doc/share/doc/witherable/html/src/Witherable.html#Witherable"><span class="hs-identifier hs-type">Wither.Witherable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418062"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-50"></span><span>     </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418060"><span class="annot"><a href="#local-6989586621679418060"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Data.CDF.html#Divisible"><span class="hs-identifier hs-type">Divisible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418060"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418062"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418063"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418060"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418064"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418060"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418062"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418063"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418061"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418064"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418061"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span><span>
+</span><span id="line-53"></span><span id="traverseDataDomain"><span class="annot"><span class="annottext">traverseDataDomain :: forall a (h :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *).
+(Divisible a, Witherable h) =&gt;
+(forall b. Divisible b =&gt; h (f b) -&gt; g b)
+-&gt; h (DataDomain f a) -&gt; DataDomain g a
+</span><a href="Data.DataDomain.html#traverseDataDomain"><span class="hs-identifier hs-var hs-var">traverseDataDomain</span></a></span></span><span> </span><span id="local-6989586621679418538"><span class="annot"><span class="annottext">forall b. Divisible b =&gt; h (f b) -&gt; g b
+</span><a href="#local-6989586621679418538"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">I (DataDomain g a) -&gt; DataDomain g a
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">(I (DataDomain g a) -&gt; DataDomain g a)
+-&gt; (h (DataDomain f a) -&gt; I (DataDomain g a))
+-&gt; h (DataDomain f a)
+-&gt; DataDomain g a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(forall b. Divisible b =&gt; h (f b) -&gt; I (g b))
+-&gt; h (DataDomain f a) -&gt; I (DataDomain g a)
+forall a (h :: * -&gt; *) (i :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *).
+(Divisible a, Witherable h, Applicative i) =&gt;
+(forall b. Divisible b =&gt; h (f b) -&gt; i (g b))
+-&gt; h (DataDomain f a) -&gt; i (DataDomain g a)
+</span><a href="Data.DataDomain.html#traverseDataDomain%27"><span class="hs-identifier hs-var">traverseDataDomain'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">g b -&gt; I (g b)
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(g b -&gt; I (g b)) -&gt; (h (f b) -&gt; g b) -&gt; h (f b) -&gt; I (g b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">h (f b) -&gt; g b
+forall b. Divisible b =&gt; h (f b) -&gt; g b
+</span><a href="#local-6989586621679418538"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span id="local-6989586621679418080"><span id="local-6989586621679418081"><span id="local-6989586621679418082"><span id="local-6989586621679418083"><span id="local-6989586621679418084"><span class="annot"><a href="Data.DataDomain.html#traverseDataDomain%27"><span class="hs-identifier hs-type">traverseDataDomain'</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Data.CDF.html#Divisible"><span class="hs-identifier hs-type">Divisible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418080"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/y8433fvy9yc7501glqcx8pvy1n1f66p4-witherable-lib-witherable-0.5-haddock-doc/share/doc/witherable/html/src/Witherable.html#Witherable"><span class="hs-identifier hs-type">Wither.Witherable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418081"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418082"><span class="hs-identifier hs-type">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-57"></span><span>     </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679418079"><span class="annot"><a href="#local-6989586621679418079"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Data.CDF.html#Divisible"><span class="hs-identifier hs-type">Divisible</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418079"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418081"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418083"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418079"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418082"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418084"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418079"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418081"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418083"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418080"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418082"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418084"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418080"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-60"></span><span id="traverseDataDomain%27"><span class="annot"><span class="annottext">traverseDataDomain' :: forall a (h :: * -&gt; *) (i :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *).
+(Divisible a, Witherable h, Applicative i) =&gt;
+(forall b. Divisible b =&gt; h (f b) -&gt; i (g b))
+-&gt; h (DataDomain f a) -&gt; i (DataDomain g a)
+</span><a href="Data.DataDomain.html#traverseDataDomain%27"><span class="hs-identifier hs-var hs-var">traverseDataDomain'</span></a></span></span><span> </span><span id="local-6989586621679418583"><span class="annot"><span class="annottext">forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679418584"><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">Interval (g a)
+-&gt; Maybe (Interval (g a)) -&gt; g Int -&gt; g Int -&gt; DataDomain g a
+forall (f :: * -&gt; *) a.
+Interval (f a)
+-&gt; Maybe (Interval (f a)) -&gt; f Int -&gt; f Int -&gt; DataDomain f a
+</span><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-var">DataDomain</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">(Interval (g a)
+ -&gt; Maybe (Interval (g a)) -&gt; g Int -&gt; g Int -&gt; DataDomain g a)
+-&gt; i (Interval (g a))
+-&gt; i (Maybe (Interval (g a)) -&gt; g Int -&gt; g Int -&gt; DataDomain g a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">g a -&gt; g a -&gt; Interval (g a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; g a -&gt; Interval (g a))
+-&gt; i (g a) -&gt; i (g a -&gt; Interval (g a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f a) -&gt; i (g a)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">h (DataDomain f a) -&gt; (DataDomain f a -&gt; f a) -&gt; h (f a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Interval (f a) -&gt; f a
+forall v. Interval v -&gt; v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#low"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (f a) -&gt; f a)
+-&gt; (DataDomain f a -&gt; Interval (f a)) -&gt; DataDomain f a -&gt; f a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain f a -&gt; Interval (f a)
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">i (g a -&gt; Interval (g a)) -&gt; i (g a) -&gt; i (Interval (g a))
+forall a b. i (a -&gt; b) -&gt; i a -&gt; i b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f a) -&gt; i (g a)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">h (DataDomain f a) -&gt; (DataDomain f a -&gt; f a) -&gt; h (f a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Interval (f a) -&gt; f a
+forall v. Interval v -&gt; v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#high"><span class="hs-identifier hs-var">high</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (f a) -&gt; f a)
+-&gt; (DataDomain f a -&gt; Interval (f a)) -&gt; DataDomain f a -&gt; f a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain f a -&gt; Interval (f a)
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">i (Maybe (Interval (g a)) -&gt; g Int -&gt; g Int -&gt; DataDomain g a)
+-&gt; i (Maybe (Interval (g a)))
+-&gt; i (g Int -&gt; g Int -&gt; DataDomain g a)
+forall a b. i (a -&gt; b) -&gt; i a -&gt; i b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679418590"><span class="annot"><span class="annottext">lohis :: (h (f a), h (f a))
+</span><a href="#local-6989586621679418590"><span class="hs-identifier hs-var hs-var">lohis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">h (f a, f a) -&gt; (h (f a), h (f a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; f (a, b) -&gt; (f a, f b)
+</span><a href="Data.DataDomain.html#neUnzip"><span class="hs-identifier hs-var">neUnzip</span></a></span><span> </span><span class="annot"><span class="annottext">(h (f a, f a) -&gt; (h (f a), h (f a)))
+-&gt; h (f a, f a) -&gt; (h (f a), h (f a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Interval (f a) -&gt; (f a, f a))
+-&gt; Maybe (Interval (f a)) -&gt; Maybe (f a, f a)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Interval (f a) -&gt; f a
+forall v. Interval v -&gt; v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#low"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (f a) -&gt; f a)
+-&gt; (Interval (f a) -&gt; f a) -&gt; Interval (f a) -&gt; (f a, f a)
+forall b c c'. (b -&gt; c) -&gt; (b -&gt; c') -&gt; b -&gt; (c, c')
+forall (a :: * -&gt; * -&gt; *) b c c'.
+Arrow a =&gt;
+a b c -&gt; a b c' -&gt; a b (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%26%26%26"><span class="hs-operator hs-var">&amp;&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Interval (f a) -&gt; f a
+forall v. Interval v -&gt; v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#high"><span class="hs-identifier hs-var">high</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (Interval (f a)) -&gt; Maybe (f a, f a))
+-&gt; (DataDomain f a -&gt; Maybe (Interval (f a)))
+-&gt; DataDomain f a
+-&gt; Maybe (f a, f a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain f a -&gt; Maybe (Interval (f a))
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Maybe (Interval (f a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var">ddFiltered</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(DataDomain f a -&gt; Maybe (f a, f a))
+-&gt; h (DataDomain f a) -&gt; h (f a, f a)
+forall a b. (a -&gt; Maybe b) -&gt; h a -&gt; h b
+forall (f :: * -&gt; *) a b.
+Filterable f =&gt;
+(a -&gt; Maybe b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/y8433fvy9yc7501glqcx8pvy1n1f66p4-witherable-lib-witherable-0.5-haddock-doc/share/doc/witherable/html/src/Witherable.html#mapMaybe"><span class="hs-operator hs-var">`Wither.mapMaybe`</span></a></span><span> </span><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-64"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Interval (g a) -&gt; Maybe (Interval (g a))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (g a) -&gt; Maybe (Interval (g a)))
+-&gt; i (Interval (g a)) -&gt; i (Maybe (Interval (g a)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">g a -&gt; g a -&gt; Interval (g a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="annot"><span class="annottext">(g a -&gt; g a -&gt; Interval (g a))
+-&gt; i (g a) -&gt; i (g a -&gt; Interval (g a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f a) -&gt; i (g a)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(h (f a), h (f a)) -&gt; h (f a)
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(h (f a), h (f a))
+</span><a href="#local-6989586621679418590"><span class="hs-identifier hs-var">lohis</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">i (g a -&gt; Interval (g a)) -&gt; i (g a) -&gt; i (Interval (g a))
+forall a b. i (a -&gt; b) -&gt; i a -&gt; i b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f a) -&gt; i (g a)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(h (f a), h (f a)) -&gt; h (f a)
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">(h (f a), h (f a))
+</span><a href="#local-6989586621679418590"><span class="hs-identifier hs-var">lohis</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">i (g Int -&gt; g Int -&gt; DataDomain g a)
+-&gt; i (g Int) -&gt; i (g Int -&gt; DataDomain g a)
+forall a b. i (a -&gt; b) -&gt; i a -&gt; i b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f Int) -&gt; i (g Int)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">h (DataDomain f a) -&gt; (DataDomain f a -&gt; f Int) -&gt; h (f Int)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain f a -&gt; f Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><span class="annottext">i (g Int -&gt; DataDomain g a) -&gt; i (g Int) -&gt; i (DataDomain g a)
+forall a b. i (a -&gt; b) -&gt; i a -&gt; i b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">h (f Int) -&gt; i (g Int)
+forall b. Divisible b =&gt; h (f b) -&gt; i (g b)
+</span><a href="#local-6989586621679418583"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">h (DataDomain f a)
+</span><a href="#local-6989586621679418584"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">h (DataDomain f a) -&gt; (DataDomain f a -&gt; f Int) -&gt; h (f Int)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain f a -&gt; f Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span id="local-6989586621679418124"><span id="local-6989586621679418125"><span class="annot"><a href="Data.DataDomain.html#dataDomainFilterRatio"><span class="hs-identifier hs-type">dataDomainFilterRatio</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418124"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418124"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418125"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span></span><span>
+</span><span id="line-69"></span><span id="dataDomainFilterRatio"><span class="annot"><span class="annottext">dataDomainFilterRatio :: forall (f :: * -&gt; *) a. (f Int -&gt; Int) -&gt; DataDomain f a -&gt; Double
+</span><a href="Data.DataDomain.html#dataDomainFilterRatio"><span class="hs-identifier hs-var hs-var">dataDomainFilterRatio</span></a></span></span><span> </span><span id="local-6989586621679418605"><span class="annot"><span class="annottext">f Int -&gt; Int
+</span><a href="#local-6989586621679418605"><span class="hs-identifier hs-var">proj</span></a></span></span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span class="hs-special">{</span><span id="local-6989586621679418606"><span id="local-6989586621679418607"><span id="local-6989586621679418608"><span id="local-6989586621679418609"><span class="annot"><span class="annottext">f Int
+Maybe (Interval (f a))
+Interval (f a)
+ddRaw :: forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+ddFiltered :: forall (f :: * -&gt; *) a. DataDomain f a -&gt; Maybe (Interval (f a))
+ddRawCount :: forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+ddFilteredCount :: forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+ddRaw :: Interval (f a)
+ddFiltered :: Maybe (Interval (f a))
+ddRawCount :: f Int
+ddFilteredCount :: f Int
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f Int -&gt; Int
+</span><a href="#local-6989586621679418605"><span class="hs-identifier hs-var">proj</span></a></span><span> </span><span class="annot"><span class="annottext">f Int
+</span><a href="#local-6989586621679418609"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f Int -&gt; Int
+</span><a href="#local-6989586621679418605"><span class="hs-identifier hs-var">proj</span></a></span><span> </span><span class="annot"><span class="annottext">f Int
+</span><a href="#local-6989586621679418608"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span id="local-6989586621679418131"><span class="annot"><a href="Data.DataDomain.html#mkDataDomainInj"><span class="hs-identifier hs-type">mkDataDomainInj</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679418131"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418131"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418131"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418131"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-73"></span><span id="mkDataDomainInj"><span class="annot"><span class="annottext">mkDataDomainInj :: forall a. a -&gt; a -&gt; (a -&gt; Int) -&gt; DataDomain I a
+</span><a href="Data.DataDomain.html#mkDataDomainInj"><span class="hs-identifier hs-var hs-var">mkDataDomainInj</span></a></span></span><span> </span><span id="local-6989586621679418614"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418614"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679418615"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418615"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679418616"><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418616"><span class="hs-identifier hs-var">measure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">Interval (I a)
+-&gt; Maybe (Interval (I a)) -&gt; I Int -&gt; I Int -&gt; DataDomain I a
+forall (f :: * -&gt; *) a.
+Interval (f a)
+-&gt; Maybe (Interval (f a)) -&gt; f Int -&gt; f Int -&gt; DataDomain f a
+</span><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-var">DataDomain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">I a -&gt; I a -&gt; Interval (I a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418614"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418615"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Interval (I a) -&gt; Maybe (Interval (I a))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">I a -&gt; I a -&gt; Interval (I a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418614"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418615"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679418617"><span class="hs-identifier hs-var">delta</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679418617"><span class="hs-identifier hs-var">delta</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679418617"><span class="annot"><span class="annottext">delta :: Int
+</span><a href="#local-6989586621679418617"><span class="hs-identifier hs-var hs-var">delta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418616"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418615"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418616"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418614"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679418134"><span class="annot"><a href="Data.DataDomain.html#mkDataDomain"><span class="hs-identifier hs-type">mkDataDomain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418134"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-78"></span><span id="mkDataDomain"><span class="annot"><span class="annottext">mkDataDomain :: forall a. a -&gt; a -&gt; a -&gt; a -&gt; (a -&gt; Int) -&gt; DataDomain I a
+</span><a href="Data.DataDomain.html#mkDataDomain"><span class="hs-identifier hs-var hs-var">mkDataDomain</span></a></span></span><span> </span><span id="local-6989586621679418621"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418621"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679418622"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418622"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679418623"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418623"><span class="hs-identifier hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679418624"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418624"><span class="hs-identifier hs-var">l'</span></a></span></span><span> </span><span id="local-6989586621679418625"><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418625"><span class="hs-identifier hs-var">measure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">Interval (I a)
+-&gt; Maybe (Interval (I a)) -&gt; I Int -&gt; I Int -&gt; DataDomain I a
+forall (f :: * -&gt; *) a.
+Interval (f a)
+-&gt; Maybe (Interval (f a)) -&gt; f Int -&gt; f Int -&gt; DataDomain f a
+</span><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-var">DataDomain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">I a -&gt; I a -&gt; Interval (I a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418621"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418622"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Interval (I a) -&gt; Maybe (Interval (I a))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">I a -&gt; I a -&gt; Interval (I a)
+forall v. v -&gt; v -&gt; Interval v
+</span><a href="file:///nix/store/1v1zjhvwdfky1mv1raiiypnjab1p8kfn-fingertree-lib-fingertree-0.1.5.0-haddock-doc/share/doc/fingertree/html/src/Data.IntervalMap.FingerTree.html#Interval"><span class="hs-identifier hs-var">Interval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418623"><span class="hs-identifier hs-var">f'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; I a
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418624"><span class="hs-identifier hs-var">l'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418625"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418622"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418625"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418621"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418625"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418624"><span class="hs-identifier hs-var">l'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Int
+</span><a href="#local-6989586621679418625"><span class="hs-identifier hs-var">measure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679418623"><span class="hs-identifier hs-var">f'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span id="local-6989586621679418136"><span class="annot"><a href="Data.DataDomain.html#unionDataDomains"><span class="hs-identifier hs-type">unionDataDomains</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418136"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418136"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418136"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-83"></span><span id="unionDataDomains"><span class="annot"><span class="annottext">unionDataDomains :: forall a. Ord a =&gt; [DataDomain I a] -&gt; DataDomain I a
+</span><a href="Data.DataDomain.html#unionDataDomains"><span class="hs-identifier hs-var hs-var">unionDataDomains</span></a></span></span><span> </span><span id="local-6989586621679418642"><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418642"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ddRaw :: Interval (I a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Interval (I a)] -&gt; Interval (I a)
+forall a. Ord a =&gt; [Interval a] -&gt; Interval a
+</span><a href="Cardano.Util.html#unionIntv"><span class="hs-identifier hs-var">unionIntv</span></a></span><span> </span><span class="annot"><span class="annottext">([Interval (I a)] -&gt; Interval (I a))
+-&gt; [Interval (I a)] -&gt; Interval (I a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418642"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+-&gt; (DataDomain I a -&gt; Interval (I a)) -&gt; [Interval (I a)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; Interval (I a)
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddFiltered :: Maybe (Interval (I a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var">ddFiltered</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Interval (I a))
+-&gt; ([Interval (I a)] -&gt; Maybe (Interval (I a)))
+-&gt; [Interval (I a)]
+-&gt; Maybe (Interval (I a))
+forall r a. r -&gt; ([a] -&gt; r) -&gt; [a] -&gt; r
+</span><a href="Cardano.Util.html#foldEmpty"><span class="hs-identifier hs-var">foldEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Interval (I a))
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Interval (I a) -&gt; Maybe (Interval (I a))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (I a) -&gt; Maybe (Interval (I a)))
+-&gt; ([Interval (I a)] -&gt; Interval (I a))
+-&gt; [Interval (I a)]
+-&gt; Maybe (Interval (I a))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Interval (I a)] -&gt; Interval (I a)
+forall a. Ord a =&gt; [Interval a] -&gt; Interval a
+</span><a href="Cardano.Util.html#unionIntv"><span class="hs-identifier hs-var">unionIntv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Interval (I a)] -&gt; Maybe (Interval (I a)))
+-&gt; [Interval (I a)] -&gt; Maybe (Interval (I a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; Maybe (Interval (I a))
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Maybe (Interval (f a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var">ddFiltered</span></a></span><span> </span><span class="annot"><span class="annottext">(DataDomain I a -&gt; Maybe (Interval (I a)))
+-&gt; [DataDomain I a] -&gt; [Interval (I a)]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#mapMaybe"><span class="hs-operator hs-var">`mapMaybe`</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418642"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddRawCount :: I Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span>      </span><span class="hs-glyph">=</span><span>   </span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418642"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a] -&gt; (DataDomain I a -&gt; Int) -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">I Int -&gt; Int
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">(I Int -&gt; Int)
+-&gt; (DataDomain I a -&gt; I Int) -&gt; DataDomain I a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; I Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddFilteredCount :: I Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span> </span><span class="hs-glyph">=</span><span>   </span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418642"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a] -&gt; (DataDomain I a -&gt; Int) -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">I Int -&gt; Int
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">(I Int -&gt; Int)
+-&gt; (DataDomain I a -&gt; I Int) -&gt; DataDomain I a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; I Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679418647"><span class="annot"><a href="Data.DataDomain.html#intersectDataDomains"><span class="hs-identifier hs-type">intersectDataDomains</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418647"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418647"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418647"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-92"></span><span id="intersectDataDomains"><span class="annot"><span class="annottext">intersectDataDomains :: forall a. Ord a =&gt; [DataDomain I a] -&gt; DataDomain I a
+</span><a href="Data.DataDomain.html#intersectDataDomains"><span class="hs-identifier hs-var hs-var">intersectDataDomains</span></a></span></span><span> </span><span id="local-6989586621679418662"><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418662"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><a href="Data.DataDomain.html#DataDomain"><span class="hs-identifier hs-type">DataDomain</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ddRaw :: Interval (I a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Interval (I a)] -&gt; Interval (I a)
+forall a. Ord a =&gt; [Interval a] -&gt; Interval a
+</span><a href="Cardano.Util.html#intersectIntv"><span class="hs-identifier hs-var">intersectIntv</span></a></span><span> </span><span class="annot"><span class="annottext">([Interval (I a)] -&gt; Interval (I a))
+-&gt; [Interval (I a)] -&gt; Interval (I a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418662"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+-&gt; (DataDomain I a -&gt; Interval (I a)) -&gt; [Interval (I a)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; Interval (I a)
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Interval (f a)
+</span><a href="Data.DataDomain.html#ddRaw"><span class="hs-identifier hs-var">ddRaw</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddFiltered :: Maybe (Interval (I a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var">ddFiltered</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Interval (I a))
+-&gt; ([Interval (I a)] -&gt; Maybe (Interval (I a)))
+-&gt; [Interval (I a)]
+-&gt; Maybe (Interval (I a))
+forall r a. r -&gt; ([a] -&gt; r) -&gt; [a] -&gt; r
+</span><a href="Cardano.Util.html#foldEmpty"><span class="hs-identifier hs-var">foldEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Interval (I a))
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Interval (I a) -&gt; Maybe (Interval (I a))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Interval (I a) -&gt; Maybe (Interval (I a)))
+-&gt; ([Interval (I a)] -&gt; Interval (I a))
+-&gt; [Interval (I a)]
+-&gt; Maybe (Interval (I a))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Interval (I a)] -&gt; Interval (I a)
+forall a. Ord a =&gt; [Interval a] -&gt; Interval a
+</span><a href="Cardano.Util.html#intersectIntv"><span class="hs-identifier hs-var">intersectIntv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Interval (I a)] -&gt; Maybe (Interval (I a)))
+-&gt; [Interval (I a)] -&gt; Maybe (Interval (I a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; Maybe (Interval (I a))
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; Maybe (Interval (f a))
+</span><a href="Data.DataDomain.html#ddFiltered"><span class="hs-identifier hs-var">ddFiltered</span></a></span><span> </span><span class="annot"><span class="annottext">(DataDomain I a -&gt; Maybe (Interval (I a)))
+-&gt; [DataDomain I a] -&gt; [Interval (I a)]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#mapMaybe"><span class="hs-operator hs-var">`mapMaybe`</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418662"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddRawCount :: I Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span>      </span><span class="hs-glyph">=</span><span>   </span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418662"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a] -&gt; (DataDomain I a -&gt; Int) -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">I Int -&gt; Int
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">(I Int -&gt; Int)
+-&gt; (DataDomain I a -&gt; I Int) -&gt; DataDomain I a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; I Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddRawCount"><span class="hs-identifier hs-var">ddRawCount</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ddFilteredCount :: I Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span> </span><span class="hs-glyph">=</span><span>   </span><span class="annot"><span class="annottext">Int -&gt; I Int
+forall a. a -&gt; I a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; I Int) -&gt; Int -&gt; I Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; [Int] -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a]
+</span><a href="#local-6989586621679418662"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DataDomain I a] -&gt; (DataDomain I a -&gt; Int) -&gt; [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">I Int -&gt; Int
+forall a. I a -&gt; a
+</span><a href="file:///nix/store/13qr6fi6l775abhra7r7gdm4k75gil4p-sop-core-lib-sop-core-0.5.0.2-haddock-doc/share/doc/sop-core/html/src/Data.SOP.BasicFunctors.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">(I Int -&gt; Int)
+-&gt; (DataDomain I a -&gt; I Int) -&gt; DataDomain I a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataDomain I a -&gt; I Int
+forall (f :: * -&gt; *) a. DataDomain f a -&gt; f Int
+</span><a href="Data.DataDomain.html#ddFilteredCount"><span class="hs-identifier hs-var">ddFilteredCount</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- In base@4.20 the Data.List.NonEmpty.unzip is deprecated and suggests that</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Data.Function.unzip should be used instead,but base versions earlier than</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- 4.20 do not have that.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- Neatest solution is to cargo cult it here and switch to Data.Function.unzip</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- later.</span><span>
+</span><span id="line-105"></span><span id="local-6989586621679418107"><span id="local-6989586621679418108"><span id="local-6989586621679418109"><span class="annot"><a href="Data.DataDomain.html#neUnzip"><span class="hs-identifier hs-type">neUnzip</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418107"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679418107"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418108"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679418109"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679418107"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418108"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679418107"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679418109"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-106"></span><span id="neUnzip"><span class="annot"><span class="annottext">neUnzip :: forall (f :: * -&gt; *) a b. Functor f =&gt; f (a, b) -&gt; (f a, f b)
+</span><a href="Data.DataDomain.html#neUnzip"><span class="hs-identifier hs-var hs-var">neUnzip</span></a></span></span><span> </span><span id="local-6989586621679418667"><span class="annot"><span class="annottext">f (a, b)
+</span><a href="#local-6989586621679418667"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a, b) -&gt; a
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((a, b) -&gt; a) -&gt; f (a, b) -&gt; f a
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">f (a, b)
+</span><a href="#local-6989586621679418667"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; b
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((a, b) -&gt; b) -&gt; f (a, b) -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">f (a, b)
+</span><a href="#local-6989586621679418667"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span></pre></body></html>

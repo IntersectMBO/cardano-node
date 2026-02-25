@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Options.Applicative.Help.Ann</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Options.Applicative.Help.Ann.html#Ann"><span class="hs-identifier">Ann</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Options.Applicative.Help.Ann.html#CanAnnotate"><span class="hs-identifier">CanAnnotate</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Doc</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">annotate</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html"><span class="hs-identifier">Options.Applicative.Help.Style</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">data</span><span> </span><span id="Ann"><span class="annot"><a href="Options.Applicative.Help.Ann.html#Ann"><span class="hs-identifier hs-var">Ann</span></a></span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="AnnTrace"><span class="annot"><a href="Options.Applicative.Help.Ann.html#AnnTrace"><span class="hs-identifier hs-var">AnnTrace</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="AnnStyle"><span class="annot"><a href="Options.Applicative.Help.Ann.html#AnnStyle"><span class="hs-identifier hs-var">AnnStyle</span></a></span></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Style.html#SetStyle"><span class="hs-identifier hs-type">SetStyle</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083440"><span id="local-6989586621679083449"><span class="annot"><span class="annottext">Ann -&gt; Ann -&gt; Bool
+(Ann -&gt; Ann -&gt; Bool) -&gt; (Ann -&gt; Ann -&gt; Bool) -&gt; Eq Ann
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Ann -&gt; Ann -&gt; Bool
+== :: Ann -&gt; Ann -&gt; Bool
+$c/= :: Ann -&gt; Ann -&gt; Bool
+/= :: Ann -&gt; Ann -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083455"><span id="local-6989586621679083467"><span id="local-6989586621679083471"><span class="annot"><span class="annottext">Int -&gt; Ann -&gt; ShowS
+[Ann] -&gt; ShowS
+Ann -&gt; String
+(Int -&gt; Ann -&gt; ShowS)
+-&gt; (Ann -&gt; String) -&gt; ([Ann] -&gt; ShowS) -&gt; Show Ann
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Ann -&gt; ShowS
+showsPrec :: Int -&gt; Ann -&gt; ShowS
+$cshow :: Ann -&gt; String
+show :: Ann -&gt; String
+$cshowList :: [Ann] -&gt; ShowS
+showList :: [Ann] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">class</span><span> </span><span id="CanAnnotate"><span class="annot"><a href="Options.Applicative.Help.Ann.html#CanAnnotate"><span class="hs-identifier hs-var">CanAnnotate</span></a></span></span><span> </span><span id="local-6989586621679083431"><span class="annot"><a href="#local-6989586621679083431"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-comment">-- | Annotate trace a value</span><span>
+</span><span id="line-18"></span><span>  </span><span id="annTrace"><span class="annot"><a href="Options.Applicative.Help.Ann.html#annTrace"><span class="hs-identifier hs-type">annTrace</span></a></span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Trace level</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Trace message</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679083431"><span class="hs-identifier hs-type">a</span></a></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ Value to be traced</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679083431"><span class="hs-identifier hs-type">a</span></a></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ The traced value</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Options.Applicative.Help.Ann.html#CanAnnotate"><span class="hs-identifier hs-type">CanAnnotate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="Options.Applicative.Help.Ann.html#Ann"><span class="hs-identifier hs-type">Ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679083479"><span class="annot"><span class="annottext">annTrace :: Int -&gt; String -&gt; Doc Ann -&gt; Doc Ann
+</span><a href="Options.Applicative.Help.Ann.html#annTrace"><span class="hs-identifier hs-var hs-var hs-var hs-var">annTrace</span></a></span></span><span> </span><span id="local-6989586621679083480"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679083480"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ann -&gt; Doc Ann -&gt; Doc Ann
+forall ann. ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-identifier hs-var">annotate</span></span><span> </span><span class="annot"><span class="annottext">(Ann -&gt; Doc Ann -&gt; Doc Ann)
+-&gt; (String -&gt; Ann) -&gt; String -&gt; Doc Ann -&gt; Doc Ann
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; Ann
+</span><a href="Options.Applicative.Help.Ann.html#AnnTrace"><span class="hs-identifier hs-var">AnnTrace</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679083480"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-26"></span></pre></body></html>

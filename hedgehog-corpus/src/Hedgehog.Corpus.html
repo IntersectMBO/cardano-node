@@ -1,0 +1,1063 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Corpus</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Hedgehog.Corpus.html#agile"><span class="hs-identifier">agile</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#animals"><span class="hs-identifier">animals</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#boats"><span class="hs-identifier">boats</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#cats"><span class="hs-identifier">cats</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#colours"><span class="hs-identifier">colours</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#cooking"><span class="hs-identifier">cooking</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#fruits"><span class="hs-identifier">fruits</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#glass"><span class="hs-identifier">glass</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#metasyntactic"><span class="hs-identifier">metasyntactic</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#muppets"><span class="hs-identifier">muppets</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#nfl"><span class="hs-identifier">nfl</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#nhl"><span class="hs-identifier">nhl</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#simpsons"><span class="hs-identifier">simpsons</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#southpark"><span class="hs-identifier">southpark</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#vegetables"><span class="hs-identifier">vegetables</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#viruses"><span class="hs-identifier">viruses</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#waters"><span class="hs-identifier">waters</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Corpus.html#weather"><span class="hs-identifier">weather</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><span class="hs-comment">-- | Collection of cooking related strings</span></span><span>
+</span><span id="line-27"></span><span id="local-6989586621679019875"><span class="annot"><a href="Hedgehog.Corpus.html#cooking"><span class="hs-identifier hs-type">cooking</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019875"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019875"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-28"></span><span id="cooking"><span class="annot"><span class="annottext">cooking :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#cooking"><span class="hs-identifier hs-var hs-var">cooking</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;salted&quot;</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;stewed&quot;</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;diced&quot;</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;filleted&quot;</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sauteed&quot;</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | Collection of Muppets</span></span><span>
+</span><span id="line-37"></span><span id="local-6989586621679019918"><span class="annot"><a href="Hedgehog.Corpus.html#muppets"><span class="hs-identifier hs-type">muppets</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019918"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019918"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-38"></span><span id="muppets"><span class="annot"><span class="annottext">muppets :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#muppets"><span class="hs-identifier hs-var hs-var">muppets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kermit&quot;</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;gonzo&quot;</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fozzy&quot;</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;chef&quot;</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;statler&quot;</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;waldorf&quot;</span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;beaker&quot;</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;animal&quot;</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | Collection of Southpark characters</span></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679019928"><span class="annot"><a href="Hedgehog.Corpus.html#southpark"><span class="hs-identifier hs-type">southpark</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019928"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019928"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-51"></span><span id="southpark"><span class="annot"><span class="annottext">southpark :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#southpark"><span class="hs-identifier hs-var hs-var">southpark</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kyle&quot;</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;stan&quot;</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cartman&quot;</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;timmy&quot;</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;token&quot;</span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;chef&quot;</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;garrison&quot;</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><span class="hs-comment">-- | Collection of Simpsons characters</span></span><span>
+</span><span id="line-62"></span><span id="local-6989586621679019937"><span class="annot"><a href="Hedgehog.Corpus.html#simpsons"><span class="hs-identifier hs-type">simpsons</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019937"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019937"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-63"></span><span id="simpsons"><span class="annot"><span class="annottext">simpsons :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#simpsons"><span class="hs-identifier hs-var hs-var">simpsons</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;homer&quot;</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;marge&quot;</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;maggie&quot;</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lisa&quot;</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bart&quot;</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;flanders&quot;</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;moe&quot;</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;barney&quot;</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><span class="hs-comment">-- | Collection of viruses</span></span><span>
+</span><span id="line-75"></span><span id="local-6989586621679019947"><span class="annot"><a href="Hedgehog.Corpus.html#viruses"><span class="hs-identifier hs-type">viruses</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019947"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019947"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-76"></span><span id="viruses"><span class="annot"><span class="annottext">viruses :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#viruses"><span class="hs-identifier hs-var hs-var">viruses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;rotavirus&quot;</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;smallpox&quot;</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;norovirus&quot;</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;chickenpox&quot;</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;camelpox&quot;</span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;dengue&quot;</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;echovirus&quot;</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;equine morbillivirus&quot;</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;gou virus&quot;</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;measles&quot;</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;monkeypox&quot;</span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><span class="hs-comment">-- | Collection of colours</span></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679019960"><span class="annot"><a href="Hedgehog.Corpus.html#colours"><span class="hs-identifier hs-type">colours</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019960"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019960"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-92"></span><span id="colours"><span class="annot"><span class="annottext">colours :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#colours"><span class="hs-identifier hs-var hs-var">colours</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;red&quot;</span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;green&quot;</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;blue&quot;</span></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;yellow&quot;</span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;black&quot;</span></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;grey&quot;</span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;purple&quot;</span></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;orange&quot;</span></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pink&quot;</span></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><span class="hs-comment">-- | Collection of weather conditions</span></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679019971"><span class="annot"><a href="Hedgehog.Corpus.html#weather"><span class="hs-identifier hs-type">weather</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019971"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019971"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-106"></span><span id="weather"><span class="annot"><span class="annottext">weather :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#weather"><span class="hs-identifier hs-var hs-var">weather</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;dry&quot;</span></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;raining&quot;</span></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;hot&quot;</span></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;humid&quot;</span></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;snowing&quot;</span></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fresh&quot;</span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;windy&quot;</span></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;freezing&quot;</span></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | Collection of bodies of water</span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621679019981"><span class="annot"><a href="Hedgehog.Corpus.html#waters"><span class="hs-identifier hs-type">waters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679019981"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679019981"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-119"></span><span id="waters"><span class="annot"><span class="annottext">waters :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#waters"><span class="hs-identifier hs-var hs-var">waters</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;basin&quot;</span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bay&quot;</span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;billabong&quot;</span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;canal&quot;</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;channel&quot;</span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;creek&quot;</span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;estuary&quot;</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fjord&quot;</span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;harbour&quot;</span></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lake&quot;</span></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;loch&quot;</span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;marsh&quot;</span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ocean&quot;</span></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pond&quot;</span></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;puddle&quot;</span></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;reservoir&quot;</span></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;river&quot;</span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sea&quot;</span></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;slough&quot;</span></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sound&quot;</span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;spring&quot;</span></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;stream&quot;</span></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;swamp&quot;</span></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;wetland&quot;</span></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="annot"><span class="hs-comment">-- | Collection of types of boats</span></span><span>
+</span><span id="line-147"></span><span id="local-6989586621679020007"><span class="annot"><a href="Hedgehog.Corpus.html#boats"><span class="hs-identifier hs-type">boats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020007"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020007"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-148"></span><span id="boats"><span class="annot"><span class="annottext">boats :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#boats"><span class="hs-identifier hs-var hs-var">boats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;barge&quot;</span></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;battleship&quot;</span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;canoe&quot;</span></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;catamaran&quot;</span></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;dinghy&quot;</span></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ferry&quot;</span></span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;gondola&quot;</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;jetski&quot;</span></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kayak&quot;</span></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;longship&quot;</span></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;motorboat&quot;</span></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pontoon&quot;</span></span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;powerboat&quot;</span></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;rowboat&quot;</span></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ship&quot;</span></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;steamboat&quot;</span></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tanker&quot;</span></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;trawler&quot;</span></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tugboat&quot;</span></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;yacht&quot;</span></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="annot"><span class="hs-comment">-- | Collection of animals</span></span><span>
+</span><span id="line-172"></span><span id="local-6989586621679020029"><span class="annot"><a href="Hedgehog.Corpus.html#animals"><span class="hs-identifier hs-type">animals</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020029"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020029"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-173"></span><span id="animals"><span class="annot"><span class="annottext">animals :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#animals"><span class="hs-identifier hs-var hs-var">animals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;alligator&quot;</span></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ant&quot;</span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bear&quot;</span></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bee&quot;</span></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bird&quot;</span></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;camel&quot;</span></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cat&quot;</span></span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cheetah&quot;</span></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;chicken&quot;</span></span><span>
+</span><span id="line-183"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;chimpanzee&quot;</span></span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cow&quot;</span></span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;crocodile&quot;</span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;deer&quot;</span></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;dog&quot;</span></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;dolphin&quot;</span></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;duck&quot;</span></span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;eagle&quot;</span></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;elephant&quot;</span></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fish&quot;</span></span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fly&quot;</span></span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fox&quot;</span></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;frog&quot;</span></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;giraffe&quot;</span></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;goat&quot;</span></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;goldfish&quot;</span></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;hamster&quot;</span></span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;hippopotamus&quot;</span></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;horse&quot;</span></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kangaroo&quot;</span></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kitten&quot;</span></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lion&quot;</span></span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lobster&quot;</span></span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;monkey&quot;</span></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;octopus&quot;</span></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;owl&quot;</span></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;panda&quot;</span></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pig&quot;</span></span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;puppy&quot;</span></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;rabbit&quot;</span></span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;rat&quot;</span></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;scorpion&quot;</span></span><span>
+</span><span id="line-215"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;seal&quot;</span></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;shark&quot;</span></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sheep&quot;</span></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;snail&quot;</span></span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;snake&quot;</span></span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;spider&quot;</span></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;squirrel&quot;</span></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tiger&quot;</span></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;turtle&quot;</span></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;wolf&quot;</span></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;zebra&quot;</span></span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="annot"><span class="hs-comment">-- | Collection of vegetables</span></span><span>
+</span><span id="line-229"></span><span id="local-6989586621679020083"><span class="annot"><a href="Hedgehog.Corpus.html#vegetables"><span class="hs-identifier hs-type">vegetables</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020083"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020083"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-230"></span><span id="vegetables"><span class="annot"><span class="annottext">vegetables :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#vegetables"><span class="hs-identifier hs-var hs-var">vegetables</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-231"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;asparagus&quot;</span></span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;beans&quot;</span></span><span>
+</span><span id="line-233"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;broccoli&quot;</span></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cabbage&quot;</span></span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;carrot&quot;</span></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;celery&quot;</span></span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;corn&quot;</span></span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cucumber&quot;</span></span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;eggplant&quot;</span></span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;green pepper&quot;</span></span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lettuce&quot;</span></span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;onion&quot;</span></span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;peas&quot;</span></span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;potato&quot;</span></span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pumpkin&quot;</span></span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;radish&quot;</span></span><span>
+</span><span id="line-247"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;spinach&quot;</span></span><span>
+</span><span id="line-248"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sweet potato&quot;</span></span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tomato&quot;</span></span><span> </span><span class="hs-comment">-- Don't be so pedantic! It's a culinary vegetable.</span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;turnip&quot;</span></span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-252"></span><span>
+</span><span id="line-253"></span><span class="annot"><span class="hs-comment">-- | Collection of fruits</span></span><span>
+</span><span id="line-254"></span><span id="local-6989586621679020105"><span class="annot"><a href="Hedgehog.Corpus.html#fruits"><span class="hs-identifier hs-type">fruits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020105"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020105"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-255"></span><span id="fruits"><span class="annot"><span class="annottext">fruits :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#fruits"><span class="hs-identifier hs-var hs-var">fruits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-256"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;apple&quot;</span></span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;banana&quot;</span></span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;cherry&quot;</span></span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;grapefruit&quot;</span></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;grapes&quot;</span></span><span>
+</span><span id="line-261"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lemon&quot;</span></span><span>
+</span><span id="line-262"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lime&quot;</span></span><span>
+</span><span id="line-263"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;melon&quot;</span></span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;orange&quot;</span></span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;peach&quot;</span></span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pear&quot;</span></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;persimmon&quot;</span></span><span>
+</span><span id="line-268"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pineapple&quot;</span></span><span>
+</span><span id="line-269"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;plum&quot;</span></span><span>
+</span><span id="line-270"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;strawberry&quot;</span></span><span>
+</span><span id="line-271"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tangerine&quot;</span></span><span>
+</span><span id="line-272"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tomato&quot;</span></span><span>
+</span><span id="line-273"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;watermelon&quot;</span></span><span>
+</span><span id="line-274"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-275"></span><span>
+</span><span id="line-276"></span><span class="annot"><span class="hs-comment">-- | Collection of cats</span></span><span>
+</span><span id="line-277"></span><span id="local-6989586621679020125"><span class="annot"><a href="Hedgehog.Corpus.html#cats"><span class="hs-identifier hs-type">cats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020125"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020125"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-278"></span><span id="cats"><span class="annot"><span class="annottext">cats :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#cats"><span class="hs-identifier hs-var hs-var">cats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-279"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;american curl&quot;</span></span><span>
+</span><span id="line-280"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;american shorthair&quot;</span></span><span>
+</span><span id="line-281"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;angora&quot;</span></span><span>
+</span><span id="line-282"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;british shorthair&quot;</span></span><span>
+</span><span id="line-283"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bobtail&quot;</span></span><span>
+</span><span id="line-284"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;exotic shorthair&quot;</span></span><span>
+</span><span id="line-285"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;himalayan&quot;</span></span><span>
+</span><span id="line-286"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;maine coon&quot;</span></span><span>
+</span><span id="line-287"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;munchkin&quot;</span></span><span>
+</span><span id="line-288"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;norwegian forest&quot;</span></span><span>
+</span><span id="line-289"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;persian&quot;</span></span><span>
+</span><span id="line-290"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ragamuffin&quot;</span></span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;ragdoll&quot;</span></span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;russian blue&quot;</span></span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;scottish fold&quot;</span></span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;siamese&quot;</span></span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;siberian&quot;</span></span><span>
+</span><span id="line-296"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;tabby&quot;</span></span><span>
+</span><span id="line-297"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-298"></span><span>
+</span><span id="line-299"></span><span class="annot"><span class="hs-comment">-- | Collection of NHL teams</span></span><span>
+</span><span id="line-300"></span><span id="local-6989586621679020145"><span class="annot"><a href="Hedgehog.Corpus.html#nhl"><span class="hs-identifier hs-type">nhl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020145"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020145"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-301"></span><span id="nhl"><span class="annot"><span class="annottext">nhl :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#nhl"><span class="hs-identifier hs-var hs-var">nhl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-302"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Anaheim Ducks&quot;</span></span><span>
+</span><span id="line-303"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Arizona Coyotes&quot;</span></span><span>
+</span><span id="line-304"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Boston Bruins&quot;</span></span><span>
+</span><span id="line-305"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Buffalo Sabres&quot;</span></span><span>
+</span><span id="line-306"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Calgary Flames&quot;</span></span><span>
+</span><span id="line-307"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Carolina Hurricanes&quot;</span></span><span>
+</span><span id="line-308"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Chicago Blackhawks&quot;</span></span><span>
+</span><span id="line-309"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Colorado Avalanche&quot;</span></span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Columbus Blue Jackets&quot;</span></span><span>
+</span><span id="line-311"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Dallas Stars&quot;</span></span><span>
+</span><span id="line-312"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Detroit Red Wings&quot;</span></span><span>
+</span><span id="line-313"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Edmonton Oilers&quot;</span></span><span>
+</span><span id="line-314"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Florida Panthers&quot;</span></span><span>
+</span><span id="line-315"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Los Angeles Kings&quot;</span></span><span>
+</span><span id="line-316"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Minnesota Wild&quot;</span></span><span>
+</span><span id="line-317"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Montr&#233;al Canadiens&quot;</span></span><span>
+</span><span id="line-318"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Nashville Predators&quot;</span></span><span>
+</span><span id="line-319"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New Jersey Devils&quot;</span></span><span>
+</span><span id="line-320"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New York Islanders&quot;</span></span><span>
+</span><span id="line-321"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New York Rangers&quot;</span></span><span>
+</span><span id="line-322"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ottawa Senators&quot;</span></span><span>
+</span><span id="line-323"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Philadelphia Flyers&quot;</span></span><span>
+</span><span id="line-324"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Pittsburgh Penguins&quot;</span></span><span>
+</span><span id="line-325"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;San Jose Sharks&quot;</span></span><span>
+</span><span id="line-326"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;St. Louis Blues&quot;</span></span><span>
+</span><span id="line-327"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Tampa Bay Lightning&quot;</span></span><span>
+</span><span id="line-328"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Toronto Maple Leafs&quot;</span></span><span>
+</span><span id="line-329"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Vancouver Canucks&quot;</span></span><span>
+</span><span id="line-330"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Vegas Golden Knights&quot;</span></span><span>
+</span><span id="line-331"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Washington Capitals&quot;</span></span><span>
+</span><span id="line-332"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Winnipeg Jets&quot;</span></span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-334"></span><span>
+</span><span id="line-335"></span><span class="annot"><span class="hs-comment">-- | Collection of NFL teams</span></span><span>
+</span><span id="line-336"></span><span id="local-6989586621679020178"><span class="annot"><a href="Hedgehog.Corpus.html#nfl"><span class="hs-identifier hs-type">nfl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020178"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020178"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-337"></span><span id="nfl"><span class="annot"><span class="annottext">nfl :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#nfl"><span class="hs-identifier hs-var hs-var">nfl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-338"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Arizona Cardinals&quot;</span></span><span>
+</span><span id="line-339"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Atlanta Falcons&quot;</span></span><span>
+</span><span id="line-340"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Baltimore Ravens&quot;</span></span><span>
+</span><span id="line-341"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Buffalo Bills&quot;</span></span><span>
+</span><span id="line-342"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Carolina Panthers&quot;</span></span><span>
+</span><span id="line-343"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Chicago Bears&quot;</span></span><span>
+</span><span id="line-344"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Cincinnati Bengals&quot;</span></span><span>
+</span><span id="line-345"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Cleveland Browns&quot;</span></span><span>
+</span><span id="line-346"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Dallas Cowboys&quot;</span></span><span>
+</span><span id="line-347"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Denver Broncos&quot;</span></span><span>
+</span><span id="line-348"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Detroit Lions&quot;</span></span><span>
+</span><span id="line-349"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Green Bay Packers&quot;</span></span><span>
+</span><span id="line-350"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Houston Texans&quot;</span></span><span>
+</span><span id="line-351"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Indianapolis Colts&quot;</span></span><span>
+</span><span id="line-352"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Jacksonville Jaguars&quot;</span></span><span>
+</span><span id="line-353"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Kansas City Chiefs&quot;</span></span><span>
+</span><span id="line-354"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Los Angeles Chargers&quot;</span></span><span>
+</span><span id="line-355"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Los Angeles Rams&quot;</span></span><span>
+</span><span id="line-356"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Miami Dolphins&quot;</span></span><span>
+</span><span id="line-357"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Minnesota Vikings&quot;</span></span><span>
+</span><span id="line-358"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New England Patriots&quot;</span></span><span>
+</span><span id="line-359"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New Orleans Saints&quot;</span></span><span>
+</span><span id="line-360"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New York Giants&quot;</span></span><span>
+</span><span id="line-361"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;New York Jets&quot;</span></span><span>
+</span><span id="line-362"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Oakland Raiders&quot;</span></span><span>
+</span><span id="line-363"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Philadelphia Eagles&quot;</span></span><span>
+</span><span id="line-364"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Pittsburgh Steelers&quot;</span></span><span>
+</span><span id="line-365"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;San Francisco 49ers&quot;</span></span><span>
+</span><span id="line-366"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Seattle Seahawks&quot;</span></span><span>
+</span><span id="line-367"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Tampa Bay Buccaneers&quot;</span></span><span>
+</span><span id="line-368"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Tennessee Titans&quot;</span></span><span>
+</span><span id="line-369"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Washington Redskins&quot;</span></span><span>
+</span><span id="line-370"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-371"></span><span>
+</span><span id="line-372"></span><span class="annot"><span class="hs-comment">-- | Collection of agiles</span></span><span>
+</span><span id="line-373"></span><span id="local-6989586621679020212"><span class="annot"><a href="Hedgehog.Corpus.html#agile"><span class="hs-identifier hs-type">agile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020212"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020212"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-374"></span><span id="agile"><span class="annot"><span class="annottext">agile :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#agile"><span class="hs-identifier hs-var hs-var">agile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-375"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;agile&quot;</span></span><span>
+</span><span id="line-376"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;backlog&quot;</span></span><span>
+</span><span id="line-377"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;burn-down chart&quot;</span></span><span>
+</span><span id="line-378"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;decisioning&quot;</span></span><span>
+</span><span id="line-379"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;epic&quot;</span></span><span>
+</span><span id="line-380"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;extreme programming&quot;</span></span><span>
+</span><span id="line-381"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;governance&quot;</span></span><span>
+</span><span id="line-382"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;information radiator&quot;</span></span><span>
+</span><span id="line-383"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;kanban&quot;</span></span><span>
+</span><span id="line-384"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;lean&quot;</span></span><span>
+</span><span id="line-385"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;pair programming&quot;</span></span><span>
+</span><span id="line-386"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;planning poker&quot;</span></span><span>
+</span><span id="line-387"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;product owner&quot;</span></span><span>
+</span><span id="line-388"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;retrospective&quot;</span></span><span>
+</span><span id="line-389"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;scrum&quot;</span></span><span>
+</span><span id="line-390"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;scrum master&quot;</span></span><span>
+</span><span id="line-391"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;spike&quot;</span></span><span>
+</span><span id="line-392"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;sprint&quot;</span></span><span>
+</span><span id="line-393"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;standup&quot;</span></span><span>
+</span><span id="line-394"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;story points&quot;</span></span><span>
+</span><span id="line-395"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;test driven&quot;</span></span><span>
+</span><span id="line-396"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;user story&quot;</span></span><span>
+</span><span id="line-397"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;velocity&quot;</span></span><span>
+</span><span id="line-398"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;vertical slice&quot;</span></span><span>
+</span><span id="line-399"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-400"></span><span>
+</span><span id="line-401"></span><span class="annot"><span class="hs-comment">-- | Collection of &lt;https://en.wikipedia.org/wiki/Metasyntactic_variable metasyntactic variables&gt;.</span></span><span>
+</span><span id="line-402"></span><span id="local-6989586621679020238"><span class="annot"><a href="Hedgehog.Corpus.html#metasyntactic"><span class="hs-identifier hs-type">metasyntactic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020238"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020238"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-403"></span><span id="metasyntactic"><span class="annot"><span class="annottext">metasyntactic :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#metasyntactic"><span class="hs-identifier hs-var hs-var">metasyntactic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-404"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;foo&quot;</span></span><span>
+</span><span id="line-405"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;bar&quot;</span></span><span>
+</span><span id="line-406"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;baz&quot;</span></span><span>
+</span><span id="line-407"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;qux&quot;</span></span><span>
+</span><span id="line-408"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;quux&quot;</span></span><span>
+</span><span id="line-409"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;quuz&quot;</span></span><span>
+</span><span id="line-410"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;corge&quot;</span></span><span>
+</span><span id="line-411"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;grault&quot;</span></span><span>
+</span><span id="line-412"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;garply&quot;</span></span><span>
+</span><span id="line-413"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;waldo&quot;</span></span><span>
+</span><span id="line-414"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;fred&quot;</span></span><span>
+</span><span id="line-415"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;plugh&quot;</span></span><span>
+</span><span id="line-416"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;xyzzy&quot;</span></span><span>
+</span><span id="line-417"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;thud&quot;</span></span><span>
+</span><span id="line-418"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-419"></span><span>
+</span><span id="line-420"></span><span class="hs-comment">-- | How to say &quot;I can eat glass, and it doesn't hurt me.&quot; in a few different</span><span>
+</span><span id="line-421"></span><span class="hs-comment">--   languages.</span><span>
+</span><span id="line-422"></span><span class="hs-comment">--</span><span>
+</span><span id="line-423"></span><span class="hs-comment">--   From: http://kermitproject.org/utf8.html</span><span>
+</span><span id="line-424"></span><span class="hs-comment">--</span><span>
+</span><span id="line-425"></span><span id="local-6989586621679020254"><span class="annot"><a href="Hedgehog.Corpus.html#glass"><span class="hs-identifier hs-type">glass</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679020254"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679020254"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-426"></span><span id="glass"><span class="annot"><span class="annottext">glass :: forall a. IsString a =&gt; [a]
+</span><a href="Hedgehog.Corpus.html#glass"><span class="hs-identifier hs-var hs-var">glass</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-427"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2325;&#2366;&#2330;&#2306; &#2358;&#2325;&#2381;&#2344;&#2379;&#2350;&#2381;&#2351;&#2340;&#2381;&#2340;&#2369;&#2350;&#2381; &#2404; &#2344;&#2379;&#2346;&#2361;&#2367;&#2344;&#2360;&#2381;&#2340;&#2367; &#2350;&#2366;&#2350;&#2381; &#2405;&quot;</span></span><span> </span><span class="hs-comment">-- Sanskrit</span><span>
+</span><span id="line-428"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;k&#257;ca&#7747; &#347;aknomyattum; nopahinasti m&#257;m.&quot;</span></span><span> </span><span class="hs-comment">-- Sanskrit (standard transcription)</span><span>
+</span><span id="line-429"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#8021;&#945;&#955;&#959;&#957; &#981;&#945;&#947;&#949;&#8150;&#957; &#948;&#8059;&#957;&#945;&#956;&#945;&#953;&#903; &#964;&#959;&#8166;&#964;&#959; &#959;&#8020; &#956;&#949; &#946;&#955;&#8049;&#960;&#964;&#949;&#953;.&quot;</span></span><span> </span><span class="hs-comment">-- Classical Greek</span><span>
+</span><span id="line-430"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#924;&#960;&#959;&#961;&#974; &#957;&#945; &#966;&#940;&#969; &#963;&#960;&#945;&#963;&#956;&#941;&#957;&#945; &#947;&#965;&#945;&#955;&#953;&#940; &#967;&#969;&#961;&#943;&#962; &#957;&#945; &#960;&#940;&#952;&#969; &#964;&#943;&#960;&#959;&#964;&#945;.&quot;</span></span><span> </span><span class="hs-comment">-- Greek (monotonic)</span><span>
+</span><span id="line-431"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#924;&#960;&#959;&#961;&#8182; &#957;&#8048; &#966;&#940;&#969; &#963;&#960;&#945;&#963;&#956;&#941;&#957;&#945; &#947;&#965;&#945;&#955;&#953;&#8048; &#967;&#969;&#961;&#8054;&#962; &#957;&#8048; &#960;&#940;&#952;&#969; &#964;&#943;&#960;&#959;&#964;&#945;. &quot;</span></span><span> </span><span class="hs-comment">-- Greek (polytonic)</span><span>
+</span><span id="line-432"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Vitrum edere possum; mihi non nocet.&quot;</span></span><span> </span><span class="hs-comment">-- Latin</span><span>
+</span><span id="line-433"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Je puis mangier del voirre. Ne me nuit.&quot;</span></span><span> </span><span class="hs-comment">-- Old French</span><span>
+</span><span id="line-434"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Je peux manger du verre, &#231;a ne me fait pas mal.&quot;</span></span><span> </span><span class="hs-comment">-- French</span><span>
+</span><span id="line-435"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;P&#242;di manjar de veire, me nafrari&#225; pas.&quot;</span></span><span> </span><span class="hs-comment">-- Proven&#231;al / Occitan</span><span>
+</span><span id="line-436"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;J'peux manger d'la vitre, &#231;a m'fa pas mal.&quot;</span></span><span> </span><span class="hs-comment">-- Qu&#233;b&#233;cois</span><span>
+</span><span id="line-437"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Dji pou magn&#238; do v&#234;re, &#231;oula m' freut n&#233;n m&#229;. &quot;</span></span><span> </span><span class="hs-comment">-- Walloon</span><span>
+</span><span id="line-438"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ch'peux mingi du verre, cha m'fo&#233; mie n'ma. &quot;</span></span><span> </span><span class="hs-comment">-- Picard</span><span>
+</span><span id="line-439"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mwen kap manje v&#232;, li pa blese'm.&quot;</span></span><span> </span><span class="hs-comment">-- Krey&#242;l Ayisyen (Hait&#239;)</span><span>
+</span><span id="line-440"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Kristala jan dezaket, ez dit minik ematen.&quot;</span></span><span> </span><span class="hs-comment">-- Basque</span><span>
+</span><span id="line-441"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Puc menjar vidre, que no em fa mal.&quot;</span></span><span> </span><span class="hs-comment">-- Catalan / Catal&#224;</span><span>
+</span><span id="line-442"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Puedo comer vidrio, no me hace da&#241;o.&quot;</span></span><span> </span><span class="hs-comment">-- Spanish</span><span>
+</span><span id="line-443"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Puedo minchar beire, no me'n fa mal . &quot;</span></span><span> </span><span class="hs-comment">-- Aragon&#233;s</span><span>
+</span><span id="line-444"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Eu podo xantar cristais e non cortarme.&quot;</span></span><span> </span><span class="hs-comment">-- Galician</span><span>
+</span><span id="line-445"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Posso comer vidro, n&#227;o me faz mal.&quot;</span></span><span> </span><span class="hs-comment">-- European Portuguese</span><span>
+</span><span id="line-446"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Posso comer vidro, n&#227;o me machuca.&quot;</span></span><span> </span><span class="hs-comment">-- Brazilian Portuguese</span><span>
+</span><span id="line-447"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;M' pod&#234; cum&#234; vidru, ca ta magu&#226;-m '.&quot;</span></span><span> </span><span class="hs-comment">--Caboverdiano/Kabuverdianu (Cape Verde)</span><span>
+</span><span id="line-448"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ami por kome glas anto e no ta hasimi da&#241;o.&quot;</span></span><span> </span><span class="hs-comment">-- Papiamentu</span><span>
+</span><span id="line-449"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Posso mangiare il vetro e non mi fa male.&quot;</span></span><span> </span><span class="hs-comment">-- Italian</span><span>
+</span><span id="line-450"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;S&#244;n b&#244;n de magn&#224; el v&#233;der, el me fa minga mal.&quot;</span></span><span> </span><span class="hs-comment">-- Milanese</span><span>
+</span><span id="line-451"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Me posso magna' er vetro, e nun me fa male.&quot;</span></span><span> </span><span class="hs-comment">-- Roman</span><span>
+</span><span id="line-452"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;M' pozz magna' o'vetr, e nun m' fa mal.&quot;</span></span><span> </span><span class="hs-comment">-- Napoletano</span><span>
+</span><span id="line-453"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mi posso magnare el vetro, no'l me fa mae.&quot;</span></span><span> </span><span class="hs-comment">-- Venetian</span><span>
+</span><span id="line-454"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;P&#242;sso mangi&#226; o veddro e o no me f&#224; m&#226;.&quot;</span></span><span> </span><span class="hs-comment">-- Zeneise (Genovese)</span><span>
+</span><span id="line-455"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Puotsu mangiari u vitru, nun mi fa mali. &quot;</span></span><span> </span><span class="hs-comment">-- Sicilian</span><span>
+</span><span id="line-456"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Jau sai mangiar vaider, senza che quai fa donn a mai. &quot;</span></span><span> </span><span class="hs-comment">-- Romansch (Grischun)</span><span>
+</span><span id="line-457"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Pot s&#259; m&#259;n&#226;nc sticl&#259; &#537;i ea nu m&#259; r&#259;ne&#537;te.&quot;</span></span><span> </span><span class="hs-comment">-- Romanian</span><span>
+</span><span id="line-458"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mi povas man&#285;i vitron, &#285;i ne dama&#285;as min. &quot;</span></span><span> </span><span class="hs-comment">-- Esperanto</span><span>
+</span><span id="line-459"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;M&#253; a yl dybry gw&#233;der hag &#233;f ny wra ow ankenya.&quot;</span></span><span> </span><span class="hs-comment">-- Cornish</span><span>
+</span><span id="line-460"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Dw i'n gallu bwyta gwydr, 'dyw e ddim yn gwneud dolur i mi.&quot;</span></span><span> </span><span class="hs-comment">-- Welsh</span><span>
+</span><span id="line-461"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Foddym gee glonney agh cha jean eh gortaghey mee.&quot;</span></span><span> </span><span class="hs-comment">-- Manx Gaelic</span><span>
+</span><span id="line-462"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#5787;&#5787;&#5769;&#5777;&#5765;&#5780;&#5769;&#5769;&#5780;&#5771;&#5760;&#5780;&#5768;&#5780;&#5760;&#5773;&#5762;&#5776;&#5765;&#5777;&#5760;&#5765;&#5780;&#5771;&#5772;&#5779;&#5765;&#5776;&#5788;&quot;</span></span><span> </span><span class="hs-comment">-- Old Irish (Ogham)</span><span>
+</span><span id="line-463"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Con&#183;iccim ithi nglano. N&#237;m&#183;g&#233;na.&quot;</span></span><span> </span><span class="hs-comment">-- Old Irish (Latin)</span><span>
+</span><span id="line-464"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Is f&#233;idir liom gloinne a ithe. N&#237; dh&#233;anann s&#237; dochar ar bith dom.&quot;</span></span><span> </span><span class="hs-comment">-- Irish</span><span>
+</span><span id="line-465"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ithim-s a gloine agus n&#237; miste damh &#233;.&quot;</span></span><span> </span><span class="hs-comment">--Ulster Gaelic</span><span>
+</span><span id="line-466"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;S urrainn dhomh gloinne ithe; cha ghoirtich i mi.&quot;</span></span><span> </span><span class="hs-comment">-- Scottish Gaelic</span><span>
+</span><span id="line-467"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#5825;&#5811;&#5867;&#5847;&#5800;&#5815;&#5867;&#5815;&#5850;&#5800;&#5835;&#5867;&#5846;&#5801;&#5839;&#5802;&#5822;&#5867;&#5801;&#5822;&#5854;&#5867;&#5819;&#5825;&#5839;&#5867;&#5822;&#5846;&#5867;&#5819;&#5846;&#5802;&#5809;&#5847;&#5825;&#5802;&#5799;&#5867;&#5847;&#5846;&#5868;&quot;</span></span><span> </span><span class="hs-comment">-- Anglo-Saxon (Runes)</span><span>
+</span><span id="line-468"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ic m&#230;g gl&#230;s eotan ond hit ne hearmia&#240; me.&quot;</span></span><span> </span><span class="hs-comment">-- Anglo-Saxon (Latin)</span><span>
+</span><span id="line-469"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ich canne glas eten and hit hirti&#254; me nou&#541;t.&quot;</span></span><span> </span><span class="hs-comment">-- Middle English</span><span>
+</span><span id="line-470"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;I can eat glass and it doesn't hurt me.&quot;</span></span><span> </span><span class="hs-comment">-- English</span><span>
+</span><span id="line-471"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;[a&#618; k&#230;n i&#720;t gl&#593;&#720;s &#230;nd &#618;t d&#592;z n&#594;t h&#604;&#720;t mi&#720;]&quot;</span></span><span> </span><span class="hs-comment">-- English (IPA)</span><span>
+</span><span id="line-472"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#10250;&#10240;&#10249;&#10241;&#10269;&#10240;&#10257;&#10241;&#10270;&#10240;&#10267;&#10247;&#10241;&#10254;&#10254;&#10240;&#10241;&#10269;&#10265;&#10240;&#10250;&#10270;&#10240;&#10265;&#10261;&#10257;&#10254;&#10269;&#10270;&#10240;&#10259;&#10277;&#10263;&#10270;&#10240;&#10253;&#10257;&quot;</span></span><span> </span><span class="hs-comment">-- English (Braille)</span><span>
+</span><span id="line-473"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mi kian niam glas han i neba hot mi.&quot;</span></span><span> </span><span class="hs-comment">-- Jamaican</span><span>
+</span><span id="line-474"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ah can eat gless, it disnae hurt us. &quot;</span></span><span> </span><span class="hs-comment">-- Lalland Scots / Doric</span><span>
+</span><span id="line-475"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#66364;&#66352;&#66354; &#66354;&#66363;&#66356;&#66371; &#66361;&#776;&#66372;&#66352;&#66365;, &#66365;&#66361; &#66364;&#66361;&#66371; &#66373;&#66367; &#66365;&#66355;&#66352;&#66365; &#66353;&#66370;&#66361;&#66354;&#66354;&#66361;&#66360;.&quot;</span></span><span> </span><span class="hs-comment">-- Gothic</span><span>
+</span><span id="line-476"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#5846;&#5812; &#5815;&#5846;&#5839; &#5846;&#5839;&#5825; &#5799; &#5815;&#5850;&#5846;&#5809; &#5848;&#5822; &#5798;&#5846;&#5835;&#5835; &#5800;&#5799; &#5793;&#5846; &#5809;&#5799;&#5800; &#5835;&#5800;&#5809;&quot;</span></span><span> </span><span class="hs-comment">-- Old Norse (Runes)</span><span>
+</span><span id="line-477"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ek get eti&#240; gler &#225;n &#254;ess a&#240; ver&#240;a s&#225;r.&quot;</span></span><span> </span><span class="hs-comment">-- Old Norse (Latin)</span><span>
+</span><span id="line-478"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Eg kan eta glas utan &#229; skada meg.&quot;</span></span><span> </span><span class="hs-comment">-- Norsk / Norwegian (Nynorsk)</span><span>
+</span><span id="line-479"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Jeg kan spise glass uten &#229; skade meg.&quot;</span></span><span> </span><span class="hs-comment">-- Norsk / Norwegian (Bokm&#229;l)</span><span>
+</span><span id="line-480"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Eg kann eta glas, ska&#240;aleysur.&quot;</span></span><span> </span><span class="hs-comment">-- F&#248;royskt / Faroese</span><span>
+</span><span id="line-481"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#201;g get eti&#240; gler &#225;n &#254;ess a&#240; mei&#240;a mig.&quot;</span></span><span> </span><span class="hs-comment">-- &#205;slenska / Icelandic</span><span>
+</span><span id="line-482"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Jag kan &#228;ta glas utan att skada mig.&quot;</span></span><span> </span><span class="hs-comment">-- Svenska / Swedish</span><span>
+</span><span id="line-483"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Jeg kan spise glas, det g&#248;r ikke ondt p&#229; mig.&quot;</span></span><span> </span><span class="hs-comment">-- Dansk / Danish</span><span>
+</span><span id="line-484"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#198; ka &#230;e glass uhen at det go m&#230; naue.&quot;</span></span><span> </span><span class="hs-comment">-- S&#248;nderjysk</span><span>
+</span><span id="line-485"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ik kin gl&#234;s ite, it docht me net sear.&quot;</span></span><span> </span><span class="hs-comment">-- Frysk / Frisian</span><span>
+</span><span id="line-486"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ik kan glas eten, het doet m&#307; geen kwaad.&quot;</span></span><span> </span><span class="hs-comment">-- Nederlands / Dutch</span><span>
+</span><span id="line-487"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Iech ken glaas &#232;&#232;se, mer 't deet miech jing pieng.&quot;</span></span><span> </span><span class="hs-comment">-- Kirchr&#246;adsj/B&#244;chesserplat</span><span>
+</span><span id="line-488"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ek kan glas eet, maar dit doen my nie skade nie.&quot;</span></span><span> </span><span class="hs-comment">-- Afrikaans</span><span>
+</span><span id="line-489"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ech kan Glas iessen, daat deet mir n&#235;t wei.&quot;</span></span><span> </span><span class="hs-comment">-- L&#235;tzebuergescht / Luxemburgish</span><span>
+</span><span id="line-490"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ich kann Glas essen, ohne mir zu schaden.&quot;</span></span><span> </span><span class="hs-comment">-- Deutsch / German</span><span>
+</span><span id="line-491"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ich kann Glas verkasematuckeln, ohne dattet mich wat jucken tut.&quot;</span></span><span> </span><span class="hs-comment">-- Ruhrdeutsch</span><span>
+</span><span id="line-492"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Isch kann Jlaas kimmeln, uuhne datt mich datt weh d&#228;&#228;d.&quot;</span></span><span> </span><span class="hs-comment">-- Langenfelder Platt</span><span>
+</span><span id="line-493"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ich koann Gloos assn und doas dudd merr ni wii.&quot;</span></span><span> </span><span class="hs-comment">-- Lausitzer Mundart (&quot;Lusatian&quot;)</span><span>
+</span><span id="line-494"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Iech konn glaasch voschbachteln ohne dass es mir ebbs daun doun dud.&quot;</span></span><span> </span><span class="hs-comment">-- Odenw&#228;lderisch</span><span>
+</span><span id="line-495"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;'sch kann Glos essn, ohne dass'sch mer wehtue.&quot;</span></span><span> </span><span class="hs-comment">-- S&#228;chsisch / Saxon</span><span>
+</span><span id="line-496"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Isch konn Glass fresse ohne dasses mer ebbes ausmache dud.&quot;</span></span><span> </span><span class="hs-comment">-- Pf&#228;lzisch</span><span>
+</span><span id="line-497"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;I k&#229; Glas fr&#228;ssa, ond des macht mr nix!&quot;</span></span><span> </span><span class="hs-comment">-- Schw&#228;bisch / Swabian</span><span>
+</span><span id="line-498"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;I ka glas eassa, ohne dass mar weh tuat.&quot;</span></span><span> </span><span class="hs-comment">-- Deutsch (Voralberg)</span><span>
+</span><span id="line-499"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;I koh Glos esa, und es duard ma ned wei.&quot;</span></span><span> </span><span class="hs-comment">-- Bayrisch / Bavarian</span><span>
+</span><span id="line-500"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;I kaun Gloos essen, es tuat ma ned weh.&quot;</span></span><span> </span><span class="hs-comment">-- Allemannisch</span><span>
+</span><span id="line-501"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ich chan Glaas &#228;sse, das schadt mir n&#246;d.&quot;</span></span><span> </span><span class="hs-comment">-- Schwyzerd&#252;tsch (Z&#252;rich)</span><span>
+</span><span id="line-502"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ech cha Gl&#226;s &#228;sse, das schadt mer ned. &quot;</span></span><span> </span><span class="hs-comment">-- Schwyzerd&#252;tsch (Luzern)</span><span>
+</span><span id="line-503"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Meg tudom enni az &#252;veget, nem lesz t&#337;le bajom.&quot;</span></span><span> </span><span class="hs-comment">-- Hungarian</span><span>
+</span><span id="line-504"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Voin sy&#246;d&#228; lasia, se ei vahingoita minua.&quot;</span></span><span> </span><span class="hs-comment">-- Suomi / Finnish</span><span>
+</span><span id="line-505"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;S&#225;ht&#225;n borrat l&#225;sa, dat ii leat b&#225;v&#269;&#269;as.&quot;</span></span><span> </span><span class="hs-comment">-- Sami (Northern)</span><span>
+</span><span id="line-506"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1052;&#1086;&#1085; &#1103;&#1088;&#1089;&#1072;&#1085; &#1089;&#1091;&#1083;&#1080;&#1082;&#1072;&#1076;&#1086;, &#1076;&#1099; &#1079;&#1099;&#1103;&#1085; &#1101;&#1081;&#1089;&#1090;&#1101;&#1085;&#1079;&#1101; &#1072; &#1091;&#1083;&#1080;.&quot;</span></span><span> </span><span class="hs-comment">-- Erzian</span><span>
+</span><span id="line-507"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mie voin syvv&#228; lasie ta minla ei ole kipie.&quot;</span></span><span> </span><span class="hs-comment">-- Northern Karelian</span><span>
+</span><span id="line-508"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Min&#228; voin syvv&#228; st'oklua dai minule ei ole kibie. &quot;</span></span><span> </span><span class="hs-comment">-- Southern Karelian</span><span>
+</span><span id="line-509"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ma v&#245;in klaasi s&#252;&#252;a, see ei tee mulle midagi.&quot;</span></span><span> </span><span class="hs-comment">-- Estonian</span><span>
+</span><span id="line-510"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Es varu &#275;st stiklu, tas man nekait&#275;.&quot;</span></span><span> </span><span class="hs-comment">-- Latvian</span><span>
+</span><span id="line-511"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;A&#353; galiu valgyti stikl&#261; ir jis man&#281;s ne&#382;eid&#382;ia &quot;</span></span><span> </span><span class="hs-comment">-- Lithuanian</span><span>
+</span><span id="line-512"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mohu j&#237;st sklo, neubl&#237;&#382;&#237; mi.&quot;</span></span><span> </span><span class="hs-comment">-- Czech</span><span>
+</span><span id="line-513"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;M&#244;&#382;em jes&#357; sklo. Nezran&#237; ma.&quot;</span></span><span> </span><span class="hs-comment">-- Slovak</span><span>
+</span><span id="line-514"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mog&#281; je&#347;&#263; szk&#322;o i mi nie szkodzi.&quot;</span></span><span> </span><span class="hs-comment">-- Polska / Polish</span><span>
+</span><span id="line-515"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Lahko jem steklo, ne da bi mi &#353;kodovalo.&quot;</span></span><span> </span><span class="hs-comment">-- Slovenian</span><span>
+</span><span id="line-516"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ja mogu jesti staklo, i to mi ne &#353;teti.&quot;</span></span><span> </span><span class="hs-comment">-- Bosnian, Croatian, Montenegrin and Serbian (Latin)</span><span>
+</span><span id="line-517"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1032;&#1072; &#1084;&#1086;&#1075;&#1091; &#1112;&#1077;&#1089;&#1090;&#1080; &#1089;&#1090;&#1072;&#1082;&#1083;&#1086;, &#1080; &#1090;&#1086; &#1084;&#1080; &#1085;&#1077; &#1096;&#1090;&#1077;&#1090;&#1080;.&quot;</span></span><span> </span><span class="hs-comment">-- Bosnian, Montenegrin and Serbian (Cyrillic)</span><span>
+</span><span id="line-518"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1052;&#1086;&#1078;&#1072;&#1084; &#1076;&#1072; &#1112;&#1072;&#1076;&#1072;&#1084; &#1089;&#1090;&#1072;&#1082;&#1083;&#1086;, &#1072; &#1085;&#1077; &#1084;&#1077; &#1096;&#1090;&#1077;&#1090;&#1072;.&quot;</span></span><span> </span><span class="hs-comment">-- Macedonian</span><span>
+</span><span id="line-519"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1071; &#1084;&#1086;&#1075;&#1091; &#1077;&#1089;&#1090;&#1100; &#1089;&#1090;&#1077;&#1082;&#1083;&#1086;, &#1086;&#1085;&#1086; &#1084;&#1085;&#1077; &#1085;&#1077; &#1074;&#1088;&#1077;&#1076;&#1080;&#1090;.&quot;</span></span><span> </span><span class="hs-comment">-- Russian</span><span>
+</span><span id="line-520"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1071; &#1084;&#1072;&#1075;&#1091; &#1077;&#1089;&#1094;&#1110; &#1096;&#1082;&#1083;&#1086;, &#1103;&#1085;&#1086; &#1084;&#1085;&#1077; &#1085;&#1077; &#1096;&#1082;&#1086;&#1076;&#1079;&#1110;&#1094;&#1100;.&quot;</span></span><span> </span><span class="hs-comment">-- Belarusian (Cyrillic)</span><span>
+</span><span id="line-521"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ja mahu je&#347;ci &#353;k&#322;o, jano mne ne &#353;kodzi&#263;.&quot;</span></span><span> </span><span class="hs-comment">-- Belarusian (Lacinka)</span><span>
+</span><span id="line-522"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1071; &#1084;&#1086;&#1078;&#1091; &#1111;&#1089;&#1090;&#1080; &#1089;&#1082;&#1083;&#1086;, &#1110; &#1074;&#1086;&#1085;&#1086; &#1084;&#1077;&#1085;&#1110; &#1085;&#1077; &#1079;&#1072;&#1096;&#1082;&#1086;&#1076;&#1080;&#1090;&#1100;.&quot;</span></span><span> </span><span class="hs-comment">-- Ukrainian</span><span>
+</span><span id="line-523"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1052;&#1086;&#1075;&#1072; &#1076;&#1072; &#1103;&#1084; &#1089;&#1090;&#1098;&#1082;&#1083;&#1086;, &#1090;&#1086; &#1085;&#1077; &#1084;&#1080; &#1074;&#1088;&#1077;&#1076;&#1080;.&quot;</span></span><span> </span><span class="hs-comment">-- Bulgarian</span><span>
+</span><span id="line-524"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#4315;&#4312;&#4316;&#4304;&#4321; &#4309;&#4333;&#4304;&#4315; &#4307;&#4304; &#4304;&#4320;&#4304; &#4315;&#4322;&#4313;&#4312;&#4309;&#4304;.&quot;</span></span><span> </span><span class="hs-comment">-- Georgian</span><span>
+</span><span id="line-525"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1343;&#1408;&#1398;&#1377;&#1396; &#1377;&#1402;&#1377;&#1391;&#1387; &#1400;&#1410;&#1407;&#1381;&#1388; &#1415; &#1387;&#1398;&#1390;&#1387; &#1377;&#1398;&#1392;&#1377;&#1398;&#1379;&#1387;&#1405;&#1407; &#1401;&#1384;&#1398;&#1381;&#1408;&#1417;&quot;</span></span><span> </span><span class="hs-comment">-- Armenian</span><span>
+</span><span id="line-526"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Un&#235; mund t&#235; ha qelq dhe nuk m&#235; gjen gj&#235;.&quot;</span></span><span> </span><span class="hs-comment">-- Albanian</span><span>
+</span><span id="line-527"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Cam yiyebilirim, bana zarar&#305; dokunmaz.&quot;</span></span><span> </span><span class="hs-comment">-- Turkish</span><span>
+</span><span id="line-528"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1580;&#1575;&#1605; &#1610;&#1610;&#1607; &#1576;&#1604;&#1608;&#1585;&#1605; &#1576;&#1709;&#1575; &#1590;&#1585;&#1585;&#1609; &#1591;&#1608;&#1602;&#1608;&#1606;&#1605;&#1586;&quot;</span></span><span> </span><span class="hs-comment">-- Turkish (Ottoman)</span><span>
+</span><span id="line-529"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Men shisha yeyishim mumkin, ammo u menga zarar keltirmaydi.&quot;</span></span><span> </span><span class="hs-comment">-- Uzbek / O&#8217;zbekcha (Roman)</span><span>
+</span><span id="line-530"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1052;&#1077;&#1085; &#1096;&#1080;&#1096;&#1072; &#1077;&#1081;&#1080;&#1096;&#1080;&#1084; &#1084;&#1091;&#1084;&#1082;&#1080;&#1085;, &#1072;&#1084;&#1084;&#1086; &#1091; &#1084;&#1077;&#1085;&#1075;&#1072; &#1079;&#1072;&#1088;&#1072;&#1088; &#1082;&#1077;&#1083;&#1090;&#1080;&#1088;&#1084;&#1072;&#1081;&#1076;&#1080;.&quot;</span></span><span> </span><span class="hs-comment">-- Uzbek / &#1038;&#1079;&#1073;&#1077;&#1082;&#1095;&#1072; (Cyrillic)</span><span>
+</span><span id="line-531"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2438;&#2478;&#2495; &#2453;&#2494;&#2433;&#2458; &#2454;&#2503;&#2468;&#2503; &#2474;&#2494;&#2480;&#2495;, &#2468;&#2494;&#2468;&#2503; &#2438;&#2478;&#2494;&#2480; &#2453;&#2507;&#2472;&#2507; &#2453;&#2509;&#2487;&#2468;&#2495; &#2489;&#2527; &#2472;&#2494;&#2404;&quot;</span></span><span> </span><span class="hs-comment">-- Bangla / Bengali</span><span>
+</span><span id="line-532"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2350;&#2368; &#2325;&#2366;&#2330; &#2326;&#2366;&#2314; &#2358;&#2325;&#2340;&#2379;, &#2350;&#2354;&#2366; &#2340;&#2375; &#2342;&#2369;&#2326;&#2340; &#2344;&#2366;&#2361;&#2368;.&quot;</span></span><span> </span><span class="hs-comment">-- Marathi</span><span>
+</span><span id="line-533"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3240;&#3240;&#3223;&#3270; &#3257;&#3262;&#3240;&#3263; &#3206;&#3223;&#3238;&#3270;, &#3240;&#3262;&#3240;&#3265; &#3223;&#3228;&#3240;&#3277;&#3240;&#3265; &#3236;&#3263;&#3240;&#3244;&#3257;&#3265;&#3238;&#3265;&quot;</span></span><span> </span><span class="hs-comment">-- Kannada</span><span>
+</span><span id="line-534"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2350;&#2376;&#2306; &#2325;&#2366;&#2305;&#2330; &#2326;&#2366; &#2360;&#2325;&#2340;&#2366; &#2361;&#2370;&#2305; &#2324;&#2352; &#2350;&#2369;&#2333;&#2375; &#2313;&#2360;&#2360;&#2375; &#2325;&#2379;&#2312; &#2330;&#2379;&#2335; &#2344;&#2361;&#2368;&#2306; &#2346;&#2361;&#2369;&#2306;&#2330;&#2340;&#2368;.&quot;</span></span><span> </span><span class="hs-comment">-- Hindi</span><span>
+</span><span id="line-535"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3342;&#3368;&#3391;&#3349;&#3405;&#3349;&#3405; &#3351;&#3405;&#3378;&#3390;&#3384;&#3405; &#3364;&#3391;&#3368;&#3405;&#3368;&#3390;&#3330;. &#3333;&#3364;&#3398;&#3368;&#3405;&#3368;&#3398; &#3381;&#3399;&#3366;&#3368;&#3391;&#3370;&#3405;&#3370;&#3391;&#3349;&#3405;&#3349;&#3391;&#3378;&#3405;&#3378;.&quot;</span></span><span> </span><span class="hs-comment">-- Malayam</span><span>
+</span><span id="line-536"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2984;&#3006;&#2985;&#3021; &#2965;&#2979;&#3021;&#2979;&#3006;&#2975;&#3007; &#2970;&#3006;&#2986;&#3021;&#2986;&#3007;&#2975;&#3009;&#2997;&#3015;&#2985;&#3021;, &#2949;&#2980;&#2985;&#3006;&#2994;&#3021; &#2958;&#2985;&#2965;&#3021;&#2965;&#3009; &#2962;&#2992;&#3009; &#2965;&#3015;&#2975;&#3009;&#2990;&#3021; &#2997;&#2992;&#3006;&#2980;&#3009;.&quot;</span></span><span> </span><span class="hs-comment">-- Tamil</span><span>
+</span><span id="line-537"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3112;&#3143;&#3112;&#3137; &#3095;&#3134;&#3100;&#3137; &#3108;&#3135;&#3112;&#3095;&#3122;&#3112;&#3137; &#3118;&#3120;&#3135;&#3119;&#3137; &#3077;&#3122;&#3134; &#3098;&#3143;&#3128;&#3135;&#3112;&#3134; &#3112;&#3134;&#3093;&#3137; &#3087;&#3118;&#3135; &#3079;&#3116;&#3149;&#3116;&#3074;&#3110;&#3135; &#3122;&#3143;&#3110;&#3137;&quot;</span></span><span> </span><span class="hs-comment">-- Telugu</span><span>
+</span><span id="line-538"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3512;&#3495; &#3520;&#3539;&#3503;&#3540;&#3515;&#3540; &#3482;&#3537;&#3512;&#3495; &#3524;&#3536;&#3482;&#3538;&#3514;&#3538;. &#3473;&#3514;&#3538;&#3505;&#3530; &#3512;&#3495; &#3482;&#3538;&#3523;&#3538; &#3524;&#3535;&#3505;&#3538;&#3514;&#3482;&#3530; &#3523;&#3538;&#3503;&#3540; &#3505;&#3548;&#3520;&#3546;.&quot;</span></span><span> </span><span class="hs-comment">-- Sinhalese</span><span>
+</span><span id="line-539"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1605;&#1740;&#1722; &#1705;&#1575;&#1606;&#1670; &#1705;&#1726;&#1575; &#1587;&#1705;&#1578;&#1575; &#1729;&#1608;&#1722; &#1575;&#1608;&#1585; &#1605;&#1580;&#1726;&#1746; &#1578;&#1705;&#1604;&#1740;&#1601; &#1606;&#1729;&#1740;&#1722; &#1729;&#1608;&#1578;&#1740; &#1748;&quot;</span></span><span> </span><span class="hs-comment">-- Urdu</span><span>
+</span><span id="line-540"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1586;&#1607; &#1588;&#1610;&#1588;&#1607; &#1582;&#1608;&#1683;&#1604;&#1744; &#1588;&#1605;&#1548; &#1607;&#1594;&#1607; &#1605;&#1575; &#1606;&#1607; &#1582;&#1608;&#1686;&#1608;&#1610;&quot;</span></span><span> </span><span class="hs-comment">-- Pashto</span><span>
+</span><span id="line-541"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;.&#1605;&#1606; &#1605;&#1740; &#1578;&#1608;&#1575;&#1606;&#1605; &#1576;&#1583;&#1608;&#1606;&#1616; &#1575;&#1581;&#1587;&#1575;&#1587; &#1583;&#1585;&#1583; &#1588;&#1610;&#1588;&#1607; &#1576;&#1582;&#1608;&#1585;&#1605;&quot;</span></span><span> </span><span class="hs-comment">-- Farsi / Persian</span><span>
+</span><span id="line-542"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1571;&#1606;&#1575; &#1602;&#1575;&#1583;&#1585; &#1593;&#1604;&#1609; &#1571;&#1603;&#1604; &#1575;&#1604;&#1586;&#1580;&#1575;&#1580; &#1608; &#1607;&#1584;&#1575; &#1604;&#1575; &#1610;&#1572;&#1604;&#1605;&#1606;&#1610;. &quot;</span></span><span> </span><span class="hs-comment">-- Arabic</span><span>
+</span><span id="line-543"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Nista' niekol il-&#295; &#289;ie&#289; u ma jag&#295;milli xejn.&quot;</span></span><span> </span><span class="hs-comment">--Maltese</span><span>
+</span><span id="line-544"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1488;&#1504;&#1497; &#1497;&#1499;&#1493;&#1500; &#1500;&#1488;&#1499;&#1493;&#1500; &#1494;&#1499;&#1493;&#1499;&#1497;&#1514; &#1493;&#1494;&#1492; &#1500;&#1488; &#1502;&#1494;&#1497;&#1511; &#1500;&#1497;.&quot;</span></span><span> </span><span class="hs-comment">-- Hebrew</span><span>
+</span><span id="line-545"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1488;&#1497;&#1498; &#1511;&#1506;&#1503; &#1506;&#1505;&#1503; &#1490;&#1500;&#1488;&#1464;&#1494; &#1488;&#1493;&#1503; &#1506;&#1505; &#1496;&#1493;&#1496; &#1502;&#1497;&#1512; &#1504;&#1497;&#1513;&#1496; &#1520;&#1522;. &quot;</span></span><span> </span><span class="hs-comment">-- Yiddish</span><span>
+</span><span id="line-546"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Metumi awe tumpan, &#604;ny&#604; me hwee.&quot;</span></span><span> </span><span class="hs-comment">-- Twi</span><span>
+</span><span id="line-547"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ina&#772; iya taunar gila&#772;shi kuma in gama&#772; la&#772;fiya&#772;.&quot;</span></span><span> </span><span class="hs-comment">-- Hausa (Latin)</span><span>
+</span><span id="line-548"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1573;&#1616;&#1606;&#1575; &#1573;&#1616;&#1609;&#1614; &#1578;&#1614;&#1608;&#1606;&#1614;&#1585; &#1594;&#1616;&#1604;&#1614;&#1575;&#1588;&#1616; &#1603;&#1615;&#1605;&#1614; &#1573;&#1616;&#1606; &#1594;&#1614;&#1605;&#1614;&#1575; &#1604;&#1614;&#1575;&#1601;&#1616;&#1609;&#1614;&#1575;&quot;</span></span><span> </span><span class="hs-comment">-- Hausa (Ajami)</span><span>
+</span><span id="line-549"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mo l&#232; je&#809; d&#237;g&#237;, k&#242; n&#237; pa m&#237; l&#225;ra.&quot;</span></span><span> </span><span class="hs-comment">-- Yoruba</span><span>
+</span><span id="line-550"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Nakoki&#769; koli&#769;ya bite&#769;ni bya milungi, ekosa&#769;la nga&#769;i&#769; mabe&#769; t&#603;&#769;.&quot;</span></span><span> </span><span class="hs-comment">-- Lingala</span><span>
+</span><span id="line-551"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Naweza kula bilauri na sikunyui.&quot;</span></span><span> </span><span class="hs-comment">-- (Ki)Swahili</span><span>
+</span><span id="line-552"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Saya boleh makan kaca dan ia tidak mencederakan saya.&quot;</span></span><span> </span><span class="hs-comment">-- Malay</span><span>
+</span><span id="line-553"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Kaya kong kumain nang bubog at hindi ako masaktan.&quot;</span></span><span> </span><span class="hs-comment">-- Tagalog</span><span>
+</span><span id="line-554"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Si&#241;a yo' chumocho krestat, ti ha na'lalamen yo'.&quot;</span></span><span> </span><span class="hs-comment">-- Chamorro</span><span>
+</span><span id="line-555"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Au rawa ni kana iloilo, ia au sega ni vakacacani kina.&quot;</span></span><span> </span><span class="hs-comment">-- Fijian</span><span>
+</span><span id="line-556"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Aku isa mangan beling tanpa lara.&quot;</span></span><span> </span><span class="hs-comment">-- Javanese</span><span>
+</span><span id="line-557"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#4096;&#4153;&#4122;&#4153;&#4125;&#4116;&#4153;&#4112;&#4145;&#4140;&#4153;&#4170;&#4096;&#4153;&#4122;&#4153;&#4125;&#4116;&#4153;&#4121; &#4121;&#4153;&#4122;&#4096;&#4153;&#4101;&#4140;&#4152;&#4116;&#4143;&#4141;&#4100;&#4153;&#4126;&#4106;&#4153;&#4171; &#4174;&#4096;&#4153;&#4123;&#4145;&#4140;&#4100;&#4153; &#4113;&#4141;&#4097;&#4143;&#4141;&#4096;&#4153;&#4121;&#4153;&#4127;&#4143; &#4121;&#4123;&#4153;&#4127;&#4141;&#4117;&#4140;&#4171;&quot;</span></span><span> </span><span class="hs-comment">-- Burmese (Unicode 4.0)</span><span>
+</span><span id="line-558"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#4096;&#4155;&#4157;&#4116;&#4154;&#4112;&#4145;&#4140;&#4154; &#4096;&#4155;&#4157;&#4116;&#4154;&#4121; &#4121;&#4158;&#4116;&#4154;&#4101;&#4140;&#4152;&#4116;&#4141;&#4143;&#4100;&#4154;&#4112;&#4122;&#4154;&#4171; &#4174;&#4100;&#4154;&#4152;&#4096;&#4156;&#4145;&#4140;&#4100;&#4154;&#4151; &#4113;&#4141;&#4097;&#4141;&#4143;&#4096;&#4154;&#4121;&#4158;&#4143;&#4121;&#4123;&#4158;&#4141;&#4117;&#4139;&#4171;&quot;</span></span><span> </span><span class="hs-comment">-- Burmese (Unicode 5.0)</span><span>
+</span><span id="line-559"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;T&#244;i c&#243; th&#7875; &#259;n th&#7911;y tinh m&#224; kh&#244;ng h&#7841;i g&#236;.&quot;</span></span><span> </span><span class="hs-comment">-- Vietnamese (qu&#7889;c ng&#7919;)</span><span>
+</span><span id="line-560"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#20123; &#144271; &#19990; &#21689; &#27700; &#26230; &#156897; &#31354; &#144271; &#23475; &#21670;&quot;</span></span><span> </span><span class="hs-comment">-- Vietnamese (n&#244;m)</span><span>
+</span><span id="line-561"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#6017;&#6098;&#6025;&#6075;&#6086;&#6050;&#6070;&#6021;&#6025;&#6075;&#6086;&#6016;&#6025;&#6098;&#6021;&#6016;&#6091;&#6036;&#6070;&#6035; &#6026;&#6084;&#6041;&#6018;&#6098;&#6040;&#6070;&#6035;&#6036;&#6025;&#6098;&#6048;&#6070;&#6042;&quot;</span></span><span> </span><span class="hs-comment">-- Khmer</span><span>
+</span><span id="line-562"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3714;&#3757;&#3785;&#3725;&#3713;&#3764;&#3737;&#3777;&#3713;&#3785;&#3751;&#3780;&#3732;&#3785;&#3778;&#3732;&#3725;&#3735;&#3765;&#3784;&#3745;&#3761;&#3737;&#3738;&#3789;&#3784;&#3780;&#3732;&#3785;&#3776;&#3758;&#3761;&#3732;&#3779;&#3755;&#3785;&#3714;&#3757;&#3785;&#3725;&#3776;&#3720;&#3761;&#3738;.&quot;</span></span><span> </span><span class="hs-comment">-- Lao</span><span>
+</span><span id="line-563"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3593;&#3633;&#3609;&#3585;&#3636;&#3609;&#3585;&#3619;&#3632;&#3592;&#3585;&#3652;&#3604;&#3657; &#3649;&#3605;&#3656;&#3617;&#3633;&#3609;&#3652;&#3617;&#3656;&#3607;&#3635;&#3651;&#3627;&#3657;&#3593;&#3633;&#3609;&#3648;&#3592;&#3655;&#3610;&quot;</span></span><span> </span><span class="hs-comment">-- Thai</span><span>
+</span><span id="line-564"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#1041;&#1080; &#1096;&#1080;&#1083; &#1080;&#1076;&#1101;&#1081; &#1095;&#1072;&#1076;&#1085;&#1072;, &#1085;&#1072;&#1076;&#1072;&#1076; &#1093;&#1086;&#1088;&#1090;&#1086;&#1081; &#1073;&#1080;&#1096;&quot;</span></span><span> </span><span class="hs-comment">-- Mongolian (Cyrillic)</span><span>
+</span><span id="line-565"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#6186;&#6178; &#6192;&#6178;&#6191;&#6178; &#6178;&#6195;&#6177;&#6198;&#6182; &#6196;&#6178;&#6195;&#6176;&#6184;&#6176; &#6146; &#6184;&#6176;&#6195;&#6180;&#6199; &#6188;&#6179;&#6180;&#6199;&#6176;&#6195;&#6176;&#6178; &#6186;&#6178;&#6192;&#6178; &quot;</span></span><span> </span><span class="hs-comment">-- Mongolian (Classic)</span><span>
+</span><span id="line-566"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#2350; &#2325;&#2366;&#2305;&#2330; &#2326;&#2366;&#2344; &#2360;&#2325;&#2381;&#2331;&#2370; &#2352; &#2350;&#2354;&#2366;&#2312; &#2325;&#2375;&#2361;&#2367; &#2344;&#2368; &#2361;&#2369;&#2344;&#2381;&#2344;&#2381; &#2404;&quot;</span></span><span> </span><span class="hs-comment">-- Nepali</span><span>
+</span><span id="line-567"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#3940;&#3962;&#3939;&#3851;&#3942;&#3986;&#3964;&#3851;&#3935;&#3851;&#3923;&#3942;&#3851;&#3908;&#3851;&#3923;&#3851;&#3906;&#3954;&#3851;&#3928;&#3851;&#3938;&#3962;&#3921;&#3853;&quot;</span></span><span> </span><span class="hs-comment">-- Tibetan</span><span>
+</span><span id="line-568"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#25105;&#33021;&#21534;&#19979;&#29627;&#29827;&#32780;&#19981;&#20260;&#36523;&#20307;&#12290;&quot;</span></span><span> </span><span class="hs-comment">-- Chinese</span><span>
+</span><span id="line-569"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#25105;&#33021;&#21534;&#19979;&#29627;&#29827;&#32780;&#19981;&#20663;&#36523;&#39636;&#12290;&quot;</span></span><span> </span><span class="hs-comment">-- Chinese (Traditional)</span><span>
+</span><span id="line-570"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;G&#243;a &#275;-t &#224;ng chia&#781;h po-l&#234;, m&#257; b&#275; tio&#781;h-siong.&quot;</span></span><span> </span><span class="hs-comment">-- Taiwanese</span><span>
+</span><span id="line-571"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#31169;&#12399;&#12460;&#12521;&#12473;&#12434;&#39135;&#12409;&#12425;&#12428;&#12414;&#12377;&#12290;&#12381;&#12428;&#12399;&#31169;&#12434;&#20663;&#12388;&#12369;&#12414;&#12379;&#12435;&#12290;&quot;</span></span><span> </span><span class="hs-comment">-- Japanese</span><span>
+</span><span id="line-572"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#45208;&#45716; &#50976;&#47532;&#47484; &#47673;&#51012; &#49688; &#51080;&#50612;&#50836;. &#44536;&#47000;&#46020; &#50500;&#54532;&#51648; &#50506;&#50500;&#50836;&quot;</span></span><span> </span><span class="hs-comment">-- Korean</span><span>
+</span><span id="line-573"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Mi save kakae glas, hemi no save katem mi.&quot;</span></span><span> </span><span class="hs-comment">-- Bislama</span><span>
+</span><span id="line-574"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Hiki ia&#699;u ke &#699;ai i ke aniani; &#699;a&#699;ole n&#333; l&#257; au e &#699;eha.&quot;</span></span><span> </span><span class="hs-comment">-- Hawaiian</span><span>
+</span><span id="line-575"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;E ko&#699;ana e kai i te karahi, mea &#699;&#257;, &#699;a&#699;e hauhau.&quot;</span></span><span> </span><span class="hs-comment">-- Marquesan</span><span>
+</span><span id="line-576"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;&#5130;&#5333;&#5261;&#5509; &#5314;&#5446;&#5421;&#5452;&#5523;&#5251;&#5231; &#5361;&#5451;&#5745;&#5222;&#5200;&#5328;&#5319;&#5509;&#5200;&#5523;&quot;</span></span><span> </span><span class="hs-comment">-- Inuktitut</span><span>
+</span><span id="line-577"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Naika m&#601;km&#601;k kaksh&#601;t labutay, pi weyk ukuk munk-s ik nay.&quot;</span></span><span> </span><span class="hs-comment">--Chinook Jargon</span><span>
+</span><span id="line-578"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Ts&#233;s&#491;&#700; yish&#261;&#769;&#261;go b&#237;&#237;n&#237;shghah d&#243;&#243; doo shi&#322; neezgai da. &quot;</span></span><span> </span><span class="hs-comment">-- Navajo</span><span>
+</span><span id="line-579"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;mi kakne le nu citka le blaci .iku'i le se go'i na xrani mi&quot;</span></span><span> </span><span class="hs-comment">-- Lojban</span><span>
+</span><span id="line-580"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Lj&#339;r ye caudran cr&#233;ne&#254; &#253; jor c&#7811;ran.&quot;</span></span><span> </span><span class="hs-comment">-- N&#243;rdicg</span><span>
+</span><span id="line-581"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-582"></span></pre></body></html>

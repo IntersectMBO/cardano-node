@@ -1,0 +1,395 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{-|
+Module      : Control.Tracer
+Description : A simple interface for logging, tracing, and monitoring
+Copyright   : (c) Alexander Vieth, 2019
+Maintainer  : aovieth@gmail.com
+License     : Apache-2.0
+
+=== General usage
+
+'Tracer' is a contravariant functor intended to express the pattern in which
+values of its parameter type are used to produce effects which are prescribed
+by the caller, as in tracing, logging, code instrumentation, etc.
+
+Programs should be written to use as specific a tracer as possible, i.e. to
+take as a parameter a @Tracer m domainSpecificType@. To combine these programs
+into an executable which does meaningful tracing, an implementation of that
+tracing should be used to make a @Tracer probablyIO implementationTracingType@,
+which is 'contramap'ped to fit @Tracer m domainSpecificType@ wherever it is
+needed, for the various @domainSpecificType@s that appear throughout the
+program.
+
+=== An example
+
+This short example shows how a tracer can be deployed, highlighting the use of
+'contramap' to fit a general tracer which writes text to a file, where a
+specific tracer which takes domain-specific events is expected.
+
+&gt; -- Writes text to some log file.
+&gt; traceToLogFile :: FilePath -&gt; Tracer IO Text
+&gt;
+&gt; -- Domain-specific event type.
+&gt; data Event = EventA | EventB Int
+&gt;
+&gt; -- The log-file format for an Event.
+&gt; eventToText :: Event -&gt; Text
+&gt;
+&gt; -- Some action that can use any tracer on Event, in any monad.
+&gt; actionWithTrace :: Monad m =&gt; Tracer m Event -&gt; m ()
+&gt; actionWithTrace tracer = do
+&gt;   traceWith tracer EventA
+&gt;   traceWith tracer (EventB 42)
+&gt;
+&gt; -- Set up a log file tracer, then use it where the Event tracer is expected.
+&gt; main :: IO ()
+&gt; main = do
+&gt;   textTacer &lt;- traceToLogFile &quot;log.txt&quot;
+&gt;   let eventTracer :: Tracer IO Event
+&gt;       eventTracer = contramap eventToText tracer
+&gt;   actionWithTrace eventTracer
+-}</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-53"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Tracer</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#traceWith"><span class="hs-identifier">traceWith</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#arrow"><span class="hs-identifier">arrow</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#use"><span class="hs-identifier">use</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier">Arrow.squelch</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier">Arrow.emit</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#effect"><span class="hs-identifier">Arrow.effect</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Simple tracers</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#nullTracer"><span class="hs-identifier">nullTracer</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#stdoutTracer"><span class="hs-identifier">stdoutTracer</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#debugTracer"><span class="hs-identifier">debugTracer</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Transforming tracers</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#natTracer"><span class="hs-identifier">natTracer</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier">Arrow.nat</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#traceMaybe"><span class="hs-identifier">traceMaybe</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.html#squelchUnless"><span class="hs-identifier">squelchUnless</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Re-export of Contravariant</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier">Contravariant</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html"><span class="hs-identifier">Control.Arrow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier">arr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#runKleisli"><span class="hs-identifier">runKleisli</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%26%26%26"><span class="hs-operator">(&amp;&amp;&amp;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%7C%7C%7C"><span class="hs-operator">(|||)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html"><span class="hs-identifier">Control.Category</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#%3E%3E%3E"><span class="hs-operator">(&gt;&gt;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html"><span class="hs-identifier">Control.Tracer.Arrow</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Arrow</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html"><span class="hs-identifier">Data.Functor.Contravariant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier">Contravariant</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Debug.Trace.html"><span class="hs-identifier">Debug.Trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Debug.Trace.html#traceM"><span class="hs-identifier">traceM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | This type describes some effect in @m@ which depends upon some value of</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- type @a@, for which the /output value/ is not of interest (only the effects).</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- The motivating use case is to describe tracing, logging, monitoring, and</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- similar features, in which the programmer wishes to provide some values to</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- some /other/ program which will do some real world side effect, such as</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- writing to a log file or bumping a counter in some monitoring system.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- The actual implementation of such a program will probably work on rather</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- large, domain-agnostic types like @Text@, @ByteString@, JSON values for</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- structured logs, etc.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- But the call sites which ultimately /invoke/ these implementations will deal</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- with smaller, domain-specific types that concisely describe events, metrics,</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- debug information, etc.</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- This difference is reconciled by the 'Contravariant' instance for 'Tracer'.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- 'Data.Functor.Contravariant.contramap' is used to change the input type of</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- a tracer. This allows for a more general tracer to be used where a more</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- specific one is expected.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- Intuitively: if you can map your domain-specific type @Event@ to a @Text@</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- representation, then any @Tracer m Text@ can stand in where a</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- @Tracer m Event@ is required.</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- &gt; eventToText :: Event -&gt; Text</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- &gt; traceTextToLogFile :: Tracer m Text</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- &gt; traceEventToLogFile :: Tracer m Event</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- &gt; traceEventToLogFile = contramap eventToText traceTextToLogFile</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- Effectful tracers that actually do interesting stuff can be defined</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- using 'emit', and composed via 'contramap'.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- The 'nullTracer' can be used as a stand-in for any tracer, doing no</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- side-effects and producing no interesting value.</span><span>
+</span><span id="line-120"></span><span class="hs-comment">--</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- To deal with branching, the arrow interface on the underlying</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- 'Control.Tracer.Arrow.Tracer' should be used. Arrow notation can be helpful</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- here.</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- For example, a common pattern is to trace only some variants of a sum type.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- &gt; data Event = This Int | That Bool</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- &gt; traceOnlyThat :: Tracer m Int -&gt; Tracer m Bool</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- &gt; traceOnlyThat tr = Tracer $ proc event -&gt; do</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- &gt;   case event of</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- &gt;     This i -&gt; use tr  -&lt; i</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- &gt;     That _ -&gt; squelch -&lt; ()</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- The key point of using the arrow representation we have here is that this</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- tracer will not necessarily need to force @event@: if the input tracer @tr@</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- does not force its value, then @event@ will not be forced. To elaborate,</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- suppose @tr@ is @nullTracer@. Then this expression becomes</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- &gt; classify (This i) = Left i</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- &gt; classify (That _) = Right ()</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- &gt; traceOnlyThat tr</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- &gt; = Tracer $ Pure classify &gt;&gt;&gt; (squelch ||| squelch) &gt;&gt;&gt; Pure (either id id)</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- &gt; = Tracer $ Pure classify &gt;&gt;&gt; Pure (either (const (Left ())) (const (Right ()))) &gt;&gt;&gt; Pure (either id id)</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- &gt; = Tracer $ Pure (classify &gt;&gt;&gt; either (const (Left ())) (const (Right ())) &gt;&gt;&gt; either id id)</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- So that when this tracer is run by 'traceWith' we get</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- &gt; traceWith (traceOnlyThat tr) x</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- &gt; = traceWith (Pure _)</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- &gt; = pure ()</span><span>
+</span><span id="line-153"></span><span class="hs-comment">--</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- It is _essential_ that the computation of the tracing effects cannot itself</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- have side-effects, as this would ruin the ability to short-circuit when</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- it is known that no tracing will be done: the side-effects of a branch</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- could change the outcome of another branch. This would fly in the face of</span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- a crucial design goal: you can leave your tracer calls in the program so</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- they do not bitrot, but can also make them zero runtime cost by substituting</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- 'nullTracer' appropriately.</span><span>
+</span><span id="line-161"></span><span class="hs-keyword">newtype</span><span> </span><span id="Tracer"><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span></span><span> </span><span id="local-6989586621679139309"><span class="annot"><a href="#local-6989586621679139309"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679139310"><span class="annot"><a href="#local-6989586621679139310"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Tracer"><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="runTracer"><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. Tracer m a -&gt; TracerA m a ()
+</span><a href="Control.Tracer.html#runTracer"><span class="hs-identifier hs-var hs-var">runTracer</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">Arrow.TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139309"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139310"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139322"><span id="local-6989586621679139448"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139322"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#Contravariant"><span class="hs-identifier hs-type">Contravariant</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139322"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-164"></span><span>  </span><span id="local-6989586621679139456"><span class="annot"><span class="annottext">contramap :: forall a' a. (a' -&gt; a) -&gt; Tracer m a -&gt; Tracer m a'
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Contravariant.html#contramap"><span class="hs-identifier hs-var hs-var hs-var hs-var">contramap</span></a></span></span><span> </span><span id="local-6989586621679139457"><span class="annot"><span class="annottext">a' -&gt; a
+</span><a href="#local-6989586621679139457"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679139458"><span class="annot"><span class="annottext">Tracer m a
+</span><a href="#local-6989586621679139458"><span class="hs-identifier hs-var">tracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m a' () -&gt; Tracer m a'
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a' -&gt; a) -&gt; TracerA m a' a
+forall b c. (b -&gt; c) -&gt; TracerA m b c
+forall (a :: * -&gt; * -&gt; *) b c. Arrow a =&gt; (b -&gt; c) -&gt; a b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="annot"><span class="annottext">a' -&gt; a
+</span><a href="#local-6989586621679139457"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m a' a -&gt; TracerA m a () -&gt; TracerA m a' ()
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k) (b :: k) (c :: k).
+Category cat =&gt;
+cat a b -&gt; cat b c -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-var">&gt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m a -&gt; TracerA m a ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; TracerA m a ()
+</span><a href="Control.Tracer.html#use"><span class="hs-identifier hs-var">use</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m a
+</span><a href="#local-6989586621679139458"><span class="hs-identifier hs-var">tracer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="annot"><span class="hs-comment">-- | @tr1 &lt;&gt; tr2@ will run @tr1@ and then @tr2@ with the same input.</span></span><span>
+</span><span id="line-167"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139342"><span id="local-6989586621679139343"><span id="local-6989586621679139462"><span id="local-6989586621679139466"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139342"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139342"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139343"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span id="local-6989586621679139474"><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139474"><span class="hs-identifier hs-var">a1</span></a></span></span><span> </span><span id="local-6989586621679139475"><span class="annot"><span class="annottext">&lt;&gt; :: Tracer m s -&gt; Tracer m s -&gt; Tracer m s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span id="local-6989586621679139476"><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139476"><span class="hs-identifier hs-var">a2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m s () -&gt; Tracer m s
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139474"><span class="hs-identifier hs-var">a1</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m s () -&gt; TracerA m s () -&gt; TracerA m s ((), ())
+forall b c c'.
+TracerA m b c -&gt; TracerA m b c' -&gt; TracerA m b (c, c')
+forall (a :: * -&gt; * -&gt; *) b c c'.
+Arrow a =&gt;
+a b c -&gt; a b c' -&gt; a b (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%26%26%26"><span class="hs-operator hs-var">&amp;&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139476"><span class="hs-identifier hs-var">a2</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m s ((), ()) -&gt; TracerA m ((), ()) () -&gt; TracerA m s ()
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k) (b :: k) (c :: k).
+Category cat =&gt;
+cat a b -&gt; cat b c -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-var">&gt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(((), ()) -&gt; ()) -&gt; TracerA m ((), ()) ()
+forall b c. (b -&gt; c) -&gt; TracerA m b c
+forall (a :: * -&gt; * -&gt; *) b c. Arrow a =&gt; (b -&gt; c) -&gt; a b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="annot"><span class="annottext">((), ()) -&gt; ()
+</span><a href="#local-6989586621679139477"><span class="hs-identifier hs-var">discard</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>    </span><span class="annot"><a href="#local-6989586621679139477"><span class="hs-identifier hs-type">discard</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>    </span><span id="local-6989586621679139477"><span class="annot"><span class="annottext">discard :: ((), ()) -&gt; ()
+</span><a href="#local-6989586621679139477"><span class="hs-identifier hs-var hs-var">discard</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; ((), ()) -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139352"><span id="local-6989586621679139353"><span id="local-6989586621679139485"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139352"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139352"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139353"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679139490"><span class="annot"><span class="annottext">mappend :: Tracer m s -&gt; Tracer m s -&gt; Tracer m s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tracer m s -&gt; Tracer m s -&gt; Tracer m s
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-175"></span><span>    </span><span id="local-6989586621679139492"><span class="annot"><span class="annottext">mempty :: Tracer m s
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tracer m s
+forall (m :: * -&gt; *) s. Monad m =&gt; Tracer m s
+</span><a href="Control.Tracer.html#nullTracer"><span class="hs-identifier hs-var">nullTracer</span></a></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.html#traceWith"><span class="hs-pragma hs-type">traceWith</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-178"></span><span class="annot"><span class="hs-comment">-- | Run a tracer with a given input.</span></span><span>
+</span><span id="line-179"></span><span id="local-6989586621679139354"><span id="local-6989586621679139355"><span class="annot"><a href="Control.Tracer.html#traceWith"><span class="hs-identifier hs-type">traceWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139354"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139354"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139355"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139355"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139354"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-180"></span><span id="traceWith"><span class="annot"><span class="annottext">traceWith :: forall (m :: * -&gt; *) a. Monad m =&gt; Tracer m a -&gt; a -&gt; m ()
+</span><a href="Control.Tracer.html#traceWith"><span class="hs-identifier hs-var hs-var">traceWith</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span id="local-6989586621679139495"><span class="annot"><span class="annottext">TracerA m a ()
+</span><a href="#local-6989586621679139495"><span class="hs-identifier hs-var">tr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a () -&gt; a -&gt; m ()
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#runKleisli"><span class="hs-identifier hs-var">runKleisli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerA m a () -&gt; Kleisli m a ()
+forall (m :: * -&gt; *) a. Monad m =&gt; TracerA m a () -&gt; Kleisli m a ()
+</span><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-identifier hs-var">Arrow.runTracerA</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m a ()
+</span><a href="#local-6989586621679139495"><span class="hs-identifier hs-var">tr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="annot"><span class="hs-comment">-- | Inverse of 'use'.</span></span><span>
+</span><span id="line-183"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.html#arrow"><span class="hs-pragma hs-type">arrow</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-184"></span><span id="local-6989586621679139497"><span id="local-6989586621679139498"><span class="annot"><a href="Control.Tracer.html#arrow"><span class="hs-identifier hs-type">arrow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">Arrow.TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139497"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139498"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139497"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139498"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-185"></span><span id="arrow"><span class="annot"><span class="annottext">arrow :: forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#arrow"><span class="hs-identifier hs-var hs-var">arrow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m a () -&gt; Tracer m a
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- | Inverse of 'arrow'. Useful when writing arrow tracers which use a</span><span>
+</span><span id="line-188"></span><span class="hs-comment">-- contravariant tracer (the newtype in this module).</span><span>
+</span><span id="line-189"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.html#use"><span class="hs-pragma hs-type">use</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-190"></span><span id="local-6989586621679139499"><span id="local-6989586621679139500"><span class="annot"><a href="Control.Tracer.html#use"><span class="hs-identifier hs-type">use</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139499"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139500"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">Arrow.TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139499"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139500"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-191"></span><span id="use"><span class="annot"><span class="annottext">use :: forall (m :: * -&gt; *) a. Tracer m a -&gt; TracerA m a ()
+</span><a href="Control.Tracer.html#use"><span class="hs-identifier hs-var hs-var">use</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tracer m a -&gt; TracerA m a ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; TracerA m a ()
+</span><a href="Control.Tracer.html#runTracer"><span class="hs-identifier hs-var">runTracer</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><span class="hs-comment">-- | A tracer which does nothing.</span></span><span>
+</span><span id="line-194"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.html#nullTracer"><span class="hs-pragma hs-type">nullTracer</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-195"></span><span id="local-6989586621679139501"><span id="local-6989586621679139502"><span class="annot"><a href="Control.Tracer.html#nullTracer"><span class="hs-identifier hs-type">nullTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139501"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139501"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139502"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-196"></span><span id="nullTracer"><span class="annot"><span class="annottext">nullTracer :: forall (m :: * -&gt; *) s. Monad m =&gt; Tracer m s
+</span><a href="Control.Tracer.html#nullTracer"><span class="hs-identifier hs-var hs-var">nullTracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m a () -&gt; Tracer m a
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m a ()
+forall (m :: * -&gt; *) a. Applicative m =&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier hs-var">Arrow.squelch</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="annot"><span class="hs-comment">-- | Create a simple contravariant tracer which runs a given side-effect.</span></span><span>
+</span><span id="line-199"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.html#emit"><span class="hs-pragma hs-type">emit</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-200"></span><span id="local-6989586621679139373"><span id="local-6989586621679139374"><span class="annot"><a href="Control.Tracer.html#emit"><span class="hs-identifier hs-type">emit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139373"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139374"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139373"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139373"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139374"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-201"></span><span id="emit"><span class="annot"><span class="annottext">emit :: forall (m :: * -&gt; *) a. Applicative m =&gt; (a -&gt; m ()) -&gt; Tracer m a
+</span><a href="Control.Tracer.html#emit"><span class="hs-identifier hs-var hs-var">emit</span></a></span></span><span> </span><span id="local-6989586621679139509"><span class="annot"><span class="annottext">a -&gt; m ()
+</span><a href="#local-6989586621679139509"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m a () -&gt; Tracer m a
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m ()) -&gt; TracerA m a ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+(a -&gt; m ()) -&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-var">Arrow.emit</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m ()
+</span><a href="#local-6989586621679139509"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- | Run a tracer only for the Just variant of a Maybe. If it's Nothing, the</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- 'nullTracer' is used (no output).</span><span>
+</span><span id="line-205"></span><span class="hs-comment">--</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- The arrow representation allows for proper laziness: if the tracer parameter</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- does not produce any tracing effects, then the predicate won't even be</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- evaluated. Contrast with the simple contravariant representation as</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- @a -&gt; m ()@, in which the predicate _must_ be forced no matter what,</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- because it's impossible to know a priori whether that function will not</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- produce any tracing effects.</span><span>
+</span><span id="line-212"></span><span class="hs-comment">--</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- It's written out explicitly for demonstration. Could also use arrow</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- notation:</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- &gt; traceMaybe p tr = Tracer $ proc a -&gt; do</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- &gt;   case k a of</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- &gt;     Just b  -&gt; use tr        -&lt; b</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- &gt;     Nothing -&gt; Arrow.squelch -&lt; ()</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--</span><span>
+</span><span id="line-221"></span><span id="local-6989586621679139379"><span id="local-6989586621679139380"><span id="local-6989586621679139381"><span class="annot"><a href="Control.Tracer.html#traceMaybe"><span class="hs-identifier hs-type">traceMaybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139379"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139380"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139381"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139379"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139381"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139379"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139380"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-222"></span><span id="traceMaybe"><span class="annot"><span class="annottext">traceMaybe :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; Maybe b) -&gt; Tracer m b -&gt; Tracer m a
+</span><a href="Control.Tracer.html#traceMaybe"><span class="hs-identifier hs-var hs-var">traceMaybe</span></a></span></span><span> </span><span id="local-6989586621679139516"><span class="annot"><span class="annottext">a -&gt; Maybe b
+</span><a href="#local-6989586621679139516"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679139517"><span class="annot"><span class="annottext">Tracer m b
+</span><a href="#local-6989586621679139517"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA m a () -&gt; Tracer m a
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerA m a () -&gt; Tracer m a) -&gt; TracerA m a () -&gt; Tracer m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m a (Either () b)
+</span><a href="#local-6989586621679139518"><span class="hs-identifier hs-var">classify</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m a (Either () b)
+-&gt; TracerA m (Either () b) () -&gt; TracerA m a ()
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k) (b :: k) (c :: k).
+Category cat =&gt;
+cat a b -&gt; cat b c -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-var">&gt;&gt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerA m () ()
+forall (m :: * -&gt; *) a. Applicative m =&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier hs-var">Arrow.squelch</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m () () -&gt; TracerA m b () -&gt; TracerA m (Either () b) ()
+forall b d c.
+TracerA m b d -&gt; TracerA m c d -&gt; TracerA m (Either b c) d
+forall (a :: * -&gt; * -&gt; *) b d c.
+ArrowChoice a =&gt;
+a b d -&gt; a c d -&gt; a (Either b c) d
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%7C%7C%7C"><span class="hs-operator hs-var">|||</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m b -&gt; TracerA m b ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; TracerA m a ()
+</span><a href="Control.Tracer.html#use"><span class="hs-identifier hs-var">use</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m b
+</span><a href="#local-6989586621679139517"><span class="hs-identifier hs-var">tr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-224"></span><span>  </span><span id="local-6989586621679139518"><span class="annot"><span class="annottext">classify :: TracerA m a (Either () b)
+</span><a href="#local-6989586621679139518"><span class="hs-identifier hs-var hs-var">classify</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Either () b) -&gt; TracerA m a (Either () b)
+forall b c. (b -&gt; c) -&gt; TracerA m b c
+forall (a :: * -&gt; * -&gt; *) b c. Arrow a =&gt; (b -&gt; c) -&gt; a b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Either () b -&gt; (b -&gt; Either () b) -&gt; Maybe b -&gt; Either () b
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either () b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b -&gt; Either () b
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe b -&gt; Either () b) -&gt; (a -&gt; Maybe b) -&gt; a -&gt; Either () b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe b
+</span><a href="#local-6989586621679139516"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="annot"><span class="hs-comment">-- | Uses 'traceMaybe' to give a tracer which emits only if a predicate is true.</span></span><span>
+</span><span id="line-227"></span><span id="local-6989586621679139401"><span id="local-6989586621679139402"><span class="annot"><a href="Control.Tracer.html#squelchUnless"><span class="hs-identifier hs-type">squelchUnless</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139401"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139402"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139401"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139402"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139401"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139402"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-228"></span><span id="squelchUnless"><span class="annot"><span class="annottext">squelchUnless :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+(a -&gt; Bool) -&gt; Tracer m a -&gt; Tracer m a
+</span><a href="Control.Tracer.html#squelchUnless"><span class="hs-identifier hs-var hs-var">squelchUnless</span></a></span></span><span> </span><span id="local-6989586621679139525"><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679139525"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; Tracer m a -&gt; Tracer m a
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; Maybe b) -&gt; Tracer m b -&gt; Tracer m a
+</span><a href="Control.Tracer.html#traceMaybe"><span class="hs-identifier hs-var">traceMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679139526"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679139526"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679139525"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679139526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679139526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- | Use a natural transformation to change the @m@ type. This is useful, for</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- instance, to use concrete IO tracers in monad transformer stacks that have</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- IO as their base.</span><span>
+</span><span id="line-233"></span><span class="annot"><a href="Control.Tracer.html#natTracer"><span class="hs-identifier hs-type">natTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679139406"><span class="annot"><a href="#local-6989586621679139406"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679139408"><span class="annot"><a href="#local-6989586621679139408"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679139409"><span class="annot"><a href="#local-6989586621679139409"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679139407"><span class="annot"><a href="#local-6989586621679139407"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679139406"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139407"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139408"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139407"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139406"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139409"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139408"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139409"><span class="hs-identifier hs-type">s</span></a></span><span>
+</span><span id="line-234"></span><span id="natTracer"><span class="annot"><span class="annottext">natTracer :: forall (m :: * -&gt; *) (n :: * -&gt; *) s.
+(forall x. m x -&gt; n x) -&gt; Tracer m s -&gt; Tracer n s
+</span><a href="Control.Tracer.html#natTracer"><span class="hs-identifier hs-var hs-var">natTracer</span></a></span></span><span> </span><span id="local-6989586621679139527"><span class="annot"><span class="annottext">forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139527"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span id="local-6989586621679139528"><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139528"><span class="hs-identifier hs-var">tr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerA n s () -&gt; Tracer n s
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-var">Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall x. m x -&gt; n x) -&gt; TracerA m s () -&gt; TracerA n s ()
+forall (m :: * -&gt; *) (n :: * -&gt; *) a b.
+(forall x. m x -&gt; n x) -&gt; TracerA m a b -&gt; TracerA n a b
+</span><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier hs-var">Arrow.nat</span></a></span><span> </span><span class="annot"><span class="annottext">m x -&gt; n x
+forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139527"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m s ()
+</span><a href="#local-6989586621679139528"><span class="hs-identifier hs-var">tr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- | Trace strings to stdout. Output could be jumbled when this is used from</span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- multiple threads. Consider 'debugTracer' instead.</span><span>
+</span><span id="line-238"></span><span class="annot"><a href="Control.Tracer.html#stdoutTracer"><span class="hs-identifier hs-type">stdoutTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-239"></span><span id="stdoutTracer"><span class="annot"><span class="annottext">stdoutTracer :: Tracer IO String
+</span><a href="Control.Tracer.html#stdoutTracer"><span class="hs-identifier hs-var hs-var">stdoutTracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; Tracer IO String
+forall (m :: * -&gt; *) a. Applicative m =&gt; (a -&gt; m ()) -&gt; Tracer m a
+</span><a href="Control.Tracer.html#emit"><span class="hs-identifier hs-var">emit</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html#putStrLn"><span class="hs-identifier hs-var">putStrLn</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- | Trace strings using 'Debug.Trace.traceM'. This will use stderr. See</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- documentation in &quot;Debug.Trace&quot; for more details.</span><span>
+</span><span id="line-243"></span><span id="local-6989586621679139419"><span class="annot"><a href="Control.Tracer.html#debugTracer"><span class="hs-identifier hs-type">debugTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139419"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.html#Tracer"><span class="hs-identifier hs-type">Tracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139419"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-244"></span><span id="debugTracer"><span class="annot"><span class="annottext">debugTracer :: forall (m :: * -&gt; *). Applicative m =&gt; Tracer m String
+</span><a href="Control.Tracer.html#debugTracer"><span class="hs-identifier hs-var hs-var">debugTracer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; Tracer m String
+forall (m :: * -&gt; *) a. Applicative m =&gt; (a -&gt; m ()) -&gt; Tracer m a
+</span><a href="Control.Tracer.html#emit"><span class="hs-identifier hs-var">emit</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; String -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Debug.Trace.html#traceM"><span class="hs-identifier hs-var">traceM</span></a></span><span>
+</span><span id="line-245"></span></pre></body></html>

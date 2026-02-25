@@ -1,0 +1,445 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExplicitForAll #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module presents the same interface as</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- &quot;Control.Exception.Annotated&quot;, but uses 'MonadUnliftIO' instead of</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- 'Control.Monad.Catch.MonadCatch' or 'Control.Monad.Catch.MonadThrow'.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Exception.Annotated.UnliftIO</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * The Main Type</span></span><span>
+</span><span id="line-10"></span><span>      </span><span class="annot"><a href="Control.Exception.Annotated.html#AnnotatedException"><span class="hs-identifier">AnnotatedException</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#exceptionWithCallStack"><span class="hs-identifier">exceptionWithCallStack</span></a></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#throwWithCallStack"><span class="hs-identifier">throwWithCallStack</span></a></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Annotating Exceptions</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpoint"><span class="hs-identifier">checkpoint</span></a></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointMany"><span class="hs-identifier">checkpointMany</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStack"><span class="hs-identifier">checkpointCallStack</span></a></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStackWith"><span class="hs-identifier">checkpointCallStackWith</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Handling Exceptions</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#catch"><span class="hs-identifier">catch</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#catches"><span class="hs-identifier">catches</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#tryAnnotated"><span class="hs-identifier">tryAnnotated</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#try"><span class="hs-identifier">try</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Manipulating Annotated Exceptions</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#check"><span class="hs-identifier">check</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#hide"><span class="hs-identifier">hide</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#annotatedExceptionCallStack"><span class="hs-identifier">annotatedExceptionCallStack</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#addCallStackToException"><span class="hs-identifier">addCallStackToException</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Re-exports from &quot;Data.Annotation&quot;</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier">Annotation</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#CallStackAnnotation"><span class="hs-identifier">CallStackAnnotation</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Re-exports from &quot;Control.Exception.Safe&quot;</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier">Exception</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier">Safe.SomeException</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#throw"><span class="hs-identifier">throw</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#Handler"><span class="hs-identifier">Handler</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadUnliftIO</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html"><span class="hs-identifier">Control.Exception.Annotated</span></a></span><span>
+</span><span id="line-43"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#AnnotatedException"><span class="hs-identifier">AnnotatedException</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier">Annotation</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#CallStackAnnotation"><span class="hs-identifier">CallStackAnnotation</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier">Exception</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#Handler"><span class="hs-identifier">Handler</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#addCallStackToException"><span class="hs-identifier">addCallStackToException</span></a></span><span>
+</span><span id="line-49"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#annotatedExceptionCallStack"><span class="hs-identifier">annotatedExceptionCallStack</span></a></span><span>
+</span><span id="line-50"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#check"><span class="hs-identifier">check</span></a></span><span>
+</span><span id="line-51"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#exceptionWithCallStack"><span class="hs-identifier">exceptionWithCallStack</span></a></span><span>
+</span><span id="line-52"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html#hide"><span class="hs-identifier">hide</span></a></span><span>
+</span><span id="line-53"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Exception.Annotated.html"><span class="hs-identifier">Control.Exception.Annotated</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Catch</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Safe</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Unlift</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Like 'Catch.throwWithCallStack', but uses 'MonadIO' instead of</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- 'Control.Monad.Catch.MonadThrow'.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#throwWithCallStack"><span class="hs-identifier hs-type">throwWithCallStack</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053615"><span class="annot"><a href="#local-6989586621679053615"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621679053613"><span class="annot"><a href="#local-6989586621679053613"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053618"><span class="annot"><a href="#local-6989586621679053618"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053613"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053615"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053615"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053613"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053618"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-66"></span><span id="throwWithCallStack"><span class="annot"><span class="annottext">throwWithCallStack :: forall e (m :: * -&gt; *) a.
+(MonadIO m, Exception e, HasCallStack) =&gt;
+e -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#throwWithCallStack"><span class="hs-identifier hs-var hs-var">throwWithCallStack</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; m a) -&gt; (e -&gt; IO a) -&gt; e -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; e -&gt; IO a) -&gt; e -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; IO a
+HasCallStack =&gt; e -&gt; IO a
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Exception e) =&gt;
+e -&gt; m a
+</span><a href="Control.Exception.Annotated.html#throwWithCallStack"><span class="hs-identifier hs-var">Catch.throwWithCallStack</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Like 'Catch.throw', but uses 'MonadIO' instead of 'Control.Monad.Catch.MonadThrow'.</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#throw"><span class="hs-identifier hs-type">throw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053740"><span class="annot"><a href="#local-6989586621679053740"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621679053741"><span class="annot"><a href="#local-6989586621679053741"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053742"><span class="annot"><a href="#local-6989586621679053742"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053741"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053740"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053740"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053741"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053742"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-72"></span><span id="throw"><span class="annot"><span class="annottext">throw :: forall e (m :: * -&gt; *) a.
+(MonadIO m, Exception e, HasCallStack) =&gt;
+e -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#throw"><span class="hs-identifier hs-var hs-var">throw</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; m a) -&gt; (e -&gt; IO a) -&gt; e -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; e -&gt; IO a) -&gt; e -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; IO a
+HasCallStack =&gt; e -&gt; IO a
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Exception e) =&gt;
+e -&gt; m a
+</span><a href="Control.Exception.Annotated.html#throw"><span class="hs-identifier hs-var">Catch.throw</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Like 'Catch.checkpoint', but uses 'MonadUnliftIO' instead of 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpoint"><span class="hs-identifier hs-type">checkpoint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053635"><span class="annot"><a href="#local-6989586621679053635"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053638"><span class="annot"><a href="#local-6989586621679053638"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053635"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053635"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053638"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053635"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053638"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-78"></span><span id="checkpoint"><span class="annot"><span class="annottext">checkpoint :: forall (m :: * -&gt; *) a.
+(MonadUnliftIO m, HasCallStack) =&gt;
+Annotation -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#checkpoint"><span class="hs-identifier hs-var hs-var">checkpoint</span></a></span></span><span> </span><span id="local-6989586621679053762"><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679053762"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span id="local-6989586621679053763"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053763"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053765"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053765"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Annotation -&gt; IO a -&gt; IO a
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadCatch m) =&gt;
+Annotation -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.html#checkpoint"><span class="hs-identifier hs-var">Catch.checkpoint</span></a></span><span> </span><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679053762"><span class="hs-identifier hs-var">ann</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053765"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053763"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | Like 'Catch.checkpointCallStack', but uses 'MonadUnliftIO' instead of</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- @since 0.2.0.2</span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStack"><span class="hs-identifier hs-type">checkpointCallStack</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053650"><span class="annot"><a href="#local-6989586621679053650"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053651"><span class="annot"><a href="#local-6989586621679053651"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053650"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053650"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053651"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053650"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053651"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-89"></span><span id="checkpointCallStack"><span class="annot"><span class="annottext">checkpointCallStack :: forall (m :: * -&gt; *) a.
+(MonadUnliftIO m, HasCallStack) =&gt;
+m a -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStack"><span class="hs-identifier hs-var hs-var">checkpointCallStack</span></a></span></span><span> </span><span id="local-6989586621679053777"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053777"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053778"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053778"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">(HasCallStack =&gt; IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; IO a -&gt; IO a
+IO a -&gt; IO a
+forall (m :: * -&gt; *) a. (MonadCatch m, HasCallStack) =&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.html#checkpointCallStack"><span class="hs-identifier hs-var">Catch.checkpointCallStack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053778"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053777"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | Like 'Catch.checkpointMany', but uses 'MonadUnliftIO' instead of</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointMany"><span class="hs-identifier hs-type">checkpointMany</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053656"><span class="annot"><a href="#local-6989586621679053656"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053657"><span class="annot"><a href="#local-6989586621679053657"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053656"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053656"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053657"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053656"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053657"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-98"></span><span id="checkpointMany"><span class="annot"><span class="annottext">checkpointMany :: forall (m :: * -&gt; *) a.
+(MonadUnliftIO m, HasCallStack) =&gt;
+[Annotation] -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#checkpointMany"><span class="hs-identifier hs-var hs-var">checkpointMany</span></a></span></span><span> </span><span id="local-6989586621679053790"><span class="annot"><span class="annottext">[Annotation]
+</span><a href="#local-6989586621679053790"><span class="hs-identifier hs-var">anns</span></a></span></span><span> </span><span id="local-6989586621679053791"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053791"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053792"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053792"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; [Annotation] -&gt; IO a -&gt; IO a)
+-&gt; [Annotation] -&gt; IO a -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; [Annotation] -&gt; IO a -&gt; IO a
+[Annotation] -&gt; IO a -&gt; IO a
+forall (m :: * -&gt; *) a.
+(MonadCatch m, HasCallStack) =&gt;
+[Annotation] -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.html#checkpointMany"><span class="hs-identifier hs-var">Catch.checkpointMany</span></a></span><span> </span><span class="annot"><span class="annottext">[Annotation]
+</span><a href="#local-6989586621679053790"><span class="hs-identifier hs-var">anns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053792"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053791"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | Like 'Catch.checkpointCallStackWith', but uses 'MonadUnliftIO' instead of</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- Deprecated in 0.2.0.0 as it is now an alias for 'checkpointMany'.</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-108"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStackWith"><span class="hs-identifier hs-type">checkpointCallStackWith</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053798"><span class="annot"><a href="#local-6989586621679053798"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053799"><span class="annot"><a href="#local-6989586621679053799"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053798"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053798"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053799"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053798"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053799"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-111"></span><span id="checkpointCallStackWith"><span class="annot"><span class="annottext">checkpointCallStackWith :: forall (m :: * -&gt; *) a.
+(MonadUnliftIO m, HasCallStack) =&gt;
+[Annotation] -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#checkpointCallStackWith"><span class="hs-identifier hs-var hs-var">checkpointCallStackWith</span></a></span></span><span> </span><span id="local-6989586621679053806"><span class="annot"><span class="annottext">[Annotation]
+</span><a href="#local-6989586621679053806"><span class="hs-identifier hs-var">anns</span></a></span></span><span> </span><span id="local-6989586621679053807"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053807"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053808"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053808"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; [Annotation] -&gt; IO a -&gt; IO a)
+-&gt; [Annotation] -&gt; IO a -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; [Annotation] -&gt; IO a -&gt; IO a
+[Annotation] -&gt; IO a -&gt; IO a
+forall (m :: * -&gt; *) a.
+(MonadCatch m, HasCallStack) =&gt;
+[Annotation] -&gt; m a -&gt; m a
+</span><a href="Control.Exception.Annotated.html#checkpointCallStackWith"><span class="hs-identifier hs-var">Catch.checkpointCallStackWith</span></a></span><span> </span><span class="annot"><span class="annottext">[Annotation]
+</span><a href="#local-6989586621679053806"><span class="hs-identifier hs-var">anns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053808"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053807"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">checkpointCallStackWith</span><span> </span><span class="hs-pragma">&quot;As of annotated-exception-0.2.0.0, this is an alias for checkpointMany&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | Like 'Catch.catch', but uses 'MonadUnliftIO' instead of 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#catch"><span class="hs-identifier hs-type">catch</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053665"><span class="annot"><a href="#local-6989586621679053665"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621679053664"><span class="annot"><a href="#local-6989586621679053664"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053666"><span class="annot"><a href="#local-6989586621679053666"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053664"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053665"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053664"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053666"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679053665"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053664"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053666"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053664"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053666"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-125"></span><span id="catch"><span class="annot"><span class="annottext">catch :: forall e (m :: * -&gt; *) a.
+(MonadUnliftIO m, Exception e, HasCallStack) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#catch"><span class="hs-identifier hs-var hs-var">catch</span></a></span></span><span> </span><span id="local-6989586621679053821"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053821"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679053822"><span class="annot"><span class="annottext">e -&gt; m a
+</span><a href="#local-6989586621679053822"><span class="hs-identifier hs-var">handler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053823"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053823"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a)
+-&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+IO a -&gt; (e -&gt; IO a) -&gt; IO a
+forall e (m :: * -&gt; *) a.
+(HasCallStack, Exception e, MonadCatch m) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><a href="Control.Exception.Annotated.html#catch"><span class="hs-identifier hs-var">Catch.catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053823"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053821"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679053829"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679053829"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053823"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; IO a) -&gt; m a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">e -&gt; m a
+</span><a href="#local-6989586621679053822"><span class="hs-identifier hs-var">handler</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679053829"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- | Like 'Catch.tryAnnotated' but uses 'MonadUnliftIO' instead of 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#tryAnnotated"><span class="hs-identifier hs-type">tryAnnotated</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053674"><span class="annot"><a href="#local-6989586621679053674"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621679053673"><span class="annot"><a href="#local-6989586621679053673"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053675"><span class="annot"><a href="#local-6989586621679053675"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053673"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053674"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053673"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053675"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053673"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Exception.Annotated.html#AnnotatedException"><span class="hs-identifier hs-type">AnnotatedException</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053674"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679053675"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span id="tryAnnotated"><span class="annot"><span class="annottext">tryAnnotated :: forall e (m :: * -&gt; *) a.
+(MonadUnliftIO m, Exception e) =&gt;
+m a -&gt; m (Either (AnnotatedException e) a)
+</span><a href="Control.Exception.Annotated.UnliftIO.html#tryAnnotated"><span class="hs-identifier hs-var hs-var">tryAnnotated</span></a></span></span><span> </span><span id="local-6989586621679053837"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053837"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO (Either (AnnotatedException e) a))
+-&gt; m (Either (AnnotatedException e) a)
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO (Either (AnnotatedException e) a))
+ -&gt; m (Either (AnnotatedException e) a))
+-&gt; ((forall a. m a -&gt; IO a)
+    -&gt; IO (Either (AnnotatedException e) a))
+-&gt; m (Either (AnnotatedException e) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053838"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053838"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">IO (Either (AnnotatedException e) a)
+-&gt; IO (Either (AnnotatedException e) a)
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either (AnnotatedException e) a)
+ -&gt; IO (Either (AnnotatedException e) a))
+-&gt; IO (Either (AnnotatedException e) a)
+-&gt; IO (Either (AnnotatedException e) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO (Either (AnnotatedException e) a)
+forall e (m :: * -&gt; *) a.
+(Exception e, MonadCatch m) =&gt;
+m a -&gt; m (Either (AnnotatedException e) a)
+</span><a href="Control.Exception.Annotated.html#tryAnnotated"><span class="hs-identifier hs-var">Catch.tryAnnotated</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053838"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053837"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | Like 'Catch.try' but uses 'MonadUnliftIO' instead of 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#try"><span class="hs-identifier hs-type">try</span></a></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053684"><span class="annot"><a href="#local-6989586621679053684"><span class="hs-identifier hs-type">e</span></a></span></span><span> </span><span id="local-6989586621679053683"><span class="annot"><a href="#local-6989586621679053683"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053685"><span class="annot"><a href="#local-6989586621679053685"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053683"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053684"><span class="hs-identifier hs-type">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053683"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053685"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053683"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053684"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053685"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span id="try"><span class="annot"><span class="annottext">try :: forall e (m :: * -&gt; *) a.
+(MonadUnliftIO m, Exception e) =&gt;
+m a -&gt; m (Either e a)
+</span><a href="Control.Exception.Annotated.UnliftIO.html#try"><span class="hs-identifier hs-var hs-var">try</span></a></span></span><span> </span><span id="local-6989586621679053846"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053846"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO (Either e a)) -&gt; m (Either e a)
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO (Either e a)) -&gt; m (Either e a))
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO (Either e a)) -&gt; m (Either e a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053847"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053847"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="annottext">IO (Either e a) -&gt; IO (Either e a)
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either e a) -&gt; IO (Either e a))
+-&gt; IO (Either e a) -&gt; IO (Either e a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO (Either e a)
+forall e (m :: * -&gt; *) a.
+(Exception e, MonadCatch m) =&gt;
+m a -&gt; m (Either e a)
+</span><a href="Control.Exception.Annotated.html#try"><span class="hs-identifier hs-var">Catch.try</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053847"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053846"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- | Like 'Catch.catches', bt uses 'MonadUnliftIO' instead of 'Control.Monad.Catch.MonadCatch'.</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- @since 0.1.2.0</span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Control.Exception.Annotated.UnliftIO.html#catches"><span class="hs-identifier hs-type">catches</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679053692"><span class="annot"><a href="#local-6989586621679053692"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679053693"><span class="annot"><a href="#local-6989586621679053693"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679053692"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053692"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053693"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#Handler"><span class="hs-identifier hs-type">Handler</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053692"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053692"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053693"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-159"></span><span id="catches"><span class="annot"><span class="annottext">catches :: forall (m :: * -&gt; *) a.
+(MonadUnliftIO m, HasCallStack) =&gt;
+m a -&gt; [Handler m a] -&gt; m a
+</span><a href="Control.Exception.Annotated.UnliftIO.html#catches"><span class="hs-identifier hs-var hs-var">catches</span></a></span></span><span> </span><span id="local-6989586621679053855"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053855"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679053856"><span class="annot"><span class="annottext">[Handler m a]
+</span><a href="#local-6989586621679053856"><span class="hs-identifier hs-var">handlers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053857"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053857"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-161"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679053858"><span class="annot"><span class="annottext">f :: Handler m a -&gt; Handler IO a
+</span><a href="#local-6989586621679053858"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#Handler"><span class="hs-identifier hs-type">Handler</span></a></span><span> </span><span id="local-6989586621679053862"><span class="annot"><span class="annottext">e -&gt; m a
+</span><a href="#local-6989586621679053862"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(e -&gt; IO a) -&gt; Handler IO a
+forall (m :: * -&gt; *) a e. Exception e =&gt; (e -&gt; m a) -&gt; Handler m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679053863"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679053863"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053857"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">e -&gt; m a
+</span><a href="#local-6989586621679053862"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621679053863"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; IO a -&gt; [Handler IO a] -&gt; IO a)
+-&gt; IO a -&gt; [Handler IO a] -&gt; IO a
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; IO a -&gt; [Handler IO a] -&gt; IO a
+IO a -&gt; [Handler IO a] -&gt; IO a
+forall (m :: * -&gt; *) a.
+(MonadCatch m, HasCallStack) =&gt;
+m a -&gt; [Handler m a] -&gt; m a
+</span><a href="Control.Exception.Annotated.html#catches"><span class="hs-identifier hs-var">Catch.catches</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679053857"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679053855"><span class="hs-identifier hs-var">action</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Handler m a -&gt; Handler IO a) -&gt; [Handler m a] -&gt; [Handler IO a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Handler m a -&gt; Handler IO a
+forall {a}. Handler m a -&gt; Handler IO a
+</span><a href="#local-6989586621679053858"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[Handler m a]
+</span><a href="#local-6989586621679053856"><span class="hs-identifier hs-var">handlers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span></pre></body></html>

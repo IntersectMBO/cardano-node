@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Topology.Types</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Topology"><span class="hs-identifier">Topology</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier">Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Location"><span class="hs-identifier">Location</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWSRegion"><span class="hs-identifier">AWSRegion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | A topology as it's used to define benchmarking profiles.</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="Topology"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Topology"><span class="hs-identifier hs-var">Topology</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Topology"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Topology"><span class="hs-identifier hs-var">Topology</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="coreNodes"><span class="annot"><span class="annottext">Topology -&gt; [Node]
+</span><a href="Cardano.Benchmarking.Topology.Types.html#coreNodes"><span class="hs-identifier hs-var hs-var">coreNodes</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="relayNodes"><span class="annot"><span class="annottext">Topology -&gt; [Node]
+</span><a href="Cardano.Benchmarking.Topology.Types.html#relayNodes"><span class="hs-identifier hs-var hs-var">relayNodes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679102209"><span id="local-6989586621679102215"><span class="annot"><span class="annottext">Topology -&gt; Topology -&gt; Bool
+(Topology -&gt; Topology -&gt; Bool)
+-&gt; (Topology -&gt; Topology -&gt; Bool) -&gt; Eq Topology
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Topology -&gt; Topology -&gt; Bool
+== :: Topology -&gt; Topology -&gt; Bool
+$c/= :: Topology -&gt; Topology -&gt; Bool
+/= :: Topology -&gt; Topology -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102221"><span id="local-6989586621679102229"><span id="local-6989586621679102233"><span class="annot"><span class="annottext">Int -&gt; Topology -&gt; ShowS
+[Topology] -&gt; ShowS
+Topology -&gt; String
+(Int -&gt; Topology -&gt; ShowS)
+-&gt; (Topology -&gt; String) -&gt; ([Topology] -&gt; ShowS) -&gt; Show Topology
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Topology -&gt; ShowS
+showsPrec :: Int -&gt; Topology -&gt; ShowS
+$cshow :: Topology -&gt; String
+show :: Topology -&gt; String
+$cshowList :: [Topology] -&gt; ShowS
+showList :: [Topology] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102238"><span id="local-6989586621679102240"><span class="annot"><span class="annottext">(forall x. Topology -&gt; Rep Topology x)
+-&gt; (forall x. Rep Topology x -&gt; Topology) -&gt; Generic Topology
+forall x. Rep Topology x -&gt; Topology
+forall x. Topology -&gt; Rep Topology x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Topology -&gt; Rep Topology x
+from :: forall x. Topology -&gt; Rep Topology x
+$cto :: forall x. Rep Topology x -&gt; Topology
+to :: forall x. Rep Topology x -&gt; Topology
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102244"><span id="local-6989586621679102251"><span id="local-6989586621679102254"><span id="local-6989586621679102257"><span id="local-6989586621679102260"><span class="annot"><span class="hs-identifier hs-type">Aeson.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Topology"><span class="hs-identifier hs-type">Topology</span></a></span></span></span></span></span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102359"><span id="local-6989586621679102366"><span id="local-6989586621679102369"><span class="annot"><span class="hs-identifier hs-type">Aeson.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Topology"><span class="hs-identifier hs-type">Topology</span></a></span></span></span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | A node as it's used to define benchmarking profiles.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   These nodes don't have remote addresses allocated, are referenced by name.</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">data</span><span> </span><span id="Node"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-var">Node</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Node"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-var">Node</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="name"><span class="annot"><span class="annottext">Node -&gt; String
+</span><a href="Cardano.Benchmarking.Topology.Types.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeId"><span class="annot"><span class="annottext">Node -&gt; Int
+</span><a href="Cardano.Benchmarking.Topology.Types.html#nodeId"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-comment">-- TODO: Swith to Word64 like Cardano.Topology ?</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Placement, not present in Cardano.Node.Configuration.Topology.</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="region"><span class="annot"><span class="annottext">Node -&gt; Location
+</span><a href="Cardano.Benchmarking.Topology.Types.html#region"><span class="hs-identifier hs-var hs-var">region</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Location"><span class="hs-identifier hs-type">Location</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ As Cardano.Node.Configuration.Topology but names not addresses.</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="producers"><span class="annot"><span class="annottext">Node -&gt; [String]
+</span><a href="Cardano.Benchmarking.Topology.Types.html#producers"><span class="hs-identifier hs-var hs-var">producers</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Actually always &quot;IOHK&quot;.</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="org"><span class="annot"><span class="annottext">Node -&gt; String
+</span><a href="Cardano.Benchmarking.Topology.Types.html#org"><span class="hs-identifier hs-var hs-var">org</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="pools"><span class="annot"><span class="annottext">Node -&gt; Maybe Int
+</span><a href="Cardano.Benchmarking.Topology.Types.html#pools"><span class="hs-identifier hs-var hs-var">pools</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stakePool"><span class="annot"><span class="annottext">Node -&gt; Maybe Bool
+</span><a href="Cardano.Benchmarking.Topology.Types.html#stakePool"><span class="hs-identifier hs-var hs-var">stakePool</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679102446"><span id="local-6989586621679102460"><span class="annot"><span class="annottext">Node -&gt; Node -&gt; Bool
+(Node -&gt; Node -&gt; Bool) -&gt; (Node -&gt; Node -&gt; Bool) -&gt; Eq Node
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Node -&gt; Node -&gt; Bool
+== :: Node -&gt; Node -&gt; Bool
+$c/= :: Node -&gt; Node -&gt; Bool
+/= :: Node -&gt; Node -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102465"><span id="local-6989586621679102480"><span id="local-6989586621679102483"><span class="annot"><span class="annottext">Int -&gt; Node -&gt; ShowS
+[Node] -&gt; ShowS
+Node -&gt; String
+(Int -&gt; Node -&gt; ShowS)
+-&gt; (Node -&gt; String) -&gt; ([Node] -&gt; ShowS) -&gt; Show Node
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Node -&gt; ShowS
+showsPrec :: Int -&gt; Node -&gt; ShowS
+$cshow :: Node -&gt; String
+show :: Node -&gt; String
+$cshowList :: [Node] -&gt; ShowS
+showList :: [Node] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102488"><span id="local-6989586621679102490"><span class="annot"><span class="annottext">(forall x. Node -&gt; Rep Node x)
+-&gt; (forall x. Rep Node x -&gt; Node) -&gt; Generic Node
+forall x. Rep Node x -&gt; Node
+forall x. Node -&gt; Rep Node x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Node -&gt; Rep Node x
+from :: forall x. Node -&gt; Rep Node x
+$cto :: forall x. Rep Node x -&gt; Node
+to :: forall x. Rep Node x -&gt; Node
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102493"><span id="local-6989586621679102499"><span id="local-6989586621679102502"><span id="local-6989586621679102505"><span id="local-6989586621679102508"><span class="annot"><span class="hs-identifier hs-type">Aeson.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-type">Node</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span class="hs-comment">{--
+  toEncoding = Aeson.genericToEncoding
+    Aeson.defaultOptions
+    { Aeson.omitNothingFields = True }
+--}</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102660"><span id="local-6989586621679102666"><span id="local-6989586621679102669"><span class="annot"><span class="hs-identifier hs-type">Aeson.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Node"><span class="hs-identifier hs-type">Node</span></a></span></span></span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | Location is either &quot;loopback&quot; used for local runs or an AWS Region name</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- used for cloud runs.</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="Location"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Location"><span class="hs-identifier hs-var">Location</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Loopback"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Loopback"><span class="hs-identifier hs-var">Loopback</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="AWS"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWS"><span class="hs-identifier hs-var">AWS</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWSRegion"><span class="hs-identifier hs-type">AWSRegion</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679102773"><span id="local-6989586621679102777"><span class="annot"><span class="annottext">Location -&gt; Location -&gt; Bool
+(Location -&gt; Location -&gt; Bool)
+-&gt; (Location -&gt; Location -&gt; Bool) -&gt; Eq Location
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Location -&gt; Location -&gt; Bool
+== :: Location -&gt; Location -&gt; Bool
+$c/= :: Location -&gt; Location -&gt; Bool
+/= :: Location -&gt; Location -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102780"><span id="local-6989586621679102785"><span id="local-6989586621679102788"><span class="annot"><span class="annottext">Int -&gt; Location -&gt; ShowS
+[Location] -&gt; ShowS
+Location -&gt; String
+(Int -&gt; Location -&gt; ShowS)
+-&gt; (Location -&gt; String) -&gt; ([Location] -&gt; ShowS) -&gt; Show Location
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Location -&gt; ShowS
+showsPrec :: Int -&gt; Location -&gt; ShowS
+$cshow :: Location -&gt; String
+show :: Location -&gt; String
+$cshowList :: [Location] -&gt; ShowS
+showList :: [Location] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102791"><span id="local-6989586621679102793"><span class="annot"><span class="annottext">(forall x. Location -&gt; Rep Location x)
+-&gt; (forall x. Rep Location x -&gt; Location) -&gt; Generic Location
+forall x. Rep Location x -&gt; Location
+forall x. Location -&gt; Rep Location x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Location -&gt; Rep Location x
+from :: forall x. Location -&gt; Rep Location x
+$cto :: forall x. Rep Location x -&gt; Location
+to :: forall x. Rep Location x -&gt; Location
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102797"><span id="local-6989586621679102800"><span id="local-6989586621679102803"><span id="local-6989586621679102806"><span class="annot"><span class="hs-identifier hs-type">Aeson.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Location"><span class="hs-identifier hs-type">Location</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679102814"><span class="annot"><span class="annottext">toJSON :: Location -&gt; Value
+</span><a href="#local-6989586621679102814"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><span class="annottext">Location
+</span><a href="Cardano.Benchmarking.Topology.Types.html#Loopback"><span class="hs-identifier hs-var">Loopback</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;loopback&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text.Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWS"><span class="hs-identifier hs-type">AWS</span></a></span><span> </span><span id="local-6989586621679102816"><span class="annot"><span class="annottext">AWSRegion
+</span><a href="#local-6989586621679102816"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="#local-6989586621679102816"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102819"><span id="local-6989586621679102822"><span class="annot"><span class="hs-identifier hs-type">Aeson.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#Location"><span class="hs-identifier hs-type">Location</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679102833"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser Location
+</span><a href="#local-6989586621679102833"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679102835"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679102835"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; (Text -&gt; Parser Location) -&gt; Value -&gt; Parser Location
+forall a. String -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withText</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Location&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser Location) -&gt; Value -&gt; Parser Location)
+-&gt; (Text -&gt; Parser Location) -&gt; Value -&gt; Parser Location
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-comment">-- Either &quot;loopback&quot; or an already defined AWS Region.</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;loopback&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Location -&gt; Parser Location
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Location
+</span><a href="Cardano.Benchmarking.Topology.Types.html#Loopback"><span class="hs-identifier hs-var">Loopback</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Location
+</span><a href="Cardano.Benchmarking.Topology.Types.html#AWS"><span class="hs-identifier hs-var">AWS</span></a></span><span> </span><span class="annot"><span class="annottext">(AWSRegion -&gt; Location) -&gt; Parser AWSRegion -&gt; Parser Location
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser AWSRegion
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.parseJSON</span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679102835"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679102835"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><span class="hs-comment">-- | The AWS Regions we support (No Availability Zone, the &quot;c&quot; in &quot;us-east-2c&quot;).</span></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">data</span><span> </span><span id="AWSRegion"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWSRegion"><span class="hs-identifier hs-var">AWSRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AP_SOUTHEAST_2"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AP_SOUTHEAST_2"><span class="hs-identifier hs-var">AP_SOUTHEAST_2</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="EU_CENTRAL_1"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#EU_CENTRAL_1"><span class="hs-identifier hs-var">EU_CENTRAL_1</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="US_EAST_1"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_1"><span class="hs-identifier hs-var">US_EAST_1</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="US_EAST_2"><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_2"><span class="hs-identifier hs-var">US_EAST_2</span></a></span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679102843"><span id="local-6989586621679102845"><span class="annot"><span class="annottext">AWSRegion -&gt; AWSRegion -&gt; Bool
+(AWSRegion -&gt; AWSRegion -&gt; Bool)
+-&gt; (AWSRegion -&gt; AWSRegion -&gt; Bool) -&gt; Eq AWSRegion
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AWSRegion -&gt; AWSRegion -&gt; Bool
+== :: AWSRegion -&gt; AWSRegion -&gt; Bool
+$c/= :: AWSRegion -&gt; AWSRegion -&gt; Bool
+/= :: AWSRegion -&gt; AWSRegion -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102848"><span id="local-6989586621679102850"><span id="local-6989586621679102853"><span class="annot"><span class="annottext">Int -&gt; AWSRegion -&gt; ShowS
+[AWSRegion] -&gt; ShowS
+AWSRegion -&gt; String
+(Int -&gt; AWSRegion -&gt; ShowS)
+-&gt; (AWSRegion -&gt; String)
+-&gt; ([AWSRegion] -&gt; ShowS)
+-&gt; Show AWSRegion
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AWSRegion -&gt; ShowS
+showsPrec :: Int -&gt; AWSRegion -&gt; ShowS
+$cshow :: AWSRegion -&gt; String
+show :: AWSRegion -&gt; String
+$cshowList :: [AWSRegion] -&gt; ShowS
+showList :: [AWSRegion] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679102856"><span id="local-6989586621679102858"><span class="annot"><span class="annottext">(forall x. AWSRegion -&gt; Rep AWSRegion x)
+-&gt; (forall x. Rep AWSRegion x -&gt; AWSRegion) -&gt; Generic AWSRegion
+forall x. Rep AWSRegion x -&gt; AWSRegion
+forall x. AWSRegion -&gt; Rep AWSRegion x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AWSRegion -&gt; Rep AWSRegion x
+from :: forall x. AWSRegion -&gt; Rep AWSRegion x
+$cto :: forall x. Rep AWSRegion x -&gt; AWSRegion
+to :: forall x. Rep AWSRegion x -&gt; AWSRegion
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102862"><span id="local-6989586621679102865"><span id="local-6989586621679102868"><span id="local-6989586621679102871"><span class="annot"><span class="hs-identifier hs-type">Aeson.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWSRegion"><span class="hs-identifier hs-type">AWSRegion</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679102881"><span class="annot"><span class="annottext">toJSON :: AWSRegion -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#AP_SOUTHEAST_2"><span class="hs-identifier hs-var">AP_SOUTHEAST_2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ap-southeast-2&quot;</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text.Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#EU_CENTRAL_1"><span class="hs-identifier hs-var">EU_CENTRAL_1</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;eu-central-1&quot;</span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text.Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_1"><span class="hs-identifier hs-var">US_EAST_1</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;us-east-1&quot;</span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text.Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_2"><span class="hs-identifier hs-var">US_EAST_2</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;us-east-2&quot;</span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text.Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679102884"><span id="local-6989586621679102887"><span class="annot"><span class="hs-identifier hs-type">Aeson.FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Topology.Types.html#AWSRegion"><span class="hs-identifier hs-type">AWSRegion</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679102907"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser AWSRegion
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Text -&gt; Parser AWSRegion) -&gt; Value -&gt; Parser AWSRegion
+forall a. String -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withText</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;AWSRegion&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser AWSRegion) -&gt; Value -&gt; Parser AWSRegion)
+-&gt; (Text -&gt; Parser AWSRegion) -&gt; Value -&gt; Parser AWSRegion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679102908"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679102908"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679102908"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ap-southeast-2&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Parser AWSRegion
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#AP_SOUTHEAST_2"><span class="hs-identifier hs-var">AP_SOUTHEAST_2</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;eu-central-1&quot;</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Parser AWSRegion
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#EU_CENTRAL_1"><span class="hs-identifier hs-var">EU_CENTRAL_1</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;us-east-1&quot;</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Parser AWSRegion
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_1"><span class="hs-identifier hs-var">US_EAST_1</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;us-east-2&quot;</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AWSRegion -&gt; Parser AWSRegion
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">AWSRegion
+</span><a href="Cardano.Benchmarking.Topology.Types.html#US_EAST_2"><span class="hs-identifier hs-var">US_EAST_2</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser AWSRegion
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Parser AWSRegion) -&gt; String -&gt; Parser AWSRegion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unknown AWSRegion: \&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679102908"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\&quot;&quot;</span></span><span>
+</span><span id="line-98"></span></pre></body></html>

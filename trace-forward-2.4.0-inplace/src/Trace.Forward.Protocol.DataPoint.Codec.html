@@ -1,0 +1,258 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Codec</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Codec.html#codecDataPointForward"><span class="hs-identifier">codecDataPointForward</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html"><span class="hs-identifier">Codec.CBOR.Decoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html"><span class="hs-identifier">Codec.CBOR.Encoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Read.html"><span class="hs-identifier">Codec.CBOR.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier">DeserialiseFailure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadST.html"><span class="hs-identifier">Control.Monad.Class.MonadST</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadST.html#MonadST"><span class="hs-identifier">MonadST</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Codec.html"><span class="hs-identifier">Network.TypedProtocol.Codec</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-l-cborg-7c6141bdf6451e9fa596d31a6d5f78d355ff3149a90e66751fa027fa80df4eb2/share/doc/html/src/Network.TypedProtocol.Codec.CBOR.html"><span class="hs-identifier">Network.TypedProtocol.Codec.CBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-l-cborg-7c6141bdf6451e9fa596d31a6d5f78d355ff3149a90e66751fa027fa80df4eb2/share/doc/html/src/Network.TypedProtocol.Codec.CBOR.html#mkCodecCborLazyBS"><span class="hs-identifier">mkCodecCborLazyBS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier">printf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html"><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Type</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Codec.html#codecDataPointForward"><span class="hs-identifier hs-type">codecDataPointForward</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679136011"><span class="annot"><a href="#local-6989586621679136011"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-25"></span><span>     </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadST.html#MonadST"><span class="hs-identifier hs-type">MonadST</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136011"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointName"><span class="hs-identifier hs-type">DataPointName</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#Encoding"><span class="hs-identifier hs-type">CBOR.Encoding</span></a></span><span class="hs-special">)</span><span>          </span><span class="annot"><span class="hs-comment">-- ^ Encoder for 'Request'.</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679136015"><span class="annot"><a href="#local-6989586621679136015"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html#Decoder"><span class="hs-identifier hs-type">CBOR.Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136015"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointName"><span class="hs-identifier hs-type">DataPointName</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Decoder for 'Request'.</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointValues"><span class="hs-identifier hs-type">DataPointValues</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#Encoding"><span class="hs-identifier hs-type">CBOR.Encoding</span></a></span><span class="hs-special">)</span><span>          </span><span class="annot"><span class="hs-comment">-- ^ Encoder for reply with list of 'DataPoint's values.</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679136018"><span class="annot"><a href="#local-6989586621679136018"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html#Decoder"><span class="hs-identifier hs-type">CBOR.Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136018"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointValues"><span class="hs-identifier hs-type">DataPointValues</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Decoder for reply with list of 'DataPoint's values.</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Codec.html#Codec"><span class="hs-identifier hs-type">Codec</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span>
+</span><span id="line-31"></span><span>           </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136011"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span>
+</span><span id="line-32"></span><span id="codecDataPointForward"><span class="annot"><span class="annottext">codecDataPointForward :: forall (m :: * -&gt; *).
+MonadST m =&gt;
+([DataPointName] -&gt; Encoding)
+-&gt; (forall s. Decoder s [DataPointName])
+-&gt; (DataPointValues -&gt; Encoding)
+-&gt; (forall s. Decoder s DataPointValues)
+-&gt; Codec DataPointForward DeserialiseFailure m ByteString
+</span><a href="Trace.Forward.Protocol.DataPoint.Codec.html#codecDataPointForward"><span class="hs-identifier hs-var hs-var">codecDataPointForward</span></a></span></span><span> </span><span id="local-6989586621679136099"><span class="annot"><span class="annottext">[DataPointName] -&gt; Encoding
+</span><a href="#local-6989586621679136099"><span class="hs-identifier hs-var">encodeRequest</span></a></span></span><span>   </span><span id="local-6989586621679136100"><span class="annot"><span class="annottext">forall s. Decoder s [DataPointName]
+</span><a href="#local-6989586621679136100"><span class="hs-identifier hs-var">decodeRequest</span></a></span></span><span>
+</span><span id="line-33"></span><span>                      </span><span id="local-6989586621679136101"><span class="annot"><span class="annottext">DataPointValues -&gt; Encoding
+</span><a href="#local-6989586621679136101"><span class="hs-identifier hs-var">encodeReplyList</span></a></span></span><span> </span><span id="local-6989586621679136102"><span class="annot"><span class="annottext">forall s. Decoder s DataPointValues
+</span><a href="#local-6989586621679136102"><span class="hs-identifier hs-var">decodeReplyList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">(forall (st :: DataPointForward) (st' :: DataPointForward).
+ (StateTokenI st, ActiveState st) =&gt;
+ Message DataPointForward st st' -&gt; Encoding)
+-&gt; (forall (st :: DataPointForward) s.
+    ActiveState st =&gt;
+    StateToken st -&gt; Decoder s (SomeMessage st))
+-&gt; Codec DataPointForward DeserialiseFailure m ByteString
+forall ps (m :: * -&gt; *).
+MonadST m =&gt;
+(forall (st :: ps) (st' :: ps).
+ (StateTokenI st, ActiveState st) =&gt;
+ Message ps st st' -&gt; Encoding)
+-&gt; (forall (st :: ps) s.
+    ActiveState st =&gt;
+    StateToken st -&gt; Decoder s (SomeMessage st))
+-&gt; Codec ps DeserialiseFailure m ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-l-cborg-7c6141bdf6451e9fa596d31a6d5f78d355ff3149a90e66751fa027fa80df4eb2/share/doc/html/src/Network.TypedProtocol.Codec.CBOR.html#mkCodecCborLazyBS"><span class="hs-identifier hs-var">mkCodecCborLazyBS</span></a></span><span> </span><span class="annot"><span class="annottext">Message DataPointForward st st' -&gt; Encoding
+forall (st :: DataPointForward) (st' :: DataPointForward).
+Message DataPointForward st st' -&gt; Encoding
+forall (st :: DataPointForward) (st' :: DataPointForward).
+(StateTokenI st, ActiveState st) =&gt;
+Message DataPointForward st st' -&gt; Encoding
+</span><a href="#local-6989586621679136103"><span class="hs-identifier hs-var">encode'</span></a></span><span> </span><span class="annot"><span class="annottext">StateToken st -&gt; Decoder s (SomeMessage st)
+forall (st :: DataPointForward) s.
+ActiveState st =&gt;
+StateToken st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679136106"><span class="hs-identifier hs-var">decode'</span></a></span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- Encode messages.</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="#local-6989586621679136103"><span class="hs-identifier hs-type">encode'</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679136037"><span class="annot"><a href="#local-6989586621679136037"><span class="hs-identifier hs-type">st</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>              </span><span class="hs-special">(</span><span id="local-6989586621679136038"><span class="annot"><a href="#local-6989586621679136038"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-40"></span><span>       </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136037"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136038"><span class="hs-identifier hs-type">st'</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#Encoding"><span class="hs-identifier hs-type">CBOR.Encoding</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679136103"><span class="annot"><span class="annottext">encode' :: forall (st :: DataPointForward) (st' :: DataPointForward).
+Message DataPointForward st st' -&gt; Encoding
+</span><a href="#local-6989586621679136103"><span class="hs-identifier hs-var hs-var">encode'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsRequest"><span class="hs-identifier hs-type">MsgDataPointsRequest</span></a></span><span> </span><span id="local-6989586621679136115"><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679136115"><span class="hs-identifier hs-var">request</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>       </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">CBOR.encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeWord"><span class="hs-identifier hs-var">CBOR.encodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName] -&gt; Encoding
+</span><a href="#local-6989586621679136099"><span class="hs-identifier hs-var">encodeRequest</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679136115"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="#local-6989586621679136103"><span class="hs-identifier hs-var">encode'</span></a></span><span> </span><span class="annot"><span class="annottext">Message DataPointForward st st'
+R:MessageDataPointForwardfromto st st'
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDone"><span class="hs-identifier hs-var">MsgDone</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>       </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">CBOR.encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeWord"><span class="hs-identifier hs-var">CBOR.encodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="#local-6989586621679136103"><span class="hs-identifier hs-var">encode'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsReply"><span class="hs-identifier hs-type">MsgDataPointsReply</span></a></span><span> </span><span id="local-6989586621679136127"><span class="annot"><span class="annottext">DataPointValues
+</span><a href="#local-6989586621679136127"><span class="hs-identifier hs-var">reply</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>       </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">CBOR.encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Encoding.html#encodeWord"><span class="hs-identifier hs-var">CBOR.encodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointValues -&gt; Encoding
+</span><a href="#local-6989586621679136101"><span class="hs-identifier hs-var">encodeReplyList</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointValues
+</span><a href="#local-6989586621679136127"><span class="hs-identifier hs-var">reply</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-comment">-- Decode messages</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="#local-6989586621679136106"><span class="hs-identifier hs-type">decode'</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679136128"><span class="annot"><a href="#local-6989586621679136128"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679136129"><span class="annot"><a href="#local-6989586621679136129"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-60"></span><span>       </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Core.html#ActiveState"><span class="hs-identifier hs-type">ActiveState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136128"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Core.html#StateToken"><span class="hs-identifier hs-type">StateToken</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136128"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html#Decoder"><span class="hs-identifier hs-type">CBOR.Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136129"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-type">SomeMessage</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679136128"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679136106"><span class="annot"><span class="annottext">decode' :: forall (st :: DataPointForward) s.
+ActiveState st =&gt;
+StateToken st -&gt; Decoder s (SomeMessage st)
+</span><a href="#local-6989586621679136106"><span class="hs-identifier hs-var hs-var">decode'</span></a></span></span><span> </span><span id="local-6989586621679136150"><span class="annot"><span class="annottext">StateToken st
+</span><a href="#local-6989586621679136150"><span class="hs-identifier hs-var">stok</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679136151"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679136151"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s Int
+forall s. Decoder s Int
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html#decodeListLen"><span class="hs-identifier hs-var">CBOR.decodeListLen</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679136153"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679136153"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s Word
+forall s. Decoder s Word
+</span><a href="file:///nix/store/yvcdadglzq271k04df4sb5f9ihd38fif-cborg-lib-cborg-0.2.10.0-haddock-doc/share/doc/cborg/html/src/Codec.CBOR.Decoding.html#decodeWord"><span class="hs-identifier hs-var">CBOR.decodeWord</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679136153"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679136151"><span class="hs-identifier hs-var">len</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StateToken st
+SingDataPointForward st
+</span><a href="#local-6989586621679136150"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingIdle"><span class="hs-identifier hs-var">SingIdle</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">Message DataPointForward st 'StBusy -&gt; SomeMessage st
+forall ps (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+Message ps st st' -&gt; SomeMessage st
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-var">SomeMessage</span></a></span><span> </span><span class="annot"><span class="annottext">(Message DataPointForward st 'StBusy -&gt; SomeMessage st)
+-&gt; ([DataPointName] -&gt; Message DataPointForward st 'StBusy)
+-&gt; [DataPointName]
+-&gt; SomeMessage st
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName] -&gt; Message DataPointForward st 'StBusy
+[DataPointName] -&gt; Message DataPointForward 'StIdle 'StBusy
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsRequest"><span class="hs-identifier hs-var">MsgDataPointsRequest</span></a></span><span> </span><span class="annot"><span class="annottext">([DataPointName] -&gt; SomeMessage st)
+-&gt; Decoder s [DataPointName] -&gt; Decoder s (SomeMessage st)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s [DataPointName]
+forall s. Decoder s [DataPointName]
+</span><a href="#local-6989586621679136100"><span class="hs-identifier hs-var">decodeRequest</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingIdle"><span class="hs-identifier hs-var">SingIdle</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">SomeMessage st -&gt; Decoder s (SomeMessage st)
+forall a. a -&gt; Decoder s a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeMessage st -&gt; Decoder s (SomeMessage st))
+-&gt; SomeMessage st -&gt; Decoder s (SomeMessage st)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Message DataPointForward st 'StDone -&gt; SomeMessage st
+forall ps (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+Message ps st st' -&gt; SomeMessage st
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-var">SomeMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Message DataPointForward st 'StDone
+Message DataPointForward 'StIdle 'StDone
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDone"><span class="hs-identifier hs-var">MsgDone</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingBusy"><span class="hs-identifier hs-var">SingBusy</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">Message DataPointForward st 'StIdle -&gt; SomeMessage st
+forall ps (st :: ps) (st' :: ps).
+(StateTokenI st, StateTokenI st', ActiveState st) =&gt;
+Message ps st st' -&gt; SomeMessage st
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Driver.html#SomeMessage"><span class="hs-identifier hs-var">SomeMessage</span></a></span><span> </span><span class="annot"><span class="annottext">(Message DataPointForward st 'StIdle -&gt; SomeMessage st)
+-&gt; (DataPointValues -&gt; Message DataPointForward st 'StIdle)
+-&gt; DataPointValues
+-&gt; SomeMessage st
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointValues -&gt; Message DataPointForward st 'StIdle
+DataPointValues -&gt; Message DataPointForward 'StBusy 'StIdle
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsReply"><span class="hs-identifier hs-var">MsgDataPointsReply</span></a></span><span> </span><span class="annot"><span class="annottext">(DataPointValues -&gt; SomeMessage st)
+-&gt; Decoder s DataPointValues -&gt; Decoder s (SomeMessage st)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s DataPointValues
+forall s. Decoder s DataPointValues
+</span><a href="#local-6989586621679136102"><span class="hs-identifier hs-var">decodeReplyList</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-comment">-- Failures per protocol state</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingIdle"><span class="hs-identifier hs-var">SingIdle</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Decoder s (SomeMessage st)
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Word -&gt; Int -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;codecDataPointForward (%s) unexpected key (%d, %d)&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SingDataPointForward 'StIdle -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">StateToken st
+SingDataPointForward 'StIdle
+</span><a href="#local-6989586621679136150"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679136153"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679136151"><span class="hs-identifier hs-var">len</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingBusy"><span class="hs-identifier hs-var">SingBusy</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Decoder s (SomeMessage st)
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Word -&gt; Int -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;codecDataPointForward (%s) unexpected key (%d, %d)&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SingDataPointForward 'StBusy -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">StateToken st
+SingDataPointForward 'StBusy
+</span><a href="#local-6989586621679136150"><span class="hs-identifier hs-var">stok</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679136153"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679136151"><span class="hs-identifier hs-var">len</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SingDataPointForward st
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#SingDone"><span class="hs-identifier hs-var">SingDone</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StateToken 'StDone -&gt; forall a. a
+forall ps (st :: ps).
+(StateAgency st ~ 'NobodyAgency, ActiveState st) =&gt;
+StateToken st -&gt; forall a. a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Core.html#notActiveState"><span class="hs-identifier hs-var">notActiveState</span></a></span><span> </span><span class="annot"><span class="annottext">StateToken st
+StateToken 'StDone
+</span><a href="#local-6989586621679136150"><span class="hs-identifier hs-var">stok</span></a></span><span>
+</span><span id="line-83"></span></pre></body></html>

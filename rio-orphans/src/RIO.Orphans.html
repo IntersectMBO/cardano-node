@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ImplicitParams #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-9"></span><span class="annot"><span class="hs-comment">-- | Orphan instances for the 'RIO' data type.</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">RIO.Orphans</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="RIO.Orphans.html#HasResourceMap"><span class="hs-identifier">HasResourceMap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Orphans.html#ResourceMap"><span class="hs-identifier">ResourceMap</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Orphans.html#withResourceMap"><span class="hs-identifier">withResourceMap</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">RIO</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier">MonadCatch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier">MonadMask</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Base</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadBase</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Unlift</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">askRunInIO</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadResource</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ReleaseMap</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ResourceT</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Resource</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runResourceT</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Control</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadBaseControl</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Logger</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LegacyLogger</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Logger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadLogger</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadLoggerIO</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">LogStr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Log.FastLogger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromLogStr</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GS</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.0.0</span></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679072957"><span id="local-6989586621679073092"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier hs-type">MonadCatch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679072957"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.0.0</span></span><span>
+</span><span id="line-33"></span><span id="local-6989586621679072974"><span id="local-6989586621679073111"><span id="local-6989586621679073123"><span id="local-6989586621679073134"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679072974"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.0.0</span></span><span>
+</span><span id="line-36"></span><span id="local-6989586621679072984"><span id="local-6989586621679073157"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadBase</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679072984"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.0.0</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679072993"><span class="annot"><span class="hs-identifier hs-type">MonadBaseControl</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679072993"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="StM"><span class="annot"><span class="hs-identifier hs-var">StM</span></span></span><span> </span><span id="local-6989586621679073171"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679072993"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679073171"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679073171"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679073174"><span class="annot"><span class="annottext">liftBaseWith :: forall a. (RunInBase (RIO env) IO -&gt; IO a) -&gt; RIO env a
+</span><a href="#local-6989586621679073174"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftBaseWith</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((forall a. RIO env a -&gt; IO a) -&gt; IO a) -&gt; RIO env a
+(RunInBase (RIO env) IO -&gt; IO a) -&gt; RIO env a
+forall b. ((forall a. RIO env a -&gt; IO a) -&gt; IO b) -&gt; RIO env b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679073178"><span class="annot"><span class="annottext">restoreM :: forall a. StM (RIO env) a -&gt; RIO env a
+</span><a href="#local-6989586621679073178"><span class="hs-identifier hs-var hs-var hs-var hs-var">restoreM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; RIO env a
+StM (RIO env) a -&gt; RIO env a
+forall a. a -&gt; RIO env a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.1.0</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679073182"><span class="annot"><span class="hs-identifier hs-type">Display</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">LogStr</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679073186"><span class="annot"><span class="annottext">display :: LogStr -&gt; Utf8Builder
+</span><a href="#local-6989586621679073186"><span class="hs-identifier hs-var hs-var hs-var hs-var">display</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Utf8Builder
+</span><span class="hs-identifier hs-var">displayBytesUtf8</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Utf8Builder)
+-&gt; (LogStr -&gt; ByteString) -&gt; LogStr -&gt; Utf8Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LogStr -&gt; ByteString
+</span><span class="hs-identifier hs-var">fromLogStr</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | @since 0.1.1.0</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679073020"><span class="annot"><span class="hs-identifier hs-type">HasLogFunc</span></span><span> </span><span class="annot"><a href="#local-6989586621679073020"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadLogger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679073020"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679073197"><span class="annot"><span class="annottext">monadLoggerLog :: forall msg.
+ToLogStr msg =&gt;
+Loc -&gt; Text -&gt; LogLevel -&gt; msg -&gt; RIO env ()
+</span><a href="#local-6989586621679073197"><span class="hs-identifier hs-var hs-var hs-var hs-var">monadLoggerLog</span></a></span></span><span> </span><span id="local-6989586621679073199"><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073199"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span id="local-6989586621679073200"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073200"><span class="hs-identifier hs-var">source</span></a></span></span><span> </span><span id="local-6989586621679073201"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073201"><span class="hs-identifier hs-var">level</span></a></span></span><span> </span><span id="local-6989586621679073202"><span class="annot"><span class="annottext">msg
+</span><a href="#local-6989586621679073202"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="">?callStack</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Loc -&gt; CallStack
+</span><a href="RIO.Orphans.html#rioCallStack"><span class="hs-identifier hs-var">rioCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073199"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-53"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LogLevel -&gt; Utf8Builder -&gt; RIO env ()
+forall (m :: * -&gt; *) env.
+(MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack) =&gt;
+Text -&gt; LogLevel -&gt; Utf8Builder -&gt; m ()
+</span><span class="hs-identifier hs-var">logGeneric</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073200"><span class="hs-identifier hs-var">source</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogLevel -&gt; LogLevel
+</span><a href="RIO.Orphans.html#rioLogLevel"><span class="hs-identifier hs-var">rioLogLevel</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073201"><span class="hs-identifier hs-var">level</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogStr -&gt; Utf8Builder
+forall a. Display a =&gt; a -&gt; Utf8Builder
+</span><span class="hs-identifier hs-var">display</span></span><span> </span><span class="annot"><span class="annottext">(LogStr -&gt; Utf8Builder) -&gt; LogStr -&gt; Utf8Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">msg -&gt; LogStr
+forall msg. ToLogStr msg =&gt; msg -&gt; LogStr
+</span><span class="hs-identifier hs-var">LegacyLogger.toLogStr</span></span><span> </span><span class="annot"><span class="annottext">msg
+</span><a href="#local-6989586621679073202"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | Do not let the generated function escape its RIO context. This may lead</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   to log-related cleanup running /before/ the function is called.</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   @since 0.1.2.0</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679073036"><span class="annot"><span class="hs-identifier hs-type">HasLogFunc</span></span><span> </span><span class="annot"><a href="#local-6989586621679073036"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadLoggerIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679073036"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679073228"><span class="annot"><span class="annottext">askLoggerIO :: RIO env (Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+</span><a href="#local-6989586621679073228"><span class="hs-identifier hs-var hs-var hs-var hs-var">askLoggerIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679073230"><span class="annot"><span class="annottext">RIO env () -&gt; IO ()
+</span><a href="#local-6989586621679073230"><span class="hs-identifier hs-var">runInIO</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RIO env (RIO env () -&gt; IO ())
+forall (m :: * -&gt; *) a. MonadUnliftIO m =&gt; m (m a -&gt; IO a)
+</span><span class="hs-identifier hs-var">askRunInIO</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">(Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+-&gt; RIO env (Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+forall a. a -&gt; RIO env a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">((Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+ -&gt; RIO env (Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ()))
+-&gt; (Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+-&gt; RIO env (Loc -&gt; Text -&gt; LogLevel -&gt; LogStr -&gt; IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679073231"><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073231"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span id="local-6989586621679073232"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073232"><span class="hs-identifier hs-var">source</span></a></span></span><span> </span><span id="local-6989586621679073233"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073233"><span class="hs-identifier hs-var">level</span></a></span></span><span> </span><span id="local-6989586621679073234"><span class="annot"><span class="annottext">LogStr
+</span><a href="#local-6989586621679073234"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="">?callStack</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Loc -&gt; CallStack
+</span><a href="RIO.Orphans.html#rioCallStack"><span class="hs-identifier hs-var">rioCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073231"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-64"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">RIO env () -&gt; IO ()
+</span><a href="#local-6989586621679073230"><span class="hs-identifier hs-var">runInIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; LogLevel -&gt; Utf8Builder -&gt; RIO env ()
+forall (m :: * -&gt; *) env.
+(MonadIO m, MonadReader env m, HasLogFunc env, HasCallStack) =&gt;
+Text -&gt; LogLevel -&gt; Utf8Builder -&gt; m ()
+</span><span class="hs-identifier hs-var">logGeneric</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073232"><span class="hs-identifier hs-var">source</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogLevel -&gt; LogLevel
+</span><a href="RIO.Orphans.html#rioLogLevel"><span class="hs-identifier hs-var">rioLogLevel</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073233"><span class="hs-identifier hs-var">level</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogStr -&gt; Utf8Builder
+forall a. Display a =&gt; a -&gt; Utf8Builder
+</span><span class="hs-identifier hs-var">display</span></span><span> </span><span class="annot"><span class="annottext">LogStr
+</span><a href="#local-6989586621679073234"><span class="hs-identifier hs-var">str</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="RIO.Orphans.html#rioLogLevel"><span class="hs-identifier hs-type">rioLogLevel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LegacyLogger.LogLevel</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LogLevel</span></span><span>
+</span><span id="line-67"></span><span id="rioLogLevel"><span class="annot"><span class="annottext">rioLogLevel :: LogLevel -&gt; LogLevel
+</span><a href="RIO.Orphans.html#rioLogLevel"><span class="hs-identifier hs-var hs-var">rioLogLevel</span></a></span></span><span> </span><span id="local-6989586621679073242"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073242"><span class="hs-identifier hs-var">level</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679073242"><span class="hs-identifier hs-var">level</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LegacyLogger.LevelDebug</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LevelDebug</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LegacyLogger.LevelInfo</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LevelInfo</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LegacyLogger.LevelWarn</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LevelWarn</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LegacyLogger.LevelError</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><span class="hs-identifier hs-var">LevelError</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">LegacyLogger.LevelOther</span></span><span> </span><span id="local-6989586621679073252"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073252"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LogLevel
+</span><span class="hs-identifier hs-var">LevelOther</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679073252"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="RIO.Orphans.html#rioCallStack"><span class="hs-identifier hs-type">rioCallStack</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Loc"><span class="hs-identifier hs-type">LegacyLogger.Loc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span>
+</span><span id="line-76"></span><span id="rioCallStack"><span class="annot"><span class="annottext">rioCallStack :: Loc -&gt; CallStack
+</span><a href="RIO.Orphans.html#rioCallStack"><span class="hs-identifier hs-var hs-var">rioCallStack</span></a></span></span><span> </span><span id="local-6989586621679073254"><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[([Char], SrcLoc)] -&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#fromCallSiteList"><span class="hs-identifier hs-var">GS.fromCallSiteList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#SrcLoc"><span class="hs-identifier hs-type">GS.SrcLoc</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">srcLocPackage :: [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocPackage"><span class="hs-identifier hs-var">GS.srcLocPackage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Loc -&gt; [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_package"><span class="hs-identifier hs-var">LegacyLogger.loc_package</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocModule :: [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocModule"><span class="hs-identifier hs-var">GS.srcLocModule</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Loc -&gt; [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_module"><span class="hs-identifier hs-var">LegacyLogger.loc_module</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocFile :: [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocFile"><span class="hs-identifier hs-var">GS.srcLocFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Loc -&gt; [Char]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_filename"><span class="hs-identifier hs-var">LegacyLogger.loc_filename</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocStartLine :: Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocStartLine"><span class="hs-identifier hs-var">GS.srcLocStartLine</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Int
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Int) -&gt; Int) -&gt; (Int, Int) -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; (Int, Int)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_start"><span class="hs-identifier hs-var">LegacyLogger.loc_start</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocStartCol :: Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocStartCol"><span class="hs-identifier hs-var">GS.srcLocStartCol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Int
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Int) -&gt; Int) -&gt; (Int, Int) -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; (Int, Int)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_start"><span class="hs-identifier hs-var">LegacyLogger.loc_start</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocEndLine :: Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocEndLine"><span class="hs-identifier hs-var">GS.srcLocEndLine</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Int
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Int) -&gt; Int) -&gt; (Int, Int) -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; (Int, Int)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_end"><span class="hs-identifier hs-var">LegacyLogger.loc_end</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">srcLocEndCol :: Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#srcLocEndCol"><span class="hs-identifier hs-var">GS.srcLocEndCol</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Int
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Int) -&gt; Int) -&gt; (Int, Int) -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; (Int, Int)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_end"><span class="hs-identifier hs-var">LegacyLogger.loc_end</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679073254"><span class="hs-identifier hs-var">loc</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | A collection of all of the registered resource cleanup actions.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-89"></span><span class="hs-keyword">type</span><span> </span><span id="ResourceMap"><span class="annot"><a href="RIO.Orphans.html#ResourceMap"><span class="hs-identifier hs-var">ResourceMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReleaseMap</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- | Perform an action with a 'ResourceMap'</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-94"></span><span id="local-6989586621679073046"><span id="local-6989586621679073048"><span class="annot"><a href="RIO.Orphans.html#withResourceMap"><span class="hs-identifier hs-type">withResourceMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679073046"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Orphans.html#ResourceMap"><span class="hs-identifier hs-type">ResourceMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679073046"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679073048"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679073046"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679073048"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-95"></span><span id="withResourceMap"><span class="annot"><span class="annottext">withResourceMap :: forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+(ResourceMap -&gt; m a) -&gt; m a
+</span><a href="RIO.Orphans.html#withResourceMap"><span class="hs-identifier hs-var hs-var">withResourceMap</span></a></span></span><span> </span><span id="local-6989586621679073275"><span class="annot"><span class="annottext">ResourceMap -&gt; m a
+</span><a href="#local-6989586621679073275"><span class="hs-identifier hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="annottext">((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a)
+-&gt; ((forall a. m a -&gt; IO a) -&gt; IO a) -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679073276"><span class="annot"><span class="annottext">forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679073276"><span class="hs-identifier hs-var">run</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ResourceT IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadUnliftIO m =&gt; ResourceT m a -&gt; m a
+</span><span class="hs-identifier hs-var">runResourceT</span></span><span> </span><span class="annot"><span class="annottext">(ResourceT IO a -&gt; IO a) -&gt; ResourceT IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(ResourceMap -&gt; IO a) -&gt; ResourceT IO a
+forall (m :: * -&gt; *) a. (ResourceMap -&gt; m a) -&gt; ResourceT m a
+</span><span class="hs-identifier hs-var">ResourceT</span></span><span> </span><span class="annot"><span class="annottext">((ResourceMap -&gt; IO a) -&gt; ResourceT IO a)
+-&gt; (ResourceMap -&gt; IO a) -&gt; ResourceT IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">m a -&gt; IO a
+forall a. m a -&gt; IO a
+</span><a href="#local-6989586621679073276"><span class="hs-identifier hs-var">run</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; IO a) -&gt; (ResourceMap -&gt; m a) -&gt; ResourceMap -&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceMap -&gt; m a
+</span><a href="#local-6989586621679073275"><span class="hs-identifier hs-var">inner</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- | An environment with a 'ResourceMap'</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-101"></span><span class="hs-keyword">class</span><span> </span><span id="HasResourceMap"><span class="annot"><a href="RIO.Orphans.html#HasResourceMap"><span class="hs-identifier hs-var">HasResourceMap</span></a></span></span><span> </span><span id="local-6989586621679073058"><span class="annot"><a href="#local-6989586621679073058"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="resourceMapL"><span class="annot"><a href="RIO.Orphans.html#resourceMapL"><span class="hs-identifier hs-type">resourceMapL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Lens'</span></span><span> </span><span class="annot"><a href="#local-6989586621679073058"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="RIO.Orphans.html#ResourceMap"><span class="hs-identifier hs-type">ResourceMap</span></a></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="RIO.Orphans.html#HasResourceMap"><span class="hs-identifier hs-type">HasResourceMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReleaseMap</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679073283"><span class="annot"><span class="annottext">resourceMapL :: Lens' ResourceMap ResourceMap
+</span><a href="RIO.Orphans.html#resourceMapL"><span class="hs-identifier hs-var hs-var hs-var hs-var">resourceMapL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ResourceMap -&gt; f ResourceMap) -&gt; ResourceMap -&gt; f ResourceMap
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679073065"><span class="annot"><a href="RIO.Orphans.html#HasResourceMap"><span class="hs-identifier hs-type">HasResourceMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679073065"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadResource</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679073065"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679073297"><span class="annot"><span class="annottext">liftResourceT :: forall a. ResourceT IO a -&gt; RIO env a
+</span><a href="#local-6989586621679073297"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftResourceT</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ResourceT</span></span><span> </span><span id="local-6989586621679073299"><span class="annot"><span class="annottext">ResourceMap -&gt; IO a
+</span><a href="#local-6989586621679073299"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Getting ResourceMap env ResourceMap -&gt; RIO env ResourceMap
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting ResourceMap env ResourceMap
+forall env. HasResourceMap env =&gt; Lens' env ResourceMap
+Lens' env ResourceMap
+</span><a href="RIO.Orphans.html#resourceMapL"><span class="hs-identifier hs-var">resourceMapL</span></a></span><span> </span><span class="annot"><span class="annottext">RIO env ResourceMap -&gt; (ResourceMap -&gt; RIO env a) -&gt; RIO env a
+forall a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; RIO env a
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; RIO env a)
+-&gt; (ResourceMap -&gt; IO a) -&gt; ResourceMap -&gt; RIO env a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceMap -&gt; IO a
+</span><a href="#local-6989586621679073299"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-107"></span></pre></body></html>

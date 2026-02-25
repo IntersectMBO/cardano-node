@@ -1,0 +1,502 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Unlog.BackendFile</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html"><span class="hs-identifier">Cardano.Analysis.API.Ground</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier">show</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.ConvertText.html#toText"><span class="hs-identifier">toText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Unlog.LogObject.html"><span class="hs-identifier">Cardano.Unlog.LogObject</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Util.html"><span class="hs-identifier">Cardano.Util</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier">id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier">show</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AE</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">eitherDecode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TS</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/8j7rsw1lka5zxhyns743lxdhma93q2zx-text-short-lib-text-short-0.1.6-haddock-doc/share/doc/text-short/html/src/Data.Text.Short.html"><span class="hs-identifier">Data.Text.Short</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#numCapabilities"><span class="hs-identifier">numCapabilities</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span id="local-6989586621679430087"><span class="annot"><a href="Cardano.Unlog.BackendFile.html#readRunLogsBare"><span class="hs-identifier hs-type">readRunLogsBare</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#JsonInputFile"><span class="hs-identifier hs-type">JsonInputFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430087"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#RunLogs"><span class="hs-identifier hs-type">RunLogs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-20"></span><span id="readRunLogsBare"><span class="annot"><span class="annottext">readRunLogsBare :: forall a. JsonInputFile a -&gt; ExceptT FilePath IO (RunLogs ())
+</span><a href="Cardano.Unlog.BackendFile.html#readRunLogsBare"><span class="hs-identifier hs-var hs-var">readRunLogsBare</span></a></span></span><span> </span><span id="local-6989586621679430307"><span class="annot"><span class="annottext">JsonInputFile a
+</span><a href="#local-6989586621679430307"><span class="hs-identifier hs-var">rlf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; Either FilePath (RunLogs ())
+forall a. FromJSON a =&gt; ByteString -&gt; Either FilePath a
+</span><span class="hs-identifier hs-var">AE.eitherDecode</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="annottext">(ByteString -&gt; Either FilePath (RunLogs ()))
+-&gt; IO ByteString -&gt; IO (Either FilePath (RunLogs ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LBS.readFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonInputFile a -&gt; FilePath
+forall a. JsonInputFile a -&gt; FilePath
+</span><a href="Cardano.Analysis.API.Ground.html#unJsonInputFile"><span class="hs-identifier hs-var">unJsonInputFile</span></a></span><span> </span><span class="annot"><span class="annottext">JsonInputFile a
+</span><a href="#local-6989586621679430307"><span class="hs-identifier hs-var">rlf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>        </span><span class="annot"><span class="annottext">IO (Either FilePath (RunLogs ()))
+-&gt; (IO (Either FilePath (RunLogs ()))
+    -&gt; ExceptT FilePath IO (RunLogs ()))
+-&gt; ExceptT FilePath IO (RunLogs ())
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either FilePath (RunLogs ()))
+-&gt; ExceptT FilePath IO (RunLogs ())
+forall (m :: * -&gt; *) x a. m (Either x a) -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#newExceptT"><span class="hs-identifier hs-var">newExceptT</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.Unlog.BackendFile.html#runLiftLogObjects"><span class="hs-identifier hs-type">runLiftLogObjects</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#RunLogs"><span class="hs-identifier hs-type">RunLogs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LOAnyType"><span class="hs-identifier hs-type">LOAnyType</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-26"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#RunLogs"><span class="hs-identifier hs-type">RunLogs</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span id="runLiftLogObjects"><span class="annot"><span class="annottext">runLiftLogObjects :: RunLogs ()
+-&gt; Bool
+-&gt; Maybe [LOAnyType]
+-&gt; ExceptT FilePath IO (RunLogs [LogObject])
+</span><a href="Cardano.Unlog.BackendFile.html#runLiftLogObjects"><span class="hs-identifier hs-var hs-var">runLiftLogObjects</span></a></span></span><span> </span><span id="local-6989586621679430314"><span class="annot"><span class="annottext">rl :: RunLogs ()
+</span><a href="#local-6989586621679430314"><span class="hs-identifier hs-var">rl</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#RunLogs"><span class="hs-identifier hs-type">RunLogs</span></a></span><span class="hs-special">{</span><span id="local-6989586621679430316"><span id="local-6989586621679430317"><span class="annot"><span class="annottext">Map Host (HostLogs ())
+UTCTime
+rlHostLogs :: Map Host (HostLogs ())
+rlFilterDate :: UTCTime
+rlHostLogs :: forall a. RunLogs a -&gt; Map Host (HostLogs a)
+rlFilterDate :: forall a. RunLogs a -&gt; UTCTime
+</span><a href="#local-6989586621679430316"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679430320"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679430320"><span class="hs-identifier hs-var">okDErr</span></a></span></span><span> </span><span id="local-6989586621679430321"><span class="annot"><span class="annottext">Maybe [LOAnyType]
+</span><a href="#local-6989586621679430321"><span class="hs-identifier hs-var">loAnyLimit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (RunLogs [LogObject])
+-&gt; ExceptT FilePath IO (RunLogs [LogObject])
+forall a. IO a -&gt; ExceptT FilePath IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (RunLogs [LogObject])
+ -&gt; ExceptT FilePath IO (RunLogs [LogObject]))
+-&gt; IO (RunLogs [LogObject])
+-&gt; ExceptT FilePath IO (RunLogs [LogObject])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-28"></span><span> </span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+-&gt; Int -&gt; [[(Host, HostLogs ())]] -&gt; IO (RunLogs [LogObject])
+</span><a href="#local-6989586621679430323"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+forall k a. Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">[[(Host, HostLogs ())]]
+</span><a href="#local-6989586621679430325"><span class="hs-identifier hs-var">simultaneousReads</span></a></span><span>
+</span><span id="line-29"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>   </span><span id="local-6989586621679430323"><span class="annot"><span class="annottext">go :: Map Host (HostLogs [LogObject])
+-&gt; Int -&gt; [[(Host, HostLogs ())]] -&gt; IO (RunLogs [LogObject])
+</span><a href="#local-6989586621679430323"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject]) -&gt; Map Host (HostLogs [LogObject])
+forall a. NFData a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#force"><span class="hs-identifier hs-var">force</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679430327"><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+</span><a href="#local-6989586621679430327"><span class="hs-identifier hs-var">acc</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430328"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679430328"><span class="hs-identifier hs-var">batchBase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-31"></span><span>     </span><span class="hs-special">[</span><span class="hs-special">]</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RunLogs [LogObject] -&gt; IO (RunLogs [LogObject])
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(RunLogs [LogObject] -&gt; IO (RunLogs [LogObject]))
+-&gt; RunLogs [LogObject] -&gt; IO (RunLogs [LogObject])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RunLogs ()
+</span><a href="#local-6989586621679430314"><span class="hs-identifier hs-var">rl</span></a></span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#rlHostLogs"><span class="hs-identifier hs-var">rlHostLogs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679430327"><span class="hs-identifier hs-type">acc</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>     </span><span id="local-6989586621679430329"><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430329"><span class="hs-identifier hs-var">c</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679430330"><span class="annot"><span class="annottext">[[(Host, HostLogs ())]]
+</span><a href="#local-6989586621679430330"><span class="hs-identifier hs-var">cs</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>       </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679430331"><span class="annot"><span class="annottext">batchBase' :: Int
+</span><a href="#local-6989586621679430331"><span class="hs-identifier hs-var hs-var">batchBase'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679430328"><span class="hs-identifier hs-var">batchBase</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430329"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-34"></span><span>       </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Host, HostLogs ())] -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430329"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-35"></span><span>         </span><span class="annot"><span class="annottext">FilePath -&gt; F -&gt; IO ()
+forall (m :: * -&gt; *). MonadIO m =&gt; FilePath -&gt; F -&gt; m ()
+</span><a href="Cardano.Util.html#progress"><span class="hs-identifier hs-var">progress</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;logs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; F
+</span><a href="Cardano.Util.html#Q"><span class="hs-identifier hs-var">Q</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; F) -&gt; FilePath -&gt; F
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Int -&gt; Int -&gt; FilePath
+forall r. PrintfType r =&gt; FilePath -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;processing batch %d - %d&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679430328"><span class="hs-identifier hs-var">batchBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679430331"><span class="hs-identifier hs-var">batchBase'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>       </span><span id="local-6989586621679430339"><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+</span><a href="#local-6989586621679430339"><span class="hs-identifier hs-var">hlsMap</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())] -&gt; IO (Map Host (HostLogs [LogObject]))
+</span><a href="#local-6989586621679430340"><span class="hs-identifier hs-var">readHostLogChunk</span></a></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430329"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-37"></span><span>       </span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+-&gt; Int -&gt; [[(Host, HostLogs ())]] -&gt; IO (RunLogs [LogObject])
+</span><a href="#local-6989586621679430323"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+</span><a href="#local-6989586621679430327"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+-&gt; Map Host (HostLogs [LogObject])
+-&gt; Map Host (HostLogs [LogObject])
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#union"><span class="hs-operator hs-var">`Map.union`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Host (HostLogs [LogObject])
+</span><a href="#local-6989586621679430339"><span class="hs-identifier hs-var">hlsMap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679430331"><span class="hs-identifier hs-var">batchBase'</span></a></span><span> </span><span class="annot"><span class="annottext">[[(Host, HostLogs ())]]
+</span><a href="#local-6989586621679430330"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>   </span><span id="local-6989586621679430325"><span class="annot"><span class="annottext">simultaneousReads :: [[(Host, HostLogs ())]]
+</span><a href="#local-6989586621679430325"><span class="hs-identifier hs-var hs-var">simultaneousReads</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [(Host, HostLogs ())] -&gt; [[(Host, HostLogs ())]]
+forall e. Int -&gt; [e] -&gt; [[e]]
+</span><a href="file:///nix/store/x3j2nbh6wj9x2xxa20pnxaw13x0b89rs-split-lib-split-0.2.5-haddock-doc/share/doc/split/html/src/Data.List.Split.Internals.html#chunksOf"><span class="hs-identifier hs-var">chunksOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#numCapabilities"><span class="hs-identifier hs-var">numCapabilities</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Host (HostLogs ()) -&gt; [(Host, HostLogs ())]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#toList"><span class="hs-identifier hs-var">Map.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Map Host (HostLogs ())
+</span><a href="#local-6989586621679430316"><span class="hs-identifier hs-var">rlHostLogs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>   </span><span class="annot"><a href="#local-6989586621679430340"><span class="hs-identifier hs-type">readHostLogChunk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#Host"><span class="hs-identifier hs-type">Host</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#Host"><span class="hs-identifier hs-type">Host</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>   </span><span id="local-6989586621679430340"><span class="annot"><span class="annottext">readHostLogChunk :: [(Host, HostLogs ())] -&gt; IO (Map Host (HostLogs [LogObject]))
+</span><a href="#local-6989586621679430340"><span class="hs-identifier hs-var hs-var">readHostLogChunk</span></a></span></span><span> </span><span id="local-6989586621679430344"><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430344"><span class="hs-identifier hs-var">hls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>     </span><span class="annot"><span class="annottext">[(Host, HostLogs [LogObject])] -&gt; Map Host (HostLogs [LogObject])
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(Host, HostLogs [LogObject])] -&gt; Map Host (HostLogs [LogObject]))
+-&gt; IO [(Host, HostLogs [LogObject])]
+-&gt; IO (Map Host (HostLogs [LogObject]))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+-&gt; ((Host, HostLogs ()) -&gt; IO (Host, HostLogs [LogObject]))
+-&gt; IO [(Host, HostLogs [LogObject])]
+forall (t :: * -&gt; *) a b.
+Traversable t =&gt;
+t a -&gt; (a -&gt; IO b) -&gt; IO (t b)
+</span><span class="hs-identifier hs-var">forConcurrently</span></span><span> </span><span class="annot"><span class="annottext">[(Host, HostLogs ())]
+</span><a href="#local-6989586621679430344"><span class="hs-identifier hs-var">hls</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Host -&gt; HostLogs () -&gt; IO (Host, HostLogs [LogObject]))
+-&gt; (Host, HostLogs ()) -&gt; IO (Host, HostLogs [LogObject])
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">Host -&gt; HostLogs () -&gt; IO (Host, HostLogs [LogObject])
+</span><a href="#local-6989586621679430348"><span class="hs-identifier hs-var">readHostLogs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>   </span><span class="annot"><a href="#local-6989586621679430348"><span class="hs-identifier hs-type">readHostLogs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#Host"><span class="hs-identifier hs-type">Host</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#Host"><span class="hs-identifier hs-type">Host</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>   </span><span id="local-6989586621679430348"><span class="annot"><span class="annottext">readHostLogs :: Host -&gt; HostLogs () -&gt; IO (Host, HostLogs [LogObject])
+</span><a href="#local-6989586621679430348"><span class="hs-identifier hs-var hs-var">readHostLogs</span></a></span></span><span> </span><span id="local-6989586621679430349"><span class="annot"><span class="annottext">Host
+</span><a href="#local-6989586621679430349"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679430350"><span class="annot"><span class="annottext">hl :: HostLogs ()
+</span><a href="#local-6989586621679430350"><span class="hs-identifier hs-var">hl</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span class="hs-special">{</span><span id="local-6989586621679430352"><span id="local-6989586621679430353"><span id="local-6989586621679430354"><span id="local-6989586621679430355"><span id="local-6989586621679430356"><span id="local-6989586621679430357"><span id="local-6989586621679430358"><span class="annot"><span class="annottext">Int
+[FilePath]
+[ProfileEntry I]
+Maybe UTCTime
+(LogObjectSource, ())
+TraceFreqs
+hlRawLogfiles :: [FilePath]
+hlRawLines :: Int
+hlRawTraceFreqs :: TraceFreqs
+hlLogs :: (LogObjectSource, ())
+hlProfile :: [ProfileEntry I]
+hlRawFirstAt :: Maybe UTCTime
+hlRawLastAt :: Maybe UTCTime
+hlRawLogfiles :: forall a. HostLogs a -&gt; [FilePath]
+hlRawLines :: forall a. HostLogs a -&gt; Int
+hlRawTraceFreqs :: forall a. HostLogs a -&gt; TraceFreqs
+hlLogs :: forall a. HostLogs a -&gt; (LogObjectSource, a)
+hlProfile :: forall a. HostLogs a -&gt; [ProfileEntry I]
+hlRawFirstAt :: forall a. HostLogs a -&gt; Maybe UTCTime
+hlRawLastAt :: forall a. HostLogs a -&gt; Maybe UTCTime
+</span><a href="#local-6989586621679430352"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>     </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">(LogObjectSource, ()) -&gt; LogObjectSource
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">(LogObjectSource, ())
+</span><a href="#local-6989586621679430355"><span class="hs-identifier hs-var">hlLogs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>       </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#LogObjectSourceJSON"><span class="hs-identifier hs-type">LogObjectSourceJSON</span></a></span><span> </span><span id="local-6989586621679430368"><span class="annot"><span class="annottext">JsonLogfile
+</span><a href="#local-6989586621679430368"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>         </span><span class="annot"><span class="annottext">FilePath -&gt; Bool -&gt; Maybe [LOAnyType] -&gt; IO [LogObject]
+</span><a href="Cardano.Unlog.BackendFile.html#readLogObjectStream"><span class="hs-identifier hs-var">readLogObjectStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonLogfile -&gt; FilePath
+</span><a href="Cardano.Analysis.API.Ground.html#unJsonLogfile"><span class="hs-identifier hs-var">unJsonLogfile</span></a></span><span> </span><span class="annot"><span class="annottext">JsonLogfile
+</span><a href="#local-6989586621679430368"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679430320"><span class="hs-identifier hs-var">okDErr</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe [LOAnyType]
+</span><a href="#local-6989586621679430321"><span class="hs-identifier hs-var">loAnyLimit</span></a></span><span>
+</span><span id="line-50"></span><span>         </span><span class="annot"><span class="annottext">IO [LogObject]
+-&gt; ([LogObject] -&gt; (Host, HostLogs [LogObject]))
+-&gt; IO (Host, HostLogs [LogObject])
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Host
+</span><a href="#local-6989586621679430349"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(HostLogs [LogObject] -&gt; (Host, HostLogs [LogObject]))
+-&gt; ([LogObject] -&gt; HostLogs [LogObject])
+-&gt; [LogObject]
+-&gt; (Host, HostLogs [LogObject])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HostLogs () -&gt; [LogObject] -&gt; HostLogs [LogObject]
+forall a b. HostLogs a -&gt; b -&gt; HostLogs b
+</span><a href="#local-6989586621679430373"><span class="hs-identifier hs-var">setLogs</span></a></span><span> </span><span class="annot"><span class="annottext">HostLogs ()
+</span><a href="#local-6989586621679430350"><span class="hs-identifier hs-var">hl</span></a></span><span> </span><span class="annot"><span class="annottext">([LogObject] -&gt; HostLogs [LogObject])
+-&gt; ([LogObject] -&gt; [LogObject])
+-&gt; [LogObject]
+-&gt; HostLogs [LogObject]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(LogObject -&gt; LogObject) -&gt; [LogObject] -&gt; [LogObject]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Host -&gt; LogObject -&gt; LogObject
+</span><a href="#local-6989586621679430374"><span class="hs-identifier hs-var">setLOhost</span></a></span><span> </span><span class="annot"><span class="annottext">Host
+</span><a href="#local-6989586621679430349"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>       </span><span id="local-6989586621679430375"><span class="annot"><span class="annottext">LogObjectSource
+</span><a href="#local-6989586621679430375"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Host, HostLogs [LogObject])
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; IO (Host, HostLogs [LogObject]))
+-&gt; FilePath -&gt; IO (Host, HostLogs [LogObject])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;readHostLogs: expected JSON log file, got &quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">LogObjectSource -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">LogObjectSource
+</span><a href="#local-6989586621679430375"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>   </span><span id="local-6989586621679430156"><span id="local-6989586621679430157"><span class="annot"><a href="#local-6989586621679430373"><span class="hs-identifier hs-type">setLogs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430156"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679430157"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#HostLogs"><span class="hs-identifier hs-type">HostLogs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430157"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-54"></span><span>   </span><span id="local-6989586621679430373"><span class="annot"><span class="annottext">setLogs :: forall a b. HostLogs a -&gt; b -&gt; HostLogs b
+</span><a href="#local-6989586621679430373"><span class="hs-identifier hs-var hs-var">setLogs</span></a></span></span><span> </span><span id="local-6989586621679430377"><span class="annot"><span class="annottext">HostLogs a
+</span><a href="#local-6989586621679430377"><span class="hs-identifier hs-var">hl</span></a></span></span><span> </span><span id="local-6989586621679430378"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679430378"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HostLogs a
+</span><a href="#local-6989586621679430377"><span class="hs-identifier hs-var">hl</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#hlLogs"><span class="hs-identifier hs-var">hlLogs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-type">fst</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-type">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#hlLogs"><span class="hs-identifier hs-var">hlLogs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430377"><span class="hs-identifier hs-type">hl</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679430378"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-55"></span><span>   </span><span class="annot"><a href="#local-6989586621679430374"><span class="hs-identifier hs-type">setLOhost</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Analysis.API.Ground.html#Host"><span class="hs-identifier hs-type">Host</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span>
+</span><span id="line-56"></span><span>   </span><span id="local-6989586621679430374"><span class="annot"><span class="annottext">setLOhost :: Host -&gt; LogObject -&gt; LogObject
+</span><a href="#local-6989586621679430374"><span class="hs-identifier hs-var hs-var">setLOhost</span></a></span></span><span> </span><span id="local-6989586621679430379"><span class="annot"><span class="annottext">Host
+</span><a href="#local-6989586621679430379"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679430380"><span class="annot"><span class="annottext">LogObject
+</span><a href="#local-6989586621679430380"><span class="hs-identifier hs-var">lo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogObject
+</span><a href="#local-6989586621679430380"><span class="hs-identifier hs-var">lo</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#loHost"><span class="hs-identifier hs-var">loHost</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679430379"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Unlog.BackendFile.html#readLogObjectStream"><span class="hs-identifier hs-type">readLogObjectStream</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LOAnyType"><span class="hs-identifier hs-type">LOAnyType</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-type">LogObject</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span id="readLogObjectStream"><span class="annot"><span class="annottext">readLogObjectStream :: FilePath -&gt; Bool -&gt; Maybe [LOAnyType] -&gt; IO [LogObject]
+</span><a href="Cardano.Unlog.BackendFile.html#readLogObjectStream"><span class="hs-identifier hs-var hs-var">readLogObjectStream</span></a></span></span><span> </span><span id="local-6989586621679430382"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679430382"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679430383"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679430383"><span class="hs-identifier hs-var">okDErr</span></a></span></span><span> </span><span id="local-6989586621679430384"><span class="annot"><span class="annottext">Maybe [LOAnyType]
+</span><a href="#local-6989586621679430384"><span class="hs-identifier hs-var">loAnyLimit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#readFile"><span class="hs-identifier hs-var">LBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679430382"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">IO ByteString -&gt; (ByteString -&gt; [LogObject]) -&gt; IO [LogObject]
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679430383"><span class="hs-identifier hs-var">okDErr</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[LogObject] -&gt; [LogObject]
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-keyword">else</span><span>
+</span><span id="line-63"></span><span>        </span><span class="annot"><span class="annottext">(LogObject -&gt; Bool) -&gt; [LogObject] -&gt; [LogObject]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-64"></span><span>                    </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LODecodeError"><span class="hs-identifier hs-type">LODecodeError</span></a></span><span> </span><span id="local-6989586621679430386"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430386"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span id="local-6989586621679430387"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430387"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Bool
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span>
+</span><span id="line-65"></span><span>                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath -&gt; FilePath -&gt; FilePath
+forall r. PrintfType r =&gt; FilePath -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Decode error while parsing %s:\n%s\non input:\n&gt;&gt;&gt;  %s&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679430382"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortText -&gt; FilePath
+</span><a href="file:///nix/store/8j7rsw1lka5zxhyns743lxdhma93q2zx-text-short-lib-text-short-0.1.6-haddock-doc/share/doc/text-short/html/src/Data.Text.Short.Internal.html#toString"><span class="hs-identifier hs-var">Text.toString</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430387"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortText -&gt; FilePath
+</span><a href="file:///nix/store/8j7rsw1lka5zxhyns743lxdhma93q2zx-text-short-lib-text-short-0.1.6-haddock-doc/share/doc/text-short/html/src/Data.Text.Short.Internal.html#toString"><span class="hs-identifier hs-var">Text.toString</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430386"><span class="hs-identifier hs-var">input</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>                    </span><span class="annot"><span class="annottext">LOBody
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>               </span><span class="annot"><span class="annottext">(LOBody -&gt; Bool) -&gt; (LogObject -&gt; LOBody) -&gt; LogObject -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject -&gt; LOBody
+</span><a href="Cardano.Unlog.LogObject.html#loBody"><span class="hs-identifier hs-var">loBody</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LogObject] -&gt; [LogObject])
+-&gt; (ByteString -&gt; [LogObject]) -&gt; ByteString -&gt; [LogObject]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">(LogObject -&gt; Bool) -&gt; [LogObject] -&gt; [LogObject]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe [LOAnyType]
+</span><a href="#local-6989586621679430384"><span class="hs-identifier hs-var">loAnyLimit</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-69"></span><span>              </span><span class="annot"><span class="annottext">Maybe [LOAnyType]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-70"></span><span>                </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LOAny"><span class="hs-identifier hs-type">LOAny</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-71"></span><span>                </span><span class="annot"><span class="annottext">LOBody
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-72"></span><span>              </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679430391"><span class="annot"><span class="annottext">[LOAnyType]
+</span><a href="#local-6989586621679430391"><span class="hs-identifier hs-var">constraint</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-73"></span><span>                </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LOAny"><span class="hs-identifier hs-type">LOAny</span></a></span><span> </span><span id="local-6989586621679430392"><span class="annot"><span class="annottext">LOAnyType
+</span><a href="#local-6989586621679430392"><span class="hs-identifier hs-var">laty</span></a></span></span><span> </span><span id="local-6989586621679430393"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679430393"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>                  </span><span class="annot"><span class="annottext">LOAnyType -&gt; [LOAnyType] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#elem"><span class="hs-identifier hs-var">elem</span></a></span><span> </span><span class="annot"><span class="annottext">LOAnyType
+</span><a href="#local-6989586621679430392"><span class="hs-identifier hs-var">laty</span></a></span><span> </span><span class="annot"><span class="annottext">[LOAnyType]
+</span><a href="#local-6989586621679430391"><span class="hs-identifier hs-var">constraint</span></a></span><span>
+</span><span id="line-75"></span><span>                  </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Bool
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath -&gt; FilePath -&gt; FilePath
+forall r. PrintfType r =&gt; FilePath -&gt; r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Unexpected LOAny while parsing %s -- %s: %s&quot;</span></span><span>
+</span><span id="line-76"></span><span>                                   </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679430382"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LOAnyType -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">LOAnyType
+</span><a href="#local-6989586621679430392"><span class="hs-identifier hs-var">laty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; FilePath
+forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679430393"><span class="hs-identifier hs-var">obj</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>                </span><span class="annot"><span class="annottext">LOBody
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>             </span><span class="annot"><span class="annottext">(LOBody -&gt; Bool) -&gt; (LogObject -&gt; LOBody) -&gt; LogObject -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject -&gt; LOBody
+</span><a href="Cardano.Unlog.LogObject.html#loBody"><span class="hs-identifier hs-var">loBody</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LogObject] -&gt; [LogObject])
+-&gt; (ByteString -&gt; [LogObject]) -&gt; ByteString -&gt; [LogObject]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">(LogObject -&gt; Bool) -&gt; [LogObject] -&gt; [LogObject]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (LogObject -&gt; Bool) -&gt; LogObject -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; LOBody -&gt; Bool
+</span><a href="#local-6989586621679430397"><span class="hs-identifier hs-var">isDecodeError</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><span class="hs-string">&quot;Error in $: not enough input&quot;</span></span><span> </span><span class="annot"><span class="annottext">(LOBody -&gt; Bool) -&gt; (LogObject -&gt; LOBody) -&gt; LogObject -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject -&gt; LOBody
+</span><a href="Cardano.Unlog.LogObject.html#loBody"><span class="hs-identifier hs-var">loBody</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([LogObject] -&gt; [LogObject])
+-&gt; (ByteString -&gt; [LogObject]) -&gt; ByteString -&gt; [LogObject]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">(ByteString -&gt; LogObject) -&gt; [ByteString] -&gt; [LogObject]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679430398"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679430398"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; Either FilePath LogObject
+forall a. FromJSON a =&gt; ByteString -&gt; Either FilePath a
+</span><span class="hs-identifier hs-var">AE.eitherDecode</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679430398"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">Either FilePath LogObject
+-&gt; (Either FilePath LogObject -&gt; LogObject) -&gt; LogObject
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">(FilePath -&gt; LogObject)
+-&gt; (LogObject -&gt; LogObject)
+-&gt; Either FilePath LogObject
+-&gt; LogObject
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime -&gt; TextRef -&gt; TextRef -&gt; Host -&gt; TId -&gt; LOBody -&gt; LogObject
+</span><a href="Cardano.Unlog.LogObject.html#LogObject"><span class="hs-identifier hs-var">LogObject</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="Cardano.Util.html#zeroUTCTime"><span class="hs-identifier hs-var">zeroUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">TextRef
+</span><span class="hs-string">&quot;Cardano.Analysis.DecodeError&quot;</span></span><span> </span><span class="annot"><span class="annottext">TextRef
+</span><span class="hs-string">&quot;DecodeError&quot;</span></span><span> </span><span class="annot"><span class="annottext">Host
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortText -&gt; TId
+</span><a href="Cardano.Analysis.API.Ground.html#TId"><span class="hs-identifier hs-var">TId</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><span class="hs-string">&quot;0&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>             </span><span class="annot"><span class="annottext">(LOBody -&gt; LogObject)
+-&gt; (FilePath -&gt; LOBody) -&gt; FilePath -&gt; LogObject
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; ShortText -&gt; LOBody
+</span><a href="Cardano.Unlog.LogObject.html#LODecodeError"><span class="hs-identifier hs-var">LODecodeError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ShortText
+</span><a href="file:///nix/store/8j7rsw1lka5zxhyns743lxdhma93q2zx-text-short-lib-text-short-0.1.6-haddock-doc/share/doc/text-short/html/src/Data.Text.Short.Internal.html#fromByteString"><span class="hs-identifier hs-var">Text.fromByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LBS.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679430398"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>                               </span><span class="annot"><span class="annottext">Maybe ShortText -&gt; (Maybe ShortText -&gt; ShortText) -&gt; ShortText
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; Maybe ShortText -&gt; ShortText
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><span class="hs-string">&quot;#&lt;ERROR decoding input fromByteString&gt;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>              </span><span class="annot"><span class="annottext">(ShortText -&gt; LOBody)
+-&gt; (FilePath -&gt; ShortText) -&gt; FilePath -&gt; LOBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ShortText
+</span><a href="file:///nix/store/8j7rsw1lka5zxhyns743lxdhma93q2zx-text-short-lib-text-short-0.1.6-haddock-doc/share/doc/text-short/html/src/Data.Text.Short.Internal.html#fromText"><span class="hs-identifier hs-var">Text.fromText</span></a></span><span>
+</span><span id="line-87"></span><span>              </span><span class="annot"><span class="annottext">(Text -&gt; ShortText) -&gt; (FilePath -&gt; Text) -&gt; FilePath -&gt; ShortText
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">TS.pack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>            </span><span class="annot"><span class="annottext">LogObject -&gt; LogObject
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">([ByteString] -&gt; [LogObject])
+-&gt; (ByteString -&gt; [ByteString]) -&gt; ByteString -&gt; [LogObject]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Bool) -&gt; [ByteString] -&gt; [ByteString]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (ByteString -&gt; Bool) -&gt; ByteString -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#null"><span class="hs-identifier hs-var">LBS.null</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">([ByteString] -&gt; [ByteString])
+-&gt; (ByteString -&gt; [ByteString]) -&gt; ByteString -&gt; [ByteString]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html#split"><span class="hs-identifier hs-var">LBS.split</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; Int -&gt; Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#fromEnum"><span class="hs-identifier hs-var">fromEnum</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>   </span><span id="local-6989586621679430397"><span class="annot"><span class="annottext">isDecodeError :: ShortText -&gt; LOBody -&gt; Bool
+</span><a href="#local-6989586621679430397"><span class="hs-identifier hs-var hs-var">isDecodeError</span></a></span></span><span> </span><span id="local-6989586621679430413"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430413"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-93"></span><span>     </span><span class="annot"><a href="Cardano.Unlog.LogObject.html#LODecodeError"><span class="hs-identifier hs-type">LODecodeError</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679430414"><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430414"><span class="hs-identifier hs-var">x'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430413"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText -&gt; ShortText -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ShortText
+</span><a href="#local-6989586621679430414"><span class="hs-identifier hs-var">x'</span></a></span><span>
+</span><span id="line-94"></span><span>     </span><span class="annot"><span class="annottext">LOBody
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-95"></span></pre></body></html>

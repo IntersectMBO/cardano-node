@@ -1,0 +1,262 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -funbox-strict-fields #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Module      : Criterion.Monad.Internal</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Copyright   : (c) 2009 Neil Brown</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- License     : BSD-style</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Maintainer  : bos@serpentine.com</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Portability : GHC</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- The environment in which most criterion code executes.</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Criterion.Monad.Internal</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>      </span><span class="annot"><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier">Criterion</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.Monad.Internal.html#Crit"><span class="hs-identifier">Crit</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier">MonadThrow</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier">MonadCatch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier">MonadMask</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html"><span class="hs-identifier">Control.Monad.Fail</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Fail</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#MonadFail"><span class="hs-identifier">MonadFail</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier">MonadReader</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier">ReaderT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Trans.html"><span class="hs-identifier">Control.Monad.Trans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Instances</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Types.html"><span class="hs-identifier">Criterion.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier">Config</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier">IORef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude.Compat</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Random.MWC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">GenIO</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="Crit"><span class="annot"><a href="Criterion.Monad.Internal.html#Crit"><span class="hs-identifier hs-var">Crit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Crit"><span class="annot"><a href="Criterion.Monad.Internal.html#Crit"><span class="hs-identifier hs-var">Crit</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-32"></span><span>    </span><span id="config"><span class="annot"><span class="annottext">Crit -&gt; Config
+</span><a href="Criterion.Monad.Internal.html#config"><span class="hs-identifier hs-var hs-var">config</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gen"><span class="annot"><span class="annottext">Crit -&gt; IORef (Maybe GenIO)
+</span><a href="Criterion.Monad.Internal.html#gen"><span class="hs-identifier hs-var hs-var">gen</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">GenIO</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | The monad in which most criterion code executes.</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">newtype</span><span> </span><span id="Criterion"><span class="annot"><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier hs-var">Criterion</span></a></span></span><span> </span><span id="local-6989586621679122432"><span class="annot"><a href="#local-6989586621679122432"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Criterion"><span class="annot"><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier hs-var">Criterion</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-38"></span><span>      </span><span id="runCriterion"><span class="annot"><span class="annottext">forall a. Criterion a -&gt; ReaderT Crit IO a
+</span><a href="Criterion.Monad.Internal.html#runCriterion"><span class="hs-identifier hs-var hs-var">runCriterion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="Criterion.Monad.Internal.html#Crit"><span class="hs-identifier hs-type">Crit</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679122432"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679122549"><span id="local-6989586621679122555"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Criterion a -&gt; Criterion b)
+-&gt; (forall a b. a -&gt; Criterion b -&gt; Criterion a)
+-&gt; Functor Criterion
+forall a b. a -&gt; Criterion b -&gt; Criterion a
+forall a b. (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+fmap :: forall a b. (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+$c&lt;$ :: forall a b. a -&gt; Criterion b -&gt; Criterion a
+&lt;$ :: forall a b. a -&gt; Criterion b -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122565"><span id="local-6989586621679122571"><span id="local-6989586621679122576"><span id="local-6989586621679122581"><span id="local-6989586621679122586"><span class="annot"><span class="annottext">Functor Criterion
+Functor Criterion =&gt;
+(forall a. a -&gt; Criterion a)
+-&gt; (forall a b. Criterion (a -&gt; b) -&gt; Criterion a -&gt; Criterion b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; Criterion a -&gt; Criterion b -&gt; Criterion c)
+-&gt; (forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b)
+-&gt; (forall a b. Criterion a -&gt; Criterion b -&gt; Criterion a)
+-&gt; Applicative Criterion
+forall a. a -&gt; Criterion a
+forall a b. Criterion a -&gt; Criterion b -&gt; Criterion a
+forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+forall a b. Criterion (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; Criterion a -&gt; Criterion b -&gt; Criterion c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+$cpure :: forall a. a -&gt; Criterion a
+pure :: forall a. a -&gt; Criterion a
+$c&lt;*&gt; :: forall a b. Criterion (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+&lt;*&gt; :: forall a b. Criterion (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+$cliftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; Criterion a -&gt; Criterion b -&gt; Criterion c
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; Criterion a -&gt; Criterion b -&gt; Criterion c
+$c*&gt; :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+*&gt; :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+$c&lt;* :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion a
+&lt;* :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122596"><span id="local-6989586621679122602"><span id="local-6989586621679122607"><span class="annot"><span class="annottext">Applicative Criterion
+Applicative Criterion =&gt;
+(forall a b. Criterion a -&gt; (a -&gt; Criterion b) -&gt; Criterion b)
+-&gt; (forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b)
+-&gt; (forall a. a -&gt; Criterion a)
+-&gt; Monad Criterion
+forall a. a -&gt; Criterion a
+forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+forall a b. Criterion a -&gt; (a -&gt; Criterion b) -&gt; Criterion b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall a b. Criterion a -&gt; (a -&gt; Criterion b) -&gt; Criterion b
+&gt;&gt;= :: forall a b. Criterion a -&gt; (a -&gt; Criterion b) -&gt; Criterion b
+$c&gt;&gt; :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+&gt;&gt; :: forall a b. Criterion a -&gt; Criterion b -&gt; Criterion b
+$creturn :: forall a. a -&gt; Criterion a
+return :: forall a. a -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122617"><span class="annot"><span class="annottext">Monad Criterion
+Monad Criterion =&gt;
+(forall a. String -&gt; Criterion a) -&gt; MonadFail Criterion
+forall a. String -&gt; Criterion a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. String -&gt; m a) -&gt; MonadFail m
+$cfail :: forall a. String -&gt; Criterion a
+fail :: forall a. String -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#MonadFail"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">Fail.MonadFail</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122628"><span class="annot"><span class="annottext">Monad Criterion
+Monad Criterion =&gt;
+(forall a. IO a -&gt; Criterion a) -&gt; MonadIO Criterion
+forall a. IO a -&gt; Criterion a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. IO a -&gt; m a) -&gt; MonadIO m
+$cliftIO :: forall a. IO a -&gt; Criterion a
+liftIO :: forall a. IO a -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></a></span></span><span>
+</span><span id="line-40"></span><span>               </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122644"><span class="annot"><span class="annottext">Monad Criterion
+Monad Criterion =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; Criterion a)
+-&gt; MonadThrow Criterion
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; Criterion a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; m a)
+-&gt; MonadThrow m
+$cthrowM :: forall e a. (HasCallStack, Exception e) =&gt; e -&gt; Criterion a
+throwM :: forall e a. (HasCallStack, Exception e) =&gt; e -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadThrow</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122665"><span class="annot"><span class="annottext">MonadThrow Criterion
+MonadThrow Criterion =&gt;
+(forall e a.
+ (HasCallStack, Exception e) =&gt;
+ Criterion a -&gt; (e -&gt; Criterion a) -&gt; Criterion a)
+-&gt; MonadCatch Criterion
+forall e a.
+(HasCallStack, Exception e) =&gt;
+Criterion a -&gt; (e -&gt; Criterion a) -&gt; Criterion a
+forall (m :: * -&gt; *).
+MonadThrow m =&gt;
+(forall e a.
+ (HasCallStack, Exception e) =&gt;
+ m a -&gt; (e -&gt; m a) -&gt; m a)
+-&gt; MonadCatch m
+$ccatch :: forall e a.
+(HasCallStack, Exception e) =&gt;
+Criterion a -&gt; (e -&gt; Criterion a) -&gt; Criterion a
+catch :: forall e a.
+(HasCallStack, Exception e) =&gt;
+Criterion a -&gt; (e -&gt; Criterion a) -&gt; Criterion a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadCatch"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadCatch</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679122684"><span id="local-6989586621679122696"><span id="local-6989586621679122707"><span class="annot"><span class="annottext">MonadCatch Criterion
+MonadCatch Criterion =&gt;
+(forall b.
+ HasCallStack =&gt;
+ ((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+ -&gt; Criterion b)
+-&gt; (forall b.
+    HasCallStack =&gt;
+    ((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+    -&gt; Criterion b)
+-&gt; (forall a b c.
+    HasCallStack =&gt;
+    Criterion a
+    -&gt; (a -&gt; ExitCase b -&gt; Criterion c)
+    -&gt; (a -&gt; Criterion b)
+    -&gt; Criterion (b, c))
+-&gt; MonadMask Criterion
+forall b.
+HasCallStack =&gt;
+((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+-&gt; Criterion b
+forall a b c.
+HasCallStack =&gt;
+Criterion a
+-&gt; (a -&gt; ExitCase b -&gt; Criterion c)
+-&gt; (a -&gt; Criterion b)
+-&gt; Criterion (b, c)
+forall (m :: * -&gt; *).
+MonadCatch m =&gt;
+(forall b. HasCallStack =&gt; ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall b.
+    HasCallStack =&gt;
+    ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall a b c.
+    HasCallStack =&gt;
+    m a -&gt; (a -&gt; ExitCase b -&gt; m c) -&gt; (a -&gt; m b) -&gt; m (b, c))
+-&gt; MonadMask m
+$cmask :: forall b.
+HasCallStack =&gt;
+((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+-&gt; Criterion b
+mask :: forall b.
+HasCallStack =&gt;
+((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+-&gt; Criterion b
+$cuninterruptibleMask :: forall b.
+HasCallStack =&gt;
+((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+-&gt; Criterion b
+uninterruptibleMask :: forall b.
+HasCallStack =&gt;
+((forall a. Criterion a -&gt; Criterion a) -&gt; Criterion b)
+-&gt; Criterion b
+$cgeneralBracket :: forall a b c.
+HasCallStack =&gt;
+Criterion a
+-&gt; (a -&gt; ExitCase b -&gt; Criterion c)
+-&gt; (a -&gt; Criterion b)
+-&gt; Criterion (b, c)
+generalBracket :: forall a b c.
+HasCallStack =&gt;
+Criterion a
+-&gt; (a -&gt; ExitCase b -&gt; Criterion c)
+-&gt; (a -&gt; Criterion b)
+-&gt; Criterion (b, c)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadMask</span></a></span></span></span></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679122722"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span> </span><span class="annot"><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier hs-type">Criterion</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679122730"><span class="annot"><span class="annottext">ask :: Criterion Config
+</span><a href="#local-6989586621679122730"><span class="hs-identifier hs-var hs-var hs-var hs-var">ask</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Crit -&gt; Config
+</span><a href="Criterion.Monad.Internal.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">(Crit -&gt; Config) -&gt; Criterion Crit -&gt; Criterion Config
+forall a b. (a -&gt; b) -&gt; Criterion a -&gt; Criterion b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Crit IO Crit -&gt; Criterion Crit
+forall a. ReaderT Crit IO a -&gt; Criterion a
+</span><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier hs-var">Criterion</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT Crit IO Crit
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679122734"><span class="annot"><span class="annottext">local :: forall a. (Config -&gt; Config) -&gt; Criterion a -&gt; Criterion a
+</span><a href="#local-6989586621679122734"><span class="hs-identifier hs-var hs-var hs-var hs-var">local</span></a></span></span><span> </span><span id="local-6989586621679122736"><span class="annot"><span class="annottext">Config -&gt; Config
+</span><a href="#local-6989586621679122736"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT Crit IO a -&gt; Criterion a
+forall a. ReaderT Crit IO a -&gt; Criterion a
+</span><a href="Criterion.Monad.Internal.html#Criterion"><span class="hs-identifier hs-var">Criterion</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT Crit IO a -&gt; Criterion a)
+-&gt; (Criterion a -&gt; ReaderT Crit IO a) -&gt; Criterion a -&gt; Criterion a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Crit -&gt; Crit) -&gt; ReaderT Crit IO a -&gt; ReaderT Crit IO a
+forall a. (Crit -&gt; Crit) -&gt; ReaderT Crit IO a -&gt; ReaderT Crit IO a
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; r) -&gt; m a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#local"><span class="hs-identifier hs-var">local</span></a></span><span> </span><span class="annot"><span class="annottext">Crit -&gt; Crit
+</span><a href="#local-6989586621679122738"><span class="hs-identifier hs-var">fconfig</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT Crit IO a -&gt; ReaderT Crit IO a)
+-&gt; (Criterion a -&gt; ReaderT Crit IO a)
+-&gt; Criterion a
+-&gt; ReaderT Crit IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Criterion a -&gt; ReaderT Crit IO a
+forall a. Criterion a -&gt; ReaderT Crit IO a
+</span><a href="Criterion.Monad.Internal.html#runCriterion"><span class="hs-identifier hs-var">runCriterion</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679122738"><span class="annot"><span class="annottext">fconfig :: Crit -&gt; Crit
+</span><a href="#local-6989586621679122738"><span class="hs-identifier hs-var hs-var">fconfig</span></a></span></span><span> </span><span id="local-6989586621679122739"><span class="annot"><span class="annottext">Crit
+</span><a href="#local-6989586621679122739"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Crit
+</span><a href="#local-6989586621679122739"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Criterion.Monad.Internal.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679122736"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Monad.Internal.html#config"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679122739"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span></pre></body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module can be used by providers to perform colorful/formatted</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- output and possibly re-use tasty's own output formats.</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Providers.ConsoleFormat</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier">ResultDetailsPrinter</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier">ConsoleFormat</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormatPrinter"><span class="hs-identifier">ConsoleFormatPrinter</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier">noResultDetails</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#failFormat"><span class="hs-identifier">failFormat</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#infoFailFormat"><span class="hs-identifier">infoFailFormat</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#infoOkFormat"><span class="hs-identifier">infoOkFormat</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#okFormat"><span class="hs-identifier">okFormat</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#skippedFormat"><span class="hs-identifier">skippedFormat</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Console.ANSI</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- | Console output format</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="ConsoleFormat"><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConsoleFormat"><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="consoleIntensity"><span class="annot"><span class="annottext">ConsoleFormat -&gt; ConsoleIntensity
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#consoleIntensity"><span class="hs-identifier hs-var hs-var">consoleIntensity</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsoleIntensity</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="colorIntensity"><span class="annot"><span class="annottext">ConsoleFormat -&gt; ColorIntensity
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#colorIntensity"><span class="hs-identifier hs-var hs-var">colorIntensity</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ColorIntensity</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="color"><span class="annot"><span class="annottext">ConsoleFormat -&gt; Color
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#color"><span class="hs-identifier hs-var hs-var">color</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Color</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | Type of console format printer functions</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">type</span><span> </span><span id="ConsoleFormatPrinter"><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormatPrinter"><span class="hs-identifier hs-var">ConsoleFormatPrinter</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ selected console format</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>         </span><span class="annot"><span class="hs-comment">-- ^ action to be executed with active console format</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | Noop result details printer. The default for most providers.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier hs-type">noResultDetails</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-type">ResultDetailsPrinter</span></a></span><span>
+</span><span id="line-41"></span><span id="noResultDetails"><span class="annot"><span class="annottext">noResultDetails :: ResultDetailsPrinter
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#noResultDetails"><span class="hs-identifier hs-var hs-var">noResultDetails</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; ConsoleFormatPrinter -&gt; IO ()) -&gt; ResultDetailsPrinter
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-var">ResultDetailsPrinter</span></a></span><span> </span><span class="annot"><span class="annottext">((Int -&gt; ConsoleFormatPrinter -&gt; IO ()) -&gt; ResultDetailsPrinter)
+-&gt; (IO () -&gt; Int -&gt; ConsoleFormatPrinter -&gt; IO ())
+-&gt; IO ()
+-&gt; ResultDetailsPrinter
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(ConsoleFormatPrinter -&gt; IO ())
+-&gt; Int -&gt; ConsoleFormatPrinter -&gt; IO ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">((ConsoleFormatPrinter -&gt; IO ())
+ -&gt; Int -&gt; ConsoleFormatPrinter -&gt; IO ())
+-&gt; (IO () -&gt; ConsoleFormatPrinter -&gt; IO ())
+-&gt; IO ()
+-&gt; Int
+-&gt; ConsoleFormatPrinter
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ConsoleFormatPrinter -&gt; IO ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ResultDetailsPrinter) -&gt; IO () -&gt; ResultDetailsPrinter
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | An action that prints additional information about a test using</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- colors/formatting; see 'Test.Tasty.Providers.testFailedDetails' and</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- 'Test.Tasty.Runners.resultDetailsPrinter'.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- As input, this action is provided with the current indentation level and</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- a 'ConsoleFormatPrinter', which tells it how perform output.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- This is a newtype to allow a 'Show' instance.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">newtype</span><span> </span><span id="ResultDetailsPrinter"><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-var">ResultDetailsPrinter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ResultDetailsPrinter"><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-var">ResultDetailsPrinter</span></a></span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormatPrinter"><span class="hs-identifier hs-type">ConsoleFormatPrinter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679094032"><span id="local-6989586621679094037"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ResultDetailsPrinter"><span class="hs-identifier hs-type">ResultDetailsPrinter</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679094040"><span class="annot"><span class="annottext">show :: ResultDetailsPrinter -&gt; String
+</span><a href="#local-6989586621679094040"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span id="local-6989586621679094042"><span class="annot"><span class="annottext">ResultDetailsPrinter
+</span><a href="#local-6989586621679094042"><span class="hs-identifier hs-var">_printer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ResultDetailsPrinter&quot;</span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | Format used to display failures</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#failFormat"><span class="hs-identifier hs-type">failFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span>
+</span><span id="line-63"></span><span id="failFormat"><span class="annot"><span class="annottext">failFormat :: ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#failFormat"><span class="hs-identifier hs-var hs-var">failFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; ColorIntensity -&gt; Color -&gt; ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">BoldIntensity</span></span><span>   </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Vivid</span></span><span> </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Red</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Format used to display additional information on failures</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#infoFailFormat"><span class="hs-identifier hs-type">infoFailFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span>
+</span><span id="line-69"></span><span id="infoFailFormat"><span class="annot"><span class="annottext">infoFailFormat :: ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#infoFailFormat"><span class="hs-identifier hs-var hs-var">infoFailFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; ColorIntensity -&gt; Color -&gt; ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">NormalIntensity</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Dull</span></span><span>  </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Red</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- | Format used to display sucesses</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#okFormat"><span class="hs-identifier hs-type">okFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span>
+</span><span id="line-75"></span><span id="okFormat"><span class="annot"><span class="annottext">okFormat :: ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#okFormat"><span class="hs-identifier hs-var hs-var">okFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; ColorIntensity -&gt; Color -&gt; ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">NormalIntensity</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Dull</span></span><span>  </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Green</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Format used to display additional information on sucesses</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#infoOkFormat"><span class="hs-identifier hs-type">infoOkFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span>
+</span><span id="line-81"></span><span id="infoOkFormat"><span class="annot"><span class="annottext">infoOkFormat :: ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#infoOkFormat"><span class="hs-identifier hs-var hs-var">infoOkFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; ColorIntensity -&gt; Color -&gt; ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">NormalIntensity</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Dull</span></span><span>  </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">White</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Format used to display skipped tests</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- @since 1.3.1</span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#skippedFormat"><span class="hs-identifier hs-type">skippedFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-type">ConsoleFormat</span></a></span><span>
+</span><span id="line-87"></span><span id="skippedFormat"><span class="annot"><span class="annottext">skippedFormat :: ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#skippedFormat"><span class="hs-identifier hs-var hs-var">skippedFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity -&gt; ColorIntensity -&gt; Color -&gt; ConsoleFormat
+</span><a href="Test.Tasty.Providers.ConsoleFormat.html#ConsoleFormat"><span class="hs-identifier hs-var">ConsoleFormat</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleIntensity
+</span><span class="hs-identifier hs-var">NormalIntensity</span></span><span> </span><span class="annot"><span class="annottext">ColorIntensity
+</span><span class="hs-identifier hs-var">Dull</span></span><span>  </span><span class="annot"><span class="annottext">Color
+</span><span class="hs-identifier hs-var">Magenta</span></span><span>
+</span><span id="line-88"></span></pre></body></html>

@@ -1,0 +1,727 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsection</span><span class="hs-special">{</span><span class="hs-identifier">Cardano.BM.Backend.Prometheus</span><span class="hs-special">}</span><span>
+</span><span id="line-3"></span><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-keyword">module</span><span class="hs-glyph">:</span><span class="hs-identifier">Cardano.BM.Backend.Prometheus</span><span class="hs-special">}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-operator">%</span><span class="hs-keyword">if</span><span> </span><span class="hs-identifier">style</span><span> </span><span class="hs-operator">==</span><span> </span><span class="hs-identifier">newcode</span><span>
+</span><span id="line-6"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE MultiWayIf #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.BM.Backend.Prometheus</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#spawnPrometheus"><span class="hs-identifier">spawnPrometheus</span></a></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Async</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html"><span class="hs-identifier">Data.ByteString.Builder</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#find"><span class="hs-identifier">find</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#partition"><span class="hs-identifier">partition</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromJust"><span class="hs-identifier">fromJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier">encodeUtf8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Read.html"><span class="hs-identifier">Data.Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Read.html#double"><span class="hs-identifier">double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier">labelThread</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier">myThreadId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.HTTP.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">status200</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.Wai</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Wai</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.Wai.Handler.Warp</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Warp</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Metrics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">sampleAll</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Remote.Monitoring.Wai</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Wai</span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span class="hs-operator">%</span><span class="hs-identifier">endif</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Spawn</span><span> </span><span class="hs-identifier">Prometheus</span><span> </span><span class="hs-identifier">client</span><span> </span><span class="hs-identifier">from</span><span> </span><span class="hs-identifier">existing</span><span> </span><span class="hs-identifier">EKG</span><span> </span><span class="hs-identifier">server</span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-glyph">:</span><span class="hs-identifier">spawnPrometheus</span><span class="hs-special">}</span><span class="hs-glyph">\</span><span class="hs-identifier">index</span><span class="hs-special">{</span><span class="hs-identifier">spawnPrometheus</span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="MetricsGroup"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-var">MetricsGroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MetricsGroup"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-var">MetricsGroup</span></a></span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="namespace"><span class="annot"><span class="annottext">MetricsGroup -&gt; Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#namespace"><span class="hs-identifier hs-var hs-var">namespace</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="metrics"><span class="annot"><span class="annottext">MetricsGroup -&gt; [Metric]
+</span><a href="Cardano.BM.Backend.Prometheus.html#metrics"><span class="hs-identifier hs-var hs-var">metrics</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106569"><span id="local-6989586621679106571"><span class="annot"><span class="annottext">(forall x. MetricsGroup -&gt; Rep MetricsGroup x)
+-&gt; (forall x. Rep MetricsGroup x -&gt; MetricsGroup)
+-&gt; Generic MetricsGroup
+forall x. Rep MetricsGroup x -&gt; MetricsGroup
+forall x. MetricsGroup -&gt; Rep MetricsGroup x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. MetricsGroup -&gt; Rep MetricsGroup x
+from :: forall x. MetricsGroup -&gt; Rep MetricsGroup x
+$cto :: forall x. Rep MetricsGroup x -&gt; MetricsGroup
+to :: forall x. Rep MetricsGroup x -&gt; MetricsGroup
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679106575"><span id="local-6989586621679106581"><span id="local-6989586621679106584"><span id="local-6989586621679106587"><span id="local-6989586621679106590"><span class="annot"><span class="annottext">[MetricsGroup] -&gt; Encoding
+[MetricsGroup] -&gt; Value
+MetricsGroup -&gt; Bool
+MetricsGroup -&gt; Encoding
+MetricsGroup -&gt; Value
+(MetricsGroup -&gt; Value)
+-&gt; (MetricsGroup -&gt; Encoding)
+-&gt; ([MetricsGroup] -&gt; Value)
+-&gt; ([MetricsGroup] -&gt; Encoding)
+-&gt; (MetricsGroup -&gt; Bool)
+-&gt; ToJSON MetricsGroup
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: MetricsGroup -&gt; Value
+toJSON :: MetricsGroup -&gt; Value
+$ctoEncoding :: MetricsGroup -&gt; Encoding
+toEncoding :: MetricsGroup -&gt; Encoding
+$ctoJSONList :: [MetricsGroup] -&gt; Value
+toJSONList :: [MetricsGroup] -&gt; Value
+$ctoEncodingList :: [MetricsGroup] -&gt; Encoding
+toEncodingList :: [MetricsGroup] -&gt; Encoding
+$comitField :: MetricsGroup -&gt; Bool
+omitField :: MetricsGroup -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">A.ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">data</span><span> </span><span id="Metric"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-var">Metric</span></a></span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="NoMetric"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NoMetric"><span class="hs-identifier hs-var">NoMetric</span></a></span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="Metric"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-var">Metric</span></a></span></span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-special">{</span><span> </span><span id="mName"><span class="annot"><span class="annottext">Metric -&gt; Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mName"><span class="hs-identifier hs-var hs-var">mName</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="mType"><span class="annot"><span class="annottext">Metric -&gt; Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mType"><span class="hs-identifier hs-var hs-var">mType</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="mLabel"><span class="annot"><span class="annottext">Metric -&gt; Maybe Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mLabel"><span class="hs-identifier hs-var hs-var">mLabel</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="mNumber"><span class="annot"><span class="annottext">Metric -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#mNumber"><span class="hs-identifier hs-var hs-var">mNumber</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Number"><span class="hs-identifier hs-type">Number</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679106699"><span id="local-6989586621679106702"><span id="local-6989586621679106705"><span id="local-6989586621679106708"><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679106736"><span class="annot"><span class="annottext">toJSON :: Metric -&gt; Value
+</span><a href="#local-6989586621679106736"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><span class="annottext">Metric
+</span><a href="Cardano.BM.Backend.Prometheus.html#NoMetric"><span class="hs-identifier hs-var">NoMetric</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier hs-var">A.Null</span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span> </span><span id="local-6989586621679106739"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106739"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679106740"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106740"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span id="local-6989586621679106741"><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106741"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;name&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106739"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;type&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106740"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;value&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Number -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106741"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span> </span><span id="local-6989586621679106743"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106743"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679106744"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106744"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679106745"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106745"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679106746"><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106746"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">A.object</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;name&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106743"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;type&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106744"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;label&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Text -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106745"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;value&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Number -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106746"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">data</span><span> </span><span id="Number"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Number"><span class="hs-identifier hs-var">Number</span></a></span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="NumberInt"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-var">NumberInt</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="NumberReal"><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberReal"><span class="hs-identifier hs-var">NumberReal</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679106751"><span id="local-6989586621679106754"><span id="local-6989586621679106757"><span id="local-6989586621679106760"><span class="annot"><span class="hs-identifier hs-type">A.ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Number"><span class="hs-identifier hs-type">Number</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679106768"><span class="annot"><span class="annottext">toJSON :: Number -&gt; Value
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-type">NumberInt</span></a></span><span> </span><span id="local-6989586621679106769"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679106769"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">A.Number</span></span><span> </span><span class="annot"><span class="annottext">(Scientific -&gt; Value) -&gt; Scientific -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Scientific
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679106769"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberReal"><span class="hs-identifier hs-type">NumberReal</span></a></span><span> </span><span id="local-6989586621679106771"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679106771"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">A.Number</span></span><span> </span><span class="annot"><span class="annottext">(Scientific -&gt; Value) -&gt; Scientific -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Scientific
+forall a. Fractional a =&gt; Rational -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromRational"><span class="hs-identifier hs-var">fromRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Rational
+forall a. Real a =&gt; a -&gt; Rational
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#toRational"><span class="hs-identifier hs-var">toRational</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679106771"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#spawnPrometheus"><span class="hs-identifier hs-type">spawnPrometheus</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Wai.Server</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Warp.HostPreference</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Async.Async</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span id="spawnPrometheus"><span class="annot"><span class="annottext">spawnPrometheus :: Server -&gt; HostPreference -&gt; Int -&gt; Maybe Text -&gt; IO (Async ())
+</span><a href="Cardano.BM.Backend.Prometheus.html#spawnPrometheus"><span class="hs-identifier hs-var hs-var">spawnPrometheus</span></a></span></span><span> </span><span id="local-6989586621679106772"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679106772"><span class="hs-identifier hs-var">ekg</span></a></span></span><span> </span><span id="local-6989586621679106773"><span class="annot"><span class="annottext">HostPreference
+</span><a href="#local-6989586621679106773"><span class="hs-identifier hs-var">host</span></a></span></span><span> </span><span id="local-6989586621679106774"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679106774"><span class="hs-identifier hs-var">port</span></a></span></span><span> </span><span id="local-6989586621679106775"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679106775"><span class="hs-identifier hs-var">prometheusOutput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO (Async ())
+forall a. IO a -&gt; IO (Async a)
+</span><span class="hs-identifier hs-var">Async.async</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (Async ())) -&gt; IO () -&gt; IO (Async ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span> </span><span class="annot"><span class="annottext">IO ThreadId -&gt; (ThreadId -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(ThreadId -&gt; String -&gt; IO ()) -&gt; String -&gt; ThreadId -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier hs-var">labelThread</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Prometheus (lobemo-backend-ekg)&quot;</span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Settings -&gt; Application -&gt; IO ()
+</span><span class="hs-identifier hs-var">Warp.runSettings</span></span><span> </span><span class="annot"><span class="annottext">Settings
+</span><a href="#local-6989586621679106779"><span class="hs-identifier hs-var">settings</span></a></span><span> </span><span class="annot"><span class="annottext">Application
+</span><a href="#local-6989586621679106780"><span class="hs-identifier hs-var">site</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><a href="#local-6989586621679106779"><span class="hs-identifier hs-type">settings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Warp.Settings</span></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679106779"><span class="annot"><span class="annottext">settings :: Settings
+</span><a href="#local-6989586621679106779"><span class="hs-identifier hs-var hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Settings -&gt; Settings
+</span><span class="hs-identifier hs-var">Warp.setPort</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679106774"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">(Settings -&gt; Settings)
+-&gt; (Settings -&gt; Settings) -&gt; Settings -&gt; Settings
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HostPreference -&gt; Settings -&gt; Settings
+</span><span class="hs-identifier hs-var">Warp.setHost</span></span><span> </span><span class="annot"><span class="annottext">HostPreference
+</span><a href="#local-6989586621679106773"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">(Settings -&gt; Settings) -&gt; Settings -&gt; Settings
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Settings
+</span><span class="hs-identifier hs-var">Warp.defaultSettings</span></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><a href="#local-6989586621679106780"><span class="hs-identifier hs-type">site</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Wai.Application</span></span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679106780"><span class="annot"><span class="annottext">site :: Application
+</span><a href="#local-6989586621679106780"><span class="hs-identifier hs-var hs-var">site</span></a></span></span><span> </span><span id="local-6989586621679106785"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679106785"><span class="hs-identifier hs-var">_request</span></a></span></span><span> </span><span id="local-6989586621679106786"><span class="annot"><span class="annottext">Response -&gt; IO ResponseReceived
+</span><a href="#local-6989586621679106786"><span class="hs-identifier hs-var">respond</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-comment">-- We ignore the request and simple respond with the data.</span><span>
+</span><span id="line-87"></span><span>        </span><span id="local-6989586621679106787"><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679106787"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Store -&gt; IO Sample
+</span><span class="hs-identifier hs-var">sampleAll</span></span><span> </span><span class="annot"><span class="annottext">(Store -&gt; IO Sample) -&gt; Store -&gt; IO Sample
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Server -&gt; Store
+</span><span class="hs-identifier hs-var">Wai.serverMetricStore</span></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679106772"><span class="hs-identifier hs-var">ekg</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679106792"><span class="annot"><span class="annottext">output :: ByteString
+</span><a href="#local-6989586621679106792"><span class="hs-identifier hs-var hs-var">output</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679106775"><span class="hs-identifier hs-var">prometheusOutput</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-89"></span><span>                         </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;json&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Sample -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#renderJSONOutput"><span class="hs-identifier hs-var">renderJSONOutput</span></a></span><span> </span><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679106787"><span class="hs-identifier hs-var">samples</span></a></span><span>
+</span><span id="line-90"></span><span>                         </span><span id="local-6989586621679106794"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679106794"><span class="hs-identifier hs-var">_other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Sample -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#renderSimpleOutput"><span class="hs-identifier hs-var">renderSimpleOutput</span></a></span><span> </span><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679106787"><span class="hs-identifier hs-var">samples</span></a></span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">Response -&gt; IO ResponseReceived
+</span><a href="#local-6989586621679106786"><span class="hs-identifier hs-var">respond</span></a></span><span> </span><span class="annot"><span class="annottext">(Response -&gt; IO ResponseReceived)
+-&gt; Response -&gt; IO ResponseReceived
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Status -&gt; ResponseHeaders -&gt; ByteString -&gt; Response
+</span><span class="hs-identifier hs-var">Wai.responseLBS</span></span><span> </span><span class="annot"><span class="annottext">Status
+</span><span class="hs-identifier hs-var">status200</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679106792"><span class="hs-identifier hs-var">output</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- Simple output: key value.</span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#renderSimpleOutput"><span class="hs-identifier hs-type">renderSimpleOutput</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span>
+</span><span id="line-95"></span><span id="renderSimpleOutput"><span class="annot"><span class="annottext">renderSimpleOutput :: Sample -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#renderSimpleOutput"><span class="hs-identifier hs-var hs-var">renderSimpleOutput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#toLazyByteString"><span class="hs-identifier hs-var">toLazyByteString</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; ByteString)
+-&gt; (Sample -&gt; Builder) -&gt; Sample -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Value)] -&gt; Builder
+</span><a href="#local-6989586621679106798"><span class="hs-identifier hs-var">renderSamples</span></a></span><span> </span><span class="annot"><span class="annottext">([(Text, Value)] -&gt; Builder)
+-&gt; (Sample -&gt; [(Text, Value)]) -&gt; Sample -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Sample -&gt; [(Text, Value)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HM.toList</span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><a href="#local-6989586621679106798"><span class="hs-identifier hs-type">renderSamples</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679106798"><span class="annot"><span class="annottext">renderSamples :: [(Text, Value)] -&gt; Builder
+</span><a href="#local-6989586621679106798"><span class="hs-identifier hs-var hs-var">renderSamples</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="#local-6989586621679106798"><span class="hs-identifier hs-var">renderSamples</span></a></span><span> </span><span id="local-6989586621679106800"><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106800"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Builder] -&gt; Builder
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106801"><span class="hs-identifier hs-var">sv</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Counter</span></span><span> </span><span id="local-6989586621679106803"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106803"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder -&gt; Builder
+</span><a href="#local-6989586621679106804"><span class="hs-identifier hs-var">renderNamedValue</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106805"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.ASCII.html#int64Dec"><span class="hs-identifier hs-var">int64Dec</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106803"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Gauge</span></span><span> </span><span id="local-6989586621679106808"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106808"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder -&gt; Builder
+</span><a href="#local-6989586621679106804"><span class="hs-identifier hs-var">renderNamedValue</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106805"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.ASCII.html#int64Dec"><span class="hs-identifier hs-var">int64Dec</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106808"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Label</span></span><span> </span><span id="local-6989586621679106810"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106810"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;{&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#isPrefixOf"><span class="hs-operator hs-var">`T.isPrefixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106810"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-105"></span><span>                            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Builder
+</span><a href="#local-6989586621679106812"><span class="hs-identifier hs-var">renderLabel</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106805"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106810"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-106"></span><span>                            </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="#local-6989586621679106813"><span class="hs-identifier hs-var">isFloat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106810"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>                                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder -&gt; Builder
+</span><a href="#local-6989586621679106804"><span class="hs-identifier hs-var">renderNamedValue</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106805"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Builder) -&gt; ByteString -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106810"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>                                </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Builder
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-109"></span><span>            </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Builder
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106805"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106805"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679106801"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106801"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106800"><span class="hs-identifier hs-var">samples</span></a></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="#local-6989586621679106804"><span class="hs-identifier hs-type">renderNamedValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679106804"><span class="annot"><span class="annottext">renderNamedValue :: Text -&gt; Builder -&gt; Builder
+</span><a href="#local-6989586621679106804"><span class="hs-identifier hs-var hs-var">renderNamedValue</span></a></span></span><span> </span><span id="local-6989586621679106815"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106815"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span id="local-6989586621679106816"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679106816"><span class="hs-identifier hs-var">bld</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Builder) -&gt; ByteString -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="#local-6989586621679106817"><span class="hs-identifier hs-var">prepareName</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106815"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679106816"><span class="hs-identifier hs-var">bld</span></a></span><span>
+</span><span id="line-117"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="#local-6989586621679106812"><span class="hs-identifier hs-type">renderLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679106812"><span class="annot"><span class="annottext">renderLabel :: Text -&gt; Text -&gt; Builder
+</span><a href="#local-6989586621679106812"><span class="hs-identifier hs-var hs-var">renderLabel</span></a></span></span><span> </span><span id="local-6989586621679106819"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106819"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span id="local-6989586621679106820"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106820"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Builder) -&gt; ByteString -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="#local-6989586621679106817"><span class="hs-identifier hs-var">prepareName</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106819"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#textToUtf8ByteString"><span class="hs-identifier hs-var">textToUtf8ByteString</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106820"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'1'</span></span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679106817"><span class="annot"><span class="annottext">prepareName :: Text -&gt; ByteString
+</span><a href="#local-6989586621679106817"><span class="hs-identifier hs-var hs-var">prepareName</span></a></span></span><span> </span><span id="local-6989586621679106841"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106841"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; Text -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#filter"><span class="hs-identifier hs-var">T.filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; String -&gt; Bool) -&gt; String -&gt; Char -&gt; Bool
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#elem"><span class="hs-identifier hs-var">elem</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'a'</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'z'</span></span><span class="hs-special">]</span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'A'</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'Z'</span></span><span class="hs-special">]</span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">[</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">T.replace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">T.replace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">T.replace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;_&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106841"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679106813"><span class="annot"><span class="annottext">isFloat :: Text -&gt; Bool
+</span><a href="#local-6989586621679106813"><span class="hs-identifier hs-var hs-var">isFloat</span></a></span></span><span> </span><span id="local-6989586621679106847"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106847"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Reader Double
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Read.html#double"><span class="hs-identifier hs-var">double</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106847"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106848"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679106848"><span class="hs-identifier hs-var">_n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>  </span><span class="hs-comment">-- only floating point number parsed, no leftover</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">Either String (Double, Text)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- JSON output</span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#renderJSONOutput"><span class="hs-identifier hs-type">renderJSONOutput</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">LBS.ByteString</span></a></span><span>
+</span><span id="line-134"></span><span id="renderJSONOutput"><span class="annot"><span class="annottext">renderJSONOutput :: Sample -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#renderJSONOutput"><span class="hs-identifier hs-var hs-var">renderJSONOutput</span></a></span></span><span> </span><span id="local-6989586621679106849"><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679106849"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679106851"><span class="annot"><span class="annottext">rtsNamespace :: Text
+</span><a href="#local-6989586621679106851"><span class="hs-identifier hs-var hs-var">rtsNamespace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;rts.gc&quot;</span></span><span>
+</span><span id="line-136"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679106852"><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106852"><span class="hs-identifier hs-var">rtsSamples</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679106853"><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106853"><span class="hs-identifier hs-var">otherSamples</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Text, Value) -&gt; Bool)
+-&gt; [(Text, Value)] -&gt; ([(Text, Value)], [(Text, Value)])
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#partition"><span class="hs-identifier hs-var">partition</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679106854"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106854"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106851"><span class="hs-identifier hs-var">rtsNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#isPrefixOf"><span class="hs-operator hs-var">`T.isPrefixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106854"><span class="hs-identifier hs-var">sk</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(Text, Value)] -&gt; ([(Text, Value)], [(Text, Value)]))
+-&gt; [(Text, Value)] -&gt; ([(Text, Value)], [(Text, Value)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Sample -&gt; [(Text, Value)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HM.toList</span></span><span> </span><span class="annot"><span class="annottext">Sample
+</span><a href="#local-6989586621679106849"><span class="hs-identifier hs-var">samples</span></a></span><span>
+</span><span id="line-137"></span><span>        </span><span id="local-6989586621679106855"><span class="annot"><span class="annottext">rtsMetrics :: MetricsGroup
+</span><a href="#local-6989586621679106855"><span class="hs-identifier hs-var hs-var">rtsMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [(Text, Value)] -&gt; MetricsGroup
+</span><a href="#local-6989586621679106856"><span class="hs-identifier hs-var">extractRtsGcMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106851"><span class="hs-identifier hs-var">rtsNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106852"><span class="hs-identifier hs-var">rtsSamples</span></a></span><span>
+</span><span id="line-138"></span><span>        </span><span id="local-6989586621679106857"><span class="annot"><span class="annottext">otherMetrics :: MetricsGroup
+</span><a href="#local-6989586621679106857"><span class="hs-identifier hs-var hs-var">otherMetrics</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Text, Value)] -&gt; MetricsGroup
+</span><a href="#local-6989586621679106858"><span class="hs-identifier hs-var">extractOtherMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106853"><span class="hs-identifier hs-var">otherSamples</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">[MetricsGroup] -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">A.encode</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">MetricsGroup
+</span><a href="#local-6989586621679106855"><span class="hs-identifier hs-var">rtsMetrics</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricsGroup
+</span><a href="#local-6989586621679106857"><span class="hs-identifier hs-var">otherMetrics</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">-- rts.gc metrics are always here because they are predefined in ekg-core,</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- so we can group them.</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="#local-6989586621679106856"><span class="hs-identifier hs-type">extractRtsGcMetrics</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-type">MetricsGroup</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679106856"><span class="annot"><span class="annottext">extractRtsGcMetrics :: Text -&gt; [(Text, Value)] -&gt; MetricsGroup
+</span><a href="#local-6989586621679106856"><span class="hs-identifier hs-var hs-var">extractRtsGcMetrics</span></a></span></span><span> </span><span id="local-6989586621679106860"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106860"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span id="local-6989586621679106861"><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106861"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-type">MetricsGroup</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">namespace :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#namespace"><span class="hs-identifier hs-var">namespace</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106860"><span class="hs-identifier hs-var">ns</span></a></span><span>
+</span><span id="line-147"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">metrics :: [Metric]
+</span><a href="Cardano.BM.Backend.Prometheus.html#metrics"><span class="hs-identifier hs-var">metrics</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106862"><span class="hs-identifier hs-var">sv</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-149"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">Counter</span></span><span> </span><span id="local-6989586621679106863"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106863"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int64 -&gt; Metric
+forall {a}. Integral a =&gt; Text -&gt; a -&gt; Metric
+</span><a href="#local-6989586621679106864"><span class="hs-identifier hs-var">intMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106865"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106863"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-150"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">Gauge</span></span><span> </span><span id="local-6989586621679106866"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106866"><span class="hs-identifier hs-var">g</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int64 -&gt; Metric
+forall {a}. Integral a =&gt; Text -&gt; a -&gt; Metric
+</span><a href="#local-6989586621679106864"><span class="hs-identifier hs-var">intMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106865"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106866"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-151"></span><span>                </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Metric
+</span><a href="Cardano.BM.Backend.Prometheus.html#NoMetric"><span class="hs-identifier hs-var">NoMetric</span></a></span><span> </span><span class="hs-comment">-- rts.gc can contain Counter or Gauge only.</span><span>
+</span><span id="line-152"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106865"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106865"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679106862"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106862"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106861"><span class="hs-identifier hs-var">samples</span></a></span><span>
+</span><span id="line-153"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-155"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-156"></span><span>        </span><span id="local-6989586621679106864"><span class="annot"><span class="annottext">intMetric :: Text -&gt; a -&gt; Metric
+</span><a href="#local-6989586621679106864"><span class="hs-identifier hs-var hs-var">intMetric</span></a></span></span><span> </span><span id="local-6989586621679106890"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106890"><span class="hs-identifier hs-var">sk</span></a></span></span><span> </span><span id="local-6989586621679106891"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679106891"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>            </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">mName :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mName"><span class="hs-identifier hs-var">mName</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; Maybe Text -&gt; Text
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Text -&gt; Text) -&gt; Maybe Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Maybe Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripPrefix"><span class="hs-identifier hs-var">T.stripPrefix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106860"><span class="hs-identifier hs-var">ns</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106890"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-158"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mType :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mType"><span class="hs-identifier hs-var">mType</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;int&quot;</span></span><span> </span><span class="hs-comment">-- All values are Int64.</span><span>
+</span><span id="line-159"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mLabel :: Maybe Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mLabel"><span class="hs-identifier hs-var">mLabel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-160"></span><span>                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mNumber :: Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#mNumber"><span class="hs-identifier hs-var">mNumber</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-var">NumberInt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679106891"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>                   </span><span class="hs-special">}</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- We cannot make any assumptions about the format of 'sk' in other samples,</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">-- so group other samples into 'common' group.</span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><a href="#local-6989586621679106858"><span class="hs-identifier hs-type">extractOtherMetrics</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-type">MetricsGroup</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span id="local-6989586621679106858"><span class="annot"><span class="annottext">extractOtherMetrics :: [(Text, Value)] -&gt; MetricsGroup
+</span><a href="#local-6989586621679106858"><span class="hs-identifier hs-var hs-var">extractOtherMetrics</span></a></span></span><span> </span><span id="local-6989586621679106895"><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106895"><span class="hs-identifier hs-var">samples</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#MetricsGroup"><span class="hs-identifier hs-type">MetricsGroup</span></a></span><span>
+</span><span id="line-167"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">namespace :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#namespace"><span class="hs-identifier hs-var">namespace</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;common&quot;</span></span><span>
+</span><span id="line-168"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">metrics :: [Metric]
+</span><a href="Cardano.BM.Backend.Prometheus.html#metrics"><span class="hs-identifier hs-var">metrics</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-169"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106896"><span class="hs-identifier hs-var">sv</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-170"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">Counter</span></span><span> </span><span id="local-6989586621679106897"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106897"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Number -&gt; Metric
+</span><a href="#local-6989586621679106898"><span class="hs-identifier hs-var">mkMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106899"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Number -&gt; Metric) -&gt; Number -&gt; Metric
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-var">NumberInt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106897"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">Gauge</span></span><span> </span><span id="local-6989586621679106900"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106900"><span class="hs-identifier hs-var">g</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Number -&gt; Metric
+</span><a href="#local-6989586621679106898"><span class="hs-identifier hs-var">mkMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106899"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Number -&gt; Metric) -&gt; Number -&gt; Metric
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-var">NumberInt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679106900"><span class="hs-identifier hs-var">g</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>                </span><span class="annot"><span class="hs-identifier hs-type">Label</span></span><span> </span><span id="local-6989586621679106901"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106901"><span class="hs-identifier hs-var">l</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Reader Double
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Read.html#double"><span class="hs-identifier hs-var">double</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106901"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-173"></span><span>                                 </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106902"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679106902"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-174"></span><span>                                    </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Number -&gt; Metric
+</span><a href="#local-6989586621679106898"><span class="hs-identifier hs-var">mkMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106899"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Number -&gt; Metric) -&gt; Number -&gt; Metric
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#NumberReal"><span class="hs-identifier hs-var">NumberReal</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679106902"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-175"></span><span>                                 </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-176"></span><span>                                    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe (Char, Text)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#uncons"><span class="hs-identifier hs-var">T.uncons</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106901"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-177"></span><span>                                        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'{'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Number -&gt; Metric
+</span><a href="#local-6989586621679106898"><span class="hs-identifier hs-var">mkMetric</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106899"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106901"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-var">NumberInt</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>                                        </span><span class="annot"><span class="annottext">Maybe (Char, Text)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Metric
+</span><a href="Cardano.BM.Backend.Prometheus.html#NoMetric"><span class="hs-identifier hs-var">NoMetric</span></a></span><span>
+</span><span id="line-179"></span><span>                </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Metric
+</span><a href="Cardano.BM.Backend.Prometheus.html#NoMetric"><span class="hs-identifier hs-var">NoMetric</span></a></span><span>
+</span><span id="line-180"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106899"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106899"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679106896"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679106896"><span class="hs-identifier hs-var">sv</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Text, Value)]
+</span><a href="#local-6989586621679106895"><span class="hs-identifier hs-var">samples</span></a></span><span>
+</span><span id="line-181"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-182"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-184"></span><span>        </span><span id="local-6989586621679106898"><span class="annot"><span class="annottext">mkMetric :: Text -&gt; Maybe Text -&gt; Number -&gt; Metric
+</span><a href="#local-6989586621679106898"><span class="hs-identifier hs-var hs-var">mkMetric</span></a></span></span><span> </span><span id="local-6989586621679106904"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106904"><span class="hs-identifier hs-var">sk</span></a></span></span><span> </span><span id="local-6989586621679106905"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679106905"><span class="hs-identifier hs-var">condTxt</span></a></span></span><span> </span><span id="local-6989586621679106906"><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106906"><span class="hs-identifier hs-var">number</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-185"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679106907"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106907"><span class="hs-identifier hs-var">withoutType</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679106908"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106908"><span class="hs-identifier hs-var">typeSuffix</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Number -&gt; (Text, Text)
+</span><a href="#local-6989586621679106909"><span class="hs-identifier hs-var">stripTypeSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106904"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106906"><span class="hs-identifier hs-var">number</span></a></span><span>
+</span><span id="line-186"></span><span>            </span><span class="hs-keyword">in</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">mName :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mName"><span class="hs-identifier hs-var">mName</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106907"><span class="hs-identifier hs-var">withoutType</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mType :: Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mType"><span class="hs-identifier hs-var">mType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106908"><span class="hs-identifier hs-var">typeSuffix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mLabel :: Maybe Text
+</span><a href="Cardano.BM.Backend.Prometheus.html#mLabel"><span class="hs-identifier hs-var">mLabel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679106905"><span class="hs-identifier hs-var">condTxt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mNumber :: Number
+</span><a href="Cardano.BM.Backend.Prometheus.html#mNumber"><span class="hs-identifier hs-var">mNumber</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106906"><span class="hs-identifier hs-var">number</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-187"></span><span>        </span><span id="local-6989586621679106909"><span class="annot"><span class="annottext">stripTypeSuffix :: Text -&gt; Number -&gt; (Text, Text)
+</span><a href="#local-6989586621679106909"><span class="hs-identifier hs-var hs-var">stripTypeSuffix</span></a></span></span><span> </span><span id="local-6989586621679106918"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106918"><span class="hs-identifier hs-var">sk</span></a></span></span><span> </span><span id="local-6989586621679106919"><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106919"><span class="hs-identifier hs-var">number</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-188"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679106926"><span class="annot"><span class="annottext">types :: [Text]
+</span><a href="#local-6989586621679106926"><span class="hs-identifier hs-var hs-var">types</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;us&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ns&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;s&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;B&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;int&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;real&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-189"></span><span>                </span><span id="local-6989586621679106930"><span class="annot"><span class="annottext">parts :: [Text]
+</span><a href="#local-6989586621679106930"><span class="hs-identifier hs-var hs-var">parts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; [Text]
+Text -&gt; Text -&gt; [Text]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#splitOn"><span class="hs-identifier hs-var">T.splitOn</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106918"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-190"></span><span>                </span><span id="local-6989586621679106936"><span class="annot"><span class="annottext">typeSuffix :: Text
+</span><a href="#local-6989586621679106936"><span class="hs-identifier hs-var hs-var">typeSuffix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; ([Text] -&gt; Bool) -&gt; [Text] -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Bool) -&gt; [Text] -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679106930"><span class="hs-identifier hs-var">parts</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. HasCallStack =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#last"><span class="hs-identifier hs-var">last</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679106930"><span class="hs-identifier hs-var">parts</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-191"></span><span>            </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106936"><span class="hs-identifier hs-var">typeSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679106926"><span class="hs-identifier hs-var">types</span></a></span><span>
+</span><span id="line-192"></span><span>                   </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Text -&gt; Text
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromJust"><span class="hs-identifier hs-var">fromJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Text -&gt; Text) -&gt; Maybe Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Maybe Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripSuffix"><span class="hs-identifier hs-var">T.stripSuffix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106936"><span class="hs-identifier hs-var">typeSuffix</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106918"><span class="hs-identifier hs-var">sk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106936"><span class="hs-identifier hs-var">typeSuffix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>                   </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Number
+</span><a href="#local-6989586621679106919"><span class="hs-identifier hs-var">number</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-194"></span><span>                            </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberInt"><span class="hs-identifier hs-type">NumberInt</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106918"><span class="hs-identifier hs-var">sk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;int&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>                            </span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#NumberReal"><span class="hs-identifier hs-type">NumberReal</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106918"><span class="hs-identifier hs-var">sk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;real&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Cardano.BM.Backend.Prometheus.html#textToUtf8ByteString"><span class="hs-identifier hs-type">textToUtf8ByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-198"></span><span id="textToUtf8ByteString"><span class="annot"><span class="annottext">textToUtf8ByteString :: Text -&gt; ByteString
+</span><a href="Cardano.BM.Backend.Prometheus.html#textToUtf8ByteString"><span class="hs-identifier hs-var hs-var">textToUtf8ByteString</span></a></span></span><span> </span><span id="local-6989586621679106941"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106941"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679106941"><span class="hs-identifier hs-var">txt</span></a></span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-201"></span></pre></body></html>

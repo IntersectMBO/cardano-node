@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BlockArguments #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Forwarder</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier">DataPointForwarder</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#dataPointForwarderPeer"><span class="hs-identifier">dataPointForwarderPeer</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html"><span class="hs-identifier">Network.TypedProtocol.Peer.Server</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html"><span class="hs-identifier">Trace.Forward.Protocol.DataPoint.Type</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="DataPointForwarder"><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-var">DataPointForwarder</span></a></span></span><span> </span><span id="local-6989586621679135895"><span class="annot"><a href="#local-6989586621679135895"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679135896"><span class="annot"><a href="#local-6989586621679135896"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DataPointForwarder"><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-var">DataPointForwarder</span></a></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | The acceptor sent us a request for new 'DataPoint's.</span></span><span>
+</span><span id="line-19"></span><span>    </span><span id="recvMsgDataPointsRequest"><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a.
+DataPointForwarder m a -&gt; [DataPointName] -&gt; m DataPointValues
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#recvMsgDataPointsRequest"><span class="hs-identifier hs-var hs-var">recvMsgDataPointsRequest</span></a></span></span><span>
+</span><span id="line-20"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Tracer.DataPoint.html#DataPointName"><span class="hs-identifier hs-type">DataPointName</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-21"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679135895"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointValues"><span class="hs-identifier hs-type">DataPointValues</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">-- | The acceptor terminated. Here we have a pure return value, but we</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">-- could have done another action in 'm' if we wanted to.</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="recvMsgDone"><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. DataPointForwarder m a -&gt; m a
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#recvMsgDone"><span class="hs-identifier hs-var hs-var">recvMsgDone</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679135895"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135896"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Interpret a particular action sequence into the server side of the protocol.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span id="local-6989586621679135904"><span id="local-6989586621679135905"><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#dataPointForwarderPeer"><span class="hs-identifier hs-type">dataPointForwarderPeer</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135904"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-type">DataPointForwarder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135904"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135905"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Server"><span class="hs-identifier hs-type">Server</span></a></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#DataPointForward"><span class="hs-identifier hs-type">DataPointForward</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Core.html#NonPipelined"><span class="hs-identifier hs-type">NonPipelined</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#StIdle"><span class="hs-identifier hs-type">StIdle</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135904"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679135905"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-34"></span><span id="dataPointForwarderPeer"><span class="annot"><span class="annottext">dataPointForwarderPeer :: forall (m :: * -&gt; *) a.
+Monad m =&gt;
+DataPointForwarder m a
+-&gt; Server DataPointForward 'NonPipelined 'StIdle m a
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#dataPointForwarderPeer"><span class="hs-identifier hs-var hs-var">dataPointForwarderPeer</span></a></span></span><span> </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#DataPointForwarder"><span class="hs-identifier hs-type">DataPointForwarder</span></a></span><span class="hs-special">{</span><span id="local-6989586621679135976"><span class="annot"><span class="annottext">[DataPointName] -&gt; m DataPointValues
+recvMsgDataPointsRequest :: forall (m :: * -&gt; *) a.
+DataPointForwarder m a -&gt; [DataPointName] -&gt; m DataPointValues
+recvMsgDataPointsRequest :: [DataPointName] -&gt; m DataPointValues
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#recvMsgDataPointsRequest"><span class="hs-identifier hs-var hs-var">recvMsgDataPointsRequest</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679135977"><span class="annot"><span class="annottext">m a
+recvMsgDone :: forall (m :: * -&gt; *) a. DataPointForwarder m a -&gt; m a
+recvMsgDone :: m a
+</span><a href="Trace.Forward.Protocol.DataPoint.Forwarder.html#recvMsgDone"><span class="hs-identifier hs-var hs-var">recvMsgDone</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Server DataPointForward 'NonPipelined 'StIdle m a
+</span><a href="#local-6989586621679135978"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621679135978"><span class="annot"><span class="annottext">go :: Server DataPointForward 'NonPipelined 'StIdle m a
+</span><a href="#local-6989586621679135978"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-comment">-- In the 'StIdle' state the forwarder is awaiting a request message</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-comment">-- from the acceptor.</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">(forall (st' :: DataPointForward).
+ Message DataPointForward 'StIdle st'
+ -&gt; Server DataPointForward 'NonPipelined st' m a)
+-&gt; Server DataPointForward 'NonPipelined 'StIdle m a
+forall ps (pl :: IsPipelined) (st :: ps) (m :: * -&gt; *) a.
+(StateTokenI st, StateAgency st ~ 'ClientAgency,
+ Outstanding pl ~ 'Z) =&gt;
+(forall (st' :: ps). Message ps st st' -&gt; Server ps pl st' m a)
+-&gt; Server ps pl st m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Await"><span class="hs-identifier hs-var">Await</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-comment">-- The acceptor sent us a request for new 'DataPoint's, so now we're</span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-comment">-- in the 'StBusy' state which means it's the forwarder's turn to send</span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-comment">-- a reply.</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsRequest"><span class="hs-identifier hs-type">MsgDataPointsRequest</span></a></span><span> </span><span id="local-6989586621679135993"><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679135993"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m (Server DataPointForward 'NonPipelined st' m a)
+-&gt; Server DataPointForward 'NonPipelined st' m a
+forall ps (pl :: IsPipelined) (st :: ps) (m :: * -&gt; *) a.
+m (Server ps pl st m a) -&gt; Server ps pl st m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Effect"><span class="hs-identifier hs-var">Effect</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>          </span><span id="local-6989586621679135995"><span class="annot"><span class="annottext">DataPointValues
+</span><a href="#local-6989586621679135995"><span class="hs-identifier hs-var">reply</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[DataPointName] -&gt; m DataPointValues
+</span><a href="#local-6989586621679135976"><span class="hs-identifier hs-var">recvMsgDataPointsRequest</span></a></span><span> </span><span class="annot"><span class="annottext">[DataPointName]
+</span><a href="#local-6989586621679135993"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><span class="annottext">Server DataPointForward 'NonPipelined st' m a
+-&gt; m (Server DataPointForward 'NonPipelined st' m a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Server DataPointForward 'NonPipelined st' m a
+ -&gt; m (Server DataPointForward 'NonPipelined st' m a))
+-&gt; Server DataPointForward 'NonPipelined st' m a
+-&gt; m (Server DataPointForward 'NonPipelined st' m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Message DataPointForward st' 'StIdle
+-&gt; Server DataPointForward 'NonPipelined 'StIdle m a
+-&gt; Server DataPointForward 'NonPipelined st' m a
+forall ps (pl :: IsPipelined) (st :: ps) (m :: * -&gt; *) a
+       (st' :: ps).
+(StateTokenI st, StateTokenI st', StateAgency st ~ 'ServerAgency,
+ Outstanding pl ~ 'Z) =&gt;
+Message ps st st' -&gt; Server ps pl st' m a -&gt; Server ps pl st m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Yield"><span class="hs-identifier hs-var">Yield</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointValues -&gt; Message DataPointForward 'StBusy 'StIdle
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDataPointsReply"><span class="hs-identifier hs-var">MsgDataPointsReply</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointValues
+</span><a href="#local-6989586621679135995"><span class="hs-identifier hs-var">reply</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>                         </span><span class="annot"><span class="annottext">Server DataPointForward 'NonPipelined 'StIdle m a
+</span><a href="#local-6989586621679135978"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-comment">-- The acceptor sent the done transition, so we're in the 'StDone' state</span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-comment">-- so all we can do is stop using 'done', with a return value.</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">Message DataPointForward 'StIdle st'
+R:MessageDataPointForwardfromto 'StIdle st'
+</span><a href="Trace.Forward.Protocol.DataPoint.Type.html#MsgDone"><span class="hs-identifier hs-var">MsgDone</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m (Server DataPointForward 'NonPipelined st' m a)
+-&gt; Server DataPointForward 'NonPipelined st' m a
+forall ps (pl :: IsPipelined) (st :: ps) (m :: * -&gt; *) a.
+m (Server ps pl st m a) -&gt; Server ps pl st m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Effect"><span class="hs-identifier hs-var">Effect</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Server DataPointForward 'NonPipelined st' m a)
+ -&gt; Server DataPointForward 'NonPipelined st' m a)
+-&gt; m (Server DataPointForward 'NonPipelined st' m a)
+-&gt; Server DataPointForward 'NonPipelined st' m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Server DataPointForward 'NonPipelined st' m a
+forall ps (pl :: IsPipelined) (st :: ps) (m :: * -&gt; *) a.
+(StateTokenI st, StateAgency st ~ 'NobodyAgency,
+ Outstanding pl ~ 'Z) =&gt;
+a -&gt; Server ps pl st m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/typed-protocols-1.0.0.0-2c25551c6ce6be1668abbdbeddffbab29cf6637cea10bf17481767a87b610b01/share/doc/html/src/Network.TypedProtocol.Peer.Server.html#Done"><span class="hs-identifier hs-var">Done</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Server DataPointForward 'NonPipelined st' m a)
+-&gt; m a -&gt; m (Server DataPointForward 'NonPipelined st' m a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679135977"><span class="hs-identifier hs-var">recvMsgDone</span></a></span><span>
+</span><span id="line-51"></span></pre></body></html>

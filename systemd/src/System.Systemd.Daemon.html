@@ -1,0 +1,336 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{-|
+Module      : System.Systemd.Daemon
+Description : Systemd facilities to manage daemons
+Copyright   : (c) Romain G&#233;rard, 2014
+                  David Fisher, 2013
+License     : BSD3
+Maintainer  : romain.gerard@erebe.eu
+Stability   : stable
+Portability : Require Systemd or will fail otherwise
+
+Implementation of Systemd facilities to create and manage
+daemons.
+
+All socket-related actions in this module, work with the
+&quot;Network.Socket&quot; module from @network@. If you want to use
+a different socket library or work directly with file
+descriptors, see &quot;System.Systemd.Daemon.Fd&quot;.
+
+This module contains socket activation and notify tools. See
+
+* &lt;http://0pointer.de/blog/projects/socket-activation.html&gt;
+* &lt;http://www.freedesktop.org/software/systemd/man/systemd.socket.html&gt;
+* &lt;http://www.freedesktop.org/software/systemd/man/systemd.service.html&gt;
+
+Example:
+
+@
+import Control.Monad(forever)
+import System.Systemd.Daemon(notifyWatchdog)
+
+main :: IO ()
+main = forever $ do
+        functionThatMayHang
+        notifyWatchdog
+@
+
+If you use the service described as below,
+Systemd will restart your program each time the watchdog
+fail to notify itself under 60 sec.
+
+@
+[Unit]
+Description=MyDaemon
+
+[Service]
+Type=simple
+TimeoutStartSec=0
+ExecStart=AbsolutePathToMyExecutable
+WatchdogSec=60
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+@
+-}</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">System.Systemd.Daemon</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-58"></span><span>                               </span><span class="annot"><span class="hs-comment">-- * Notify functions</span></span><span>
+</span><span id="line-59"></span><span>                               </span><span class="annot"><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier">notify</span></a></span><span>
+</span><span id="line-60"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyWithFD"><span class="hs-identifier">notifyWithFD</span></a></span><span>
+</span><span id="line-61"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#storeFd"><span class="hs-identifier">storeFd</span></a></span><span>
+</span><span id="line-62"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#storeFdWithName"><span class="hs-identifier">storeFdWithName</span></a></span><span>
+</span><span id="line-63"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyWatchdog"><span class="hs-identifier">notifyWatchdog</span></a></span><span>
+</span><span id="line-64"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyReady"><span class="hs-identifier">notifyReady</span></a></span><span>
+</span><span id="line-65"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyPID"><span class="hs-identifier">notifyPID</span></a></span><span>
+</span><span id="line-66"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyErrno"><span class="hs-identifier">notifyErrno</span></a></span><span>
+</span><span id="line-67"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyStatus"><span class="hs-identifier">notifyStatus</span></a></span><span>
+</span><span id="line-68"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyBusError"><span class="hs-identifier">notifyBusError</span></a></span><span>
+</span><span id="line-69"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyReloading"><span class="hs-identifier">notifyReloading</span></a></span><span>
+</span><span id="line-70"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#notifyStopping"><span class="hs-identifier">notifyStopping</span></a></span><span>
+</span><span id="line-71"></span><span>                             </span><span class="annot"><span class="hs-comment">-- * Socket activation functions</span></span><span>
+</span><span id="line-72"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#getActivatedSockets"><span class="hs-identifier">getActivatedSockets</span></a></span><span>
+</span><span id="line-73"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.html#getActivatedSocketsWithNames"><span class="hs-identifier">getActivatedSocketsWithNames</span></a></span><span>
+</span><span id="line-74"></span><span>                             </span><span class="annot"><span class="hs-comment">-- * Utils</span></span><span>
+</span><span id="line-75"></span><span>                             </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="System.Systemd.Internal.html#unsetEnvironnement"><span class="hs-identifier">unsetEnvironnement</span></a></span><span>
+</span><span id="line-76"></span><span>                             </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="System.Systemd.Daemon.Fd.html"><span class="hs-identifier">System.Systemd.Daemon.Fd</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Fd</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="System.Systemd.Internal.html"><span class="hs-identifier">System.Systemd.Internal</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Error.html"><span class="hs-identifier">Foreign.C.Error</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Error.html#Errno"><span class="hs-identifier">Errno</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Posix.Types.html"><span class="hs-identifier">System.Posix.Types</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Posix.Types.html#CPid"><span class="hs-identifier">CPid</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.Socket</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><span class="hs-comment">-- | Notify the watchdog that the program is still alive</span></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyWatchdog"><span class="hs-identifier hs-type">notifyWatchdog</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span id="notifyWatchdog"><span class="annot"><span class="annottext">notifyWatchdog :: IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyWatchdog"><span class="hs-identifier hs-var hs-var">notifyWatchdog</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;WATCHDOG=1&quot;</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><span class="hs-comment">-- | Notify the systemd that the program is ready</span></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyReady"><span class="hs-identifier hs-type">notifyReady</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span id="notifyReady"><span class="annot"><span class="annottext">notifyReady :: IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyReady"><span class="hs-identifier hs-var hs-var">notifyReady</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;READY=1&quot;</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | Notify systemd of the PID of the program (for after a fork)</span></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyPID"><span class="hs-identifier hs-type">notifyPID</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Posix.Types.html#CPid"><span class="hs-identifier hs-type">CPid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span id="notifyPID"><span class="annot"><span class="annottext">notifyPID :: CPid -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyPID"><span class="hs-identifier hs-var hs-var">notifyPID</span></a></span></span><span> </span><span id="local-6989586621679035233"><span class="annot"><span class="annottext">CPid
+</span><a href="#local-6989586621679035233"><span class="hs-identifier hs-var">pid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO (Maybe ())) -&gt; String -&gt; IO (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MAINPID=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">CPid -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">CPid
+</span><a href="#local-6989586621679035233"><span class="hs-identifier hs-var">pid</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><span class="hs-comment">-- | Notify systemd that the service is reloading its configuration</span></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyReloading"><span class="hs-identifier hs-type">notifyReloading</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span id="notifyReloading"><span class="annot"><span class="annottext">notifyReloading :: IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyReloading"><span class="hs-identifier hs-var hs-var">notifyReloading</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RELOADING=1&quot;</span></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="annot"><span class="hs-comment">-- | Notify systemd that the service is beginning its shutdown</span></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyStopping"><span class="hs-identifier hs-type">notifyStopping</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span id="notifyStopping"><span class="annot"><span class="annottext">notifyStopping :: IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyStopping"><span class="hs-identifier hs-var hs-var">notifyStopping</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;STOPPING=1&quot;</span></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="annot"><span class="hs-comment">-- | Notify systemd of an 'Errno' error</span></span><span>
+</span><span id="line-108"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyErrno"><span class="hs-identifier hs-type">notifyErrno</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Error.html#Errno"><span class="hs-identifier hs-type">Errno</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span id="notifyErrno"><span class="annot"><span class="annottext">notifyErrno :: Errno -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyErrno"><span class="hs-identifier hs-var hs-var">notifyErrno</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Foreign.C.Error.html#Errno"><span class="hs-identifier hs-type">Errno</span></a></span><span> </span><span id="local-6989586621679035236"><span class="annot"><span class="annottext">CInt
+</span><a href="#local-6989586621679035236"><span class="hs-identifier hs-var">errorNb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO (Maybe ())) -&gt; String -&gt; IO (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ERRNO=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">CInt -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">CInt
+</span><a href="#local-6989586621679035236"><span class="hs-identifier hs-var">errorNb</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- | Notify systemd of the status of the program.</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- An arbitrary 'String' can be passed</span><span>
+</span><span id="line-114"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyStatus"><span class="hs-identifier hs-type">notifyStatus</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span id="notifyStatus"><span class="annot"><span class="annottext">notifyStatus :: String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyStatus"><span class="hs-identifier hs-var hs-var">notifyStatus</span></a></span></span><span> </span><span id="local-6989586621679035237"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035237"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO (Maybe ())) -&gt; String -&gt; IO (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;STATUS=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035237"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | Notify systemd of a DBUS error like.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- Correct formatting of the 'String' is left to the caller</span><span>
+</span><span id="line-120"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyBusError"><span class="hs-identifier hs-type">notifyBusError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span id="notifyBusError"><span class="annot"><span class="annottext">notifyBusError :: String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyBusError"><span class="hs-identifier hs-var hs-var">notifyBusError</span></a></span></span><span> </span><span id="local-6989586621679035238"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035238"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var">notify</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO (Maybe ())) -&gt; String -&gt; IO (Maybe ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;BUSERROR=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035238"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | Notify systemd to store a socket for us.</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- To be used along 'getActivatedSockets' during a restart</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- Usefull for zero downtime restart</span><span>
+</span><span id="line-128"></span><span class="annot"><a href="System.Systemd.Daemon.html#storeFd"><span class="hs-identifier hs-type">storeFd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span id="storeFd"><span class="annot"><span class="annottext">storeFd :: Socket -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#storeFd"><span class="hs-identifier hs-var hs-var">storeFd</span></a></span></span><span> </span><span id="local-6989586621679035239"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035239"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO Fd
+</span><a href="System.Systemd.Internal.html#socketToFd_"><span class="hs-identifier hs-var">socketToFd_</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035239"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">IO Fd -&gt; (Fd -&gt; IO (Maybe ())) -&gt; IO (Maybe ())
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.Fd.html#storeFd"><span class="hs-identifier hs-var">Fd.storeFd</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | Notify systemd to store a socket for us and specify a name.</span><span>
+</span><span id="line-132"></span><span class="hs-comment">--</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- To be used along 'getActivatedSocketsWithNames' during a restart</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- Usefull for zero downtime restart</span><span>
+</span><span id="line-136"></span><span class="annot"><a href="System.Systemd.Daemon.html#storeFdWithName"><span class="hs-identifier hs-type">storeFdWithName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span id="storeFdWithName"><span class="annot"><span class="annottext">storeFdWithName :: Socket -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#storeFdWithName"><span class="hs-identifier hs-var hs-var">storeFdWithName</span></a></span></span><span> </span><span id="local-6989586621679035242"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035242"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span id="local-6989586621679035243"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035243"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO Fd
+</span><a href="System.Systemd.Internal.html#socketToFd_"><span class="hs-identifier hs-var">socketToFd_</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035242"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">IO Fd -&gt; (Fd -&gt; IO (Maybe ())) -&gt; IO (Maybe ())
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Fd -&gt; String -&gt; IO (Maybe ())) -&gt; String -&gt; Fd -&gt; IO (Maybe ())
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.Fd.html#storeFdWithName"><span class="hs-identifier hs-var">Fd.storeFdWithName</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035243"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- | Notify systemd about an event</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- After notifying systemd the 'Bool' parameter specify if the environnement</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- shall be unset (Further call to notify will fail)</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- The 'String' is the event to pass</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- Returns 'Nothing' if the program was not started with systemd</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- or that the environnement was previously unset</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-type">notify</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span id="notify"><span class="annot"><span class="annottext">notify :: Bool -&gt; String -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notify"><span class="hs-identifier hs-var hs-var">notify</span></a></span></span><span> </span><span id="local-6989586621679035246"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679035246"><span class="hs-identifier hs-var">unset_env</span></a></span></span><span> </span><span id="local-6989586621679035247"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035247"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; Maybe Fd -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Internal.html#notifyWithFD_"><span class="hs-identifier hs-var">notifyWithFD_</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679035246"><span class="hs-identifier hs-var">unset_env</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035247"><span class="hs-identifier hs-var">state</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Fd
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- | Same as 'notify' but send along a socket to be stored</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- It is up to the caller to properly set the message</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- (i.e: do not forget to set FDSTORE=1)</span><span>
+</span><span id="line-155"></span><span class="annot"><a href="System.Systemd.Daemon.html#notifyWithFD"><span class="hs-identifier hs-type">notifyWithFD</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span id="notifyWithFD"><span class="annot"><span class="annottext">notifyWithFD :: Bool -&gt; String -&gt; Socket -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.html#notifyWithFD"><span class="hs-identifier hs-var hs-var">notifyWithFD</span></a></span></span><span> </span><span id="local-6989586621679035249"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679035249"><span class="hs-identifier hs-var">unset_env</span></a></span></span><span> </span><span id="local-6989586621679035250"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035250"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span id="local-6989586621679035251"><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035251"><span class="hs-identifier hs-var">sock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Socket -&gt; IO Fd
+</span><a href="System.Systemd.Internal.html#socketToFd_"><span class="hs-identifier hs-var">socketToFd_</span></a></span><span> </span><span class="annot"><span class="annottext">Socket
+</span><a href="#local-6989586621679035251"><span class="hs-identifier hs-var">sock</span></a></span><span> </span><span class="annot"><span class="annottext">IO Fd -&gt; (Fd -&gt; IO (Maybe ())) -&gt; IO (Maybe ())
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; Fd -&gt; IO (Maybe ())
+</span><a href="System.Systemd.Daemon.Fd.html#notifyWithFD"><span class="hs-identifier hs-var">Fd.notifyWithFD</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679035249"><span class="hs-identifier hs-var">unset_env</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679035250"><span class="hs-identifier hs-var">state</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--  SOCKET</span><span>
+</span><span id="line-160"></span><span class="hs-comment">------------------------------------------------------------------------------------------------</span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- | Return a list of activated sockets, if the program was started with</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- socket activation.</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- The sockets are in the same order as in the associated @.socket@ file.</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- The sockets will have their family, type, and status set appropriately.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- Returns 'Nothing' in systems without socket activation (or</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- when the program was not socket activated).</span><span>
+</span><span id="line-170"></span><span class="annot"><a href="System.Systemd.Daemon.html#getActivatedSockets"><span class="hs-identifier hs-type">getActivatedSockets</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span id="getActivatedSockets"><span class="annot"><span class="annottext">getActivatedSockets :: IO (Maybe [Socket])
+</span><a href="System.Systemd.Daemon.html#getActivatedSockets"><span class="hs-identifier hs-var hs-var">getActivatedSockets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe [Fd])
+</span><a href="System.Systemd.Daemon.Fd.html#getActivatedSockets"><span class="hs-identifier hs-var">Fd.getActivatedSockets</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Maybe [Fd])
+-&gt; (Maybe [Fd] -&gt; IO (Maybe [Socket])) -&gt; IO (Maybe [Socket])
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">([Fd] -&gt; IO [Socket]) -&gt; Maybe [Fd] -&gt; IO (Maybe [Socket])
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Fd -&gt; IO Socket) -&gt; [Fd] -&gt; IO [Socket]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO Socket
+</span><a href="System.Systemd.Internal.html#fdToSocket"><span class="hs-identifier hs-var">fdToSocket</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- | Same as 'getActivatedSockets' but return also the names associated</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- with those sockets if 'storeFdWithName' was used or specified in the @.socket@ file.</span><span>
+</span><span id="line-175"></span><span class="hs-comment">--</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- IF 'storeFd' was used to transmit the socket to systemd, the name will be a generic one</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- (i.e: usally &quot;stored&quot;)</span><span>
+</span><span id="line-178"></span><span class="annot"><a href="System.Systemd.Daemon.html#getActivatedSocketsWithNames"><span class="hs-identifier hs-type">getActivatedSocketsWithNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Socket</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span id="getActivatedSocketsWithNames"><span class="annot"><span class="annottext">getActivatedSocketsWithNames :: IO (Maybe [(Socket, String)])
+</span><a href="System.Systemd.Daemon.html#getActivatedSocketsWithNames"><span class="hs-identifier hs-var hs-var">getActivatedSocketsWithNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe [(Fd, String)])
+</span><a href="System.Systemd.Daemon.Fd.html#getActivatedSocketsWithNames"><span class="hs-identifier hs-var">Fd.getActivatedSocketsWithNames</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Maybe [(Fd, String)])
+-&gt; (Maybe [(Fd, String)] -&gt; IO (Maybe [(Socket, String)]))
+-&gt; IO (Maybe [(Socket, String)])
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">([(Fd, String)] -&gt; IO [(Socket, String)])
+-&gt; Maybe [(Fd, String)] -&gt; IO (Maybe [(Socket, String)])
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Fd, String) -&gt; IO (Socket, String))
+-&gt; [(Fd, String)] -&gt; IO [(Socket, String)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">(Fd, String) -&gt; IO (Socket, String)
+forall {b}. (Fd, b) -&gt; IO (Socket, b)
+</span><a href="#local-6989586621679035258"><span class="hs-identifier hs-var">socketWithName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679035258"><span class="annot"><span class="annottext">socketWithName :: (Fd, b) -&gt; IO (Socket, b)
+</span><a href="#local-6989586621679035258"><span class="hs-identifier hs-var hs-var">socketWithName</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679035261"><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679035261"><span class="hs-identifier hs-var">fd</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679035262"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679035262"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Socket -&gt; (Socket, b)) -&gt; IO Socket -&gt; IO (Socket, b)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Socket -&gt; b -&gt; (Socket, b)) -&gt; b -&gt; Socket -&gt; (Socket, b)
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679035262"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO Socket -&gt; IO (Socket, b)) -&gt; IO Socket -&gt; IO (Socket, b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Fd -&gt; IO Socket
+</span><a href="System.Systemd.Internal.html#fdToSocket"><span class="hs-identifier hs-var">fdToSocket</span></a></span><span> </span><span class="annot"><span class="annottext">Fd
+</span><a href="#local-6989586621679035261"><span class="hs-identifier hs-var">fd</span></a></span><span>
+</span><span id="line-181"></span></pre></body></html>

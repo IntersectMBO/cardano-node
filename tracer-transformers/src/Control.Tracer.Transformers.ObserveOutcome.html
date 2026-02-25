@@ -1,0 +1,471 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-glyph">:</span><span class="hs-identifier">Control.Tracer.Transformers.ObserveOutcome</span><span class="hs-special">}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-operator">%</span><span class="hs-keyword">if</span><span> </span><span class="hs-identifier">style</span><span> </span><span class="hs-operator">==</span><span> </span><span class="hs-identifier">newcode</span><span>
+</span><span id="line-4"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">{-|
+Module: ObserveOutcome
+
+Observing events with annotations of thread id and time.
+-}</span></span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns           #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses  #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables    #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies           #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Tracer.Transformers.ObserveOutcome</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- * transformer</span></span><span>
+</span><span id="line-18"></span><span>      </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#Outcome"><span class="hs-identifier">Outcome</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnhancedTracer"><span class="hs-identifier">OutcomeEnhancedTracer</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeFidelity"><span class="hs-identifier">OutcomeFidelity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeProgressionStatus"><span class="hs-identifier">OutcomeProgressionStatus</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#mkOutcomeExtractor"><span class="hs-identifier">mkOutcomeExtractor</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier">newMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#takeMVar"><span class="hs-identifier">takeMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier">putMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier">MonadMask</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CES</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Tracer</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">traceWith</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span class="hs-operator">%</span><span class="hs-identifier">endif</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- transformer of traces that have the structure of an 'Outcome'</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- (beginning and possible end)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- the distinct stages</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">data</span><span> </span><span id="OutcomeProgressionStatus"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeProgressionStatus"><span class="hs-identifier hs-var">OutcomeProgressionStatus</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="OutcomeStarts"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeStarts"><span class="hs-identifier hs-var">OutcomeStarts</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="OutcomeOther"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeOther"><span class="hs-identifier hs-var">OutcomeOther</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="OutcomeEnds"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnds"><span class="hs-identifier hs-var">OutcomeEnds</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679040992"><span id="local-6989586621679040994"><span class="annot"><span class="annottext">OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool
+(OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool)
+-&gt; (OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool)
+-&gt; Eq OutcomeProgressionStatus
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool
+== :: OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool
+$c/= :: OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool
+/= :: OutcomeProgressionStatus -&gt; OutcomeProgressionStatus -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- constructing an outcome from a sequence of observables</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040933"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="Outcome"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#Outcome"><span class="hs-identifier hs-var">Outcome</span></a></span></span><span> </span><span id="local-6989586621679040933"><span class="annot"><a href="#local-6989586621679040933"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679040934"><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="IntermediateValue"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-var">IntermediateValue</span></a></span></span><span> </span><span id="local-6989586621679040934"><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="OutcomeMetric"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeMetric"><span class="hs-identifier hs-var">OutcomeMetric</span></a></span></span><span> </span><span id="local-6989586621679040934"><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>  </span><span id="classifyObservable"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#classifyObservable"><span class="hs-identifier hs-type">classifyObservable</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-55"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040933"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeProgressionStatus"><span class="hs-identifier hs-type">OutcomeProgressionStatus</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="captureObservableValue"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#captureObservableValue"><span class="hs-identifier hs-type">captureObservableValue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-57"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040933"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span id="computeOutcomeMetric"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#computeOutcomeMetric"><span class="hs-identifier hs-type">computeOutcomeMetric</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-59"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-60"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-61"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040933"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeMetric"><span class="hs-identifier hs-type">OutcomeMetric</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040934"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | The Maybe (OutcomeMetric a) captures the 'DeltaQ-ness' of the</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--   nature of outcomes, may / may not complete.</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">type</span><span> </span><span id="OutcomeEnhancedTracer"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnhancedTracer"><span class="hs-identifier hs-var">OutcomeEnhancedTracer</span></a></span></span><span> </span><span id="local-6989586621679041002"><span class="annot"><a href="#local-6989586621679041002"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679041003"><span class="annot"><a href="#local-6989586621679041003"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679041002"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041003"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeFidelity"><span class="hs-identifier hs-type">OutcomeFidelity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeMetric"><span class="hs-identifier hs-type">OutcomeMetric</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041003"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="annot"><span class="hs-comment">-- | Also need to know that observables happened in the &quot;right way&quot;</span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">data</span><span> </span><span id="OutcomeFidelity"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeFidelity"><span class="hs-identifier hs-var">OutcomeFidelity</span></a></span></span><span> </span><span id="local-6989586621679040982"><span class="annot"><a href="#local-6989586621679040982"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="EndsBeforeStarted"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#EndsBeforeStarted"><span class="hs-identifier hs-var">EndsBeforeStarted</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="StartsBeforeEnds"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#StartsBeforeEnds"><span class="hs-identifier hs-var">StartsBeforeEnds</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679040982"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ProgressedNormally"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#ProgressedNormally"><span class="hs-identifier hs-var">ProgressedNormally</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679040982"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-74"></span><span class="hs-comment">--  might have &quot;timeout&quot; and/or Failureprogression?</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679041009"><span id="local-6989586621679041016"><span id="local-6989586621679041020"><span class="annot"><span class="annottext">Int -&gt; OutcomeFidelity a -&gt; ShowS
+[OutcomeFidelity a] -&gt; ShowS
+OutcomeFidelity a -&gt; String
+(Int -&gt; OutcomeFidelity a -&gt; ShowS)
+-&gt; (OutcomeFidelity a -&gt; String)
+-&gt; ([OutcomeFidelity a] -&gt; ShowS)
+-&gt; Show (OutcomeFidelity a)
+forall a. Show a =&gt; Int -&gt; OutcomeFidelity a -&gt; ShowS
+forall a. Show a =&gt; [OutcomeFidelity a] -&gt; ShowS
+forall a. Show a =&gt; OutcomeFidelity a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; OutcomeFidelity a -&gt; ShowS
+showsPrec :: Int -&gt; OutcomeFidelity a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; OutcomeFidelity a -&gt; String
+show :: OutcomeFidelity a -&gt; String
+$cshowList :: forall a. Show a =&gt; [OutcomeFidelity a] -&gt; ShowS
+showList :: [OutcomeFidelity a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Custom function for @MVar@, relying on two pretty standard</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- constraints.</span><span>
+</span><span id="line-79"></span><span id="local-6989586621679040941"><span id="local-6989586621679040944"><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#liftedModifyMVar_"><span class="hs-identifier hs-type">liftedModifyMVar_</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040941"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040941"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040944"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679040944"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040941"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040944"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040941"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-80"></span><span id="liftedModifyMVar_"><span class="annot"><span class="annottext">liftedModifyMVar_ :: forall (m :: * -&gt; *) a.
+(MonadIO m, MonadMask m) =&gt;
+MVar a -&gt; (a -&gt; m a) -&gt; m ()
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#liftedModifyMVar_"><span class="hs-identifier hs-var hs-var">liftedModifyMVar_</span></a></span></span><span> </span><span id="local-6989586621679041039"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679041039"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679041040"><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679041040"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall b. HasCallStack =&gt; ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+(MonadMask m, HasCallStack) =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#mask"><span class="hs-identifier hs-var">CES.mask</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ())
+-&gt; ((forall a. m a -&gt; m a) -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679041042"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679041042"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679041043"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041043"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; m a) -&gt; IO a -&gt; m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679041039"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679041045"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041045"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679041042"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; m a
+</span><a href="#local-6989586621679041040"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041043"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m () -&gt; m a
+forall (m :: * -&gt; *) a b.
+(HasCallStack, MonadMask m) =&gt;
+m a -&gt; m b -&gt; m a
+</span><span class="hs-operator hs-var">`CES.onException`</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679041039"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041043"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679041039"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041045"><span class="hs-identifier hs-var">a'</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Generic Trace transformer. It could be written to take</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   an initial argument, but restricting the scope of that</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   per-invocation state seems more appropriate (for the</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   moment). That may be of use if\/when explict management of</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   timeout was required and\/or non-termination of the outcome at</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   the end of a run was of interest.</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#mkOutcomeExtractor"><span class="hs-identifier hs-type">mkOutcomeExtractor</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679040962"><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679040963"><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnhancedTracer"><span class="hs-identifier hs-type">OutcomeEnhancedTracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span id="mkOutcomeExtractor"><span class="annot"><span class="annottext">mkOutcomeExtractor :: forall (m :: * -&gt; *) a.
+(MonadIO m, MonadMask m, Outcome m a) =&gt;
+m (OutcomeEnhancedTracer m a -&gt; Tracer m a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#mkOutcomeExtractor"><span class="hs-identifier hs-var hs-var">mkOutcomeExtractor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- We always instantiate a new MVar for the outcome.</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679041083"><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041083"><span class="hs-identifier hs-var">maybeInterValue</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (MVar (Maybe (IntermediateValue a)))
+-&gt; m (MVar (Maybe (IntermediateValue a)))
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (MVar (Maybe (IntermediateValue a)))
+ -&gt; m (MVar (Maybe (IntermediateValue a))))
+-&gt; IO (MVar (Maybe (IntermediateValue a)))
+-&gt; m (MVar (Maybe (IntermediateValue a)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+-&gt; IO (MVar (Maybe (IntermediateValue a)))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">(OutcomeEnhancedTracer m a -&gt; Tracer m a)
+-&gt; m (OutcomeEnhancedTracer m a -&gt; Tracer m a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">((OutcomeEnhancedTracer m a -&gt; Tracer m a)
+ -&gt; m (OutcomeEnhancedTracer m a -&gt; Tracer m a))
+-&gt; (OutcomeEnhancedTracer m a -&gt; Tracer m a)
+-&gt; m (OutcomeEnhancedTracer m a -&gt; Tracer m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+-&gt; OutcomeEnhancedTracer m a -&gt; Tracer m a
+</span><a href="#local-6989586621679041084"><span class="hs-identifier hs-var">traceOutcomes</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041083"><span class="hs-identifier hs-var">maybeInterValue</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="#local-6989586621679041084"><span class="hs-identifier hs-type">traceOutcomes</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnhancedTracer"><span class="hs-identifier hs-type">OutcomeEnhancedTracer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679041084"><span class="annot"><span class="annottext">traceOutcomes :: MVar (Maybe (IntermediateValue a))
+-&gt; OutcomeEnhancedTracer m a -&gt; Tracer m a
+</span><a href="#local-6989586621679041084"><span class="hs-identifier hs-var hs-var">traceOutcomes</span></a></span></span><span> </span><span id="local-6989586621679041085"><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041085"><span class="hs-identifier hs-var">maybeInterValue</span></a></span></span><span> </span><span id="local-6989586621679041086"><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m ()) -&gt; Tracer m a
+forall (m :: * -&gt; *) a. (a -&gt; m ()) -&gt; Tracer m a
+</span><span class="hs-identifier hs-var">Tracer</span></span><span> </span><span class="annot"><span class="annottext">((a -&gt; m ()) -&gt; Tracer m a) -&gt; (a -&gt; m ()) -&gt; Tracer m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679041088"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041088"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>      </span><span id="local-6989586621679041089"><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041089"><span class="hs-identifier hs-var">classifedObservable</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m OutcomeProgressionStatus
+forall (m :: * -&gt; *) a.
+Outcome m a =&gt;
+a -&gt; m OutcomeProgressionStatus
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#classifyObservable"><span class="hs-identifier hs-var">classifyObservable</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041088"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-106"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041089"><span class="hs-identifier hs-var">classifedObservable</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeOther"><span class="hs-identifier hs-var">OutcomeOther</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041088"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-108"></span><span>        </span><span id="local-6989586621679041090"><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041090"><span class="hs-identifier hs-var">outcome</span></a></span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+-&gt; (Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadIO m, MonadMask m) =&gt;
+MVar a -&gt; (a -&gt; m a) -&gt; m ()
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#liftedModifyMVar_"><span class="hs-identifier hs-var">liftedModifyMVar_</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041085"><span class="hs-identifier hs-var">maybeInterValue</span></a></span><span> </span><span class="annot"><span class="annottext">((Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+ -&gt; m ())
+-&gt; (Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679041091"><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+</span><a href="#local-6989586621679041091"><span class="hs-identifier hs-var">observedResult</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+</span><a href="#local-6989586621679041091"><span class="hs-identifier hs-var">observedResult</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-109"></span><span>                </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus -&gt; a -&gt; m (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041092"><span class="hs-identifier hs-var">outcomeWithoutValue</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041090"><span class="hs-identifier hs-var">outcome</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041088"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-110"></span><span>                </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679041093"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041093"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+-&gt; a -&gt; IntermediateValue a -&gt; m (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041094"><span class="hs-identifier hs-var">outcomeWithValue</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041090"><span class="hs-identifier hs-var">outcome</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041088"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041093"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>       </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-comment">-- If we don't have any intermediate values and the outcome is</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-comment">-- @OutcomeStarts@, then we set the initial value inside the MVar.</span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><a href="#local-6989586621679041092"><span class="hs-identifier hs-type">outcomeWithoutValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeProgressionStatus"><span class="hs-identifier hs-type">OutcomeProgressionStatus</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>        </span><span id="local-6989586621679041092"><span class="annot"><span class="annottext">outcomeWithoutValue :: OutcomeProgressionStatus -&gt; a -&gt; m (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041092"><span class="hs-identifier hs-var hs-var">outcomeWithoutValue</span></a></span></span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeStarts"><span class="hs-identifier hs-var">OutcomeStarts</span></a></span><span> </span><span id="local-6989586621679041095"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041095"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>            </span><span class="hs-glyph">!</span><span id="local-6989586621679041096"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041096"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m (IntermediateValue a)
+forall (m :: * -&gt; *) a. Outcome m a =&gt; a -&gt; m (IntermediateValue a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#captureObservableValue"><span class="hs-identifier hs-var">captureObservableValue</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041095"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-118"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041095"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-119"></span><span>            </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a -&gt; Maybe (IntermediateValue a)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041096"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><a href="#local-6989586621679041092"><span class="hs-identifier hs-var">outcomeWithoutValue</span></a></span><span> </span><span id="local-6989586621679041097"><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041097"><span class="hs-identifier hs-var">_otherwise</span></a></span></span><span> </span><span id="local-6989586621679041098"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041098"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- Outcome ends</span><span>
+</span><span id="line-121"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041098"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-122"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeFidelity (OutcomeMetric a)
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeFidelity (OutcomeMetric a)
+forall a. OutcomeFidelity a
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#EndsBeforeStarted"><span class="hs-identifier hs-var">EndsBeforeStarted</span></a></span><span>
+</span><span id="line-123"></span><span>            </span><span class="hs-comment">-- We remove what we had been measuring, this should</span><span>
+</span><span id="line-124"></span><span>            </span><span class="hs-comment">-- probably be an error as well.</span><span>
+</span><span id="line-125"></span><span>            </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span>        </span><span class="hs-comment">-- If we do have any intermediate values and the outcome is</span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-comment">-- @OutcomeStarts@, then we set the initial value inside the MVar.</span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><a href="#local-6989586621679041094"><span class="hs-identifier hs-type">outcomeWithValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeProgressionStatus"><span class="hs-identifier hs-type">OutcomeProgressionStatus</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679040962"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Transformers.ObserveOutcome.html#IntermediateValue"><span class="hs-identifier hs-type">IntermediateValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679040963"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>        </span><span id="local-6989586621679041094"><span class="annot"><span class="annottext">outcomeWithValue :: OutcomeProgressionStatus
+-&gt; a -&gt; IntermediateValue a -&gt; m (Maybe (IntermediateValue a))
+</span><a href="#local-6989586621679041094"><span class="hs-identifier hs-var hs-var">outcomeWithValue</span></a></span></span><span> </span><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#OutcomeEnds"><span class="hs-identifier hs-var">OutcomeEnds</span></a></span><span> </span><span id="local-6989586621679041099"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041099"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679041100"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041100"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>            </span><span class="hs-glyph">!</span><span id="local-6989586621679041101"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041101"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m (IntermediateValue a)
+forall (m :: * -&gt; *) a. Outcome m a =&gt; a -&gt; m (IntermediateValue a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#captureObservableValue"><span class="hs-identifier hs-var">captureObservableValue</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041099"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-132"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041099"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-133"></span><span>            </span><span id="local-6989586621679041102"><span class="annot"><span class="annottext">OutcomeMetric a
+</span><a href="#local-6989586621679041102"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a
+-&gt; IntermediateValue a
+-&gt; IntermediateValue a
+-&gt; m (OutcomeMetric a)
+forall (m :: * -&gt; *) a.
+Outcome m a =&gt;
+a
+-&gt; IntermediateValue a
+-&gt; IntermediateValue a
+-&gt; m (OutcomeMetric a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#computeOutcomeMetric"><span class="hs-identifier hs-var">computeOutcomeMetric</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041099"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041100"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041101"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-134"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeFidelity (OutcomeMetric a)
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OutcomeMetric a -&gt; OutcomeFidelity (OutcomeMetric a)
+forall a. a -&gt; OutcomeFidelity a
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#ProgressedNormally"><span class="hs-identifier hs-var">ProgressedNormally</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeMetric a
+</span><a href="#local-6989586621679041102"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>            </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><a href="#local-6989586621679041094"><span class="hs-identifier hs-var">outcomeWithValue</span></a></span><span> </span><span id="local-6989586621679041103"><span class="annot"><span class="annottext">OutcomeProgressionStatus
+</span><a href="#local-6989586621679041103"><span class="hs-identifier hs-var">_otherwise</span></a></span></span><span> </span><span id="local-6989586621679041104"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041104"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679041105"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041105"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- OutcomeStarts, this could be ignored since it &quot;resets&quot;.</span><span>
+</span><span id="line-137"></span><span>            </span><span class="hs-glyph">!</span><span id="local-6989586621679041106"><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041106"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; m (IntermediateValue a)
+forall (m :: * -&gt; *) a. Outcome m a =&gt; a -&gt; m (IntermediateValue a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#captureObservableValue"><span class="hs-identifier hs-var">captureObservableValue</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041104"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-138"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041104"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-139"></span><span>            </span><span id="local-6989586621679041107"><span class="annot"><span class="annottext">OutcomeMetric a
+</span><a href="#local-6989586621679041107"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a
+-&gt; IntermediateValue a
+-&gt; IntermediateValue a
+-&gt; m (OutcomeMetric a)
+forall (m :: * -&gt; *) a.
+Outcome m a =&gt;
+a
+-&gt; IntermediateValue a
+-&gt; IntermediateValue a
+-&gt; m (OutcomeMetric a)
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#computeOutcomeMetric"><span class="hs-identifier hs-var">computeOutcomeMetric</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679041104"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041105"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041106"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-140"></span><span>            </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">OutcomeEnhancedTracer m a
+</span><a href="#local-6989586621679041086"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ())
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a)) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeFidelity (OutcomeMetric a)
+-&gt; Either a (OutcomeFidelity (OutcomeMetric a))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OutcomeMetric a -&gt; OutcomeFidelity (OutcomeMetric a)
+forall a. a -&gt; OutcomeFidelity a
+</span><a href="Control.Tracer.Transformers.ObserveOutcome.html#StartsBeforeEnds"><span class="hs-identifier hs-var">StartsBeforeEnds</span></a></span><span> </span><span class="annot"><span class="annottext">OutcomeMetric a
+</span><a href="#local-6989586621679041107"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Probably some error.</span><span>
+</span><span id="line-141"></span><span>            </span><span class="annot"><span class="annottext">Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a)))
+-&gt; Maybe (IntermediateValue a) -&gt; m (Maybe (IntermediateValue a))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a -&gt; Maybe (IntermediateValue a)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">IntermediateValue a
+</span><a href="#local-6989586621679041106"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-144"></span></pre></body></html>

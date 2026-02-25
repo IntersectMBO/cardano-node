@@ -1,0 +1,862 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679075841"><span id="local-6989586621679075842"></span></span><span class="hs-pragma">{-# LANGUAGE CPP, DeriveDataTypeable, DeriveTraversable, DeriveFoldable,
+       DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Functor.Of</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier">Of</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.html"><span class="hs-identifier">Data.Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html"><span class="hs-identifier">Data.Traversable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier">Traversable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_base(4,9,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html"><span class="hs-identifier">Data.Functor.Classes</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html"><span class="hs-identifier">Data.Traversable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier">Traversable</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">#if MIN_VERSION_base(4,10,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html"><span class="hs-identifier">Data.Bifoldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html#Bifoldable"><span class="hs-identifier">Bifoldable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html#bifoldMap"><span class="hs-identifier">bifoldMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html"><span class="hs-identifier">Data.Bitraversable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html#Bitraversable"><span class="hs-identifier">Bitraversable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html#bitraverse"><span class="hs-identifier">bitraverse</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic1"><span class="hs-identifier">Generic1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="annot"><span class="hs-comment">-- | A left-strict pair; the base functor for streams of individual elements.</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="Of"><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-var">Of</span></a></span></span><span> </span><span id="local-6989586621679075657"><span class="annot"><a href="#local-6989586621679075657"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679075658"><span class="annot"><a href="#local-6989586621679075658"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679075657"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span id="%3A%3E"><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679075658"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679075853"><span id="local-6989586621679075857"><span id="local-6989586621679075861"><span id="local-6989586621679075863"><span id="local-6989586621679075865"><span id="local-6989586621679075871"><span id="local-6989586621679075878"><span id="local-6989586621679075881"><span id="local-6989586621679075884"><span id="local-6989586621679075887"><span id="local-6989586621679075890"><span id="local-6989586621679075893"><span id="local-6989586621679075898"><span id="local-6989586621679075903"><span class="annot"><span class="annottext">Typeable (Of a b)
+Typeable (Of a b) =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Of a b -&gt; c (Of a b))
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Of a b))
+-&gt; (Of a b -&gt; Constr)
+-&gt; (Of a b -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Of a b)))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Of a b)))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Of a b -&gt; Of a b)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b))
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b))
+-&gt; Data (Of a b)
+Of a b -&gt; Constr
+Of a b -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Of a b -&gt; Of a b
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; [u]
+forall a b. (Data a, Data b) =&gt; Typeable (Of a b)
+forall a b. (Data a, Data b) =&gt; Of a b -&gt; Constr
+forall a b. (Data a, Data b) =&gt; Of a b -&gt; DataType
+forall a b.
+(Data a, Data b) =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Of a b -&gt; Of a b
+forall a b u.
+(Data a, Data b) =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; u
+forall a b u.
+(Data a, Data b) =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; [u]
+forall a b r r'.
+(Data a, Data b) =&gt;
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+forall a b r r'.
+(Data a, Data b) =&gt;
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+forall a b (m :: * -&gt; *).
+(Data a, Data b, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+forall a b (m :: * -&gt; *).
+(Data a, Data b, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+forall a b (c :: * -&gt; *).
+(Data a, Data b) =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Of a b)
+forall a b (c :: * -&gt; *).
+(Data a, Data b) =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Of a b -&gt; c (Of a b)
+forall a b (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Data b, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Of a b))
+forall a b (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Data b, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Of a b))
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Of a b)
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Of a b -&gt; c (Of a b)
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Of a b))
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Of a b))
+$cgfoldl :: forall a b (c :: * -&gt; *).
+(Data a, Data b) =&gt;
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Of a b -&gt; c (Of a b)
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Of a b -&gt; c (Of a b)
+$cgunfold :: forall a b (c :: * -&gt; *).
+(Data a, Data b) =&gt;
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Of a b)
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c (Of a b)
+$ctoConstr :: forall a b. (Data a, Data b) =&gt; Of a b -&gt; Constr
+toConstr :: Of a b -&gt; Constr
+$cdataTypeOf :: forall a b. (Data a, Data b) =&gt; Of a b -&gt; DataType
+dataTypeOf :: Of a b -&gt; DataType
+$cdataCast1 :: forall a b (t :: * -&gt; *) (c :: * -&gt; *).
+(Data a, Data b, Typeable t) =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Of a b))
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c (Of a b))
+$cdataCast2 :: forall a b (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+(Data a, Data b, Typeable t) =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Of a b))
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c (Of a b))
+$cgmapT :: forall a b.
+(Data a, Data b) =&gt;
+(forall b. Data b =&gt; b -&gt; b) -&gt; Of a b -&gt; Of a b
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Of a b -&gt; Of a b
+$cgmapQl :: forall a b r r'.
+(Data a, Data b) =&gt;
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+$cgmapQr :: forall a b r r'.
+(Data a, Data b) =&gt;
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Of a b -&gt; r
+$cgmapQ :: forall a b u.
+(Data a, Data b) =&gt;
+(forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; [u]
+$cgmapQi :: forall a b u.
+(Data a, Data b) =&gt;
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Of a b -&gt; u
+$cgmapM :: forall a b (m :: * -&gt; *).
+(Data a, Data b, Monad m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+$cgmapMp :: forall a b (m :: * -&gt; *).
+(Data a, Data b, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+$cgmapMo :: forall a b (m :: * -&gt; *).
+(Data a, Data b, MonadPlus m) =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Of a b -&gt; m (Of a b)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679075914"><span id="local-6989586621679075918"><span class="annot"><span class="annottext">Of a b -&gt; Of a b -&gt; Bool
+(Of a b -&gt; Of a b -&gt; Bool)
+-&gt; (Of a b -&gt; Of a b -&gt; Bool) -&gt; Eq (Of a b)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall a b. (Eq a, Eq b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+$c== :: forall a b. (Eq a, Eq b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+== :: Of a b -&gt; Of a b -&gt; Bool
+$c/= :: forall a b. (Eq a, Eq b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+/= :: Of a b -&gt; Of a b -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679075923"><span id="local-6989586621679075929"><span id="local-6989586621679075932"><span id="local-6989586621679075937"><span id="local-6989586621679075939"><span id="local-6989586621679075942"><span id="local-6989586621679075945"><span id="local-6989586621679075948"><span id="local-6989586621679075951"><span id="local-6989586621679075954"><span id="local-6989586621679075957"><span id="local-6989586621679075959"><span id="local-6989586621679075962"><span id="local-6989586621679075967"><span id="local-6989586621679075972"><span id="local-6989586621679075977"><span id="local-6989586621679075982"><span class="annot"><span class="annottext">(forall m. Monoid m =&gt; Of a m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a)
+-&gt; (forall a. Of a a -&gt; [a])
+-&gt; (forall a. Of a a -&gt; Bool)
+-&gt; (forall a. Of a a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; Of a a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; Of a a -&gt; a)
+-&gt; (forall a. Ord a =&gt; Of a a -&gt; a)
+-&gt; (forall a. Num a =&gt; Of a a -&gt; a)
+-&gt; (forall a. Num a =&gt; Of a a -&gt; a)
+-&gt; Foldable (Of a)
+forall a. Eq a =&gt; a -&gt; Of a a -&gt; Bool
+forall a. Num a =&gt; Of a a -&gt; a
+forall a. Ord a =&gt; Of a a -&gt; a
+forall m. Monoid m =&gt; Of a m -&gt; m
+forall a. Of a a -&gt; Bool
+forall a. Of a a -&gt; Int
+forall a. Of a a -&gt; [a]
+forall a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+forall a a. Eq a =&gt; a -&gt; Of a a -&gt; Bool
+forall a a. Num a =&gt; Of a a -&gt; a
+forall a a. Ord a =&gt; Of a a -&gt; a
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+forall a m. Monoid m =&gt; Of a m -&gt; m
+forall a a. Of a a -&gt; Bool
+forall a a. Of a a -&gt; Int
+forall a a. Of a a -&gt; [a]
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+forall a a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+forall a m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+forall a b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+forall a a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+forall (t :: * -&gt; *).
+(forall m. Monoid m =&gt; t m -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall m a. Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. (a -&gt; a -&gt; a) -&gt; t a -&gt; a)
+-&gt; (forall a. t a -&gt; [a])
+-&gt; (forall a. t a -&gt; Bool)
+-&gt; (forall a. t a -&gt; Int)
+-&gt; (forall a. Eq a =&gt; a -&gt; t a -&gt; Bool)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Ord a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; (forall a. Num a =&gt; t a -&gt; a)
+-&gt; Foldable t
+$cfold :: forall a m. Monoid m =&gt; Of a m -&gt; m
+fold :: forall m. Monoid m =&gt; Of a m -&gt; m
+$cfoldMap :: forall a m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+$cfoldMap' :: forall a m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+foldMap' :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Of a a -&gt; m
+$cfoldr :: forall a a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+$cfoldr' :: forall a a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+$cfoldl :: forall a b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+$cfoldl' :: forall a b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Of a a -&gt; b
+$cfoldr1 :: forall a a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+$cfoldl1 :: forall a a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; Of a a -&gt; a
+$ctoList :: forall a a. Of a a -&gt; [a]
+toList :: forall a. Of a a -&gt; [a]
+$cnull :: forall a a. Of a a -&gt; Bool
+null :: forall a. Of a a -&gt; Bool
+$clength :: forall a a. Of a a -&gt; Int
+length :: forall a. Of a a -&gt; Int
+$celem :: forall a a. Eq a =&gt; a -&gt; Of a a -&gt; Bool
+elem :: forall a. Eq a =&gt; a -&gt; Of a a -&gt; Bool
+$cmaximum :: forall a a. Ord a =&gt; Of a a -&gt; a
+maximum :: forall a. Ord a =&gt; Of a a -&gt; a
+$cminimum :: forall a a. Ord a =&gt; Of a a -&gt; a
+minimum :: forall a. Ord a =&gt; Of a a -&gt; a
+$csum :: forall a a. Num a =&gt; Of a a -&gt; a
+sum :: forall a. Num a =&gt; Of a a -&gt; a
+$cproduct :: forall a a. Num a =&gt; Of a a -&gt; a
+product :: forall a. Num a =&gt; Of a a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Foldable</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679075994"><span id="local-6989586621679075998"><span id="local-6989586621679076002"><span id="local-6989586621679076006"><span id="local-6989586621679076009"><span id="local-6989586621679076012"><span id="local-6989586621679076015"><span class="annot"><span class="annottext">Eq (Of a b)
+Eq (Of a b) =&gt;
+(Of a b -&gt; Of a b -&gt; Ordering)
+-&gt; (Of a b -&gt; Of a b -&gt; Bool)
+-&gt; (Of a b -&gt; Of a b -&gt; Bool)
+-&gt; (Of a b -&gt; Of a b -&gt; Bool)
+-&gt; (Of a b -&gt; Of a b -&gt; Bool)
+-&gt; (Of a b -&gt; Of a b -&gt; Of a b)
+-&gt; (Of a b -&gt; Of a b -&gt; Of a b)
+-&gt; Ord (Of a b)
+Of a b -&gt; Of a b -&gt; Bool
+Of a b -&gt; Of a b -&gt; Ordering
+Of a b -&gt; Of a b -&gt; Of a b
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a b. (Ord a, Ord b) =&gt; Eq (Of a b)
+forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Ordering
+forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Of a b
+$ccompare :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Ordering
+compare :: Of a b -&gt; Of a b -&gt; Ordering
+$c&lt; :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+&lt; :: Of a b -&gt; Of a b -&gt; Bool
+$c&lt;= :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+&lt;= :: Of a b -&gt; Of a b -&gt; Bool
+$c&gt; :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+&gt; :: Of a b -&gt; Of a b -&gt; Bool
+$c&gt;= :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Bool
+&gt;= :: Of a b -&gt; Of a b -&gt; Bool
+$cmax :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Of a b
+max :: Of a b -&gt; Of a b -&gt; Of a b
+$cmin :: forall a b. (Ord a, Ord b) =&gt; Of a b -&gt; Of a b -&gt; Of a b
+min :: Of a b -&gt; Of a b -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>              </span><span id="local-6989586621679076022"><span id="local-6989586621679076026"><span id="local-6989586621679076029"><span id="local-6989586621679076038"><span class="annot"><span class="annottext">ReadPrec [Of a b]
+ReadPrec (Of a b)
+Int -&gt; ReadS (Of a b)
+ReadS [Of a b]
+(Int -&gt; ReadS (Of a b))
+-&gt; ReadS [Of a b]
+-&gt; ReadPrec (Of a b)
+-&gt; ReadPrec [Of a b]
+-&gt; Read (Of a b)
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+forall a b. (Read a, Read b) =&gt; ReadPrec [Of a b]
+forall a b. (Read a, Read b) =&gt; ReadPrec (Of a b)
+forall a b. (Read a, Read b) =&gt; Int -&gt; ReadS (Of a b)
+forall a b. (Read a, Read b) =&gt; ReadS [Of a b]
+$creadsPrec :: forall a b. (Read a, Read b) =&gt; Int -&gt; ReadS (Of a b)
+readsPrec :: Int -&gt; ReadS (Of a b)
+$creadList :: forall a b. (Read a, Read b) =&gt; ReadS [Of a b]
+readList :: ReadS [Of a b]
+$creadPrec :: forall a b. (Read a, Read b) =&gt; ReadPrec (Of a b)
+readPrec :: ReadPrec (Of a b)
+$creadListPrec :: forall a b. (Read a, Read b) =&gt; ReadPrec [Of a b]
+readListPrec :: ReadPrec [Of a b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076044"><span id="local-6989586621679076050"><span id="local-6989586621679076054"><span class="annot"><span class="annottext">Int -&gt; Of a b -&gt; ShowS
+[Of a b] -&gt; ShowS
+Of a b -&gt; String
+(Int -&gt; Of a b -&gt; ShowS)
+-&gt; (Of a b -&gt; String) -&gt; ([Of a b] -&gt; ShowS) -&gt; Show (Of a b)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall a b. (Show a, Show b) =&gt; Int -&gt; Of a b -&gt; ShowS
+forall a b. (Show a, Show b) =&gt; [Of a b] -&gt; ShowS
+forall a b. (Show a, Show b) =&gt; Of a b -&gt; String
+$cshowsPrec :: forall a b. (Show a, Show b) =&gt; Int -&gt; Of a b -&gt; ShowS
+showsPrec :: Int -&gt; Of a b -&gt; ShowS
+$cshow :: forall a b. (Show a, Show b) =&gt; Of a b -&gt; String
+show :: Of a b -&gt; String
+$cshowList :: forall a b. (Show a, Show b) =&gt; [Of a b] -&gt; ShowS
+showList :: [Of a b] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076063"><span id="local-6989586621679076068"><span id="local-6989586621679076074"><span id="local-6989586621679076079"><span class="annot"><span class="annottext">Functor (Of a)
+Foldable (Of a)
+(Functor (Of a), Foldable (Of a)) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; Of a a -&gt; f (Of a b))
+-&gt; (forall (f :: * -&gt; *) a.
+    Applicative f =&gt;
+    Of a (f a) -&gt; f (Of a a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; Of a a -&gt; m (Of a b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; Of a (m a) -&gt; m (Of a a))
+-&gt; Traversable (Of a)
+forall a. Functor (Of a)
+forall a. Foldable (Of a)
+forall a (m :: * -&gt; *) a. Monad m =&gt; Of a (m a) -&gt; m (Of a a)
+forall a (f :: * -&gt; *) a. Applicative f =&gt; Of a (f a) -&gt; f (Of a a)
+forall a (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Of a a -&gt; m (Of a b)
+forall a (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Of a a -&gt; f (Of a b)
+forall (t :: * -&gt; *).
+(Functor t, Foldable t) =&gt;
+(forall (f :: * -&gt; *) a b.
+ Applicative f =&gt;
+ (a -&gt; f b) -&gt; t a -&gt; f (t b))
+-&gt; (forall (f :: * -&gt; *) a. Applicative f =&gt; t (f a) -&gt; f (t a))
+-&gt; (forall (m :: * -&gt; *) a b.
+    Monad m =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (m :: * -&gt; *) a. Monad m =&gt; t (m a) -&gt; m (t a))
+-&gt; Traversable t
+forall (m :: * -&gt; *) a. Monad m =&gt; Of a (m a) -&gt; m (Of a a)
+forall (f :: * -&gt; *) a. Applicative f =&gt; Of a (f a) -&gt; f (Of a a)
+forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Of a a -&gt; m (Of a b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Of a a -&gt; f (Of a b)
+$ctraverse :: forall a (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Of a a -&gt; f (Of a b)
+traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Of a a -&gt; f (Of a b)
+$csequenceA :: forall a (f :: * -&gt; *) a. Applicative f =&gt; Of a (f a) -&gt; f (Of a a)
+sequenceA :: forall (f :: * -&gt; *) a. Applicative f =&gt; Of a (f a) -&gt; f (Of a a)
+$cmapM :: forall a (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Of a a -&gt; m (Of a b)
+mapM :: forall (m :: * -&gt; *) a b.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Of a a -&gt; m (Of a b)
+$csequence :: forall a (m :: * -&gt; *) a. Monad m =&gt; Of a (m a) -&gt; m (Of a a)
+sequence :: forall (m :: * -&gt; *) a. Monad m =&gt; Of a (m a) -&gt; m (Of a a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Traversable</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076086"><span id="local-6989586621679076088"><span class="annot"><span class="annottext">(forall x. Of a b -&gt; Rep (Of a b) x)
+-&gt; (forall x. Rep (Of a b) x -&gt; Of a b) -&gt; Generic (Of a b)
+forall x. Rep (Of a b) x -&gt; Of a b
+forall x. Of a b -&gt; Rep (Of a b) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a b x. Rep (Of a b) x -&gt; Of a b
+forall a b x. Of a b -&gt; Rep (Of a b) x
+$cfrom :: forall a b x. Of a b -&gt; Rep (Of a b) x
+from :: forall x. Of a b -&gt; Rep (Of a b) x
+$cto :: forall a b x. Rep (Of a b) x -&gt; Of a b
+to :: forall x. Rep (Of a b) x -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076092"><span id="local-6989586621679076094"><span class="annot"><span class="annottext">(forall a. Of a a -&gt; Rep1 (Of a) a)
+-&gt; (forall a. Rep1 (Of a) a -&gt; Of a a) -&gt; Generic1 (Of a)
+forall a. Rep1 (Of a) a -&gt; Of a a
+forall a. Of a a -&gt; Rep1 (Of a) a
+forall a a. Rep1 (Of a) a -&gt; Of a a
+forall a a. Of a a -&gt; Rep1 (Of a) a
+forall k (f :: k -&gt; *).
+(forall (a :: k). f a -&gt; Rep1 f a)
+-&gt; (forall (a :: k). Rep1 f a -&gt; f a) -&gt; Generic1 f
+$cfrom1 :: forall a a. Of a a -&gt; Rep1 (Of a) a
+from1 :: forall a. Of a a -&gt; Rep1 (Of a) a
+$cto1 :: forall a a. Rep1 (Of a) a -&gt; Of a a
+to1 :: forall a. Rep1 (Of a) a -&gt; Of a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic1"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic1</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075655"><span id="local-6989586621679075656"><span id="local-6989586621679076101"><span id="local-6989586621679076105"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075655"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075656"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075655"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075656"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076112"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076112"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076113"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076113"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679076114"><span class="annot"><span class="annottext">&lt;&gt; :: Of a b -&gt; Of a b -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076115"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076115"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076116"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076116"><span class="hs-identifier hs-var">w'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076112"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076115"><span class="hs-identifier hs-var">m'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076113"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; b -&gt; b
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076116"><span class="hs-identifier hs-var">w'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075662"><span id="local-6989586621679075663"><span id="local-6989586621679076125"><span id="local-6989586621679076129"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075662"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075663"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075662"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075663"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679076135"><span class="annot"><span class="annottext">mempty :: Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-pragma hs-type">mempty</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if !(MIN_VERSION_base(4,11,0))
+</span><span>  </span><span class="hs-identifier">mappend</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">m</span><span> </span><span class="hs-operator">:&gt;</span><span> </span><span class="hs-identifier">w</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">m'</span><span> </span><span class="hs-operator">:&gt;</span><span> </span><span class="hs-identifier">w'</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">mappend</span><span> </span><span class="hs-identifier">m</span><span> </span><span class="hs-identifier">m'</span><span> </span><span class="hs-operator">:&gt;</span><span> </span><span class="hs-identifier">mappend</span><span> </span><span class="hs-identifier">w</span><span> </span><span class="hs-identifier">w'</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">mappend</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076136"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076136"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679076140"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Of a a -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679076141"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076141"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076142"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076142"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076143"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076143"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076142"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076141"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076143"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-pragma hs-type">fmap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679076144"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076144"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679076145"><span class="annot"><span class="annottext">&lt;$ :: forall a b. a -&gt; Of a b -&gt; Of a a
+</span><a href="#local-6989586621679076145"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;$</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076147"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076147"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076147"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Of a a
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076144"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;$</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+
+#if MIN_VERSION_base(4,8,0)
+</span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#Bifunctor"><span class="hs-identifier hs-type">Bifunctor</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679076155"><span class="annot"><span class="annottext">bimap :: forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; Of a c -&gt; Of b d
+</span><a href="#local-6989586621679076155"><span class="hs-identifier hs-var hs-var hs-var hs-var">bimap</span></a></span></span><span> </span><span id="local-6989586621679076157"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076157"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679076158"><span class="annot"><span class="annottext">c -&gt; d
+</span><a href="#local-6989586621679076158"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076159"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076159"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076160"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076160"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076157"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076159"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; d -&gt; Of b d
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; d
+</span><a href="#local-6989586621679076158"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076160"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#bimap"><span class="hs-pragma hs-type">bimap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679076161"><span class="annot"><span class="annottext">first :: forall a b c. (a -&gt; b) -&gt; Of a c -&gt; Of b c
+</span><a href="#local-6989586621679076161"><span class="hs-identifier hs-var hs-var hs-var hs-var">first</span></a></span></span><span> </span><span id="local-6989586621679076163"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076163"><span class="hs-identifier hs-var">f</span></a></span></span><span>   </span><span class="hs-special">(</span><span id="local-6989586621679076164"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076164"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076165"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076165"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076163"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076164"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; c -&gt; Of b c
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076165"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#first"><span class="hs-pragma hs-type">first</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679076166"><span class="annot"><span class="annottext">second :: forall b c a. (b -&gt; c) -&gt; Of a b -&gt; Of a c
+</span><a href="#local-6989586621679076166"><span class="hs-identifier hs-var hs-var hs-var hs-var">second</span></a></span></span><span> </span><span id="local-6989586621679076168"><span class="annot"><span class="annottext">b -&gt; c
+</span><a href="#local-6989586621679076168"><span class="hs-identifier hs-var">g</span></a></span></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076169"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076169"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076170"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076170"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076169"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; c -&gt; Of a c
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; c
+</span><a href="#local-6989586621679076168"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076170"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#second"><span class="hs-pragma hs-type">second</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span class="hs-cpp">
+#if MIN_VERSION_base(4,10,0)
+</span><span class="annot"><span class="hs-comment">-- | @since 0.2.4.0</span></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076172"><span id="local-6989586621679076179"><span id="local-6989586621679076182"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html#Bifoldable"><span class="hs-identifier hs-type">Bifoldable</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679076187"><span class="annot"><span class="annottext">bifoldMap :: forall m a b. Monoid m =&gt; (a -&gt; m) -&gt; (b -&gt; m) -&gt; Of a b -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html#bifoldMap"><span class="hs-identifier hs-var hs-var hs-var hs-var">bifoldMap</span></a></span></span><span> </span><span id="local-6989586621679076188"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679076188"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679076189"><span class="annot"><span class="annottext">b -&gt; m
+</span><a href="#local-6989586621679076189"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076190"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076190"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076191"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076191"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679076188"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076190"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; m
+</span><a href="#local-6989586621679076189"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076191"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifoldable.html#bifoldMap"><span class="hs-pragma hs-type">bifoldMap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | @since 0.2.4.0</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html#Bitraversable"><span class="hs-identifier hs-type">Bitraversable</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679076203"><span class="annot"><span class="annottext">bitraverse :: forall (f :: * -&gt; *) a c b d.
+Applicative f =&gt;
+(a -&gt; f c) -&gt; (b -&gt; f d) -&gt; Of a b -&gt; f (Of c d)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html#bitraverse"><span class="hs-identifier hs-var hs-var hs-var hs-var">bitraverse</span></a></span></span><span> </span><span id="local-6989586621679076204"><span class="annot"><span class="annottext">a -&gt; f c
+</span><a href="#local-6989586621679076204"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679076205"><span class="annot"><span class="annottext">b -&gt; f d
+</span><a href="#local-6989586621679076205"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076206"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076206"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076207"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076207"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">c -&gt; d -&gt; Of c d
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">(:&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">(c -&gt; d -&gt; Of c d) -&gt; f c -&gt; f (d -&gt; Of c d)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f c
+</span><a href="#local-6989586621679076204"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076206"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">f (d -&gt; Of c d) -&gt; f d -&gt; f (Of c d)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; f d
+</span><a href="#local-6989586621679076205"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076207"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bitraversable.html#bitraverse"><span class="hs-pragma hs-type">bitraverse</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075739"><span id="local-6989586621679076215"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075739"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075739"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679076222"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Of a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621679076223"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076223"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Of a a
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076223"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-pragma hs-type">pure</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076225"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076225"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076226"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076226"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679076227"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Of a (a -&gt; b) -&gt; Of a a -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076228"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076228"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076229"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076229"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076225"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076228"><span class="hs-identifier hs-var">m'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679076226"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076229"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076231"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076231"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679076232"><span class="annot"><span class="annottext">*&gt; :: forall a b. Of a a -&gt; Of a b -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">*&gt;</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076233"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076233"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076234"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076234"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076231"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076233"><span class="hs-identifier hs-var">m'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076234"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076236"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076236"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076237"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076237"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679076238"><span class="annot"><span class="annottext">&lt;* :: forall a b. Of a a -&gt; Of a b -&gt; Of a a
+</span><a href="#local-6989586621679076238"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076240"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076240"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076236"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076240"><span class="hs-identifier hs-var">m'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Of a a
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076237"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075754"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075754"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075754"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679076250"><span class="annot"><span class="annottext">return :: forall a. a -&gt; Of a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Of a a
+forall a. a -&gt; Of a a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-pragma hs-type">return</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679076252"><span class="annot"><span class="annottext">&gt;&gt; :: forall a b. Of a a -&gt; Of a b -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&gt;&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Of a a -&gt; Of a b -&gt; Of a b
+forall a b. Of a a -&gt; Of a b -&gt; Of a b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">(*&gt;)</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679076254"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076254"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076255"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076255"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679076256"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. Of a a -&gt; (a -&gt; Of a b) -&gt; Of a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679076257"><span class="annot"><span class="annottext">a -&gt; Of a b
+</span><a href="#local-6989586621679076257"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679076258"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076258"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076259"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076259"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Of a b
+</span><a href="#local-6989586621679076257"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076255"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076254"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076258"><span class="hs-identifier hs-var">m'</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Of a b
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076259"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-pragma">{-#INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;=</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+
+#if MIN_VERSION_base(4,9,0)
+</span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075766"><span id="local-6989586621679076265"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075766"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show1"><span class="hs-identifier hs-type">Show1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075766"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679076273"><span class="annot"><span class="annottext">liftShowsPrec :: forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; ([a] -&gt; ShowS) -&gt; Int -&gt; Of a a -&gt; ShowS
+</span><a href="#local-6989586621679076273"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftShowsPrec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; (Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; Int
+-&gt; Of a a
+-&gt; ShowS
+forall a b.
+(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; (Int -&gt; b -&gt; ShowS)
+-&gt; ([b] -&gt; ShowS)
+-&gt; Int
+-&gt; Of a b
+-&gt; ShowS
+forall (f :: * -&gt; * -&gt; *) a b.
+Show2 f =&gt;
+(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; (Int -&gt; b -&gt; ShowS)
+-&gt; ([b] -&gt; ShowS)
+-&gt; Int
+-&gt; f a b
+-&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftShowsPrec2"><span class="hs-identifier hs-var">liftShowsPrec2</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; ShowS
+forall a. Show a =&gt; [a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showList"><span class="hs-identifier hs-var">showList</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075778"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075778"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq1"><span class="hs-identifier hs-type">Eq1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075778"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679076287"><span class="annot"><span class="annottext">liftEq :: forall a b. (a -&gt; b -&gt; Bool) -&gt; Of a a -&gt; Of a b -&gt; Bool
+</span><a href="#local-6989586621679076287"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftEq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; Bool) -&gt; (a -&gt; b -&gt; Bool) -&gt; Of a a -&gt; Of a b -&gt; Bool
+forall a b c d.
+(a -&gt; b -&gt; Bool) -&gt; (c -&gt; d -&gt; Bool) -&gt; Of a c -&gt; Of b d -&gt; Bool
+forall (f :: * -&gt; * -&gt; *) a b c d.
+Eq2 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; (c -&gt; d -&gt; Bool) -&gt; f a c -&gt; f b d -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftEq2"><span class="hs-identifier hs-var">liftEq2</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">(==)</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679075793"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075793"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord1"><span class="hs-identifier hs-type">Ord1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679075793"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679076302"><span class="annot"><span class="annottext">liftCompare :: forall a b. (a -&gt; b -&gt; Ordering) -&gt; Of a a -&gt; Of a b -&gt; Ordering
+</span><a href="#local-6989586621679076302"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftCompare</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; b -&gt; Ordering) -&gt; Of a a -&gt; Of a b -&gt; Ordering
+forall a b c d.
+(a -&gt; b -&gt; Ordering)
+-&gt; (c -&gt; d -&gt; Ordering) -&gt; Of a c -&gt; Of b d -&gt; Ordering
+forall (f :: * -&gt; * -&gt; *) a b c d.
+Ord2 f =&gt;
+(a -&gt; b -&gt; Ordering)
+-&gt; (c -&gt; d -&gt; Ordering) -&gt; f a c -&gt; f b d -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftCompare2"><span class="hs-identifier hs-var">liftCompare2</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-identifier hs-var">compare</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076310"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Show2"><span class="hs-identifier hs-type">Show2</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679076316"><span class="annot"><span class="annottext">liftShowsPrec2 :: forall a b.
+(Int -&gt; a -&gt; ShowS)
+-&gt; ([a] -&gt; ShowS)
+-&gt; (Int -&gt; b -&gt; ShowS)
+-&gt; ([b] -&gt; ShowS)
+-&gt; Int
+-&gt; Of a b
+-&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftShowsPrec2"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftShowsPrec2</span></a></span></span><span> </span><span id="local-6989586621679076317"><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><a href="#local-6989586621679076317"><span class="hs-identifier hs-var">spa</span></a></span></span><span> </span><span id="local-6989586621679076318"><span class="annot"><span class="annottext">[a] -&gt; ShowS
+</span><a href="#local-6989586621679076318"><span class="hs-identifier hs-var">_sla</span></a></span></span><span> </span><span id="local-6989586621679076319"><span class="annot"><span class="annottext">Int -&gt; b -&gt; ShowS
+</span><a href="#local-6989586621679076319"><span class="hs-identifier hs-var">spb</span></a></span></span><span> </span><span id="local-6989586621679076320"><span class="annot"><span class="annottext">[b] -&gt; ShowS
+</span><a href="#local-6989586621679076320"><span class="hs-identifier hs-var">_slb</span></a></span></span><span> </span><span id="local-6989586621679076321"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679076321"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076322"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076322"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076323"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076323"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; ShowS -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showParen"><span class="hs-identifier hs-var">showParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679076321"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; ShowS) -&gt; ShowS -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+</span><a href="#local-6989586621679076317"><span class="hs-identifier hs-var">spa</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076322"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; :&gt; &quot;</span></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; b -&gt; ShowS
+</span><a href="#local-6989586621679076319"><span class="hs-identifier hs-var">spb</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076323"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Eq2"><span class="hs-identifier hs-type">Eq2</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679076332"><span class="annot"><span class="annottext">liftEq2 :: forall a b c d.
+(a -&gt; b -&gt; Bool) -&gt; (c -&gt; d -&gt; Bool) -&gt; Of a c -&gt; Of b d -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftEq2"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftEq2</span></a></span></span><span> </span><span id="local-6989586621679076333"><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><a href="#local-6989586621679076333"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679076334"><span class="annot"><span class="annottext">c -&gt; d -&gt; Bool
+</span><a href="#local-6989586621679076334"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076335"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076335"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076336"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076336"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076337"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076337"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076338"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679076338"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Bool
+</span><a href="#local-6989586621679076333"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076335"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076337"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; d -&gt; Bool
+</span><a href="#local-6989586621679076334"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076336"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679076338"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#Ord2"><span class="hs-identifier hs-type">Ord2</span></a></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679076348"><span class="annot"><span class="annottext">liftCompare2 :: forall a b c d.
+(a -&gt; b -&gt; Ordering)
+-&gt; (c -&gt; d -&gt; Ordering) -&gt; Of a c -&gt; Of b d -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Classes.html#liftCompare2"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftCompare2</span></a></span></span><span> </span><span id="local-6989586621679076349"><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679076349"><span class="hs-identifier hs-var">comp1</span></a></span></span><span> </span><span id="local-6989586621679076350"><span class="annot"><span class="annottext">c -&gt; d -&gt; Ordering
+</span><a href="#local-6989586621679076350"><span class="hs-identifier hs-var">comp2</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076351"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076351"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076352"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076352"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076353"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076353"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="annot"><a href="Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679076354"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679076354"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679076349"><span class="hs-identifier hs-var">comp1</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679076351"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679076353"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Ordering
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; d -&gt; Ordering
+</span><a href="#local-6989586621679076350"><span class="hs-identifier hs-var">comp2</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679076352"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679076354"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-111"></span></pre></body></html>

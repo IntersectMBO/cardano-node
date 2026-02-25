@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Unit testing support for tasty, inspired by the HUnit package.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- Here's an example (a single tasty test case consisting of three</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- assertions):</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- &gt;import Test.Tasty</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- &gt;import Test.Tasty.HUnit</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- &gt;main = defaultMain $</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- &gt;  testCase &quot;Example test case&quot; $ do</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- &gt;    -- assertion no. 1 (passes)</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- &gt;    2 + 2 @?= 4</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- &gt;    -- assertion no. 2 (fails)</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- &gt;    assertBool &quot;the list is not empty&quot; $ null [1]</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- &gt;    -- assertion no. 3 (would have failed, but won't be executed because</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- &gt;    -- the previous assertion has already failed)</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- &gt;    &quot;foo&quot; @?= &quot;bar&quot;</span><span>
+</span><span id="line-18"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies, DeriveDataTypeable #-}</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.HUnit</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Constructing test cases</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Test.Tasty.HUnit.html#testCase"><span class="hs-identifier">testCase</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.html#testCaseInfo"><span class="hs-identifier">testCaseInfo</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html#testCaseSteps"><span class="hs-identifier">testCaseSteps</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Constructing assertions</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier">assertFailure</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertBool"><span class="hs-identifier">assertBool</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier">assertEqual</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3D%3F"><span class="hs-operator">(@=?)</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator">(@?=)</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#%40%3F"><span class="hs-operator">(@?)</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicable"><span class="hs-identifier">AssertionPredicable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data types</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier">Assertion</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier">HUnitFailure</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Accurate location for domain-specific assertion functions</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- | It is common to define domain-specific assertion functions based</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">-- on the standard ones, e.g.</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- &gt; assertNonEmpty = assertBool &quot;List is empty&quot; . not . null</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">-- The problem is that if a test fails, tasty-hunit will point to the</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">-- definition site of @assertNonEmpty@ as the source of failure, not</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">-- its use site.</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">-- To correct this, add a 'HasCallStack' constraint (re-exported from</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">-- this module) to your function:</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">-- &gt; assertNonEmpty :: HasCallStack =&gt; [a] -&gt; Assertion</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- &gt; assertNonEmpty = assertBool &quot;List is empty&quot; . not . null</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier">HasCallStack</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Deprecated functions and types</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- | These definitions come from HUnit, but I don't see why one would</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">-- need them. If you have a valid use case for them, please contact me</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">-- or file an issue for tasty. Otherwise, they will eventually be</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- removed.</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#assertString"><span class="hs-identifier">assertString</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertable"><span class="hs-identifier">Assertable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#AssertionPredicate"><span class="hs-identifier">AssertionPredicate</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Tasty.Providers</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html"><span class="hs-identifier">Test.Tasty.HUnit.Orig</span></a></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Steps.html"><span class="hs-identifier">Test.Tasty.HUnit.Steps</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.CallStack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier">HasCallStack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | Turn an 'Assertion' into a tasty test case</span></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-type">testCase</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestTree</span></span><span>
+</span><span id="line-74"></span><span id="testCase"><span class="annot"><span class="annottext">testCase :: TestName -&gt; Assertion -&gt; TestTree
+</span><a href="Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var hs-var">testCase</span></a></span></span><span> </span><span id="local-6989586621679043227"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043227"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestCase -&gt; TestTree
+forall t. IsTest t =&gt; TestName -&gt; t -&gt; TestTree
+</span><span class="hs-identifier hs-var">singleTest</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043227"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(TestCase -&gt; TestTree)
+-&gt; (Assertion -&gt; TestCase) -&gt; Assertion -&gt; TestTree
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO TestName -&gt; TestCase
+</span><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-var">TestCase</span></a></span><span> </span><span class="annot"><span class="annottext">(IO TestName -&gt; TestCase)
+-&gt; (Assertion -&gt; IO TestName) -&gt; Assertion -&gt; TestCase
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(() -&gt; TestName) -&gt; Assertion -&gt; IO TestName
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName -&gt; () -&gt; TestName
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- | Like 'testCase', except in case the test succeeds, the returned string</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- will be shown as the description. If the empty string is returned, it</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- will be ignored.</span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Test.Tasty.HUnit.html#testCaseInfo"><span class="hs-identifier hs-type">testCaseInfo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestName</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestTree</span></span><span>
+</span><span id="line-80"></span><span id="testCaseInfo"><span class="annot"><span class="annottext">testCaseInfo :: TestName -&gt; IO TestName -&gt; TestTree
+</span><a href="Test.Tasty.HUnit.html#testCaseInfo"><span class="hs-identifier hs-var hs-var">testCaseInfo</span></a></span></span><span> </span><span id="local-6989586621679043232"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043232"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestCase -&gt; TestTree
+forall t. IsTest t =&gt; TestName -&gt; t -&gt; TestTree
+</span><span class="hs-identifier hs-var">singleTest</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043232"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(TestCase -&gt; TestTree)
+-&gt; (IO TestName -&gt; TestCase) -&gt; IO TestName -&gt; TestTree
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO TestName -&gt; TestCase
+</span><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-var">TestCase</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- IO String is a computation that throws an exception upon failure or</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- returns an informational string otherwise. This allows us to unify the</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- implementation of 'testCase' and 'testCaseInfo'.</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- In case of testCase, we simply make the result string empty, which makes</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- tasty ignore it.</span><span>
+</span><span id="line-88"></span><span class="hs-keyword">newtype</span><span> </span><span id="TestCase"><span class="annot"><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-var">TestCase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestCase"><span class="annot"><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-var">TestCase</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsTest</span></span><span> </span><span class="annot"><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-type">TestCase</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679043243"><span class="annot"><span class="annottext">run :: OptionSet -&gt; TestCase -&gt; (Progress -&gt; Assertion) -&gt; IO Result
+</span><a href="#local-6989586621679043243"><span class="hs-identifier hs-var hs-var hs-var hs-var">run</span></a></span></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.html#TestCase"><span class="hs-identifier hs-type">TestCase</span></a></span><span> </span><span id="local-6989586621679043245"><span class="annot"><span class="annottext">IO TestName
+</span><a href="#local-6989586621679043245"><span class="hs-identifier hs-var">assertion</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Progress -&gt; Assertion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">-- The standard HUnit's performTestCase catches (almost) all exceptions.</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- This is bad for a few reasons:</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-comment">-- - it interferes with timeout handling</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-comment">-- - it makes exception reporting inconsistent across providers</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-comment">-- - it doesn't provide enough information for ingredients such as</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-comment">-- tasty-rerun</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-comment">-- So we do it ourselves.</span><span>
+</span><span id="line-102"></span><span>    </span><span id="local-6989586621679043246"><span class="annot"><span class="annottext">Either HUnitFailure TestName
+</span><a href="#local-6989586621679043246"><span class="hs-identifier hs-var">hunitResult</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO TestName -&gt; IO (Either HUnitFailure TestName)
+forall e a. Exception e =&gt; IO a -&gt; IO (Either e a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#try"><span class="hs-identifier hs-var">try</span></a></span><span> </span><span class="annot"><span class="annottext">IO TestName
+</span><a href="#local-6989586621679043245"><span class="hs-identifier hs-var">assertion</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="annottext">Result -&gt; IO Result
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Result -&gt; IO Result) -&gt; Result -&gt; IO Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either HUnitFailure TestName
+</span><a href="#local-6989586621679043246"><span class="hs-identifier hs-var">hunitResult</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679043248"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043248"><span class="hs-identifier hs-var">info</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Result
+</span><span class="hs-identifier hs-var">testPassed</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043248"><span class="hs-identifier hs-var">info</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.HUnit.Orig.html#HUnitFailure"><span class="hs-identifier hs-type">HUnitFailure</span></a></span><span> </span><span id="local-6989586621679043251"><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679043251"><span class="hs-identifier hs-var">mbloc</span></a></span></span><span> </span><span id="local-6989586621679043252"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043252"><span class="hs-identifier hs-var">message</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Result
+</span><span class="hs-identifier hs-var">testFailed</span></span><span> </span><span class="annot"><span class="annottext">(TestName -&gt; Result) -&gt; TestName -&gt; Result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc -&gt; TestName -&gt; TestName
+</span><a href="Test.Tasty.HUnit.Orig.html#prependLocation"><span class="hs-identifier hs-var">prependLocation</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SrcLoc
+</span><a href="#local-6989586621679043251"><span class="hs-identifier hs-var">mbloc</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679043252"><span class="hs-identifier hs-var">message</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679043257"><span class="annot"><span class="annottext">testOptions :: Tagged TestCase [OptionDescription]
+</span><a href="#local-6989586621679043257"><span class="hs-identifier hs-var hs-var hs-var hs-var">testOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; Tagged TestCase [OptionDescription]
+forall a. a -&gt; Tagged TestCase a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-109"></span></pre></body></html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      : Text.EDE.Internal.Syntax</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright   : (c) 2013-2022 Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License     : This Source Code Form is subject to the terms of</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--               the Mozilla Public License, v. 2.0.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--               A copy of the MPL can be found in the LICENSE file or</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--               you can obtain it at http://mozilla.org/MPL/2.0/.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Maintainer  : Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Portability : non-portable (GHC extensions)</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- /Warning/: this is an internal module, and does not have a stable</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- API or name. Functions in this module may not check or enforce</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- preconditions expected by public modules. Use at your own risk!</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Text.EDE.Internal.Syntax</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Lens</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.~)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HashSet</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HashSet</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html"><span class="hs-identifier">Text.EDE.Internal.Types</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Text.Parser.Token.Style</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">CommentStyle</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Text.Parser.Token.Style</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Token</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Text.Trifecta</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IdentifierStyle</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">TokenParsing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Text.Trifecta</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Trifecta</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | The default ED-E syntax.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Delimiters:</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- * Pragma: @{! ... !}@</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- * Inline: @{{ ... }}@</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- * Comments: @{# ... #}@</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- * Blocks: @{% ... %}@</span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier hs-type">defaultSyntax</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span>
+</span><span id="line-41"></span><span id="defaultSyntax"><span class="annot"><span class="annottext">defaultSyntax :: Syntax
+</span><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier hs-var hs-var">defaultSyntax</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_delimPragma :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimPragma"><span class="hs-identifier hs-var">_delimPragma</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;{!&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;!}&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">_delimInline :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimInline"><span class="hs-identifier hs-var">_delimInline</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;{{&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;}}&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">_delimComment :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimComment"><span class="hs-identifier hs-var">_delimComment</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;{#&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;#}&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">_delimBlock :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimBlock"><span class="hs-identifier hs-var">_delimBlock</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;{%&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;%}&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | An alternate syntax (based on Play/Scala templates) designed to</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- be used when the default is potentially ambiguous due to another encountered</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- smarty based syntax.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- Delimiters:</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- * Inline: @\&lt;\@ ... \@&gt;@</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- * Comments: @\@* ... *\@@</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- * Blocks: @\@( ... )\@@</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#alternateSyntax"><span class="hs-identifier hs-type">alternateSyntax</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span>
+</span><span id="line-61"></span><span id="alternateSyntax"><span class="annot"><span class="annottext">alternateSyntax :: Syntax
+</span><a href="Text.EDE.Internal.Syntax.html#alternateSyntax"><span class="hs-identifier hs-var hs-var">alternateSyntax</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_delimPragma :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimPragma"><span class="hs-identifier hs-var">_delimPragma</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;@!&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;!@&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">_delimInline :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimInline"><span class="hs-identifier hs-var">_delimInline</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;@&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;@&gt;&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">_delimComment :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimComment"><span class="hs-identifier hs-var">_delimComment</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;@*&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;*@&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">_delimBlock :: Delim
+</span><a href="Text.EDE.Internal.Types.html#_delimBlock"><span class="hs-identifier hs-var">_delimBlock</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;@(&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;)@&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#commentStyle"><span class="hs-identifier hs-type">commentStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CommentStyle</span></span><span>
+</span><span id="line-70"></span><span id="commentStyle"><span class="annot"><span class="annottext">commentStyle :: String -&gt; String -&gt; CommentStyle
+</span><a href="Text.EDE.Internal.Syntax.html#commentStyle"><span class="hs-identifier hs-var hs-var">commentStyle</span></a></span></span><span> </span><span id="local-6989586621679155539"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679155539"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679155540"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679155540"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">CommentStyle
+</span><span class="hs-identifier hs-var">Token.emptyCommentStyle</span></span><span> </span><span class="annot"><span class="annottext">CommentStyle -&gt; (CommentStyle -&gt; CommentStyle) -&gt; CommentStyle
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Identity String)
+-&gt; CommentStyle -&gt; Identity CommentStyle
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(String -&gt; f String) -&gt; CommentStyle -&gt; f CommentStyle
+</span><span class="hs-identifier hs-var">Token.commentStart</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Identity String)
+ -&gt; CommentStyle -&gt; Identity CommentStyle)
+-&gt; String -&gt; CommentStyle -&gt; CommentStyle
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679155539"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">CommentStyle -&gt; (CommentStyle -&gt; CommentStyle) -&gt; CommentStyle
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Identity String)
+-&gt; CommentStyle -&gt; Identity CommentStyle
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(String -&gt; f String) -&gt; CommentStyle -&gt; f CommentStyle
+</span><span class="hs-identifier hs-var">Token.commentEnd</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Identity String)
+ -&gt; CommentStyle -&gt; Identity CommentStyle)
+-&gt; String -&gt; CommentStyle -&gt; CommentStyle
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679155540"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621679155470"><span class="annot"><a href="Text.EDE.Internal.Syntax.html#operatorStyle"><span class="hs-identifier hs-type">operatorStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenParsing</span></span><span> </span><span class="annot"><a href="#local-6989586621679155470"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IdentifierStyle</span></span><span> </span><span class="annot"><a href="#local-6989586621679155470"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-74"></span><span id="operatorStyle"><span class="annot"><span class="annottext">operatorStyle :: forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><a href="Text.EDE.Internal.Syntax.html#operatorStyle"><span class="hs-identifier hs-var hs-var">operatorStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">IdentifierStyle m
+forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><span class="hs-identifier hs-var">Token.haskellOps</span></span><span> </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(m Char -&gt; Identity (m Char))
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(m Char -&gt; f (m Char))
+-&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleLetter</span></span><span> </span><span class="annot"><span class="annottext">((m Char -&gt; Identity (m Char))
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; m Char -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; m Char
+forall (m :: * -&gt; *). CharParsing m =&gt; String -&gt; m Char
+</span><span class="hs-identifier hs-var">Trifecta.oneOf</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;-+!&amp;|=&gt;&lt;&quot;</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679155554"><span class="annot"><a href="Text.EDE.Internal.Syntax.html#variableStyle"><span class="hs-identifier hs-type">variableStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenParsing</span></span><span> </span><span class="annot"><a href="#local-6989586621679155554"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IdentifierStyle</span></span><span> </span><span class="annot"><a href="#local-6989586621679155554"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-78"></span><span id="variableStyle"><span class="annot"><span class="annottext">variableStyle :: forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><a href="Text.EDE.Internal.Syntax.html#variableStyle"><span class="hs-identifier hs-var hs-var">variableStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">IdentifierStyle m
+forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><a href="Text.EDE.Internal.Syntax.html#keywordStyle"><span class="hs-identifier hs-var">keywordStyle</span></a></span><span> </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Identity String)
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(String -&gt; f String) -&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleName</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Identity String)
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; String -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;variable&quot;</span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679155562"><span class="annot"><a href="Text.EDE.Internal.Syntax.html#keywordStyle"><span class="hs-identifier hs-type">keywordStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenParsing</span></span><span> </span><span class="annot"><a href="#local-6989586621679155562"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IdentifierStyle</span></span><span> </span><span class="annot"><a href="#local-6989586621679155562"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-82"></span><span id="keywordStyle"><span class="annot"><span class="annottext">keywordStyle :: forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><a href="Text.EDE.Internal.Syntax.html#keywordStyle"><span class="hs-identifier hs-var hs-var">keywordStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">IdentifierStyle m
+forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><span class="hs-identifier hs-var">Token.haskellIdents</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(HashSet String -&gt; Identity (HashSet String))
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(HashSet String -&gt; f (HashSet String))
+-&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleReserved</span></span><span> </span><span class="annot"><span class="annottext">((HashSet String -&gt; Identity (HashSet String))
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; HashSet String -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">HashSet String
+</span><a href="Text.EDE.Internal.Syntax.html#keywordSet"><span class="hs-identifier hs-var">keywordSet</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Identity String)
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(String -&gt; f String) -&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleName</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Identity String)
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; String -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;keyword&quot;</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#keywordSet"><span class="hs-identifier hs-type">keywordSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HashSet</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-88"></span><span id="keywordSet"><span class="annot"><span class="annottext">keywordSet :: HashSet String
+</span><a href="Text.EDE.Internal.Syntax.html#keywordSet"><span class="hs-identifier hs-var hs-var">keywordSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">[String] -&gt; HashSet String
+forall a. (Eq a, Hashable a) =&gt; [a] -&gt; HashSet a
+</span><span class="hs-identifier hs-var">HashSet.fromList</span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;if&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;elif&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;else&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;case&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;when&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;for&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;include&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;let&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endif&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endcase&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endfor&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endlet&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;in&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;with&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;_&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;true&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-107"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;false&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;set&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endset&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-110"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;block&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;endblock&quot;</span></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span id="local-6989586621679155572"><span class="annot"><a href="Text.EDE.Internal.Syntax.html#pragmaStyle"><span class="hs-identifier hs-type">pragmaStyle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TokenParsing</span></span><span> </span><span class="annot"><a href="#local-6989586621679155572"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IdentifierStyle</span></span><span> </span><span class="annot"><a href="#local-6989586621679155572"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-115"></span><span id="pragmaStyle"><span class="annot"><span class="annottext">pragmaStyle :: forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><a href="Text.EDE.Internal.Syntax.html#pragmaStyle"><span class="hs-identifier hs-var hs-var">pragmaStyle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">IdentifierStyle m
+forall (m :: * -&gt; *). TokenParsing m =&gt; IdentifierStyle m
+</span><span class="hs-identifier hs-var">Token.haskellIdents</span></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(HashSet String -&gt; Identity (HashSet String))
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(HashSet String -&gt; f (HashSet String))
+-&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleReserved</span></span><span> </span><span class="annot"><span class="annottext">((HashSet String -&gt; Identity (HashSet String))
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; HashSet String -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">HashSet String
+</span><a href="Text.EDE.Internal.Syntax.html#pragmaSet"><span class="hs-identifier hs-var">pragmaSet</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">IdentifierStyle m
+-&gt; (IdentifierStyle m -&gt; IdentifierStyle m) -&gt; IdentifierStyle m
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Identity String)
+-&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m)
+forall (f :: * -&gt; *) (m :: * -&gt; *).
+Functor f =&gt;
+(String -&gt; f String) -&gt; IdentifierStyle m -&gt; f (IdentifierStyle m)
+</span><span class="hs-identifier hs-var">Trifecta.styleName</span></span><span> </span><span class="annot"><span class="annottext">((String -&gt; Identity String)
+ -&gt; IdentifierStyle m -&gt; Identity (IdentifierStyle m))
+-&gt; String -&gt; IdentifierStyle m -&gt; IdentifierStyle m
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pragma field&quot;</span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#pragmaSet"><span class="hs-identifier hs-type">pragmaSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HashSet</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-121"></span><span id="pragmaSet"><span class="annot"><span class="annottext">pragmaSet :: HashSet String
+</span><a href="Text.EDE.Internal.Syntax.html#pragmaSet"><span class="hs-identifier hs-var hs-var">pragmaSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="annottext">[String] -&gt; HashSet String
+forall a. (Eq a, Hashable a) =&gt; [a] -&gt; HashSet a
+</span><span class="hs-identifier hs-var">HashSet.fromList</span></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pragma&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;inline&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;comment&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;block&quot;</span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-128"></span></pre></body></html>

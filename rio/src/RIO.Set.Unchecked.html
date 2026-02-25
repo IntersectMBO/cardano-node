@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | This module contains functions from &quot;Data.Set&quot; that have unchecked</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--   preconditions on their input.  If these preconditions are not satisfied,</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   the data structure may end up in an invalid state and other operations</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--   may misbehave.  Import as:</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- &gt; import qualified RIO.Set.Unchecked as Set'</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">RIO.Set.Unchecked</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-comment">-- * Map</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#mapMonotonic"><span class="hs-identifier">Data.Set.mapMonotonic</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-comment">-- * Ordered list</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromAscList"><span class="hs-identifier">Data.Set.fromAscList</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_containers(0,5,8)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromDescList"><span class="hs-identifier">Data.Set.fromDescList</span></a></span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromDistinctAscList"><span class="hs-identifier">Data.Set.fromDistinctAscList</span></a></span><span class="hs-cpp">
+#if MIN_VERSION_containers(0,5,8)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromDistinctDescList"><span class="hs-identifier">Data.Set.fromDistinctDescList</span></a></span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span>
+</span><span id="line-26"></span></pre></body></html>

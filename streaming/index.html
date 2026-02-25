@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>streaming</title><link href="linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">streaming</span><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul></div><div id="content"><div id="description"><h1>streaming</h1><div class="doc"><p>This package contains two modules, <a href="http://hackage.haskell.org/package/streaming/docs/Streaming.html">Streaming</a>
+and <a href="http://hackage.haskell.org/package/streaming/docs/Streaming-Prelude.html">Streaming.Prelude</a>.
+The principal module, <a href="http://hackage.haskell.org/package/streaming-0.1.4.3/docs/Streaming-Prelude.html">Streaming.Prelude</a>, exports an elementary streaming prelude focused on
+a simple &quot;source&quot; or &quot;producer&quot; type, namely <code>Stream (Of a) m r</code>.
+This is a sort of effectful version of
+<code>([a],r)</code> in which successive elements of type <code>a</code> arise from some sort of monadic
+action before the succession ends with a value of type <code>r</code>.
+Everything in the library is organized to make
+programming with this type as simple as possible,
+by the simple expedient of making it as close to <code>Prelude</code>
+and <code>Data.List</code> as possible. Thus for example
+the trivial program</p><pre>&gt;&gt;&gt; S.sum $ S.take 3 (S.readLn :: Stream (Of Int) IO ())
+1&lt;Enter&gt;
+2&lt;Enter&gt;
+3&lt;Enter&gt;
+6 :&gt; ()</pre><p>sums the first three valid integers from user input. Similarly,</p><pre>&gt;&gt;&gt; S.stdoutLn $ S.map (map toUpper) $ S.take 2 S.stdinLn
+hello&lt;Enter&gt;
+HELLO
+world!&lt;Enter&gt;
+WORLD!</pre><p>upper-cases the first two lines from stdin as they arise,
+and sends them to stdout. And so on,
+with filtering, mapping, breaking, chunking, zipping, unzipping, replicating
+and so forth:
+we program with streams of <code>Int</code>s or <code>String</code>s directly as
+if they constituted something like a list. That's because streams really do constitute something
+like a list, and the associated operations can mostly have the same names.
+(A few, like <code>reverse</code>, don't stream and thus disappear;
+others like <code>unzip</code> are here given properly streaming formulation for the first time.)
+And we everywhere
+oppose &quot;extracting a pure list from IO&quot;,
+which is the origin of typical Haskell memory catastrophes.
+Basically any case where you are
+tempted to use <code>mapM</code>, <code>replicateM</code>, <code>traverse</code> or <code>sequence</code>
+with Haskell lists, you would do better to use something like
+<code>Stream (Of a) m r</code>. The type signatures are a little fancier, but
+the programs themselves are mostly the same. <em>In fact, they are mostly simpler.</em> Thus,
+consider the trivial demo program mentioned in
+<a href="http://stackoverflow.com/questions/24068399/haskell-performance-of-iorefs">this SO question</a></p><pre>main = mapM newIORef [1..10^8::Int] &gt;&gt;= mapM readIORef &gt;&gt;= mapM_ print</pre><p>The new user notices that this exhausts memory, and worries about the efficiency of Haskell <code>IORefs</code>.
+But of course it exhausts memory! Look what it says!
+The problem is immediately cured by writing</p><pre>main = S.print $ S.mapM readIORef $ S.mapM newIORef $ S.each [1..10^8::Int]</pre><p>which really does what the other program was meant to do,
+uses no more memory than <code>hello-world</code>, <em>and is simpler anyway</em>, since it
+doesn't involve the detour of &quot;extracting a list from IO&quot;. Almost
+every use of list <code>mapM</code>, <code>replicateM</code>, <code>traverse</code> and <code>sequence</code> produces
+this problem on a smaller scale. People get used to it, as if it were
+characteristic of Haskell programs to use a lot of memory. But in truth
+&quot;extracting a list or sequence from IO&quot; is mostly just bad practice pure and simple.
+Of course, <code>mapM</code>, <code>replicateM</code>, <code>traverse</code> and <code>sequence</code> make sense for lists,
+under certain conditions! But <code>unsafePerformIO</code> also makes sense under
+certain conditions.</p><p>The <a href="http://hackage.haskell.org/package/streaming-0.1.4.3/docs/Streaming.html">Streaming</a> module exports the general type,
+<code>Stream f m r</code>, which can be used to stream successive distinct
+steps characterized by <em>any</em>
+functor <code>f</code>, though we are mostly interested in organizing computations
+of the form <code>Stream (Of a) m r</code>. The streaming-IO libraries have
+various devices for dealing
+with effectful variants of <code>[a]</code> or <code>([a],r)</code> in which the emergence of
+successive elements somehow depends on IO. But it is only with
+the general type <code>Stream f m r</code>, or some equivalent,
+that one can envisage (for example) the connected streaming of their
+sorts of stream - as one makes lists of lists in the Haskell
+<code>Prelude</code> and <code>Data.List</code>. One needs some such type if we are
+to express properly streaming equivalents of e.g.</p><pre>group :: Ord a =&gt; [a] -&gt; [[a]]
+chunksOf :: Int -&gt; [a] -&gt; [[a]]
+lines :: [Char] -&gt; [[Char]] -- but similarly with byte streams, etc.</pre><p>to mention a few obviously desirable operations.
+(This is explained more elaborately in the <a href="https://hackage.haskell.org/package/streaming#readme">readme</a> below.)</p><p>One could of course throw something
+like the present <code>Stream</code> type on top of a prior stream concept: this is how <code>pipes</code> and
+<code>pipes-group</code> (which are very much our model here) use <code>FreeT</code>.
+But once one grasps the iterable stream concept needed to express
+those functions then one will also see that,
+with it, one is <em>already</em> in possession of a complete
+elementary streaming library - since one possesses <code>Stream ((,) a) m r</code>
+or equivalently <code>Stream (Of a) m r</code>. This
+is the type of a 'generator' or 'producer' or 'source' or whatever
+you call an effectful stream of items.
+<em>The present Streaming.Prelude is thus the simplest streaming library that can replicate anything like the API of the Prelude and Data.List</em>.</p><p>The emphasis of the library is on interoperation; for
+the rest its advantages are: extreme simplicity, re-use of
+intuitions the user has gathered from mastery of <code>Prelude</code> and
+<code>Data.List</code>, and a total and systematic rejection of type synonyms.
+The two conceptual pre-requisites are some
+comprehension of monad transformers and some familiarity
+with 'rank 2 types'. It is hoped that experimentation with this
+simple material, starting with the ghci examples in <code>Streaming.Prelude</code>,
+will give people who are new to these concepts some
+intuition about their importance. The most fundamental purpose of the
+library is to express elementary streaming ideas without reliance on
+a complex framework, but in a way that integrates transparently with
+the rest of Haskell, using ideas - e.g. rank 2 types, which are here
+implicit or explicit in most mapping - that the user can carry elsewhere,
+rather than chaining her understanding to the curiosities of
+a so-called streaming IO framework (as necessary as that is for certain purposes.)</p><p>See the
+<a href="https://hackage.haskell.org/package/streaming#readme">readme</a>
+below for further explanation, including the examples linked there.
+Elementary usage can be divined from the ghci examples in
+<code>Streaming.Prelude</code> and perhaps from this rough beginning of a
+<a href="https://github.com/michaelt/streaming-tutorial/blob/master/tutorial.md">tutorial</a>.
+Note also the
+<a href="https://hackage.haskell.org/package/streaming-bytestring">streaming bytestring</a>
+and
+<a href="https://hackage.haskell.org/package/streaming-utils">streaming utils</a>
+packages. Questions about usage can be put
+raised on StackOverflow with the tag <code>[haskell-streaming]</code>,
+or as an issue on Github, or on the
+<a href="https://groups.google.com/forum/#!forum/haskell-pipes">pipes list</a>
+(the package understands itself as part of the pipes 'ecosystem'.)</p><p>The simplest form of interoperation with
+<a href="http://hackage.haskell.org/package/pipes">pipes</a>
+is accomplished with this isomorphism:</p><pre>Pipes.unfoldr Streaming.next        :: Stream (Of a) m r   -&gt; Producer a m r
+Streaming.unfoldr Pipes.next        :: Producer a m r      -&gt; Stream (Of a) m r</pre><p>Interoperation with
+<a href="http://hackage.haskell.org/package/io-streams">io-streams</a>
+is thus:</p><pre>Streaming.reread IOStreams.read     :: InputStream a       -&gt; Stream (Of a) IO ()
+IOStreams.unfoldM Streaming.uncons  :: Stream (Of a) IO () -&gt; IO (InputStream a)</pre><p>With
+<a href="http://hackage.haskell.org/package/conduit">conduit</a>
+one might use, e.g.:</p><pre>Conduit.unfoldM Streaming.uncons                        :: Stream (Of a) m () -&gt; Source m a
+\str -&gt; Streaming.mapM_ Conduit.yield (hoist lift str)  :: Stream (Of o) m r  -&gt; ConduitM i o m r
+\src -&gt; hoist lift str $$ Conduit.mapM_ Streaming.yield :: Source m a         -&gt; Stream (Of a) m ()</pre><p>These conversions should never be more expensive than a single <code>&gt;-&gt;</code> or <code>=$=</code>.
+The simplest interoperation with regular Haskell lists is provided by, say</p><pre>Streaming.each                                 :: [a]               -&gt; Stream (Of a) m ()
+Streaming.toList_                              :: Stream (Of a) m r -&gt; m [a]</pre><p>The latter of course accumulates the whole list in memory, and is mostly what we are trying
+to avoid. Every use of <code>Prelude.mapM f</code> should be reconceived as using the
+composition <code>Streaming.toList_ . Streaming.mapM f . Streaming.each</code> with a view to
+considering whether the accumulation required by <code>Streaming.toList_</code> is really necessary.</p><p>Here are the results of some
+<a href="https://gist.github.com/michaelt/96606bbf05b29bf43a05aba081dc9bd4#file-benchmachines-hs">microbenchmarks</a>
+based on the
+<a href="https://github.com/ekmett/machines/blob/master/benchmarks/Benchmarks.hs">benchmarks</a>
+included in the machines package:</p><p><img src="http://i.imgur.com/YbQtlXm.png" /></p><p>Because these are microbenchmarks for individual functions,
+they represent a sort of &quot;worst case&quot;; many other factors can influence
+the speed of a complex program.</p></div></div><div id="module-list"><p class="caption">Modules</p><div id="module-list"><p class="caption">streaming-0.2.4.0</p><ul><li><span class="module details-toggle-control details-toggle" data-details-id="n.1">Data</span><details id="n.1" open="open"><summary class="hide-when-js-enabled">Submodules</summary><ul><li><span class="module details-toggle-control details-toggle" data-details-id="n.1.1">Functor</span><details id="n.1.1" open="open"><summary class="hide-when-js-enabled">Submodules</summary><ul><li><span class="module"><span class="noexpander">&nbsp;</span><a href="Data-Functor-Of.html">Data.Functor.Of</a></span></li></ul></details></li></ul></details></li><li><span class="module"><span class="details-toggle-control details-toggle" data-details-id="n.2">&nbsp;</span><a href="Streaming.html">Streaming</a></span><details id="n.2" open="open"><summary class="hide-when-js-enabled">Submodules</summary><ul><li><span class="module"><span class="noexpander">&nbsp;</span><a href="Streaming-Internal.html">Streaming.Internal</a></span></li><li><span class="module"><span class="noexpander">&nbsp;</span><a href="Streaming-Prelude.html">Streaming.Prelude</a></span></li></ul></details></li></ul></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.29.2</p></div></body></html>

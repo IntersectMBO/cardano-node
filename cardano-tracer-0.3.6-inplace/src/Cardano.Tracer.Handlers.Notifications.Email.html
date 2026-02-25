@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Email</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier">StatusMessage</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendEmail"><span class="hs-identifier">createAndSendEmail</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendTestEmail"><span class="hs-identifier">createAndSendTestEmail</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#statusIsOK"><span class="hs-identifier">statusIsOK</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Types</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/40sfib9gihfafnfnz62r9m47wjq6gay4-tasty-lib-tasty-1.5.3-haddock-doc/share/doc/tasty/html/src/Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">race</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html"><span class="hs-identifier">Control.Exception.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#try_"><span class="hs-identifier">try_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LT</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Network.Mail.Mime</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Address</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Mail</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">simpleMail'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/rdq4kr42347brr6grbx0cld5p10wmy5x-smtp-mail-lib-smtp-mail-0.5.0.0-haddock-doc/share/doc/smtp-mail/html/src/Network.Mail.SMTP.html"><span class="hs-identifier">Network.Mail.SMTP</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SMTP</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Time.Extra.html"><span class="hs-identifier">System.Time.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Time.Extra.html#sleep"><span class="hs-identifier">sleep</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">type</span><span> </span><span id="StatusMessage"><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier hs-var">StatusMessage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendEmail"><span class="hs-identifier hs-type">createAndSendEmail</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier hs-type">StatusMessage</span></a></span><span>
+</span><span id="line-29"></span><span id="createAndSendEmail"><span class="annot"><span class="annottext">createAndSendEmail :: EmailSettings -&gt; Text -&gt; IO Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendEmail"><span class="hs-identifier hs-var hs-var">createAndSendEmail</span></a></span></span><span> </span><span id="local-6989586621679181035"><span class="annot"><span class="annottext">settings :: EmailSettings
+</span><a href="#local-6989586621679181035"><span class="hs-identifier hs-var">settings</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679181037"><span class="annot"><span class="annottext">Text
+esEmailTo :: Text
+esEmailTo :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181037"><span class="hs-identifier hs-var hs-var">esEmailTo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181039"><span class="annot"><span class="annottext">Text
+esEmailFrom :: Text
+esEmailFrom :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181039"><span class="hs-identifier hs-var hs-var">esEmailFrom</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181041"><span class="annot"><span class="annottext">Text
+esSubject :: Text
+esSubject :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181041"><span class="hs-identifier hs-var hs-var">esSubject</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679181043"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181043"><span class="hs-identifier hs-var">bodyMessage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">EmailSettings -&gt; Mail -&gt; IO Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#sendEmail"><span class="hs-identifier hs-var">sendEmail</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181035"><span class="hs-identifier hs-var">settings</span></a></span><span> </span><span class="annot"><span class="annottext">(Mail -&gt; IO Text) -&gt; Mail -&gt; IO Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Address -&gt; Address -&gt; Text -&gt; Text -&gt; Mail
+</span><span class="hs-identifier hs-var">simpleMail'</span></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679181045"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679181046"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181041"><span class="hs-identifier hs-var">esSubject</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181047"><span class="hs-identifier hs-var">body</span></a></span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679181045"><span class="annot"><span class="annottext">to :: Address
+</span><a href="#local-6989586621679181045"><span class="hs-identifier hs-var hs-var">to</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Address
+</span><span class="hs-identifier hs-var">Address</span></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181037"><span class="hs-identifier hs-var">esEmailTo</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679181046"><span class="annot"><span class="annottext">from :: Address
+</span><a href="#local-6989586621679181046"><span class="hs-identifier hs-var hs-var">from</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Address
+</span><span class="hs-identifier hs-var">Address</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Cardano RTView&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181039"><span class="hs-identifier hs-var">esEmailFrom</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679181047"><span class="annot"><span class="annottext">body :: Text
+</span><a href="#local-6989586621679181047"><span class="hs-identifier hs-var hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html#fromStrict"><span class="hs-identifier hs-var">LT.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181043"><span class="hs-identifier hs-var">bodyMessage</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendTestEmail"><span class="hs-identifier hs-type">createAndSendTestEmail</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier hs-type">StatusMessage</span></a></span><span>
+</span><span id="line-39"></span><span id="createAndSendTestEmail"><span class="annot"><span class="annottext">createAndSendTestEmail :: EmailSettings -&gt; IO Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendTestEmail"><span class="hs-identifier hs-var hs-var">createAndSendTestEmail</span></a></span></span><span> </span><span id="local-6989586621679181051"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181051"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Text -&gt; IO Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#createAndSendEmail"><span class="hs-identifier hs-var">createAndSendEmail</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679181051"><span class="hs-identifier hs-var">settings</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181052"><span class="hs-identifier hs-var">body</span></a></span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679181052"><span class="annot"><span class="annottext">body :: Text
+</span><a href="#local-6989586621679181052"><span class="hs-identifier hs-var hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;This is a test notification from Cardano RTView. Congrats: your email settings are correct!&quot;</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#sendEmail"><span class="hs-identifier hs-type">sendEmail</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Mail</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier hs-type">StatusMessage</span></a></span><span>
+</span><span id="line-47"></span><span id="sendEmail"><span class="annot"><span class="annottext">sendEmail :: EmailSettings -&gt; Mail -&gt; IO Text
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#sendEmail"><span class="hs-identifier hs-var hs-var">sendEmail</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EmailSettings"><span class="hs-identifier hs-type">EmailSettings</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679181054"><span class="annot"><span class="annottext">Text
+esSMTPHost :: Text
+esSMTPHost :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181054"><span class="hs-identifier hs-var hs-var">esSMTPHost</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181056"><span class="annot"><span class="annottext">Int
+esSMTPPort :: Int
+esSMTPPort :: EmailSettings -&gt; Int
+</span><a href="#local-6989586621679181056"><span class="hs-identifier hs-var hs-var">esSMTPPort</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181058"><span class="annot"><span class="annottext">Text
+esUsername :: Text
+esUsername :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181058"><span class="hs-identifier hs-var hs-var">esUsername</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181060"><span class="annot"><span class="annottext">Text
+esPassword :: Text
+esPassword :: EmailSettings -&gt; Text
+</span><a href="#local-6989586621679181060"><span class="hs-identifier hs-var hs-var">esPassword</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679181062"><span class="annot"><span class="annottext">EmailSSL
+esSSL :: EmailSSL
+esSSL :: EmailSettings -&gt; EmailSSL
+</span><a href="#local-6989586621679181062"><span class="hs-identifier hs-var hs-var">esSSL</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679181064"><span class="annot"><span class="annottext">Mail
+</span><a href="#local-6989586621679181064"><span class="hs-identifier hs-var">mail</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- Unfortunately, 'sender' function may freeze because of problem with email settings</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-comment">-- (for example, wrong SMTP port). In this case we need a watchdog-pattern to avoid</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-comment">-- too long execution time.</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">Double -&gt; Text -&gt; IO Text -&gt; IO Text
+forall a. Double -&gt; a -&gt; IO a -&gt; IO a
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#runIOWithWatchdog"><span class="hs-identifier hs-var">runIOWithWatchdog</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">10.0</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#10007; Unable to send: timeout&quot;</span></span><span> </span><span class="annot"><span class="annottext">(IO Text -&gt; IO Text) -&gt; IO Text -&gt; IO Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO (Either SomeException ())
+forall a. IO a -&gt; IO (Either SomeException a)
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Exception.Extra.html#try_"><span class="hs-identifier hs-var">try_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; HostName -&gt; HostName -&gt; Mail -&gt; IO ()
+</span><a href="#local-6989586621679181066"><span class="hs-identifier hs-var">sender</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679181067"><span class="hs-identifier hs-var">host</span></a></span><span> </span><span class="annot"><span class="annottext">PortNumber
+</span><a href="#local-6989586621679181068"><span class="hs-identifier hs-var">port</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679181069"><span class="hs-identifier hs-var">user</span></a></span><span> </span><span class="annot"><span class="annottext">HostName
+</span><a href="#local-6989586621679181070"><span class="hs-identifier hs-var">pass</span></a></span><span> </span><span class="annot"><span class="annottext">Mail
+</span><a href="#local-6989586621679181064"><span class="hs-identifier hs-var">mail</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO (Either SomeException ())
+-&gt; (Either SomeException () -&gt; IO Text) -&gt; IO Text
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679181071"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679181071"><span class="hs-identifier hs-var">e</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Text
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; IO Text) -&gt; Text -&gt; IO Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#10007; Unable to send: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Text
+forall {p}. Show p =&gt; p -&gt; Text
+</span><a href="#local-6989586621679181072"><span class="hs-identifier hs-var">explanation</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621679181071"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Text
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&#10003; Yay! Notification is sent.&quot;</span></span><span>
+</span><span id="line-55"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679181066"><span class="annot"><span class="annottext">sender :: HostName -&gt; PortNumber -&gt; HostName -&gt; HostName -&gt; Mail -&gt; IO ()
+</span><a href="#local-6989586621679181066"><span class="hs-identifier hs-var hs-var">sender</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">EmailSSL
+</span><a href="#local-6989586621679181062"><span class="hs-identifier hs-var">esSSL</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-57"></span><span>             </span><span class="annot"><span class="annottext">EmailSSL
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#TLS"><span class="hs-identifier hs-var">TLS</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; HostName -&gt; HostName -&gt; Mail -&gt; IO ()
+</span><a href="file:///nix/store/rdq4kr42347brr6grbx0cld5p10wmy5x-smtp-mail-lib-smtp-mail-0.5.0.0-haddock-doc/share/doc/smtp-mail/html/src/Network.Mail.SMTP.html#sendMailWithLoginTLS%27"><span class="hs-identifier hs-var">SMTP.sendMailWithLoginTLS'</span></a></span><span>
+</span><span id="line-58"></span><span>             </span><span class="annot"><span class="annottext">EmailSSL
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#STARTTLS"><span class="hs-identifier hs-var">STARTTLS</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; HostName -&gt; HostName -&gt; Mail -&gt; IO ()
+</span><a href="file:///nix/store/rdq4kr42347brr6grbx0cld5p10wmy5x-smtp-mail-lib-smtp-mail-0.5.0.0-haddock-doc/share/doc/smtp-mail/html/src/Network.Mail.SMTP.html#sendMailWithLoginSTARTTLS%27"><span class="hs-identifier hs-var">SMTP.sendMailWithLoginSTARTTLS'</span></a></span><span>
+</span><span id="line-59"></span><span>             </span><span class="annot"><span class="annottext">EmailSSL
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#NoSSL"><span class="hs-identifier hs-var">NoSSL</span></a></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; PortNumber -&gt; HostName -&gt; HostName -&gt; Mail -&gt; IO ()
+</span><a href="file:///nix/store/rdq4kr42347brr6grbx0cld5p10wmy5x-smtp-mail-lib-smtp-mail-0.5.0.0-haddock-doc/share/doc/smtp-mail/html/src/Network.Mail.SMTP.html#sendMailWithLogin%27"><span class="hs-identifier hs-var">SMTP.sendMailWithLogin'</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679181067"><span class="annot"><span class="annottext">host :: HostName
+</span><a href="#local-6989586621679181067"><span class="hs-identifier hs-var hs-var">host</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HostName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181054"><span class="hs-identifier hs-var">esSMTPHost</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679181068"><span class="annot"><span class="annottext">port :: PortNumber
+</span><a href="#local-6989586621679181068"><span class="hs-identifier hs-var hs-var">port</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; PortNumber
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679181056"><span class="hs-identifier hs-var">esSMTPPort</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679181069"><span class="annot"><span class="annottext">user :: HostName
+</span><a href="#local-6989586621679181069"><span class="hs-identifier hs-var hs-var">user</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HostName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181058"><span class="hs-identifier hs-var">esUsername</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679181070"><span class="annot"><span class="annottext">pass :: HostName
+</span><a href="#local-6989586621679181070"><span class="hs-identifier hs-var hs-var">pass</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HostName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181060"><span class="hs-identifier hs-var">esPassword</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679181072"><span class="annot"><span class="annottext">explanation :: p -&gt; Text
+</span><a href="#local-6989586621679181072"><span class="hs-identifier hs-var hs-var">explanation</span></a></span></span><span> </span><span id="local-6989586621679181089"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679181089"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;getAddrInfo&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#isInfixOf"><span class="hs-operator hs-var">`T.isInfixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181091"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;check SMTP host&quot;</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;user error&quot;</span></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#isInfixOf"><span class="hs-operator hs-var">`T.isInfixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181091"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;check your name, password or SSL&quot;</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181091"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-69"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679181091"><span class="annot"><span class="annottext">msg :: Text
+</span><a href="#local-6989586621679181091"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HostName -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">p -&gt; HostName
+forall a. Show a =&gt; a -&gt; HostName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679181089"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#statusIsOK"><span class="hs-identifier hs-type">statusIsOK</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#StatusMessage"><span class="hs-identifier hs-type">StatusMessage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-73"></span><span id="statusIsOK"><span class="annot"><span class="annottext">statusIsOK :: Text -&gt; Bool
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#statusIsOK"><span class="hs-identifier hs-var hs-var">statusIsOK</span></a></span></span><span> </span><span id="local-6989586621679181095"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181095"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Yay&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#isInfixOf"><span class="hs-operator hs-var">`T.isInfixOf`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679181095"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span id="local-6989586621679180998"><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Email.html#runIOWithWatchdog"><span class="hs-identifier hs-type">runIOWithWatchdog</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679180998"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679180998"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679180998"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-80"></span><span id="runIOWithWatchdog"><span class="annot"><span class="annottext">runIOWithWatchdog :: forall a. Double -&gt; a -&gt; IO a -&gt; IO a
+</span><a href="Cardano.Tracer.Handlers.Notifications.Email.html#runIOWithWatchdog"><span class="hs-identifier hs-var hs-var">runIOWithWatchdog</span></a></span></span><span> </span><span id="local-6989586621679181099"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679181099"><span class="hs-identifier hs-var">howLongToWaitInS</span></a></span></span><span> </span><span id="local-6989586621679181100"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679181100"><span class="hs-identifier hs-var">timeIsUpMsg</span></a></span></span><span> </span><span id="local-6989586621679181101"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679181101"><span class="hs-identifier hs-var">ioAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; IO a -&gt; IO (Either () a)
+forall a b. IO a -&gt; IO b -&gt; IO (Either a b)
+</span><span class="hs-identifier hs-var">race</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; IO ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Time.Extra.html#sleep"><span class="hs-identifier hs-var">sleep</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679181099"><span class="hs-identifier hs-var">howLongToWaitInS</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679181101"><span class="hs-identifier hs-var">ioAction</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either () a) -&gt; (Either () a -&gt; IO a) -&gt; IO a
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679181100"><span class="hs-identifier hs-var">timeIsUpMsg</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679181102"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679181102"><span class="hs-identifier hs-var">actionResult</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679181102"><span class="hs-identifier hs-var">actionResult</span></a></span><span>
+</span><span id="line-84"></span></pre></body></html>

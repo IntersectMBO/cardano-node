@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Accum</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier">Accum</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#mkAccum"><span class="hs-identifier">mkAccum</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#divAccum"><span class="hs-identifier">divAccum</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#mulAccum"><span class="hs-identifier">mulAccum</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#updateAccum"><span class="hs-identifier">updateAccum</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-comment">-- Various accumulators</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#mkAccumNew"><span class="hs-identifier">mkAccumNew</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#mkAccumDelta"><span class="hs-identifier">mkAccumDelta</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#mkAccumTicksShare"><span class="hs-identifier">mkAccumTicksShare</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/8zjgs4xkwkvijkx491gx9i0c5ncnjjrh-cardano-prelude-lib-cardano-prelude-0.2.1.0-haddock-doc/share/doc/cardano-prelude/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier">NominalDiffTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-identifier">diffUTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html"><span class="hs-identifier">Data.Time.Clock.POSIX</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Time</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="Accum"><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-var">Accum</span></a></span></span><span> </span><span id="local-6989586621679415612"><span class="annot"><a href="#local-6989586621679415612"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679415613"><span class="annot"><a href="#local-6989586621679415613"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Accum"><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-var">Accum</span></a></span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="aUpdate"><span class="annot"><span class="annottext">forall a b. Accum a b -&gt; POSIXTime -&gt; a -&gt; a -&gt; b
+</span><a href="Data.Accum.html#aUpdate"><span class="hs-identifier hs-var hs-var">aUpdate</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415612"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415612"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415613"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="aPrevStamp"><span class="annot"><span class="annottext">forall a b. Accum a b -&gt; UTCTime
+</span><a href="Data.Accum.html#aPrevStamp"><span class="hs-identifier hs-var hs-var">aPrevStamp</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="aPrevValue"><span class="annot"><span class="annottext">forall a b. Accum a b -&gt; a
+</span><a href="Data.Accum.html#aPrevValue"><span class="hs-identifier hs-var hs-var">aPrevValue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679415612"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="aCurrent"><span class="annot"><span class="annottext">forall a b. Accum a b -&gt; b
+</span><a href="Data.Accum.html#aCurrent"><span class="hs-identifier hs-var hs-var">aCurrent</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679415613"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span id="local-6989586621679415624"><span id="local-6989586621679415625"><span class="annot"><a href="Data.Accum.html#mkAccum"><span class="hs-identifier hs-type">mkAccum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679415624"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415625"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415624"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415624"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415625"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415624"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415625"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-33"></span><span id="mkAccum"><span class="annot"><span class="annottext">mkAccum :: forall a b. a -&gt; b -&gt; (POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; Accum a b
+</span><a href="Data.Accum.html#mkAccum"><span class="hs-identifier hs-var hs-var">mkAccum</span></a></span></span><span> </span><span id="local-6989586621679415689"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415689"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679415690"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679415690"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679415691"><span class="annot"><span class="annottext">POSIXTime -&gt; a -&gt; a -&gt; b
+</span><a href="#local-6989586621679415691"><span class="hs-identifier hs-var">update</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; UTCTime -&gt; a -&gt; b -&gt; Accum a b
+forall a b.
+(POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; UTCTime -&gt; a -&gt; b -&gt; Accum a b
+</span><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-var">Accum</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; a -&gt; a -&gt; b
+</span><a href="#local-6989586621679415691"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="Data.Accum.html#zeroUTCTime"><span class="hs-identifier hs-var">zeroUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415689"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679415690"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | Given an 'Accum', produce one that returns results downscaled by N.</span></span><span>
+</span><span id="line-36"></span><span id="local-6989586621679415628"><span class="annot"><a href="Data.Accum.html#divAccum"><span class="hs-identifier hs-type">divAccum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415628"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415628"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span></span><span>
+</span><span id="line-37"></span><span id="divAccum"><span class="annot"><span class="annottext">divAccum :: forall a. Accum a Word64 -&gt; Word64 -&gt; Accum a Word64
+</span><a href="Data.Accum.html#divAccum"><span class="hs-identifier hs-var hs-var">divAccum</span></a></span></span><span> </span><span id="local-6989586621679415694"><span class="annot"><span class="annottext">a :: Accum a Word64
+</span><a href="#local-6989586621679415694"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span class="hs-special">{</span><span id="local-6989586621679415695"><span id="local-6989586621679415696"><span id="local-6989586621679415697"><span id="local-6989586621679415698"><span class="annot"><span class="annottext">a
+Word64
+UTCTime
+POSIXTime -&gt; a -&gt; a -&gt; Word64
+aUpdate :: forall a b. Accum a b -&gt; POSIXTime -&gt; a -&gt; a -&gt; b
+aPrevStamp :: forall a b. Accum a b -&gt; UTCTime
+aPrevValue :: forall a b. Accum a b -&gt; a
+aCurrent :: forall a b. Accum a b -&gt; b
+aUpdate :: POSIXTime -&gt; a -&gt; a -&gt; Word64
+aPrevStamp :: UTCTime
+aPrevValue :: a
+aCurrent :: Word64
+</span><a href="Data.Accum.html#aUpdate"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679415699"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415699"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">Accum a Word64
+</span><a href="#local-6989586621679415694"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Data.Accum.html#aUpdate"><span class="hs-identifier hs-var">aUpdate</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679415700"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415700"><span class="hs-identifier hs-var">dt</span></a></span></span><span> </span><span id="local-6989586621679415701"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415701"><span class="hs-identifier hs-var">prev</span></a></span></span><span> </span><span id="local-6989586621679415702"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415702"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; a -&gt; a -&gt; Word64
+</span><a href="#local-6989586621679415695"><span class="hs-identifier hs-var">aUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415700"><span class="hs-identifier hs-var">dt</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415701"><span class="hs-identifier hs-var">prev</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415702"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415699"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><span class="hs-comment">-- | Given an 'Accum', produce one that returns results upscaled by N.</span></span><span>
+</span><span id="line-41"></span><span id="local-6989586621679415704"><span class="annot"><a href="Data.Accum.html#mulAccum"><span class="hs-identifier hs-type">mulAccum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415704"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415704"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span></span><span>
+</span><span id="line-42"></span><span id="mulAccum"><span class="annot"><span class="annottext">mulAccum :: forall a. Accum a Word64 -&gt; Word64 -&gt; Accum a Word64
+</span><a href="Data.Accum.html#mulAccum"><span class="hs-identifier hs-var hs-var">mulAccum</span></a></span></span><span> </span><span id="local-6989586621679415706"><span class="annot"><span class="annottext">a :: Accum a Word64
+</span><a href="#local-6989586621679415706"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span class="hs-special">{</span><span id="local-6989586621679415707"><span id="local-6989586621679415708"><span id="local-6989586621679415709"><span id="local-6989586621679415710"><span class="annot"><span class="annottext">a
+Word64
+UTCTime
+POSIXTime -&gt; a -&gt; a -&gt; Word64
+aUpdate :: forall a b. Accum a b -&gt; POSIXTime -&gt; a -&gt; a -&gt; b
+aPrevStamp :: forall a b. Accum a b -&gt; UTCTime
+aPrevValue :: forall a b. Accum a b -&gt; a
+aCurrent :: forall a b. Accum a b -&gt; b
+aUpdate :: POSIXTime -&gt; a -&gt; a -&gt; Word64
+aPrevStamp :: UTCTime
+aPrevValue :: a
+aCurrent :: Word64
+</span><a href="Data.Accum.html#aUpdate"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679415711"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415711"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">Accum a Word64
+</span><a href="#local-6989586621679415706"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Data.Accum.html#aUpdate"><span class="hs-identifier hs-var">aUpdate</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679415712"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415712"><span class="hs-identifier hs-var">dt</span></a></span></span><span> </span><span id="local-6989586621679415713"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415713"><span class="hs-identifier hs-var">prev</span></a></span></span><span> </span><span id="local-6989586621679415714"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415714"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; a -&gt; a -&gt; Word64
+</span><a href="#local-6989586621679415707"><span class="hs-identifier hs-var">aUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415712"><span class="hs-identifier hs-var">dt</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415713"><span class="hs-identifier hs-var">prev</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415714"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415711"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span id="local-6989586621679415633"><span id="local-6989586621679415634"><span class="annot"><a href="Data.Accum.html#updateAccum"><span class="hs-identifier hs-type">updateAccum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679415633"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415633"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415634"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415633"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415634"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-46"></span><span id="updateAccum"><span class="annot"><span class="annottext">updateAccum :: forall a b. UTCTime -&gt; a -&gt; Accum a b -&gt; Accum a b
+</span><a href="Data.Accum.html#updateAccum"><span class="hs-identifier hs-var hs-var">updateAccum</span></a></span></span><span> </span><span id="local-6989586621679415716"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679415716"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span id="local-6989586621679415717"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679415717"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span id="local-6989586621679415718"><span class="annot"><span class="annottext">a :: Accum a b
+</span><a href="#local-6989586621679415718"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span class="hs-special">{</span><span id="local-6989586621679415719"><span id="local-6989586621679415720"><span id="local-6989586621679415721"><span id="local-6989586621679415722"><span class="annot"><span class="annottext">a
+b
+UTCTime
+POSIXTime -&gt; a -&gt; a -&gt; b
+aUpdate :: forall a b. Accum a b -&gt; POSIXTime -&gt; a -&gt; a -&gt; b
+aPrevStamp :: forall a b. Accum a b -&gt; UTCTime
+aPrevValue :: forall a b. Accum a b -&gt; a
+aCurrent :: forall a b. Accum a b -&gt; b
+aUpdate :: POSIXTime -&gt; a -&gt; a -&gt; b
+aPrevStamp :: UTCTime
+aPrevValue :: a
+aCurrent :: b
+</span><a href="Data.Accum.html#aUpdate"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">Accum a b
+</span><a href="#local-6989586621679415718"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Data.Accum.html#aPrevStamp"><span class="hs-identifier hs-var">aPrevStamp</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679415716"><span class="hs-identifier hs-type">now</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#aPrevValue"><span class="hs-identifier hs-var">aPrevValue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679415717"><span class="hs-identifier hs-type">val</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Accum.html#aCurrent"><span class="hs-identifier hs-var">aCurrent</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679415719"><span class="hs-identifier hs-type">aUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415723"><span class="hs-identifier hs-type">elapsed</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415721"><span class="hs-identifier hs-type">aPrevValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679415717"><span class="hs-identifier hs-type">val</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679415723"><span class="annot"><span class="annottext">elapsed :: POSIXTime
+</span><a href="#local-6989586621679415723"><span class="hs-identifier hs-var hs-var">elapsed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679415716"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; UTCTime -&gt; POSIXTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-operator hs-var">`diffUTCTime`</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679415720"><span class="hs-identifier hs-var">aPrevStamp</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- updateCounter :: UTCTime -&gt; Word -&gt; CpuTickCounter -&gt; CpuTickCounter</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- updateCounter now newValue CpuTickCounter{..} =</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   Counter</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   { cPrevStamp   = now</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   , cPrevValue   = newValue</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   , cCurShare    = newFraction</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   }</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   where newFraction :: Float</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--         newFraction    = fromIntegral spentTicks / elapsedTicks</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--         spentTicks     = newValue - ctcPrevValue</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--         elapsedTicks   = realToFrac elapsedTime * ticksPerSecond</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--         elapsedTime    = now `Time.diffUTCTime` ctcPrevStamp</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--         ticksPerSecond = 100 :: Float</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--         -- ^ 100Hz is a constant on Linux, for practical purposes.</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Data.Accum.html#zeroUTCTime"><span class="hs-identifier hs-type">zeroUTCTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-70"></span><span id="zeroUTCTime"><span class="annot"><span class="annottext">zeroUTCTime :: UTCTime
+</span><a href="Data.Accum.html#zeroUTCTime"><span class="hs-identifier hs-var hs-var">zeroUTCTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; UTCTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#posixSecondsToUTCTime"><span class="hs-identifier hs-var">Time.posixSecondsToUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; UTCTime) -&gt; POSIXTime -&gt; UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; POSIXTime
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#realToFrac"><span class="hs-identifier hs-var">realToFrac</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- * Basic accumulators</span></span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><span class="hs-comment">-- | Just store the latest value.</span></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Data.Accum.html#mkAccumNew"><span class="hs-identifier hs-type">mkAccumNew</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-77"></span><span id="mkAccumNew"><span class="annot"><span class="annottext">mkAccumNew :: Accum Word64 Word64
+</span><a href="Data.Accum.html#mkAccumNew"><span class="hs-identifier hs-var hs-var">mkAccumNew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+-&gt; Word64
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64)
+-&gt; Accum Word64 Word64
+forall a b. a -&gt; b -&gt; (POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; Accum a b
+</span><a href="Data.Accum.html#mkAccum"><span class="hs-identifier hs-var">mkAccum</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">((POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64)
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">\</span><span id="local-6989586621679415725"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415725"><span class="hs-identifier hs-var">_dt</span></a></span></span><span> </span><span id="local-6989586621679415726"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415726"><span class="hs-identifier hs-var">_old</span></a></span></span><span> </span><span id="local-6989586621679415727"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415727"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415727"><span class="hs-identifier hs-var">new</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><span class="hs-comment">-- | Simply compute the increase.</span></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Data.Accum.html#mkAccumDelta"><span class="hs-identifier hs-type">mkAccumDelta</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-82"></span><span id="mkAccumDelta"><span class="annot"><span class="annottext">mkAccumDelta :: Accum Word64 Word64
+</span><a href="Data.Accum.html#mkAccumDelta"><span class="hs-identifier hs-var hs-var">mkAccumDelta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+-&gt; Word64
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64)
+-&gt; Accum Word64 Word64
+forall a b. a -&gt; b -&gt; (POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; Accum a b
+</span><a href="Data.Accum.html#mkAccum"><span class="hs-identifier hs-var">mkAccum</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">((POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64)
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">\</span><span id="local-6989586621679415728"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415728"><span class="hs-identifier hs-var">_dt</span></a></span></span><span> </span><span id="local-6989586621679415729"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415729"><span class="hs-identifier hs-var">old</span></a></span></span><span> </span><span id="local-6989586621679415730"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415730"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415730"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415729"><span class="hs-identifier hs-var">old</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | Interpret values as centiseconds (ticks, in Linux),</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--   and compute ratio of elapsed time, in percents.</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Data.Accum.html#mkAccumTicksShare"><span class="hs-identifier hs-type">mkAccumTicksShare</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Accum.html#Accum"><span class="hs-identifier hs-type">Accum</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-88"></span><span id="mkAccumTicksShare"><span class="annot"><span class="annottext">mkAccumTicksShare :: Accum Word64 Word64
+</span><a href="Data.Accum.html#mkAccumTicksShare"><span class="hs-identifier hs-var hs-var">mkAccumTicksShare</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+-&gt; Word64
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64)
+-&gt; Accum Word64 Word64
+forall a b. a -&gt; b -&gt; (POSIXTime -&gt; a -&gt; a -&gt; b) -&gt; Accum a b
+</span><a href="Data.Accum.html#mkAccum"><span class="hs-identifier hs-var">mkAccum</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">((POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64)
+-&gt; (POSIXTime -&gt; Word64 -&gt; Word64 -&gt; Word64) -&gt; Accum Word64 Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">\</span><span id="local-6989586621679415731"><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415731"><span class="hs-identifier hs-var">dt</span></a></span></span><span> </span><span id="local-6989586621679415732"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415732"><span class="hs-identifier hs-var">old</span></a></span></span><span> </span><span id="local-6989586621679415733"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415733"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679415734"><span class="annot"><span class="annottext">spentTicks :: Word64
+</span><a href="#local-6989586621679415734"><span class="hs-identifier hs-var hs-var">spentTicks</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415733"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415732"><span class="hs-identifier hs-var">old</span></a></span><span>
+</span><span id="line-91"></span><span>        </span><span id="local-6989586621679415735"><span class="annot"><span class="annottext">elapsedTicks :: Float
+</span><a href="#local-6989586621679415735"><span class="hs-identifier hs-var hs-var">elapsedTicks</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; Float
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#realToFrac"><span class="hs-identifier hs-var">realToFrac</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><a href="#local-6989586621679415731"><span class="hs-identifier hs-var">dt</span></a></span><span> </span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><a href="#local-6989586621679415736"><span class="hs-identifier hs-var">ticksPerSecond</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span id="local-6989586621679415736"><span class="annot"><span class="annottext">ticksPerSecond :: Float
+</span><a href="#local-6989586621679415736"><span class="hs-identifier hs-var hs-var">ticksPerSecond</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">100</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier hs-type">Float</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Float -&gt; Word64
+forall b. Integral b =&gt; Float -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#ceiling"><span class="hs-identifier hs-var">ceiling</span></a></span><span> </span><span class="annot"><span class="annottext">(Float -&gt; Word64) -&gt; Float -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Float
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679415734"><span class="hs-identifier hs-var">spentTicks</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Float -&gt; Float -&gt; Float
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><a href="#local-6989586621679415735"><span class="hs-identifier hs-var">elapsedTicks</span></a></span><span>
+</span><span id="line-94"></span></pre></body></html>

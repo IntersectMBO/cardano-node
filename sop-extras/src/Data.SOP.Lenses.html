@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.SOP.Lenses</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier">Lens</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.SOP.Lenses.html#lenses_NP"><span class="hs-identifier">lenses_NP</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Sing</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.SOP.Strict</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="annot"><span class="hs-comment">-- | Simple lens to access an element of an n-ary product.</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">data</span><span> </span><span id="Lens"><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-var">Lens</span></a></span></span><span> </span><span id="local-6989586621679098798"><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span></span><span> </span><span id="local-6989586621679098799"><span class="annot"><a href="#local-6989586621679098799"><span class="hs-identifier hs-type">xs</span></a></span></span><span> </span><span id="local-6989586621679098800"><span class="annot"><a href="#local-6989586621679098800"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Lens"><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-var">Lens</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="getter"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) (xs :: [*]) a. Lens f xs a -&gt; NP f xs -&gt; f a
+</span><a href="Data.SOP.Lenses.html#getter"><span class="hs-identifier hs-var hs-var">getter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098799"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098800"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="setter"><span class="annot"><span class="annottext">forall (f :: * -&gt; *) (xs :: [*]) a.
+Lens f xs a -&gt; f a -&gt; NP f xs -&gt; NP f xs
+</span><a href="Data.SOP.Lenses.html#setter"><span class="hs-identifier hs-var hs-var">setter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098800"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098799"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="annot"><a href="#local-6989586621679098798"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098799"><span class="hs-identifier hs-type">xs</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><span class="hs-comment">-- | Generate all lenses to access the element of an n-ary product.</span></span><span>
+</span><span id="line-21"></span><span id="local-6989586621679098809"><span id="local-6989586621679098811"><span class="annot"><a href="Data.SOP.Lenses.html#lenses_NP"><span class="hs-identifier hs-type">lenses_NP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SListI</span></span><span> </span><span class="annot"><a href="#local-6989586621679098809"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098811"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098809"><span class="hs-identifier hs-type">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679098809"><span class="hs-identifier hs-type">xs</span></a></span></span></span><span>
+</span><span id="line-22"></span><span id="lenses_NP"><span class="annot"><span class="annottext">lenses_NP :: forall (xs :: [*]) (f :: * -&gt; *). SListI xs =&gt; NP (Lens f xs) xs
+</span><a href="Data.SOP.Lenses.html#lenses_NP"><span class="hs-identifier hs-var hs-var">lenses_NP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SList xs -&gt; NP (Lens f xs) xs
+forall (xs' :: [*]) (f :: * -&gt; *). SList xs' -&gt; NP (Lens f xs') xs'
+</span><a href="#local-6989586621679098874"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs
+forall {k} (xs :: [k]). SListI xs =&gt; SList xs
+</span><span class="hs-identifier hs-var">sList</span></span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679098815"><span id="local-6989586621679098816"><span class="annot"><a href="#local-6989586621679098874"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">SList</span></span><span> </span><span class="annot"><a href="#local-6989586621679098815"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098816"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098815"><span class="hs-identifier hs-type">xs'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679098815"><span class="hs-identifier hs-type">xs'</span></a></span></span></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679098874"><span class="annot"><span class="annottext">go :: forall (xs' :: [*]) (f :: * -&gt; *). SList xs' -&gt; NP (Lens f xs') xs'
+</span><a href="#local-6989586621679098874"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">SList xs'
+</span><span class="hs-identifier hs-var">SNil</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP (Lens f xs') xs'
+NP (Lens f xs') '[]
+forall {k} (f :: k -&gt; *). NP f '[]
+</span><span class="hs-identifier hs-var">Nil</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="#local-6989586621679098874"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs'
+</span><span class="hs-identifier hs-var">SCons</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens f xs' x
+Lens f (x : xs) x
+forall (f :: * -&gt; *) x (xs' :: [*]). Lens f (x : xs') x
+</span><a href="#local-6989586621679098886"><span class="hs-identifier hs-var">lensFirst</span></a></span><span> </span><span class="annot"><span class="annottext">Lens f xs' x -&gt; NP (Lens f xs') xs -&gt; NP (Lens f xs') (x : xs)
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">(forall a. Lens f xs a -&gt; Lens f xs' a)
+-&gt; NP (Lens f xs) xs -&gt; NP (Lens f xs') xs
+forall {k} {l} (h :: (k -&gt; *) -&gt; l -&gt; *) (xs :: l) (f :: k -&gt; *)
+       (f' :: k -&gt; *).
+(SListIN (Prod h) xs, HAp h) =&gt;
+(forall (a :: k). f a -&gt; f' a) -&gt; h f xs -&gt; h f' xs
+</span><span class="hs-identifier hs-var">hmap</span></span><span> </span><span class="annot"><span class="annottext">Lens f xs a -&gt; Lens f xs' a
+Lens f xs a -&gt; Lens f (x : xs) a
+forall a. Lens f xs a -&gt; Lens f xs' a
+forall (f :: * -&gt; *) (xs' :: [*]) a x.
+Lens f xs' a -&gt; Lens f (x : xs') a
+</span><a href="#local-6989586621679098889"><span class="hs-identifier hs-var">shiftLens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SList xs -&gt; NP (Lens f xs) xs
+forall (xs' :: [*]) (f :: * -&gt; *). SList xs' -&gt; NP (Lens f xs') xs'
+</span><a href="#local-6989586621679098874"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">SList xs
+forall {k} (xs :: [k]). SListI xs =&gt; SList xs
+</span><span class="hs-identifier hs-var">sList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679098829"><span id="local-6989586621679098830"><span id="local-6989586621679098831"><span class="annot"><a href="#local-6989586621679098886"><span class="hs-identifier hs-type">lensFirst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098829"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679098830"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-glyph">:</span><span> </span><span class="annot"><a href="#local-6989586621679098831"><span class="hs-identifier hs-type">xs'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679098830"><span class="hs-identifier hs-type">x</span></a></span></span></span></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679098886"><span class="annot"><span class="annottext">lensFirst :: forall (f :: * -&gt; *) x (xs' :: [*]). Lens f (x : xs') x
+</span><a href="#local-6989586621679098886"><span class="hs-identifier hs-var hs-var">lensFirst</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">getter :: NP f (x : xs') -&gt; f x
+</span><a href="Data.SOP.Lenses.html#getter"><span class="hs-identifier hs-var">getter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NP f (x : xs') -&gt; f x
+forall {k} (f :: k -&gt; *) (x :: k) (xs :: [k]). NP f (x : xs) -&gt; f x
+</span><span class="hs-identifier hs-var">hd</span></span><span>
+</span><span id="line-32"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">setter :: f x -&gt; NP f (x : xs') -&gt; NP f (x : xs')
+</span><a href="Data.SOP.Lenses.html#setter"><span class="hs-identifier hs-var">setter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679098891"><span class="annot"><span class="annottext">f x
+</span><a href="#local-6989586621679098891"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f x
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:*</span></span><span> </span><span id="local-6989586621679098895"><span class="annot"><span class="annottext">NP f xs1
+</span><a href="#local-6989586621679098895"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">f x
+</span><a href="#local-6989586621679098891"><span class="hs-identifier hs-var">a'</span></a></span><span> </span><span class="annot"><span class="annottext">f x -&gt; NP f xs' -&gt; NP f (x : xs')
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">NP f xs'
+NP f xs1
+</span><a href="#local-6989586621679098895"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-33"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679098842"><span id="local-6989586621679098843"><span id="local-6989586621679098844"><span id="local-6989586621679098845"><span class="annot"><a href="#local-6989586621679098889"><span class="hs-identifier hs-type">shiftLens</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098842"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098843"><span class="hs-identifier hs-type">xs'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098844"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679098842"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679098845"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-glyph">:</span><span> </span><span class="annot"><a href="#local-6989586621679098843"><span class="hs-identifier hs-type">xs'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679098844"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679098889"><span class="annot"><span class="annottext">shiftLens :: forall (f :: * -&gt; *) (xs' :: [*]) a x.
+Lens f xs' a -&gt; Lens f (x : xs') a
+</span><a href="#local-6989586621679098889"><span class="hs-identifier hs-var hs-var">shiftLens</span></a></span></span><span> </span><span id="local-6989586621679098896"><span class="annot"><span class="annottext">Lens f xs' a
+</span><a href="#local-6989586621679098896"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Data.SOP.Lenses.html#Lens"><span class="hs-identifier hs-type">Lens</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">getter :: NP f (x : xs') -&gt; f a
+</span><a href="Data.SOP.Lenses.html#getter"><span class="hs-identifier hs-var">getter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens f xs' a -&gt; NP f xs' -&gt; f a
+forall (f :: * -&gt; *) (xs :: [*]) a. Lens f xs a -&gt; NP f xs -&gt; f a
+</span><a href="Data.SOP.Lenses.html#getter"><span class="hs-identifier hs-var">getter</span></a></span><span> </span><span class="annot"><span class="annottext">Lens f xs' a
+</span><a href="#local-6989586621679098896"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">(NP f xs' -&gt; f a)
+-&gt; (NP f (x : xs') -&gt; NP f xs') -&gt; NP f (x : xs') -&gt; f a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NP f (x : xs') -&gt; NP f xs'
+forall {k} (f :: k -&gt; *) (x :: k) (xs :: [k]).
+NP f (x : xs) -&gt; NP f xs
+</span><span class="hs-identifier hs-var">tl</span></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">setter :: f a -&gt; NP f (x : xs') -&gt; NP f (x : xs')
+</span><a href="Data.SOP.Lenses.html#setter"><span class="hs-identifier hs-var">setter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679098899"><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679098899"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679098905"><span class="annot"><span class="annottext">f x
+</span><a href="#local-6989586621679098905"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:*</span></span><span> </span><span id="local-6989586621679098906"><span class="annot"><span class="annottext">NP f xs1
+</span><a href="#local-6989586621679098906"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">f x
+f x
+</span><a href="#local-6989586621679098905"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">f x -&gt; NP f xs' -&gt; NP f (x : xs')
+forall {k} (f :: k -&gt; *) (x :: k) (xs1 :: [k]).
+f x -&gt; NP f xs1 -&gt; NP f (x : xs1)
+</span><span class="hs-operator hs-var">:*</span></span><span> </span><span class="annot"><span class="annottext">Lens f xs' a -&gt; f a -&gt; NP f xs' -&gt; NP f xs'
+forall (f :: * -&gt; *) (xs :: [*]) a.
+Lens f xs a -&gt; f a -&gt; NP f xs -&gt; NP f xs
+</span><a href="Data.SOP.Lenses.html#setter"><span class="hs-identifier hs-var">setter</span></a></span><span> </span><span class="annot"><span class="annottext">Lens f xs' a
+</span><a href="#local-6989586621679098896"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">f a
+</span><a href="#local-6989586621679098899"><span class="hs-identifier hs-var">a'</span></a></span><span> </span><span class="annot"><span class="annottext">NP f xs'
+NP f xs1
+</span><a href="#local-6989586621679098906"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span></pre></body></html>

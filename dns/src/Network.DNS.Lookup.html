@@ -1,0 +1,956 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Simple, high-level DNS lookup functions for clients.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--   All of the lookup functions necessary run in IO since they</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--   interact with the network. The return types are similar, but</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   differ in what can be returned from a successful lookup.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--   We can think of the return type as either \&quot;what I asked for\&quot; or</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--   \&quot;an error\&quot;. For example, the 'lookupA' function, if successful,</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--   will return a list of 'IPv4'. The 'lookupMX' function will</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--   instead return a list of @('Domain','Int')@ pairs, where each pair</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--   represents a hostname and its associated priority.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   The order of multiple results may not be consistent between</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--   lookups. If you require consistent results, apply</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--   'Data.List.sort' to the returned list.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--   The errors that can occur are the same for all lookups. Namely:</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--     * Timeout</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--     * Wrong sequence number (foul play?)</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--     * Unexpected data in the response</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   If an error occurs, you should be able to pattern match on the</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--   'DNSError' constructor to determine which of these is the case.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--   /Note/: A result of \&quot;no records\&quot; is not considered an</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--   error. If you perform, say, an \'AAAA\' lookup for a domain with</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--   no such records, the \&quot;success\&quot; result would be @Right []@.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--   We perform a successful lookup of \&quot;www.example.com\&quot;:</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--   &gt;&gt;&gt; let hostname = Data.ByteString.Char8.pack &quot;www.example.com&quot;</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   &gt;&gt;&gt;</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupA resolver hostname</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   Right [93.184.216.34]</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--   The only error that we can easily cause is a timeout. We do this</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--   by creating and utilizing a 'ResolvConf' which has a timeout of</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   one millisecond and a very limited number of retries:</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--   &gt;&gt;&gt; let hostname2 = Data.ByteString.Char8.pack &quot;www.example.com&quot;</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--   &gt;&gt;&gt; let badrc = defaultResolvConf { resolvTimeout = 0, resolvRetry = 1 }</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--   &gt;&gt;&gt;</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   &gt;&gt;&gt; rs2 &lt;- makeResolvSeed badrc</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs2 $ \resolver -&gt; lookupA resolver hostname2</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--   Left RetryLimitExceeded</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   As is the convention, successful results will always be wrapped</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--   in a 'Right' while errors will be wrapped in a 'Left'.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--   For convenience, you may wish to enable GHC\'s OverloadedStrings</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--   extension. This will allow you to avoid calling</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   'Data.ByteString.Char8.pack' on each domain name. See</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   &lt;https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#overloaded-string-literals&gt;</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   for more information. In the following examples,</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   we assuem this extension is enabled.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   All lookup functions eventually call 'lookupRaw'. See its documentation</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   to understand the concrete lookup behavior.</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.DNS.Lookup</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupA"><span class="hs-identifier">lookupA</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAAAA"><span class="hs-identifier">lookupAAAA</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupMX"><span class="hs-identifier">lookupMX</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAviaMX"><span class="hs-identifier">lookupAviaMX</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAAAAviaMX"><span class="hs-identifier">lookupAAAAviaMX</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupNS"><span class="hs-identifier">lookupNS</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupNSAuth"><span class="hs-identifier">lookupNSAuth</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupTXT"><span class="hs-identifier">lookupTXT</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupSOA"><span class="hs-identifier">lookupSOA</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupPTR"><span class="hs-identifier">lookupPTR</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupRDNS"><span class="hs-identifier">lookupRDNS</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.DNS.Lookup.html#lookupSRV"><span class="hs-identifier">lookupSRV</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.IP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IPv4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">IPv6</span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Imports</span></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.LookupRaw.html"><span class="hs-identifier">Network.DNS.LookupRaw</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DNS</span></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.DNS.Resolver.html"><span class="hs-identifier">Network.DNS.Resolver</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DNS</span></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Network.DNS.Types.Internal</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- &gt;&gt;&gt; :set -XOverloadedStrings</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Look up all \'A\' records for the given hostname.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   A straightforward example:</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupA resolver &quot;192.0.2.1.nip.io&quot;</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--   Right [192.0.2.1]</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--   This function will also follow a CNAME and resolve its target if</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   one exists for the queried hostname:</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--   &gt;&gt;&gt; rs2 &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs2 $ \resolver -&gt; lookupA resolver &quot;www.kame.net&quot;</span><span>
+</span><span id="line-101"></span><span class="hs-comment">--   Right [210.155.141.200]</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupA"><span class="hs-identifier hs-type">lookupA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv4</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span id="lookupA"><span class="annot"><span class="annottext">lookupA :: Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv4])
+</span><a href="Network.DNS.Lookup.html#lookupA"><span class="hs-identifier hs-var hs-var">lookupA</span></a></span></span><span> </span><span id="local-6989586621679075006"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075006"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075007"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075007"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679075008"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075008"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075006"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075007"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">A</span></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075008"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075011"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075011"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [IPv4] -&gt; IO (Either DNSError [IPv4])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [IPv4]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075011"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075012"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075012"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [IPv4] -&gt; IO (Either DNSError [IPv4])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [IPv4] -&gt; IO (Either DNSError [IPv4]))
+-&gt; Either DNSError [IPv4] -&gt; IO (Either DNSError [IPv4])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError IPv4)
+-&gt; [RData] -&gt; Either DNSError [IPv4]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError IPv4
+</span><a href="#local-6989586621679075014"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075012"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><a href="#local-6989586621679075014"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IPv4</span></span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621679075014"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError IPv4
+</span><a href="#local-6989586621679075014"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_A</span></span><span> </span><span id="local-6989586621679075016"><span class="annot"><span class="annottext">IPv4
+</span><a href="#local-6989586621679075016"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IPv4 -&gt; Either DNSError IPv4
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">IPv4
+</span><a href="#local-6989586621679075016"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="#local-6989586621679075014"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError IPv4
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- | Look up all (IPv6) \'AAAA\' records for the given hostname.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--   Examples:</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupAAAA resolver &quot;www.wide.ad.jp&quot;</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--   Right [2001:200:0:180c:20c:29ff:fec9:9d61]</span><span>
+</span><span id="line-123"></span><span class="hs-comment">--</span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAAAA"><span class="hs-identifier hs-type">lookupAAAA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv6</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span id="lookupAAAA"><span class="annot"><span class="annottext">lookupAAAA :: Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv6])
+</span><a href="Network.DNS.Lookup.html#lookupAAAA"><span class="hs-identifier hs-var hs-var">lookupAAAA</span></a></span></span><span> </span><span id="local-6989586621679075018"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075018"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075019"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075019"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679075020"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075020"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075018"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075019"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">AAAA</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075020"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075022"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075022"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [IPv6] -&gt; IO (Either DNSError [IPv6])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [IPv6]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075022"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075023"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075023"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [IPv6] -&gt; IO (Either DNSError [IPv6])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [IPv6] -&gt; IO (Either DNSError [IPv6]))
+-&gt; Either DNSError [IPv6] -&gt; IO (Either DNSError [IPv6])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError IPv6)
+-&gt; [RData] -&gt; Either DNSError [IPv6]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError IPv6
+</span><a href="#local-6989586621679075024"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075023"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><a href="#local-6989586621679075024"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IPv6</span></span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621679075024"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError IPv6
+</span><a href="#local-6989586621679075024"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_AAAA</span></span><span> </span><span id="local-6989586621679075026"><span class="annot"><span class="annottext">IPv6
+</span><a href="#local-6989586621679075026"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IPv6 -&gt; Either DNSError IPv6
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">IPv6
+</span><a href="#local-6989586621679075026"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="#local-6989586621679075024"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError IPv6
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- | Look up all \'MX\' records for the given hostname. Two parts</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--   constitute an MX record: a hostname , and an integer priority. We</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--   therefore return each record as a @('Domain', Int)@.</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--</span><span>
+</span><span id="line-142"></span><span class="hs-comment">--   In this first example, we look up the MX for the domain \&quot;example.com\&quot;.</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--   It has an RFC7505 NULL MX (to prevent a deluge of spam from examples</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--   posted on the internet).</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupMX resolver &quot;example.com&quot;</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--   Right [(&quot;.&quot;,0)]</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">--</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--   The domain \&quot;mew.org\&quot; does however have a single MX:</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span class="hs-comment">--   &gt;&gt;&gt; rs2 &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs2 $ \resolver -&gt; lookupMX resolver &quot;mew.org&quot;</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--   Right [(&quot;mail.mew.org.&quot;,10)]</span><span>
+</span><span id="line-156"></span><span class="hs-comment">--</span><span>
+</span><span id="line-157"></span><span class="hs-comment">--   Also note that all hostnames are returned with a trailing dot to</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--   indicate the DNS root.</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--   However the MX host itself has no need for an MX record, so its MX RRset</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--   is empty.  But, \&quot;no results\&quot; is still a successful result.</span><span>
+</span><span id="line-162"></span><span class="hs-comment">--</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--   &gt;&gt;&gt; rs3 &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs3 $ \resolver -&gt; lookupMX resolver &quot;mail.mew.org&quot;</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--   Right []</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupMX"><span class="hs-identifier hs-type">lookupMX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span id="lookupMX"><span class="annot"><span class="annottext">lookupMX :: Resolver -&gt; Domain -&gt; IO (Either DNSError [(Domain, Int)])
+</span><a href="Network.DNS.Lookup.html#lookupMX"><span class="hs-identifier hs-var hs-var">lookupMX</span></a></span></span><span> </span><span id="local-6989586621679075027"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075027"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075028"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075028"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-169"></span><span>  </span><span id="local-6989586621679075029"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075029"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075027"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075028"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">MX</span></span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075029"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075031"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075031"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [(Domain, Int)]
+-&gt; IO (Either DNSError [(Domain, Int)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [(Domain, Int)]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075031"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075032"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075032"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [(Domain, Int)]
+-&gt; IO (Either DNSError [(Domain, Int)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [(Domain, Int)]
+ -&gt; IO (Either DNSError [(Domain, Int)]))
+-&gt; Either DNSError [(Domain, Int)]
+-&gt; IO (Either DNSError [(Domain, Int)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError (Domain, Int))
+-&gt; [RData] -&gt; Either DNSError [(Domain, Int)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError (Domain, Int)
+</span><a href="#local-6989586621679075033"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075032"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><a href="#local-6989586621679075033"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679075033"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError (Domain, Int)
+</span><a href="#local-6989586621679075033"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_MX</span></span><span> </span><span id="local-6989586621679075035"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075035"><span class="hs-identifier hs-var">pr</span></a></span></span><span> </span><span id="local-6989586621679075036"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075036"><span class="hs-identifier hs-var">dm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Domain, Int) -&gt; Either DNSError (Domain, Int)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075036"><span class="hs-identifier hs-var">dm</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075035"><span class="hs-identifier hs-var">pr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><a href="#local-6989586621679075033"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError (Domain, Int)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- | Look up all \'MX\' records for the given hostname, and then</span><span>
+</span><span id="line-180"></span><span class="hs-comment">--   resolve their hostnames to IPv4 addresses by calling</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--   'lookupA'. The priorities are not retained.</span><span>
+</span><span id="line-182"></span><span class="hs-comment">--</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--   Examples:</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-comment">--   &gt;&gt;&gt; import Data.List (sort)</span><span>
+</span><span id="line-186"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-187"></span><span class="hs-comment">--   &gt;&gt;&gt; ips &lt;- withResolver rs $ \resolver -&gt; lookupAviaMX resolver &quot;wide.ad.jp&quot;</span><span>
+</span><span id="line-188"></span><span class="hs-comment">--   &gt;&gt;&gt; fmap sort ips</span><span>
+</span><span id="line-189"></span><span class="hs-comment">--   Right [203.178.136.30]</span><span>
+</span><span id="line-190"></span><span class="hs-comment">--</span><span>
+</span><span id="line-191"></span><span class="hs-comment">--   Since there is more than one result, it is necessary to sort the</span><span>
+</span><span id="line-192"></span><span class="hs-comment">--   list in order to check for equality.</span><span>
+</span><span id="line-193"></span><span class="hs-comment">--</span><span>
+</span><span id="line-194"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAviaMX"><span class="hs-identifier hs-type">lookupAviaMX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv4</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span id="lookupAviaMX"><span class="annot"><span class="annottext">lookupAviaMX :: Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv4])
+</span><a href="Network.DNS.Lookup.html#lookupAviaMX"><span class="hs-identifier hs-var hs-var">lookupAviaMX</span></a></span></span><span> </span><span id="local-6989586621679075037"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075037"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075038"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075038"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Resolver
+-&gt; Domain
+-&gt; (Domain -&gt; IO (Either DNSError [IPv4]))
+-&gt; IO (Either DNSError [IPv4])
+forall a.
+Resolver
+-&gt; Domain
+-&gt; (Domain -&gt; IO (Either DNSError [a]))
+-&gt; IO (Either DNSError [a])
+</span><a href="Network.DNS.Lookup.html#lookupXviaMX"><span class="hs-identifier hs-var">lookupXviaMX</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075037"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075038"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv4])
+</span><a href="Network.DNS.Lookup.html#lookupA"><span class="hs-identifier hs-var">lookupA</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075037"><span class="hs-identifier hs-var">rlv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | Look up all \'MX\' records for the given hostname, and then</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--   resolve their hostnames to IPv6 addresses by calling</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--   'lookupAAAA'. The priorities are not retained.</span><span>
+</span><span id="line-200"></span><span class="hs-comment">--</span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupAAAAviaMX"><span class="hs-identifier hs-type">lookupAAAAviaMX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">IPv6</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span id="lookupAAAAviaMX"><span class="annot"><span class="annottext">lookupAAAAviaMX :: Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv6])
+</span><a href="Network.DNS.Lookup.html#lookupAAAAviaMX"><span class="hs-identifier hs-var hs-var">lookupAAAAviaMX</span></a></span></span><span> </span><span id="local-6989586621679075040"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075040"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075041"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075041"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Resolver
+-&gt; Domain
+-&gt; (Domain -&gt; IO (Either DNSError [IPv6]))
+-&gt; IO (Either DNSError [IPv6])
+forall a.
+Resolver
+-&gt; Domain
+-&gt; (Domain -&gt; IO (Either DNSError [a]))
+-&gt; IO (Either DNSError [a])
+</span><a href="Network.DNS.Lookup.html#lookupXviaMX"><span class="hs-identifier hs-var">lookupXviaMX</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075040"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075041"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; IO (Either DNSError [IPv6])
+</span><a href="Network.DNS.Lookup.html#lookupAAAA"><span class="hs-identifier hs-var">lookupAAAA</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075040"><span class="hs-identifier hs-var">rlv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span id="local-6989586621679074929"><span class="annot"><a href="Network.DNS.Lookup.html#lookupXviaMX"><span class="hs-identifier hs-type">lookupXviaMX</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span>
+</span><span id="line-205"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span>
+</span><span id="line-206"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679074929"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679074929"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-208"></span><span id="lookupXviaMX"><span class="annot"><span class="annottext">lookupXviaMX :: forall a.
+Resolver
+-&gt; Domain
+-&gt; (Domain -&gt; IO (Either DNSError [a]))
+-&gt; IO (Either DNSError [a])
+</span><a href="Network.DNS.Lookup.html#lookupXviaMX"><span class="hs-identifier hs-var hs-var">lookupXviaMX</span></a></span></span><span> </span><span id="local-6989586621679075052"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075052"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075053"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075053"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679075054"><span class="annot"><span class="annottext">Domain -&gt; IO (Either DNSError [a])
+</span><a href="#local-6989586621679075054"><span class="hs-identifier hs-var">func</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-209"></span><span>    </span><span id="local-6989586621679075055"><span class="annot"><span class="annottext">Either DNSError [(Domain, Int)]
+</span><a href="#local-6989586621679075055"><span class="hs-identifier hs-var">edps</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; IO (Either DNSError [(Domain, Int)])
+</span><a href="Network.DNS.Lookup.html#lookupMX"><span class="hs-identifier hs-var">lookupMX</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075052"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075053"><span class="hs-identifier hs-var">dom</span></a></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [(Domain, Int)]
+</span><a href="#local-6989586621679075055"><span class="hs-identifier hs-var">edps</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-211"></span><span>      </span><span class="hs-comment">-- We have to deconstruct and reconstruct the error so that the</span><span>
+</span><span id="line-212"></span><span>      </span><span class="hs-comment">-- typechecker does not conclude that a ~ (Domain, Int).</span><span>
+</span><span id="line-213"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075056"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075056"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [a] -&gt; IO (Either DNSError [a])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [a]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075056"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075057"><span class="annot"><span class="annottext">[(Domain, Int)]
+</span><a href="#local-6989586621679075057"><span class="hs-identifier hs-var">dps</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-215"></span><span>        </span><span class="hs-comment">-- We'll get back a [Either DNSError a] here.</span><span>
+</span><span id="line-216"></span><span>        </span><span id="local-6989586621679075058"><span class="annot"><span class="annottext">[Either DNSError [a]]
+</span><a href="#local-6989586621679075058"><span class="hs-identifier hs-var">responses</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Domain, Int) -&gt; IO (Either DNSError [a]))
+-&gt; [(Domain, Int)] -&gt; IO [Either DNSError [a]]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Domain -&gt; IO (Either DNSError [a])
+</span><a href="#local-6989586621679075054"><span class="hs-identifier hs-var">func</span></a></span><span> </span><span class="annot"><span class="annottext">(Domain -&gt; IO (Either DNSError [a]))
+-&gt; ((Domain, Int) -&gt; Domain)
+-&gt; (Domain, Int)
+-&gt; IO (Either DNSError [a])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Domain, Int) -&gt; Domain
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Domain, Int)]
+</span><a href="#local-6989586621679075057"><span class="hs-identifier hs-var">dps</span></a></span><span>
+</span><span id="line-217"></span><span>        </span><span class="hs-comment">-- We can use 'sequence' to join all of the Eithers</span><span>
+</span><span id="line-218"></span><span>        </span><span class="hs-comment">-- together. If any of them are (Left _), we'll get a Left</span><span>
+</span><span id="line-219"></span><span>        </span><span class="hs-comment">-- overall. Otherwise, we'll get Right [a].</span><span>
+</span><span id="line-220"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679075063"><span class="annot"><span class="annottext">overall :: Either DNSError [[a]]
+</span><a href="#local-6989586621679075063"><span class="hs-identifier hs-var hs-var">overall</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Either DNSError [a]] -&gt; Either DNSError [[a]]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a. Monad m =&gt; [m a] -&gt; m [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#sequence"><span class="hs-identifier hs-var">sequence</span></a></span><span> </span><span class="annot"><span class="annottext">[Either DNSError [a]]
+</span><a href="#local-6989586621679075058"><span class="hs-identifier hs-var">responses</span></a></span><span>
+</span><span id="line-221"></span><span>        </span><span class="hs-comment">-- Finally, we use (fmap concat) to concatenate the responses</span><span>
+</span><span id="line-222"></span><span>        </span><span class="hs-comment">-- if there were no errors.</span><span>
+</span><span id="line-223"></span><span>        </span><span class="annot"><span class="annottext">Either DNSError [a] -&gt; IO (Either DNSError [a])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [a] -&gt; IO (Either DNSError [a]))
+-&gt; Either DNSError [a] -&gt; IO (Either DNSError [a])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">([[a]] -&gt; [a]) -&gt; Either DNSError [[a]] -&gt; Either DNSError [a]
+forall a b. (a -&gt; b) -&gt; Either DNSError a -&gt; Either DNSError b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[[a]] -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concat"><span class="hs-identifier hs-var">concat</span></a></span><span> </span><span class="annot"><span class="annottext">Either DNSError [[a]]
+</span><a href="#local-6989586621679075063"><span class="hs-identifier hs-var">overall</span></a></span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- | This function performs the real work for both 'lookupNS' and</span><span>
+</span><span id="line-230"></span><span class="hs-comment">--   'lookupNSAuth'. The only difference between those two is which</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--   function, 'lookup' or 'lookupAuth', is used to perform the</span><span>
+</span><span id="line-232"></span><span class="hs-comment">--   lookup. We take either of those as our first parameter.</span><span>
+</span><span id="line-233"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupNSImpl"><span class="hs-identifier hs-type">lookupNSImpl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TYPE</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span>
+</span><span id="line-235"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span>
+</span><span id="line-236"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span id="lookupNSImpl"><span class="annot"><span class="annottext">lookupNSImpl :: (Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData]))
+-&gt; Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupNSImpl"><span class="hs-identifier hs-var hs-var">lookupNSImpl</span></a></span></span><span> </span><span id="local-6989586621679075069"><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="#local-6989586621679075069"><span class="hs-identifier hs-var">lookup_function</span></a></span></span><span> </span><span id="local-6989586621679075070"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075070"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075071"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075071"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-238"></span><span>  </span><span id="local-6989586621679075072"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075072"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="#local-6989586621679075069"><span class="hs-identifier hs-var">lookup_function</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075070"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075071"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">NS</span></span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075072"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-240"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-241"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075074"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075074"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [Domain]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075074"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075075"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075075"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [Domain] -&gt; IO (Either DNSError [Domain]))
+-&gt; Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError Domain)
+-&gt; [RData] -&gt; Either DNSError [Domain]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075076"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075075"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><a href="#local-6989586621679075076"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span>
+</span><span id="line-245"></span><span>    </span><span id="local-6989586621679075076"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075076"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_NS</span></span><span> </span><span id="local-6989586621679075078"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075078"><span class="hs-identifier hs-var">dm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Domain -&gt; Either DNSError Domain
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075078"><span class="hs-identifier hs-var">dm</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><a href="#local-6989586621679075076"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError Domain
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- | Look up all \'NS\' records for the given hostname. The results</span><span>
+</span><span id="line-249"></span><span class="hs-comment">--   are taken from the ANSWER section of the response (as opposed to</span><span>
+</span><span id="line-250"></span><span class="hs-comment">--   AUTHORITY). For details, see e.g.</span><span>
+</span><span id="line-251"></span><span class="hs-comment">--   &lt;http://www.zytrax.com/books/dns/ch15/&gt;.</span><span>
+</span><span id="line-252"></span><span class="hs-comment">--</span><span>
+</span><span id="line-253"></span><span class="hs-comment">--   There will typically be more than one name server for a</span><span>
+</span><span id="line-254"></span><span class="hs-comment">--   domain. It is therefore extra important to sort the results if</span><span>
+</span><span id="line-255"></span><span class="hs-comment">--   you prefer them to be at all deterministic.</span><span>
+</span><span id="line-256"></span><span class="hs-comment">--</span><span>
+</span><span id="line-257"></span><span class="hs-comment">--   Examples:</span><span>
+</span><span id="line-258"></span><span class="hs-comment">--</span><span>
+</span><span id="line-259"></span><span class="hs-comment">--   &gt;&gt;&gt; import Data.List (sort)</span><span>
+</span><span id="line-260"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-261"></span><span class="hs-comment">--   &gt;&gt;&gt; ns &lt;- withResolver rs $ \resolver -&gt; lookupNS resolver &quot;mew.org&quot;</span><span>
+</span><span id="line-262"></span><span class="hs-comment">--   &gt;&gt;&gt; fmap sort ns</span><span>
+</span><span id="line-263"></span><span class="hs-comment">--   Right [&quot;ns1.mew.org.&quot;,&quot;ns2.mew.org.&quot;]</span><span>
+</span><span id="line-264"></span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupNS"><span class="hs-identifier hs-type">lookupNS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span id="lookupNS"><span class="annot"><span class="annottext">lookupNS :: Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupNS"><span class="hs-identifier hs-var hs-var">lookupNS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData]))
+-&gt; Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupNSImpl"><span class="hs-identifier hs-var">lookupNSImpl</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span>
+</span><span id="line-267"></span><span>
+</span><span id="line-268"></span><span class="hs-comment">-- | Look up all \'NS\' records for the given hostname. The results</span><span>
+</span><span id="line-269"></span><span class="hs-comment">--   are taken from the AUTHORITY section of the response and not the</span><span>
+</span><span id="line-270"></span><span class="hs-comment">--   usual ANSWER (use 'lookupNS' for that). For details, see e.g.</span><span>
+</span><span id="line-271"></span><span class="hs-comment">--   &lt;http://www.zytrax.com/books/dns/ch15/&gt;.</span><span>
+</span><span id="line-272"></span><span class="hs-comment">--</span><span>
+</span><span id="line-273"></span><span class="hs-comment">--   There will typically be more than one name server for a</span><span>
+</span><span id="line-274"></span><span class="hs-comment">--   domain. It is therefore extra important to sort the results if</span><span>
+</span><span id="line-275"></span><span class="hs-comment">--   you prefer them to be at all deterministic.</span><span>
+</span><span id="line-276"></span><span class="hs-comment">--</span><span>
+</span><span id="line-277"></span><span class="hs-comment">--   For an example, we can look up the nameservers for</span><span>
+</span><span id="line-278"></span><span class="hs-comment">--   \&quot;example.com\&quot; from one of the root servers, a.gtld-servers.net,</span><span>
+</span><span id="line-279"></span><span class="hs-comment">--   the IP address of which was found beforehand:</span><span>
+</span><span id="line-280"></span><span class="hs-comment">--</span><span>
+</span><span id="line-281"></span><span class="hs-comment">--   &gt;&gt;&gt; import Data.List (sort)</span><span>
+</span><span id="line-282"></span><span class="hs-comment">--   &gt;&gt;&gt; let ri = RCHostName &quot;192.5.6.30&quot; -- a.gtld-servers.net</span><span>
+</span><span id="line-283"></span><span class="hs-comment">--   &gt;&gt;&gt; let rc = defaultResolvConf { resolvInfo = ri }</span><span>
+</span><span id="line-284"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed rc</span><span>
+</span><span id="line-285"></span><span class="hs-comment">--   &gt;&gt;&gt; ns &lt;- withResolver rs $ \resolver -&gt; lookupNSAuth resolver &quot;example.com&quot;</span><span>
+</span><span id="line-286"></span><span class="hs-comment">--   &gt;&gt;&gt; fmap sort ns</span><span>
+</span><span id="line-287"></span><span class="hs-comment">--   Right [&quot;a.iana-servers.net.&quot;,&quot;b.iana-servers.net.&quot;]</span><span>
+</span><span id="line-288"></span><span class="hs-comment">--</span><span>
+</span><span id="line-289"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupNSAuth"><span class="hs-identifier hs-type">lookupNSAuth</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-290"></span><span id="lookupNSAuth"><span class="annot"><span class="annottext">lookupNSAuth :: Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupNSAuth"><span class="hs-identifier hs-var hs-var">lookupNSAuth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData]))
+-&gt; Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupNSImpl"><span class="hs-identifier hs-var">lookupNSImpl</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookupAuth"><span class="hs-identifier hs-var">DNS.lookupAuth</span></a></span><span>
+</span><span id="line-291"></span><span>
+</span><span id="line-292"></span><span>
+</span><span id="line-293"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-294"></span><span>
+</span><span id="line-295"></span><span class="hs-comment">-- | Look up all \'TXT\' records for the given hostname. The results</span><span>
+</span><span id="line-296"></span><span class="hs-comment">--   are free-form 'ByteString's.</span><span>
+</span><span id="line-297"></span><span class="hs-comment">--</span><span>
+</span><span id="line-298"></span><span class="hs-comment">--   Two common uses for \'TXT\' records are</span><span>
+</span><span id="line-299"></span><span class="hs-comment">--   &lt;http://en.wikipedia.org/wiki/Sender_Policy_Framework&gt; and</span><span>
+</span><span id="line-300"></span><span class="hs-comment">--   &lt;http://en.wikipedia.org/wiki/DomainKeys_Identified_Mail&gt;. As an</span><span>
+</span><span id="line-301"></span><span class="hs-comment">--   example, we find the SPF record for \&quot;mew.org\&quot;:</span><span>
+</span><span id="line-302"></span><span class="hs-comment">--</span><span>
+</span><span id="line-303"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-304"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupTXT resolver &quot;mew.org&quot;</span><span>
+</span><span id="line-305"></span><span class="hs-comment">--   Right [&quot;v=spf1 +mx -all&quot;]</span><span>
+</span><span id="line-306"></span><span class="hs-comment">--</span><span>
+</span><span id="line-307"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupTXT"><span class="hs-identifier hs-type">lookupTXT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-308"></span><span id="lookupTXT"><span class="annot"><span class="annottext">lookupTXT :: Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupTXT"><span class="hs-identifier hs-var hs-var">lookupTXT</span></a></span></span><span> </span><span id="local-6989586621679075080"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075080"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075081"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075081"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-309"></span><span>  </span><span id="local-6989586621679075082"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075082"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075080"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075081"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">TXT</span></span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075082"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-311"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-312"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075084"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075084"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [Domain]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075084"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-313"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075085"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075085"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [Domain] -&gt; IO (Either DNSError [Domain]))
+-&gt; Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError Domain)
+-&gt; [RData] -&gt; Either DNSError [Domain]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075086"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075085"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-314"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-315"></span><span>    </span><span class="annot"><a href="#local-6989586621679075086"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-316"></span><span>    </span><span id="local-6989586621679075086"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075086"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_TXT</span></span><span> </span><span id="local-6989586621679075088"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075088"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Domain -&gt; Either DNSError Domain
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075088"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-317"></span><span>    </span><span class="annot"><a href="#local-6989586621679075086"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError Domain
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-318"></span><span>
+</span><span id="line-319"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-320"></span><span>
+</span><span id="line-321"></span><span class="hs-comment">-- | Look up the \'SOA\' record for the given domain. The result 7-tuple</span><span>
+</span><span id="line-322"></span><span class="hs-comment">--   consists of the \'mname\', \'rname\', \'serial\', \'refresh\', \'retry\',</span><span>
+</span><span id="line-323"></span><span class="hs-comment">--   \'expire\' and \'minimum\' fields of the SOA record.</span><span>
+</span><span id="line-324"></span><span class="hs-comment">--</span><span>
+</span><span id="line-325"></span><span class="hs-comment">--   An \@ separator is used between the first and second labels of the</span><span>
+</span><span id="line-326"></span><span class="hs-comment">--   \'rname\' field.  Since \'rname\' is an email address, it often contains</span><span>
+</span><span id="line-327"></span><span class="hs-comment">--   periods within its first label.  Presently, the trailing period is not</span><span>
+</span><span id="line-328"></span><span class="hs-comment">--   removed from the domain part of the \'rname\', but this may change in the</span><span>
+</span><span id="line-329"></span><span class="hs-comment">--   future.  Users should be prepared to remove any trailing period before</span><span>
+</span><span id="line-330"></span><span class="hs-comment">--   using the \'rname\` as a contact email address.</span><span>
+</span><span id="line-331"></span><span class="hs-comment">--</span><span>
+</span><span id="line-332"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-333"></span><span class="hs-comment">--   &gt;&gt;&gt; soa &lt;- withResolver rs $ \resolver -&gt; lookupSOA resolver &quot;mew.org&quot;</span><span>
+</span><span id="line-334"></span><span class="hs-comment">--   &gt;&gt;&gt; map (\ (mn, rn, _, _, _, _, _) -&gt; (mn, rn)) &lt;$&gt; soa</span><span>
+</span><span id="line-335"></span><span class="hs-comment">--   Right [(&quot;ns1.mew.org.&quot;,&quot;kazu@mew.org.&quot;)]</span><span>
+</span><span id="line-336"></span><span class="hs-comment">--</span><span>
+</span><span id="line-337"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupSOA"><span class="hs-identifier hs-type">lookupSOA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier hs-type">Mailbox</span></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-338"></span><span id="lookupSOA"><span class="annot"><span class="annottext">lookupSOA :: Resolver
+-&gt; Domain
+-&gt; IO
+     (Either
+        DNSError
+        [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)])
+</span><a href="Network.DNS.Lookup.html#lookupSOA"><span class="hs-identifier hs-var hs-var">lookupSOA</span></a></span></span><span> </span><span id="local-6989586621679075090"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075090"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075091"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075091"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-339"></span><span>  </span><span id="local-6989586621679075092"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075092"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075090"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075091"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">SOA</span></span><span>
+</span><span id="line-340"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075092"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-341"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-342"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075094"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075094"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either
+  DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+-&gt; IO
+     (Either
+        DNSError
+        [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError
+-&gt; Either
+     DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075094"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-343"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075095"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075095"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either
+  DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+-&gt; IO
+     (Either
+        DNSError
+        [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either
+   DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+ -&gt; IO
+      (Either
+         DNSError
+         [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]))
+-&gt; Either
+     DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+-&gt; IO
+     (Either
+        DNSError
+        [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData
+ -&gt; Either
+      DNSError (Domain, Domain, Word32, Word32, Word32, Word32, Word32))
+-&gt; [RData]
+-&gt; Either
+     DNSError [(Domain, Domain, Word32, Word32, Word32, Word32, Word32)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+-&gt; Either
+     DNSError (Domain, Domain, Word32, Word32, Word32, Word32, Word32)
+</span><a href="#local-6989586621679075096"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075095"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-344"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-345"></span><span>    </span><span class="annot"><a href="#local-6989586621679075096"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier hs-type">Mailbox</span></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-346"></span><span>    </span><span id="local-6989586621679075096"><span class="annot"><span class="annottext">unTag :: RData
+-&gt; Either
+     DNSError (Domain, Domain, Word32, Word32, Word32, Word32, Word32)
+</span><a href="#local-6989586621679075096"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_SOA</span></span><span> </span><span id="local-6989586621679075098"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075098"><span class="hs-identifier hs-var">mn</span></a></span></span><span> </span><span id="local-6989586621679075099"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075099"><span class="hs-identifier hs-var">mr</span></a></span></span><span> </span><span id="local-6989586621679075100"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075100"><span class="hs-identifier hs-var">serial</span></a></span></span><span> </span><span id="local-6989586621679075101"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075101"><span class="hs-identifier hs-var">refresh</span></a></span></span><span> </span><span id="local-6989586621679075102"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075102"><span class="hs-identifier hs-var">retry</span></a></span></span><span> </span><span id="local-6989586621679075103"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075103"><span class="hs-identifier hs-var">expire</span></a></span></span><span> </span><span id="local-6989586621679075104"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075104"><span class="hs-identifier hs-var">mini</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Domain, Domain, Word32, Word32, Word32, Word32, Word32)
+-&gt; Either
+     DNSError (Domain, Domain, Word32, Word32, Word32, Word32, Word32)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075098"><span class="hs-identifier hs-var">mn</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075099"><span class="hs-identifier hs-var">mr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075100"><span class="hs-identifier hs-var">serial</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075101"><span class="hs-identifier hs-var">refresh</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075102"><span class="hs-identifier hs-var">retry</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075103"><span class="hs-identifier hs-var">expire</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679075104"><span class="hs-identifier hs-var">mini</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-347"></span><span>    </span><span class="annot"><a href="#local-6989586621679075096"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError
+-&gt; Either
+     DNSError (Domain, Domain, Word32, Word32, Word32, Word32, Word32)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-348"></span><span>
+</span><span id="line-349"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-350"></span><span>
+</span><span id="line-351"></span><span class="hs-comment">-- | Look up all \'PTR\' records for the given hostname. To perform a</span><span>
+</span><span id="line-352"></span><span class="hs-comment">--   reverse lookup on an IP address, you must first reverse its</span><span>
+</span><span id="line-353"></span><span class="hs-comment">--   octets and then append the suffix \&quot;.in-addr.arpa.\&quot;</span><span>
+</span><span id="line-354"></span><span class="hs-comment">--</span><span>
+</span><span id="line-355"></span><span class="hs-comment">--   We look up the PTR associated with the IP address</span><span>
+</span><span id="line-356"></span><span class="hs-comment">--   210.130.137.80, i.e., 80.137.130.210.in-addr.arpa:</span><span>
+</span><span id="line-357"></span><span class="hs-comment">--</span><span>
+</span><span id="line-358"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-359"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupPTR resolver &quot;180.2.232.202.in-addr.arpa&quot;</span><span>
+</span><span id="line-360"></span><span class="hs-comment">--   Right [&quot;www.iij.ad.jp.&quot;]</span><span>
+</span><span id="line-361"></span><span class="hs-comment">--</span><span>
+</span><span id="line-362"></span><span class="hs-comment">--   The 'lookupRDNS' function is more suited to this particular task.</span><span>
+</span><span id="line-363"></span><span class="hs-comment">--</span><span>
+</span><span id="line-364"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupPTR"><span class="hs-identifier hs-type">lookupPTR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-365"></span><span id="lookupPTR"><span class="annot"><span class="annottext">lookupPTR :: Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupPTR"><span class="hs-identifier hs-var hs-var">lookupPTR</span></a></span></span><span> </span><span id="local-6989586621679075105"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075105"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075106"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075106"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-366"></span><span>  </span><span id="local-6989586621679075107"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075107"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075105"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075106"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">PTR</span></span><span>
+</span><span id="line-367"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075107"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-368"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-369"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075109"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075109"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [Domain]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075109"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-370"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075110"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075110"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [Domain] -&gt; IO (Either DNSError [Domain]))
+-&gt; Either DNSError [Domain] -&gt; IO (Either DNSError [Domain])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError Domain)
+-&gt; [RData] -&gt; Either DNSError [Domain]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075111"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075110"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-371"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-372"></span><span>    </span><span class="annot"><a href="#local-6989586621679075111"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span>
+</span><span id="line-373"></span><span>    </span><span id="local-6989586621679075111"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError Domain
+</span><a href="#local-6989586621679075111"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_PTR</span></span><span> </span><span id="local-6989586621679075113"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075113"><span class="hs-identifier hs-var">dm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Domain -&gt; Either DNSError Domain
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075113"><span class="hs-identifier hs-var">dm</span></a></span><span>
+</span><span id="line-374"></span><span>    </span><span class="annot"><a href="#local-6989586621679075111"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError Domain
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-375"></span><span>
+</span><span id="line-376"></span><span>
+</span><span id="line-377"></span><span class="hs-comment">-- | Convenient wrapper around 'lookupPTR' to perform a reverse lookup</span><span>
+</span><span id="line-378"></span><span class="hs-comment">--   on a single IP address.</span><span>
+</span><span id="line-379"></span><span class="hs-comment">--</span><span>
+</span><span id="line-380"></span><span class="hs-comment">--   We repeat the example from 'lookupPTR', except now we pass the IP</span><span>
+</span><span id="line-381"></span><span class="hs-comment">--   address directly:</span><span>
+</span><span id="line-382"></span><span class="hs-comment">--</span><span>
+</span><span id="line-383"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-384"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupRDNS resolver &quot;202.232.2.180&quot;</span><span>
+</span><span id="line-385"></span><span class="hs-comment">--   Right [&quot;www.iij.ad.jp.&quot;]</span><span>
+</span><span id="line-386"></span><span class="hs-comment">--</span><span>
+</span><span id="line-387"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupRDNS"><span class="hs-identifier hs-type">lookupRDNS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-388"></span><span id="lookupRDNS"><span class="annot"><span class="annottext">lookupRDNS :: Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupRDNS"><span class="hs-identifier hs-var hs-var">lookupRDNS</span></a></span></span><span> </span><span id="local-6989586621679075114"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075114"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075115"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075115"><span class="hs-identifier hs-var">ip</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; IO (Either DNSError [Domain])
+</span><a href="Network.DNS.Lookup.html#lookupPTR"><span class="hs-identifier hs-var">lookupPTR</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075114"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075116"><span class="hs-identifier hs-var">dom</span></a></span><span>
+</span><span id="line-389"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-390"></span><span>    </span><span class="hs-comment">-- ByteString constants.</span><span>
+</span><span id="line-391"></span><span>    </span><span id="local-6989586621679075117"><span class="annot"><span class="annottext">dot :: Domain
+</span><a href="#local-6989586621679075117"><span class="hs-identifier hs-var hs-var">dot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Domain
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-392"></span><span>    </span><span id="local-6989586621679075119"><span class="annot"><span class="annottext">suffix :: Domain
+</span><a href="#local-6989586621679075119"><span class="hs-identifier hs-var hs-var">suffix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Domain
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.in-addr.arpa&quot;</span></span><span>
+</span><span id="line-393"></span><span>
+</span><span id="line-394"></span><span>    </span><span id="local-6989586621679075120"><span class="annot"><span class="annottext">octets :: [Domain]
+</span><a href="#local-6989586621679075120"><span class="hs-identifier hs-var hs-var">octets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Domain -&gt; [Domain]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#split"><span class="hs-identifier hs-var">BS.split</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075115"><span class="hs-identifier hs-var">ip</span></a></span><span>
+</span><span id="line-395"></span><span>    </span><span id="local-6989586621679075122"><span class="annot"><span class="annottext">reverse_ip :: Domain
+</span><a href="#local-6989586621679075122"><span class="hs-identifier hs-var hs-var">reverse_ip</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Domain -&gt; [Domain] -&gt; Domain
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#intercalate"><span class="hs-identifier hs-var">BS.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075117"><span class="hs-identifier hs-var">dot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Domain] -&gt; [Domain]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[Domain]
+</span><a href="#local-6989586621679075120"><span class="hs-identifier hs-var">octets</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-396"></span><span>    </span><span id="local-6989586621679075116"><span class="annot"><span class="annottext">dom :: Domain
+</span><a href="#local-6989586621679075116"><span class="hs-identifier hs-var hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075122"><span class="hs-identifier hs-var">reverse_ip</span></a></span><span> </span><span class="annot"><span class="annottext">Domain -&gt; Domain -&gt; Domain
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#append"><span class="hs-operator hs-var">`BS.append`</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075119"><span class="hs-identifier hs-var">suffix</span></a></span><span>
+</span><span id="line-397"></span><span>
+</span><span id="line-398"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-399"></span><span>
+</span><span id="line-400"></span><span class="hs-comment">-- | Look up all \'SRV\' records for the given hostname. SRV records</span><span>
+</span><span id="line-401"></span><span class="hs-comment">--   consist (see &lt;https://tools.ietf.org/html/rfc2782&gt;) of the</span><span>
+</span><span id="line-402"></span><span class="hs-comment">--   following four fields:</span><span>
+</span><span id="line-403"></span><span class="hs-comment">--</span><span>
+</span><span id="line-404"></span><span class="hs-comment">--     * Priority (lower is more-preferred)</span><span>
+</span><span id="line-405"></span><span class="hs-comment">--</span><span>
+</span><span id="line-406"></span><span class="hs-comment">--     * Weight (relative frequency with which to use this record</span><span>
+</span><span id="line-407"></span><span class="hs-comment">--       amongst all results with the same priority)</span><span>
+</span><span id="line-408"></span><span class="hs-comment">--</span><span>
+</span><span id="line-409"></span><span class="hs-comment">--     * Port (the port on which the service is offered)</span><span>
+</span><span id="line-410"></span><span class="hs-comment">--</span><span>
+</span><span id="line-411"></span><span class="hs-comment">--     * Target (the hostname on which the service is offered)</span><span>
+</span><span id="line-412"></span><span class="hs-comment">--</span><span>
+</span><span id="line-413"></span><span class="hs-comment">--   The first three are integral, and the target is another DNS</span><span>
+</span><span id="line-414"></span><span class="hs-comment">--   hostname. We therefore return a four-tuple</span><span>
+</span><span id="line-415"></span><span class="hs-comment">--   @(Int,Int,Int,'Domain')@.</span><span>
+</span><span id="line-416"></span><span class="hs-comment">--</span><span>
+</span><span id="line-417"></span><span class="hs-comment">--   Examples:</span><span>
+</span><span id="line-418"></span><span class="hs-comment">--</span><span>
+</span><span id="line-419"></span><span class="hs-comment">--   &gt;&gt;&gt; rs &lt;- makeResolvSeed defaultResolvConf</span><span>
+</span><span id="line-420"></span><span class="hs-comment">--   &gt;&gt;&gt; withResolver rs $ \resolver -&gt; lookupSRV resolver &quot;_xmpp-server._tcp.jabber.ietf.org&quot;</span><span>
+</span><span id="line-421"></span><span class="hs-comment">--   Right [(5,0,5269,&quot;_dc-srv.6661af51975d._xmpp-server._tcp.jabber.ietf.org.&quot;)]</span><span>
+</span><span id="line-422"></span><span>
+</span><span id="line-423"></span><span class="hs-comment">-- Though the &quot;jabber.ietf.orgs&quot; SRV record may prove reasonably stable, as</span><span>
+</span><span id="line-424"></span><span class="hs-comment">-- with anything else published in DNS it is subject to change.  Also, this</span><span>
+</span><span id="line-425"></span><span class="hs-comment">-- example only works when connected to the Internet.  Perhaps the above</span><span>
+</span><span id="line-426"></span><span class="hs-comment">-- example should be displayed in a format that is not recognized as a test</span><span>
+</span><span id="line-427"></span><span class="hs-comment">-- by &quot;doctest&quot;.</span><span>
+</span><span id="line-428"></span><span>
+</span><span id="line-429"></span><span class="annot"><a href="Network.DNS.Lookup.html#lookupSRV"><span class="hs-identifier hs-type">lookupSRV</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Resolver</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-430"></span><span id="lookupSRV"><span class="annot"><span class="annottext">lookupSRV :: Resolver
+-&gt; Domain
+-&gt; IO (Either DNSError [(Word16, Word16, Word16, Domain)])
+</span><a href="Network.DNS.Lookup.html#lookupSRV"><span class="hs-identifier hs-var hs-var">lookupSRV</span></a></span></span><span> </span><span id="local-6989586621679075126"><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075126"><span class="hs-identifier hs-var">rlv</span></a></span></span><span> </span><span id="local-6989586621679075127"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075127"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-431"></span><span>  </span><span id="local-6989586621679075128"><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075128"><span class="hs-identifier hs-var">erds</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Resolver -&gt; Domain -&gt; TYPE -&gt; IO (Either DNSError [RData])
+</span><a href="Network.DNS.LookupRaw.html#lookup"><span class="hs-identifier hs-var">DNS.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver
+</span><a href="#local-6989586621679075126"><span class="hs-identifier hs-var">rlv</span></a></span><span> </span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075127"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">TYPE
+</span><span class="hs-identifier hs-var">SRV</span></span><span>
+</span><span id="line-432"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either DNSError [RData]
+</span><a href="#local-6989586621679075128"><span class="hs-identifier hs-var">erds</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-433"></span><span>    </span><span class="hs-comment">-- See lookupXviaMX for an explanation of this construct.</span><span>
+</span><span id="line-434"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679075130"><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075130"><span class="hs-identifier hs-var">err</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [(Word16, Word16, Word16, Domain)]
+-&gt; IO (Either DNSError [(Word16, Word16, Word16, Domain)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError [(Word16, Word16, Word16, Domain)]
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><a href="#local-6989586621679075130"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-435"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679075131"><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075131"><span class="hs-identifier hs-var">rds</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either DNSError [(Word16, Word16, Word16, Domain)]
+-&gt; IO (Either DNSError [(Word16, Word16, Word16, Domain)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DNSError [(Word16, Word16, Word16, Domain)]
+ -&gt; IO (Either DNSError [(Word16, Word16, Word16, Domain)]))
+-&gt; Either DNSError [(Word16, Word16, Word16, Domain)]
+-&gt; IO (Either DNSError [(Word16, Word16, Word16, Domain)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(RData -&gt; Either DNSError (Word16, Word16, Word16, Domain))
+-&gt; [RData] -&gt; Either DNSError [(Word16, Word16, Word16, Domain)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">RData -&gt; Either DNSError (Word16, Word16, Word16, Domain)
+</span><a href="#local-6989586621679075132"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">[RData]
+</span><a href="#local-6989586621679075131"><span class="hs-identifier hs-var">rds</span></a></span><span>
+</span><span id="line-436"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-437"></span><span>    </span><span class="annot"><a href="#local-6989586621679075132"><span class="hs-identifier hs-type">unTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">RData</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">DNSError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Domain</span></span><span class="hs-special">)</span><span>
+</span><span id="line-438"></span><span>    </span><span id="local-6989586621679075132"><span class="annot"><span class="annottext">unTag :: RData -&gt; Either DNSError (Word16, Word16, Word16, Domain)
+</span><a href="#local-6989586621679075132"><span class="hs-identifier hs-var hs-var">unTag</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">RD_SRV</span></span><span> </span><span id="local-6989586621679075134"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075134"><span class="hs-identifier hs-var">pri</span></a></span></span><span> </span><span id="local-6989586621679075135"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075135"><span class="hs-identifier hs-var">wei</span></a></span></span><span> </span><span id="local-6989586621679075136"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075136"><span class="hs-identifier hs-var">prt</span></a></span></span><span> </span><span id="local-6989586621679075137"><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075137"><span class="hs-identifier hs-var">dm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word16, Word16, Word16, Domain)
+-&gt; Either DNSError (Word16, Word16, Word16, Domain)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075134"><span class="hs-identifier hs-var">pri</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075135"><span class="hs-identifier hs-var">wei</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679075136"><span class="hs-identifier hs-var">prt</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Domain
+</span><a href="#local-6989586621679075137"><span class="hs-identifier hs-var">dm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-439"></span><span>    </span><span class="annot"><a href="#local-6989586621679075132"><span class="hs-identifier hs-var">unTag</span></a></span><span> </span><span class="annot"><span class="annottext">RData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DNSError -&gt; Either DNSError (Word16, Word16, Word16, Domain)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">DNSError
+</span><span class="hs-identifier hs-var">UnexpectedRDATA</span></span><span>
+</span><span id="line-440"></span></pre></body></html>

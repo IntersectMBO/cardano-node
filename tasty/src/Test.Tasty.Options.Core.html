@@ -1,0 +1,538 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Core options, i.e. the options used by tasty itself</span></span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP, DeriveDataTypeable, GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-type-defaults #-}</span><span> </span><span class="hs-comment">-- for (^)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Options.Core</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier">NumThreads</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier">Timeout</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#mkTimeout"><span class="hs-identifier">mkTimeout</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier">HideProgress</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#coreOptions"><span class="hs-identifier">coreOptions</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Helpers</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#parseDuration"><span class="hs-identifier">parseDuration</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#mfilter"><span class="hs-identifier">mfilter</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Fixed.html"><span class="hs-identifier">Data.Fixed</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">str</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span class="hs-cpp">
+#if !MIN_VERSION_base(4,11,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html"><span class="hs-identifier">Test.Tasty.Options</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html"><span class="hs-identifier">Test.Tasty.Patterns</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Number of parallel threads to use for running tests.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- Note that this is /not/ included in 'coreOptions'.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Instead, it's automatically included in the options for any</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- 'Test.Tasty.Ingredients.TestReporter' ingredient by</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- 'Test.Tasty.Ingredients.ingredientOptions', because the way test</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- reporters are handled already involves parallelism. Other ingredients</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- may also choose to include this option.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">newtype</span><span> </span><span id="NumThreads"><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-var">NumThreads</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NumThreads"><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-var">NumThreads</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getNumThreads"><span class="annot"><span class="annottext">NumThreads -&gt; Int
+</span><a href="Test.Tasty.Options.Core.html#getNumThreads"><span class="hs-identifier hs-var hs-var">getNumThreads</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679093713"><span id="local-6989586621679093718"><span class="annot"><span class="annottext">NumThreads -&gt; NumThreads -&gt; Bool
+(NumThreads -&gt; NumThreads -&gt; Bool)
+-&gt; (NumThreads -&gt; NumThreads -&gt; Bool) -&gt; Eq NumThreads
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NumThreads -&gt; NumThreads -&gt; Bool
+== :: NumThreads -&gt; NumThreads -&gt; Bool
+$c/= :: NumThreads -&gt; NumThreads -&gt; Bool
+/= :: NumThreads -&gt; NumThreads -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093726"><span id="local-6989586621679093730"><span id="local-6989586621679093734"><span id="local-6989586621679093738"><span id="local-6989586621679093742"><span id="local-6989586621679093746"><span id="local-6989586621679093750"><span class="annot"><span class="annottext">Eq NumThreads
+Eq NumThreads =&gt;
+(NumThreads -&gt; NumThreads -&gt; Ordering)
+-&gt; (NumThreads -&gt; NumThreads -&gt; Bool)
+-&gt; (NumThreads -&gt; NumThreads -&gt; Bool)
+-&gt; (NumThreads -&gt; NumThreads -&gt; Bool)
+-&gt; (NumThreads -&gt; NumThreads -&gt; Bool)
+-&gt; (NumThreads -&gt; NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads -&gt; NumThreads)
+-&gt; Ord NumThreads
+NumThreads -&gt; NumThreads -&gt; Bool
+NumThreads -&gt; NumThreads -&gt; Ordering
+NumThreads -&gt; NumThreads -&gt; NumThreads
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: NumThreads -&gt; NumThreads -&gt; Ordering
+compare :: NumThreads -&gt; NumThreads -&gt; Ordering
+$c&lt; :: NumThreads -&gt; NumThreads -&gt; Bool
+&lt; :: NumThreads -&gt; NumThreads -&gt; Bool
+$c&lt;= :: NumThreads -&gt; NumThreads -&gt; Bool
+&lt;= :: NumThreads -&gt; NumThreads -&gt; Bool
+$c&gt; :: NumThreads -&gt; NumThreads -&gt; Bool
+&gt; :: NumThreads -&gt; NumThreads -&gt; Bool
+$c&gt;= :: NumThreads -&gt; NumThreads -&gt; Bool
+&gt;= :: NumThreads -&gt; NumThreads -&gt; Bool
+$cmax :: NumThreads -&gt; NumThreads -&gt; NumThreads
+max :: NumThreads -&gt; NumThreads -&gt; NumThreads
+$cmin :: NumThreads -&gt; NumThreads -&gt; NumThreads
+min :: NumThreads -&gt; NumThreads -&gt; NumThreads
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093756"><span id="local-6989586621679093760"><span id="local-6989586621679093764"><span id="local-6989586621679093768"><span id="local-6989586621679093772"><span id="local-6989586621679093776"><span id="local-6989586621679093780"><span class="annot"><span class="annottext">Integer -&gt; NumThreads
+NumThreads -&gt; NumThreads
+NumThreads -&gt; NumThreads -&gt; NumThreads
+(NumThreads -&gt; NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads)
+-&gt; (NumThreads -&gt; NumThreads)
+-&gt; (Integer -&gt; NumThreads)
+-&gt; Num NumThreads
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: NumThreads -&gt; NumThreads -&gt; NumThreads
++ :: NumThreads -&gt; NumThreads -&gt; NumThreads
+$c- :: NumThreads -&gt; NumThreads -&gt; NumThreads
+- :: NumThreads -&gt; NumThreads -&gt; NumThreads
+$c* :: NumThreads -&gt; NumThreads -&gt; NumThreads
+* :: NumThreads -&gt; NumThreads -&gt; NumThreads
+$cnegate :: NumThreads -&gt; NumThreads
+negate :: NumThreads -&gt; NumThreads
+$cabs :: NumThreads -&gt; NumThreads
+abs :: NumThreads -&gt; NumThreads
+$csignum :: NumThreads -&gt; NumThreads
+signum :: NumThreads -&gt; NumThreads
+$cfromInteger :: Integer -&gt; NumThreads
+fromInteger :: Integer -&gt; NumThreads
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-type">NumThreads</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679093795"><span class="annot"><span class="annottext">defaultValue :: NumThreads
+</span><a href="#local-6989586621679093795"><span class="hs-identifier hs-var hs-var hs-var hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; NumThreads
+</span><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-var">NumThreads</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#numCapabilities"><span class="hs-identifier hs-var">numCapabilities</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679093803"><span class="annot"><span class="annottext">parseValue :: String -&gt; Maybe NumThreads
+</span><a href="#local-6989586621679093803"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NumThreads -&gt; Bool) -&gt; Maybe NumThreads -&gt; Maybe NumThreads
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; (a -&gt; Bool) -&gt; m a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#mfilter"><span class="hs-identifier hs-var">mfilter</span></a></span><span> </span><span class="annot"><span class="annottext">NumThreads -&gt; Bool
+</span><a href="Test.Tasty.Options.Core.html#onlyPositive"><span class="hs-identifier hs-var">onlyPositive</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe NumThreads -&gt; Maybe NumThreads)
+-&gt; (String -&gt; Maybe NumThreads) -&gt; String -&gt; Maybe NumThreads
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; NumThreads) -&gt; Maybe Int -&gt; Maybe NumThreads
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; NumThreads
+</span><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-var">NumThreads</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; Maybe NumThreads)
+-&gt; (String -&gt; Maybe Int) -&gt; String -&gt; Maybe NumThreads
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe Int
+forall a. Read a =&gt; String -&gt; Maybe a
+</span><a href="Test.Tasty.Options.html#safeRead"><span class="hs-identifier hs-var">safeRead</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679093810"><span class="annot"><span class="annottext">optionName :: Tagged NumThreads String
+</span><a href="#local-6989586621679093810"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged NumThreads String
+forall a. a -&gt; Tagged NumThreads a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;num-threads&quot;</span></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679093813"><span class="annot"><span class="annottext">optionHelp :: Tagged NumThreads String
+</span><a href="#local-6989586621679093813"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionHelp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged NumThreads String
+forall a. a -&gt; Tagged NumThreads a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Number of threads to use for tests execution&quot;</span></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679093822"><span class="annot"><span class="annottext">optionCLParser :: Parser NumThreads
+</span><a href="#local-6989586621679093822"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionCLParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod OptionFields NumThreads -&gt; Parser NumThreads
+forall v. IsOption v =&gt; Mod OptionFields v -&gt; Parser v
+</span><a href="Test.Tasty.Options.html#mkOptionCLParser"><span class="hs-identifier hs-var">mkOptionCLParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields NumThreads
+forall (f :: * -&gt; *) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'j'</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields NumThreads
+-&gt; Mod OptionFields NumThreads -&gt; Mod OptionFields NumThreads
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields NumThreads
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;NUMBER&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679093827"><span class="annot"><span class="annottext">showDefaultValue :: NumThreads -&gt; Maybe String
+</span><a href="#local-6989586621679093827"><span class="hs-identifier hs-var hs-var hs-var hs-var">showDefaultValue</span></a></span></span><span> </span><span class="annot"><span class="annottext">NumThreads
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;# of cores/capabilities&quot;</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><span class="hs-comment">-- | Filtering function to prevent non-positive number of threads</span></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Test.Tasty.Options.Core.html#onlyPositive"><span class="hs-identifier hs-type">onlyPositive</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-type">NumThreads</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-50"></span><span id="onlyPositive"><span class="annot"><span class="annottext">onlyPositive :: NumThreads -&gt; Bool
+</span><a href="Test.Tasty.Options.Core.html#onlyPositive"><span class="hs-identifier hs-var hs-var">onlyPositive</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-type">NumThreads</span></a></span><span> </span><span id="local-6989586621679093829"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679093829"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679093829"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | Timeout to be applied to individual tests.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="Timeout"><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Timeout"><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- ^ 'String' is the original representation of the timeout (such as</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- @\&quot;0.5m\&quot;@), so that we can print it back. 'Integer' is the number of</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- microseconds.</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NoTimeout"><span class="annot"><a href="Test.Tasty.Options.Core.html#NoTimeout"><span class="hs-identifier hs-var">NoTimeout</span></a></span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679093834"><span id="local-6989586621679093840"><span class="annot"><span class="annottext">Timeout -&gt; Timeout -&gt; Bool
+(Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool) -&gt; Eq Timeout
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Timeout -&gt; Timeout -&gt; Bool
+== :: Timeout -&gt; Timeout -&gt; Bool
+$c/= :: Timeout -&gt; Timeout -&gt; Bool
+/= :: Timeout -&gt; Timeout -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- ^ Auto-derived instance, just to allow storing in a 'Map' and such.</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-comment">-- @since 1.5.1</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093847"><span id="local-6989586621679093853"><span id="local-6989586621679093858"><span id="local-6989586621679093862"><span id="local-6989586621679093865"><span id="local-6989586621679093868"><span id="local-6989586621679093871"><span class="annot"><span class="annottext">Eq Timeout
+Eq Timeout =&gt;
+(Timeout -&gt; Timeout -&gt; Ordering)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Timeout)
+-&gt; (Timeout -&gt; Timeout -&gt; Timeout)
+-&gt; Ord Timeout
+Timeout -&gt; Timeout -&gt; Bool
+Timeout -&gt; Timeout -&gt; Ordering
+Timeout -&gt; Timeout -&gt; Timeout
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Timeout -&gt; Timeout -&gt; Ordering
+compare :: Timeout -&gt; Timeout -&gt; Ordering
+$c&lt; :: Timeout -&gt; Timeout -&gt; Bool
+&lt; :: Timeout -&gt; Timeout -&gt; Bool
+$c&lt;= :: Timeout -&gt; Timeout -&gt; Bool
+&lt;= :: Timeout -&gt; Timeout -&gt; Bool
+$c&gt; :: Timeout -&gt; Timeout -&gt; Bool
+&gt; :: Timeout -&gt; Timeout -&gt; Bool
+$c&gt;= :: Timeout -&gt; Timeout -&gt; Bool
+&gt;= :: Timeout -&gt; Timeout -&gt; Bool
+$cmax :: Timeout -&gt; Timeout -&gt; Timeout
+max :: Timeout -&gt; Timeout -&gt; Timeout
+$cmin :: Timeout -&gt; Timeout -&gt; Timeout
+min :: Timeout -&gt; Timeout -&gt; Timeout
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- ^ Auto-derived instance, just to allow storing in a 'Map' and such.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">-- @since 1.5.1</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093875"><span id="local-6989586621679093883"><span id="local-6989586621679093887"><span class="annot"><span class="annottext">Int -&gt; Timeout -&gt; ShowS
+[Timeout] -&gt; ShowS
+Timeout -&gt; String
+(Int -&gt; Timeout -&gt; ShowS)
+-&gt; (Timeout -&gt; String) -&gt; ([Timeout] -&gt; ShowS) -&gt; Show Timeout
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Timeout -&gt; ShowS
+showsPrec :: Int -&gt; Timeout -&gt; ShowS
+$cshow :: Timeout -&gt; String
+show :: Timeout -&gt; String
+$cshowList :: [Timeout] -&gt; ShowS
+showList :: [Timeout] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679093898"><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679093901"><span class="annot"><span class="annottext">defaultValue :: Timeout
+</span><a href="Test.Tasty.Options.html#defaultValue"><span class="hs-identifier hs-var hs-var hs-var hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="Test.Tasty.Options.Core.html#NoTimeout"><span class="hs-identifier hs-var">NoTimeout</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679093906"><span class="annot"><span class="annottext">parseValue :: String -&gt; Maybe Timeout
+</span><a href="Test.Tasty.Options.html#parseValue"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseValue</span></a></span></span><span> </span><span id="local-6989586621679093907"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093907"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">Integer -&gt; String -&gt; Timeout
+</span><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">(Integer -&gt; String -&gt; Timeout)
+-&gt; Maybe Integer -&gt; Maybe (String -&gt; Timeout)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe Integer
+</span><a href="Test.Tasty.Options.Core.html#parseDuration"><span class="hs-identifier hs-var">parseDuration</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093907"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Maybe (String -&gt; Timeout) -&gt; Maybe String -&gt; Maybe Timeout
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093907"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679093910"><span class="annot"><span class="annottext">optionName :: Tagged Timeout String
+</span><a href="Test.Tasty.Options.html#optionName"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged Timeout String
+forall a. a -&gt; Tagged Timeout a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;timeout&quot;</span></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679093912"><span class="annot"><span class="annottext">optionHelp :: Tagged Timeout String
+</span><a href="Test.Tasty.Options.html#optionHelp"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionHelp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged Timeout String
+forall a. a -&gt; Tagged Timeout a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Timeout for individual tests (suffixes: ms,s,m,h; default: s)&quot;</span></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679093917"><span class="annot"><span class="annottext">optionCLParser :: Parser Timeout
+</span><a href="Test.Tasty.Options.html#optionCLParser"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionCLParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod OptionFields Timeout -&gt; Parser Timeout
+forall v. IsOption v =&gt; Mod OptionFields v -&gt; Parser v
+</span><a href="Test.Tasty.Options.html#mkOptionCLParser"><span class="hs-identifier hs-var">mkOptionCLParser</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields Timeout
+forall (f :: * -&gt; *) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'t'</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields Timeout
+-&gt; Mod OptionFields Timeout -&gt; Mod OptionFields Timeout
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Timeout
+forall (f :: * -&gt; *) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DURATION&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- | Parses a suffixed duration (e.g. &quot;10s&quot;) to an Integer representing</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- number of microseconds.</span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Test.Tasty.Options.Core.html#parseDuration"><span class="hs-identifier hs-type">parseDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-87"></span><span id="parseDuration"><span class="annot"><span class="annottext">parseDuration :: String -&gt; Maybe Integer
+</span><a href="Test.Tasty.Options.Core.html#parseDuration"><span class="hs-identifier hs-var hs-var">parseDuration</span></a></span></span><span> </span><span id="local-6989586621679093918"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093918"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-comment">-- it sucks that there's no more direct way to convert to a number of</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-comment">-- microseconds</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro -&gt; Integer
+forall b. Integral b =&gt; Micro -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Fixed.html#Micro"><span class="hs-identifier hs-type">Micro</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Micro -&gt; Integer) -&gt; (Micro -&gt; Micro) -&gt; Micro -&gt; Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro -&gt; Micro -&gt; Micro
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><span class="hs-number">10</span></span><span class="annot"><span class="annottext">Micro -&gt; Integer -&gt; Micro
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Micro -&gt; Integer) -&gt; Maybe Micro -&gt; Maybe Integer
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ReadS Micro
+forall a. Read a =&gt; ReadS a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Read.html#reads"><span class="hs-identifier hs-var">reads</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093918"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">(</span><span id="local-6989586621679093923"><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093924"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093924"><span class="hs-identifier hs-var">suffix</span></a></span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679093924"><span class="hs-identifier hs-var">suffix</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ms&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Maybe Micro
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Micro -&gt; Micro
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><span class="hs-number">10</span></span><span class="annot"><span class="annottext">Micro -&gt; Integer -&gt; Micro
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Maybe Micro
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;s&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Maybe Micro
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;m&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Maybe Micro
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Micro -&gt; Micro
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><span class="hs-number">60</span></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;h&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Maybe Micro
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro
+</span><a href="#local-6989586621679093923"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Micro -&gt; Micro
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Micro
+</span><span class="hs-number">60</span></span><span class="annot"><span class="annottext">Micro -&gt; Integer -&gt; Micro
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Micro
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">[(Micro, String)]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Micro
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- | A shortcut for creating 'Timeout' values.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Test.Tasty.Options.Core.html#mkTimeout"><span class="hs-identifier hs-type">mkTimeout</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ microseconds</span></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-108"></span><span id="mkTimeout"><span class="annot"><span class="annottext">mkTimeout :: Integer -&gt; Timeout
+</span><a href="Test.Tasty.Options.Core.html#mkTimeout"><span class="hs-identifier hs-var hs-var">mkTimeout</span></a></span></span><span> </span><span id="local-6989586621679093926"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679093926"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="annottext">Integer -&gt; String -&gt; Timeout
+</span><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679093926"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Timeout) -&gt; String -&gt; Timeout
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Micro -&gt; String
+forall {k} (a :: k). HasResolution a =&gt; Bool -&gt; Fixed a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Fixed.html#showFixed"><span class="hs-identifier hs-var">showFixed</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Micro
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679093926"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Micro -&gt; Micro -&gt; Micro
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Micro
+</span><span class="hs-number">10</span></span><span class="annot"><span class="annottext">Micro -&gt; Integer -&gt; Micro
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Fixed.html#Micro"><span class="hs-identifier hs-type">Micro</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;s&quot;</span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Hide progress information. If progress disabled, the test launcher</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- 'Test.Tasty.Runners.launchTestTree' completely ignores callbacks to update progress.</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- If enabled, it's up to individual 'Test.Tasty.Ingredients.TestReporter's</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- how to execute, some might not be able to render progress anyways.</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- @since 1.5</span><span>
+</span><span id="line-118"></span><span class="hs-keyword">newtype</span><span> </span><span id="HideProgress"><span class="annot"><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-var">HideProgress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HideProgress"><span class="annot"><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-var">HideProgress</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="getHideProgress"><span class="annot"><span class="annottext">HideProgress -&gt; Bool
+</span><a href="Test.Tasty.Options.Core.html#getHideProgress"><span class="hs-identifier hs-var hs-var">getHideProgress</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679093931"><span id="local-6989586621679093936"><span class="annot"><span class="annottext">HideProgress -&gt; HideProgress -&gt; Bool
+(HideProgress -&gt; HideProgress -&gt; Bool)
+-&gt; (HideProgress -&gt; HideProgress -&gt; Bool) -&gt; Eq HideProgress
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: HideProgress -&gt; HideProgress -&gt; Bool
+== :: HideProgress -&gt; HideProgress -&gt; Bool
+$c/= :: HideProgress -&gt; HideProgress -&gt; Bool
+/= :: HideProgress -&gt; HideProgress -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679093943"><span id="local-6989586621679093948"><span id="local-6989586621679093952"><span id="local-6989586621679093956"><span id="local-6989586621679093960"><span id="local-6989586621679093964"><span id="local-6989586621679093968"><span class="annot"><span class="annottext">Eq HideProgress
+Eq HideProgress =&gt;
+(HideProgress -&gt; HideProgress -&gt; Ordering)
+-&gt; (HideProgress -&gt; HideProgress -&gt; Bool)
+-&gt; (HideProgress -&gt; HideProgress -&gt; Bool)
+-&gt; (HideProgress -&gt; HideProgress -&gt; Bool)
+-&gt; (HideProgress -&gt; HideProgress -&gt; Bool)
+-&gt; (HideProgress -&gt; HideProgress -&gt; HideProgress)
+-&gt; (HideProgress -&gt; HideProgress -&gt; HideProgress)
+-&gt; Ord HideProgress
+HideProgress -&gt; HideProgress -&gt; Bool
+HideProgress -&gt; HideProgress -&gt; Ordering
+HideProgress -&gt; HideProgress -&gt; HideProgress
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: HideProgress -&gt; HideProgress -&gt; Ordering
+compare :: HideProgress -&gt; HideProgress -&gt; Ordering
+$c&lt; :: HideProgress -&gt; HideProgress -&gt; Bool
+&lt; :: HideProgress -&gt; HideProgress -&gt; Bool
+$c&lt;= :: HideProgress -&gt; HideProgress -&gt; Bool
+&lt;= :: HideProgress -&gt; HideProgress -&gt; Bool
+$c&gt; :: HideProgress -&gt; HideProgress -&gt; Bool
+&gt; :: HideProgress -&gt; HideProgress -&gt; Bool
+$c&gt;= :: HideProgress -&gt; HideProgress -&gt; Bool
+&gt;= :: HideProgress -&gt; HideProgress -&gt; Bool
+$cmax :: HideProgress -&gt; HideProgress -&gt; HideProgress
+max :: HideProgress -&gt; HideProgress -&gt; HideProgress
+$cmin :: HideProgress -&gt; HideProgress -&gt; HideProgress
+min :: HideProgress -&gt; HideProgress -&gt; HideProgress
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679093979"><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-type">HideProgress</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679093982"><span class="annot"><span class="annottext">defaultValue :: HideProgress
+</span><a href="Test.Tasty.Options.html#defaultValue"><span class="hs-identifier hs-var hs-var hs-var hs-var">defaultValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; HideProgress
+</span><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-var">HideProgress</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621679093984"><span class="annot"><span class="annottext">parseValue :: String -&gt; Maybe HideProgress
+</span><a href="Test.Tasty.Options.html#parseValue"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; HideProgress) -&gt; Maybe Bool -&gt; Maybe HideProgress
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; HideProgress
+</span><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-var">HideProgress</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; Maybe HideProgress)
+-&gt; (String -&gt; Maybe Bool) -&gt; String -&gt; Maybe HideProgress
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe Bool
+</span><a href="Test.Tasty.Options.html#safeReadBool"><span class="hs-identifier hs-var">safeReadBool</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679093987"><span class="annot"><span class="annottext">optionName :: Tagged HideProgress String
+</span><a href="Test.Tasty.Options.html#optionName"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged HideProgress String
+forall a. a -&gt; Tagged HideProgress a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;hide-progress&quot;</span></span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679093989"><span class="annot"><span class="annottext">optionHelp :: Tagged HideProgress String
+</span><a href="Test.Tasty.Options.html#optionHelp"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionHelp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Tagged HideProgress String
+forall a. a -&gt; Tagged HideProgress a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Do not show progress&quot;</span></span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679093993"><span class="annot"><span class="annottext">optionCLParser :: Parser HideProgress
+</span><a href="Test.Tasty.Options.html#optionCLParser"><span class="hs-identifier hs-var hs-var hs-var hs-var">optionCLParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Mod FlagFields HideProgress -&gt; HideProgress -&gt; Parser HideProgress
+forall v. IsOption v =&gt; Mod FlagFields v -&gt; v -&gt; Parser v
+</span><a href="Test.Tasty.Options.html#mkFlagCLParser"><span class="hs-identifier hs-var">mkFlagCLParser</span></a></span><span> </span><span class="annot"><span class="annottext">Mod FlagFields HideProgress
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; HideProgress
+</span><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-var">HideProgress</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | The list of all core options, i.e. the options not specific to any</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- provider or ingredient, but to tasty itself. Currently contains</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- 'TestPattern' and 'Timeout'.</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Test.Tasty.Options.Core.html#coreOptions"><span class="hs-identifier hs-type">coreOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-133"></span><span id="coreOptions"><span class="annot"><span class="annottext">coreOptions :: [OptionDescription]
+</span><a href="Test.Tasty.Options.Core.html#coreOptions"><span class="hs-identifier hs-var hs-var">coreOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy TestPattern -&gt; OptionDescription
+forall v. IsOption v =&gt; Proxy v -&gt; OptionDescription
+</span><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-var">Option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy TestPattern
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Patterns.html#TestPattern"><span class="hs-identifier hs-type">TestPattern</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy Timeout -&gt; OptionDescription
+forall v. IsOption v =&gt; Proxy v -&gt; OptionDescription
+</span><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-var">Option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy Timeout
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy HideProgress -&gt; OptionDescription
+forall v. IsOption v =&gt; Proxy v -&gt; OptionDescription
+</span><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-var">Option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy HideProgress
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#HideProgress"><span class="hs-identifier hs-type">HideProgress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-138"></span></pre></body></html>

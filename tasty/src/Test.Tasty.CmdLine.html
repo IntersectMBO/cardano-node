@@ -1,0 +1,476 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Parsing options supplied on the command line</span></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.CmdLine</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.CmdLine.html#optionParser"><span class="hs-identifier">optionParser</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#suiteOptions"><span class="hs-identifier">suiteOptions</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.CmdLine.html#suiteOptionParser"><span class="hs-identifier">suiteOptionParser</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.CmdLine.html#parseOptions"><span class="hs-identifier">parseOptions</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.CmdLine.html#defaultMainWithIngredients"><span class="hs-identifier">defaultMainWithIngredients</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html"><span class="hs-identifier">Control.Arrow</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#typeRep"><span class="hs-identifier">typeRep</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Common</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">evalParser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Types</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Option</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">OptProperties</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>  </span><span class="hs-comment">-- Silence AMP and FTP import warnings</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span class="hs-cpp">
+#if !MIN_VERSION_base(4,11,0)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Monoid</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data.Foldable</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">foldMap</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html"><span class="hs-identifier">Test.Tasty.Core</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Runners.Utils.html"><span class="hs-identifier">Test.Tasty.Runners.Utils</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html"><span class="hs-identifier">Test.Tasty.Ingredients</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html"><span class="hs-identifier">Test.Tasty.Options</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Env.html"><span class="hs-identifier">Test.Tasty.Options.Env</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Runners.Reducers.html"><span class="hs-identifier">Test.Tasty.Runners.Reducers</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- | Generate a command line parser from a list of option descriptions,</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- alongside any related warning messages.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- @since 1.3</span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#optionParser"><span class="hs-identifier hs-type">optionParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span id="optionParser"><span class="annot"><span class="annottext">optionParser :: [OptionDescription] -&gt; ([String], Parser OptionSet)
+</span><a href="Test.Tasty.CmdLine.html#optionParser"><span class="hs-identifier hs-var hs-var">optionParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Ap Parser OptionSet -&gt; Parser OptionSet)
+-&gt; ([String], Ap Parser OptionSet) -&gt; ([String], Parser OptionSet)
+forall b c d. (b -&gt; c) -&gt; (d, b) -&gt; (d, c)
+forall (a :: * -&gt; * -&gt; *) b c d.
+Arrow a =&gt;
+a b c -&gt; a (d, b) (d, c)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="annot"><span class="annottext">Ap Parser OptionSet -&gt; Parser OptionSet
+forall (f :: * -&gt; *) a. Ap f a -&gt; f a
+</span><a href="Test.Tasty.Runners.Reducers.html#getApp"><span class="hs-identifier hs-var">getApp</span></a></span><span> </span><span class="annot"><span class="annottext">(([String], Ap Parser OptionSet) -&gt; ([String], Parser OptionSet))
+-&gt; ([OptionDescription] -&gt; ([String], Ap Parser OptionSet))
+-&gt; [OptionDescription]
+-&gt; ([String], Parser OptionSet)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(OptionDescription -&gt; ([String], Ap Parser OptionSet))
+-&gt; [OptionDescription] -&gt; ([String], Ap Parser OptionSet)
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; [a] -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">OptionDescription -&gt; ([String], Ap Parser OptionSet)
+</span><a href="#local-6989586621679098033"><span class="hs-identifier hs-var">toSet</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="#local-6989586621679098033"><span class="hs-identifier hs-type">toSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Runners.Reducers.html#Ap"><span class="hs-identifier hs-type">Ap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679098033"><span class="annot"><span class="annottext">toSet :: OptionDescription -&gt; ([String], Ap Parser OptionSet)
+</span><a href="#local-6989586621679098033"><span class="hs-identifier hs-var hs-var">toSet</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-type">Option</span></a></span><span> </span><span id="local-6989586621679098046"><span class="annot"><span class="annottext">Proxy v
+</span><a href="#local-6989586621679098046"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Parser v -&gt; Ap Parser OptionSet)
+-&gt; ([String], Parser v) -&gt; ([String], Ap Parser OptionSet)
+forall b c d. (b -&gt; c) -&gt; (d, b) -&gt; (d, c)
+forall (a :: * -&gt; * -&gt; *) b c d.
+Arrow a =&gt;
+a b c -&gt; a (d, b) (d, c)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#second"><span class="hs-identifier hs-var">second</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679098047"><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098047"><span class="hs-identifier hs-var">parser</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Parser OptionSet -&gt; Ap Parser OptionSet
+forall (f :: * -&gt; *) a. f a -&gt; Ap f a
+</span><a href="Test.Tasty.Runners.Reducers.html#Ap"><span class="hs-identifier hs-var">Ap</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser OptionSet -&gt; Ap Parser OptionSet)
+-&gt; Parser OptionSet -&gt; Ap Parser OptionSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v -&gt; OptionSet
+forall v. IsOption v =&gt; v -&gt; OptionSet
+</span><a href="Test.Tasty.Options.html#singleOption"><span class="hs-identifier hs-var">singleOption</span></a></span><span> </span><span class="annot"><span class="annottext">(v -&gt; OptionSet) -&gt; Parser v -&gt; Parser OptionSet
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098047"><span class="hs-identifier hs-var">parser</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser OptionSet -&gt; Parser OptionSet -&gt; Parser OptionSet
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; Parser OptionSet
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy v -&gt; Parser v -&gt; ([String], Parser v)
+forall (proxy :: * -&gt; *) v.
+IsOption v =&gt;
+proxy v -&gt; Parser v -&gt; ([String], Parser v)
+</span><a href="Test.Tasty.CmdLine.html#finalizeCLParser"><span class="hs-identifier hs-var">finalizeCLParser</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy v
+</span><a href="#local-6989586621679098046"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Parser v
+forall v. IsOption v =&gt; Parser v
+</span><a href="Test.Tasty.Options.html#optionCLParser"><span class="hs-identifier hs-var">optionCLParser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- Do two things:</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- 1. Replace an `optionCLParser`'s 'propShowDefault' with 'showDefaultValue'</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--    from the 'IsOption' class.</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- 2. Generate warning messages if the 'optionCLParser' does anything</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--    suspicious. Currently, the only suspicious things we check for are</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--    (a) if the 'Parser' defines multiple options and, (b) if the 'Parser'</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--    assigns a default value outside of 'defaultValue'.</span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#finalizeCLParser"><span class="hs-identifier hs-type">finalizeCLParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679097935"><span class="annot"><a href="#local-6989586621679097935"><span class="hs-identifier hs-type">proxy</span></a></span></span><span> </span><span id="local-6989586621679097934"><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#IsOption"><span class="hs-identifier hs-type">IsOption</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span>
+</span><span id="line-54"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679097935"><span class="hs-identifier hs-type">proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span id="finalizeCLParser"><span class="annot"><span class="annottext">finalizeCLParser :: forall (proxy :: * -&gt; *) v.
+IsOption v =&gt;
+proxy v -&gt; Parser v -&gt; ([String], Parser v)
+</span><a href="Test.Tasty.CmdLine.html#finalizeCLParser"><span class="hs-identifier hs-var hs-var">finalizeCLParser</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy v
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679098066"><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098066"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679098067"><span class="hs-identifier hs-var">warnings</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; Parser v -&gt; Parser v
+forall a. Maybe String -&gt; Parser a -&gt; Parser a
+</span><a href="Test.Tasty.CmdLine.html#setCLParserShowDefaultValue"><span class="hs-identifier hs-var">setCLParserShowDefaultValue</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679098069"><span class="hs-identifier hs-var">mbDef</span></a></span><span> </span><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098066"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><a href="#local-6989586621679098069"><span class="hs-identifier hs-type">mbDef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621679098069"><span class="annot"><span class="annottext">mbDef :: Maybe String
+</span><a href="#local-6989586621679098069"><span class="hs-identifier hs-var hs-var">mbDef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">v -&gt; Maybe String
+forall v. IsOption v =&gt; v -&gt; Maybe String
+</span><a href="Test.Tasty.Options.html#showDefaultValue"><span class="hs-identifier hs-var">showDefaultValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">v
+forall v. IsOption v =&gt; v
+</span><a href="Test.Tasty.Options.html#defaultValue"><span class="hs-identifier hs-var">defaultValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><a href="#local-6989586621679098067"><span class="hs-identifier hs-type">warnings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679098067"><span class="annot"><span class="annottext">warnings :: [String]
+</span><a href="#local-6989586621679098067"><span class="hs-identifier hs-var hs-var">warnings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Maybe String] -&gt; [String]
+forall a. [Maybe a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#catMaybes"><span class="hs-identifier hs-var">catMaybes</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679098073"><span class="hs-identifier hs-var">multipleOptPsWarning</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679098074"><span class="hs-identifier hs-var">badDefaultWarning</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- Warn if a Parser defines multiple options, as this breaks an assumption</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- that setCLParserShowDefaultValue relies on.</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="#local-6989586621679098073"><span class="hs-identifier hs-type">multipleOptPsWarning</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679098073"><span class="annot"><span class="annottext">multipleOptPsWarning :: Maybe String
+</span><a href="#local-6989586621679098073"><span class="hs-identifier hs-var hs-var">multipleOptPsWarning</span></a></span></span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Parser v -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098066"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; String -&gt; Maybe String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679098078"><span class="hs-identifier hs-var">prov</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;optionCLParser defines multiple options. Consider only defining&quot;</span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;a single option here, as defining multiple options does not play&quot;</span></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;well with how tasty displays default values.&quot;</span></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- Warning if a Parser has a default value (outside of IsOption's</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- defaultValue method, that is), as this interferes with tasty's ability</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- to read arguments from environment variables. For more on this point,</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- see the Haddocks for optionCLParser.</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><a href="#local-6989586621679098074"><span class="hs-identifier hs-type">badDefaultWarning</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679098074"><span class="annot"><span class="annottext">badDefaultWarning :: Maybe String
+</span><a href="#local-6989586621679098074"><span class="hs-identifier hs-var hs-var">badDefaultWarning</span></a></span></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-comment">-- evalParser will only return Just if has a default value declared with</span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-comment">-- e.g. the Options.Applicative.value function.</span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Maybe v -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser v -&gt; Maybe v
+forall a. Parser a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">evalParser</span></span><span> </span><span class="annot"><span class="annottext">Parser v
+</span><a href="#local-6989586621679098066"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String) -&gt; String -&gt; Maybe String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679098078"><span class="hs-identifier hs-var">prov</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Using default values (e.g., with Options.Applicative.value) in&quot;</span></span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;optionCLParser is prohibited, as it interferes with tasty's ability&quot;</span></span><span>
+</span><span id="line-90"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;to read environment variable options properly. Moreover, assigning&quot;</span></span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;default values is unnecessary, as their functionality is subsumed&quot;</span></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;by the defaultValue method of IsOption.&quot;</span></span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="#local-6989586621679098078"><span class="hs-identifier hs-type">prov</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679098078"><span class="annot"><span class="annottext">prov :: String
+</span><a href="#local-6989586621679098078"><span class="hs-identifier hs-var hs-var">prov</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;WARNING (in the IsOption instance for &quot;</span></span><span>
+</span><span id="line-99"></span><span>             </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">TypeRep -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy v -&gt; TypeRep
+forall {k} (proxy :: k -&gt; *) (a :: k).
+Typeable a =&gt;
+proxy a -&gt; TypeRep
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#typeRep"><span class="hs-identifier hs-var">typeRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy v
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679097934"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;):&quot;</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Replace an `optionCLParser`'s 'propShowDefault' with 'showDefaultValue' from</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- the 'IsOption' class. It's tempting to try doing this when constructing the</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- 'Parser' itself using 'optionMod', but @optparse-applicative@'s 'mkParser'</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- function always overrides the result of 'optionMod'. Ugh.</span><span>
+</span><span id="line-105"></span><span id="local-6989586621679097940"><span class="annot"><a href="Test.Tasty.CmdLine.html#setCLParserShowDefaultValue"><span class="hs-identifier hs-type">setCLParserShowDefaultValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097940"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097940"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-106"></span><span id="setCLParserShowDefaultValue"><span class="annot"><span class="annottext">setCLParserShowDefaultValue :: forall a. Maybe String -&gt; Parser a -&gt; Parser a
+</span><a href="Test.Tasty.CmdLine.html#setCLParserShowDefaultValue"><span class="hs-identifier hs-var hs-var">setCLParserShowDefaultValue</span></a></span></span><span> </span><span id="local-6989586621679098082"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679098082"><span class="hs-identifier hs-var">mbDef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; Parser a
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679097955"><span class="annot"><a href="#local-6989586621679098083"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097955"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097955"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- Note that we /always/ replace the Option's optProps, regardless of</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- what type it may have. This can produce unexpected results if an</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- optionCLParser defines multiple options, which is why we emit a warning</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- (in finalizeCLParser) if a Parser does this.</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679098083"><span class="annot"><span class="annottext">go :: forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">OptP</span></span><span> </span><span id="local-6989586621679098085"><span class="annot"><span class="annottext">Option a
+</span><a href="#local-6989586621679098085"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Option a -&gt; Parser a
+forall a. Option a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OptP</span></span><span> </span><span class="annot"><span class="annottext">Option a
+</span><a href="#local-6989586621679098085"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">{</span><span class="annot"><span class="hs-identifier hs-var">Applicative.optProps</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>                              </span><span class="annot"><a href="#local-6989586621679098087"><span class="hs-identifier hs-type">modifyDefault</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-var">Applicative.optProps</span></span><span> </span><span class="annot"><a href="#local-6989586621679098085"><span class="hs-identifier hs-type">o</span></a></span><span class="hs-special">)</span><span class="hs-special">}</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679098088"><span class="annot"><span class="annottext">p :: Parser a
+</span><a href="#local-6989586621679098088"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">NilP</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098088"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MultP</span></span><span> </span><span id="local-6989586621679098091"><span class="annot"><span class="annottext">Parser (x -&gt; a)
+</span><a href="#local-6989586621679098091"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621679098092"><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098092"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser (x -&gt; a) -&gt; Parser x -&gt; Parser a
+forall a x. Parser (x -&gt; a) -&gt; Parser x -&gt; Parser a
+</span><span class="hs-identifier hs-var">MultP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser (x -&gt; a) -&gt; Parser (x -&gt; a)
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (x -&gt; a)
+</span><a href="#local-6989586621679098091"><span class="hs-identifier hs-var">p1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser x -&gt; Parser x
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098092"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AltP</span></span><span>  </span><span id="local-6989586621679098094"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098094"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621679098095"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098095"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; Parser a -&gt; Parser a
+forall a. Parser a -&gt; Parser a -&gt; Parser a
+</span><span class="hs-identifier hs-var">AltP</span></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser a -&gt; Parser a
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098094"><span class="hs-identifier hs-var">p1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser a -&gt; Parser a
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098095"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BindP</span></span><span> </span><span id="local-6989586621679098099"><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098099"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621679098100"><span class="annot"><span class="annottext">x -&gt; Parser a
+</span><a href="#local-6989586621679098100"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser x -&gt; (x -&gt; Parser a) -&gt; Parser a
+forall a x. Parser x -&gt; (x -&gt; Parser a) -&gt; Parser a
+</span><span class="hs-identifier hs-var">BindP</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser x -&gt; Parser x
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098099"><span class="hs-identifier hs-var">p1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Parser a -&gt; Parser a) -&gt; (x -&gt; Parser a) -&gt; x -&gt; Parser a
+forall a b. (a -&gt; b) -&gt; (x -&gt; a) -&gt; x -&gt; b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; Parser a
+forall a. Parser a -&gt; Parser a
+</span><a href="#local-6989586621679098083"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">x -&gt; Parser a
+</span><a href="#local-6989586621679098100"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><a href="#local-6989586621679098087"><span class="hs-identifier hs-type">modifyDefault</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptProperties</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptProperties</span></span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679098087"><span class="annot"><span class="annottext">modifyDefault :: OptProperties -&gt; OptProperties
+</span><a href="#local-6989586621679098087"><span class="hs-identifier hs-var hs-var">modifyDefault</span></a></span></span><span> </span><span id="local-6989586621679098101"><span class="annot"><span class="annottext">OptProperties
+</span><a href="#local-6989586621679098101"><span class="hs-identifier hs-var">op</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OptProperties
+</span><a href="#local-6989586621679098101"><span class="hs-identifier hs-var">op</span></a></span><span class="hs-special">{</span><span class="annot"><span class="hs-identifier hs-var">propShowDefault</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679098082"><span class="hs-identifier hs-type">mbDef</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- Note: this is a conservative estimate, since we cannot count the number</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- of OptPs in the continuation argument of BindP. But BindP is really only</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- used for ParserM purposes, and since ParserM is an internal</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- optparse-applicative definition, most optionCLParser instances are</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- unlikely to use it in practice.</span><span>
+</span><span id="line-128"></span><span id="local-6989586621679097942"><span class="annot"><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-type">numOptPs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679097942"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span><span>
+</span><span id="line-129"></span><span id="numOptPs"><span class="annot"><span class="annottext">numOptPs :: forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var hs-var">numOptPs</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">OptP</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">NilP</span></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MultP</span></span><span> </span><span id="local-6989586621679098105"><span class="annot"><span class="annottext">Parser (x -&gt; a)
+</span><a href="#local-6989586621679098105"><span class="hs-identifier hs-var">p1</span></a></span></span><span>  </span><span id="local-6989586621679098106"><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098106"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser (x -&gt; a) -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (x -&gt; a)
+</span><a href="#local-6989586621679098105"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Parser x -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098106"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">AltP</span></span><span>  </span><span id="local-6989586621679098108"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098108"><span class="hs-identifier hs-var">p1</span></a></span></span><span>  </span><span id="local-6989586621679098109"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098109"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098108"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679098109"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BindP</span></span><span> </span><span id="local-6989586621679098110"><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098110"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span id="local-6989586621679098111"><span class="annot"><span class="annottext">x -&gt; Parser a
+</span><a href="#local-6989586621679098111"><span class="hs-identifier hs-var">_p2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser x -&gt; Int
+forall a. Parser a -&gt; Int
+</span><a href="Test.Tasty.CmdLine.html#numOptPs"><span class="hs-identifier hs-var">numOptPs</span></a></span><span> </span><span class="annot"><span class="annottext">Parser x
+</span><a href="#local-6989586621679098110"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- | The command line parser for the test suite, alongside any related</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- warnings.</span><span>
+</span><span id="line-137"></span><span class="hs-comment">--</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- @since 1.3</span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#suiteOptionParser"><span class="hs-identifier hs-type">suiteOptionParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span id="suiteOptionParser"><span class="annot"><span class="annottext">suiteOptionParser :: [Ingredient] -&gt; TestTree -&gt; ([String], Parser OptionSet)
+</span><a href="Test.Tasty.CmdLine.html#suiteOptionParser"><span class="hs-identifier hs-var hs-var">suiteOptionParser</span></a></span></span><span> </span><span id="local-6989586621679098112"><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098112"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621679098113"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098113"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; ([String], Parser OptionSet)
+</span><a href="Test.Tasty.CmdLine.html#optionParser"><span class="hs-identifier hs-var">optionParser</span></a></span><span> </span><span class="annot"><span class="annottext">([OptionDescription] -&gt; ([String], Parser OptionSet))
+-&gt; [OptionDescription] -&gt; ([String], Parser OptionSet)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient] -&gt; TestTree -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#suiteOptions"><span class="hs-identifier hs-var">suiteOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098112"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098113"><span class="hs-identifier hs-var">tree</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | Parse the command-line and environment options passed to tasty.</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- Useful if you need to get the options before 'Test.Tasty.defaultMain' is called.</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- Once within the test tree, 'Test.Tasty.askOption' should be used instead.</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- The arguments to this function should be the same as for</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- 'defaultMainWithIngredients'. If you don't use any custom ingredients,</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- pass 'Test.Tasty.defaultIngredients'.</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- @since 1.2.2</span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#parseOptions"><span class="hs-identifier hs-type">parseOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span>
+</span><span id="line-154"></span><span id="parseOptions"><span class="annot"><span class="annottext">parseOptions :: [Ingredient] -&gt; TestTree -&gt; IO OptionSet
+</span><a href="Test.Tasty.CmdLine.html#parseOptions"><span class="hs-identifier hs-var hs-var">parseOptions</span></a></span></span><span> </span><span id="local-6989586621679098114"><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098114"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621679098115"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098115"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679098116"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679098116"><span class="hs-identifier hs-var">warnings</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679098117"><span class="annot"><span class="annottext">Parser OptionSet
+</span><a href="#local-6989586621679098117"><span class="hs-identifier hs-var">parser</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Ingredient] -&gt; TestTree -&gt; ([String], Parser OptionSet)
+</span><a href="Test.Tasty.CmdLine.html#suiteOptionParser"><span class="hs-identifier hs-var">suiteOptionParser</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098114"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098115"><span class="hs-identifier hs-var">tree</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; [String] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Handle -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Text.html#hPutStrLn"><span class="hs-identifier hs-var">hPutStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679098116"><span class="hs-identifier hs-var">warnings</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679098121"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098121"><span class="hs-identifier hs-var">cmdlineOpts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ParserInfo OptionSet -&gt; IO OptionSet
+forall a. ParserInfo a -&gt; IO a
+</span><span class="hs-identifier hs-var">execParser</span></span><span> </span><span class="annot"><span class="annottext">(ParserInfo OptionSet -&gt; IO OptionSet)
+-&gt; ParserInfo OptionSet -&gt; IO OptionSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">Parser OptionSet -&gt; InfoMod OptionSet -&gt; ParserInfo OptionSet
+forall a. Parser a -&gt; InfoMod a -&gt; ParserInfo a
+</span><span class="hs-identifier hs-var">info</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser (OptionSet -&gt; OptionSet)
+forall a. Parser (a -&gt; a)
+</span><span class="hs-identifier hs-var">helper</span></span><span> </span><span class="annot"><span class="annottext">Parser (OptionSet -&gt; OptionSet)
+-&gt; Parser OptionSet -&gt; Parser OptionSet
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser OptionSet
+</span><a href="#local-6989586621679098117"><span class="hs-identifier hs-var">parser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">InfoMod OptionSet
+forall a. InfoMod a
+</span><span class="hs-identifier hs-var">fullDesc</span></span><span> </span><span class="annot"><span class="annottext">InfoMod OptionSet -&gt; InfoMod OptionSet -&gt; InfoMod OptionSet
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-160"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; InfoMod OptionSet
+forall a. String -&gt; InfoMod a
+</span><span class="hs-identifier hs-var">header</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Mmm... tasty test suite&quot;</span></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>  </span><span id="local-6989586621679098127"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098127"><span class="hs-identifier hs-var">envOpts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ingredient] -&gt; TestTree -&gt; IO OptionSet
+</span><a href="Test.Tasty.Options.Env.html#suiteEnvOptions"><span class="hs-identifier hs-var">suiteEnvOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098114"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098115"><span class="hs-identifier hs-var">tree</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><span class="annottext">OptionSet -&gt; IO OptionSet
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(OptionSet -&gt; IO OptionSet) -&gt; OptionSet -&gt; IO OptionSet
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098127"><span class="hs-identifier hs-var">envOpts</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; OptionSet -&gt; OptionSet
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098121"><span class="hs-identifier hs-var">cmdlineOpts</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | Parse the command line arguments and run the tests using the provided</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- ingredient list.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- When the tests finish, this function calls 'System.Exit.exitWith' with the exit code</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- that indicates whether any tests have failed. See 'Test.Tasty.defaultMain' for</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- details.</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Test.Tasty.CmdLine.html#defaultMainWithIngredients"><span class="hs-identifier hs-type">defaultMainWithIngredients</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span id="defaultMainWithIngredients"><span class="annot"><span class="annottext">defaultMainWithIngredients :: [Ingredient] -&gt; TestTree -&gt; IO ()
+</span><a href="Test.Tasty.CmdLine.html#defaultMainWithIngredients"><span class="hs-identifier hs-var hs-var">defaultMainWithIngredients</span></a></span></span><span> </span><span id="local-6989586621679098130"><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098130"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621679098131"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098131"><span class="hs-identifier hs-var">testTree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><span class="annottext">IO ()
+</span><a href="Test.Tasty.Runners.Utils.html#installSignalHandlers"><span class="hs-identifier hs-var">installSignalHandlers</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span id="local-6989586621679098133"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098133"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ingredient] -&gt; TestTree -&gt; IO OptionSet
+</span><a href="Test.Tasty.CmdLine.html#parseOptions"><span class="hs-identifier hs-var">parseOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098130"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098131"><span class="hs-identifier hs-var">testTree</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Ingredient] -&gt; OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="Test.Tasty.Ingredients.html#tryIngredients"><span class="hs-identifier hs-var">tryIngredients</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679098130"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679098133"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679098131"><span class="hs-identifier hs-var">testTree</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><span class="annottext">Maybe (IO Bool)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-180"></span><span>      </span><span class="annot"><span class="annottext">Handle -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Text.html#hPutStrLn"><span class="hs-identifier hs-var">hPutStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;No ingredients agreed to run. Something is wrong either with your ingredient set or the options.&quot;</span></span><span>
+</span><span id="line-182"></span><span>      </span><span class="annot"><span class="annottext">IO ()
+forall a. IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitFailure"><span class="hs-identifier hs-var">exitFailure</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679098136"><span class="annot"><span class="annottext">IO Bool
+</span><a href="#local-6989586621679098136"><span class="hs-identifier hs-var">act</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-184"></span><span>      </span><span id="local-6989586621679098137"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679098137"><span class="hs-identifier hs-var">ok</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="#local-6989586621679098136"><span class="hs-identifier hs-var">act</span></a></span><span>
+</span><span id="line-185"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679098137"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">IO ()
+forall a. IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitSuccess"><span class="hs-identifier hs-var">exitSuccess</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">IO ()
+forall a. IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitFailure"><span class="hs-identifier hs-var">exitFailure</span></a></span><span>
+</span><span id="line-186"></span></pre></body></html>

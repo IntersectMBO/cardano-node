@@ -1,0 +1,1127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsection</span><span class="hs-special">{</span><span class="hs-identifier">Cardano.BM.Backend.Aggregation</span><span class="hs-special">}</span><span>
+</span><span id="line-3"></span><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-glyph">:</span><span class="hs-identifier">Cardano.BM.Backend.Aggregation</span><span class="hs-special">}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-operator">%</span><span class="hs-keyword">if</span><span> </span><span class="hs-identifier">style</span><span> </span><span class="hs-operator">==</span><span> </span><span class="hs-identifier">newcode</span><span>
+</span><span id="line-6"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE CPP                   #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns          #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances     #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables   #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">{-@ embed GHC.Natural.Natural as int @-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.BM.Backend.Aggregation</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>      </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier">Aggregation</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Plugin</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#plugin"><span class="hs-identifier">plugin</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Async</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier">newEmptyMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier">putMVar</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>                     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier">readMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryTakeMVar"><span class="hs-identifier">tryTakeMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier">withMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html"><span class="hs-identifier">Control.Concurrent.STM.TBQueue</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TBQ</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">throwM</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.IO.html"><span class="hs-identifier">Data.Text.IO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TIO</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.html"><span class="hs-identifier">GHC.Conc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier">labelThread</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier">myThreadId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier">stderr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Backend.ProcessQueue</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">processQueue</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Configuration.Model</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Configuration</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getAggregatedKind</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Aggregated</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Aggregated</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">EWMA</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>                     </span><span class="annot"><span class="hs-identifier">Measurable</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ewma</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">singletonStats</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">updateAggregation</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.AggregatedKind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AggregatedKind</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Backend</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Counter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Counter</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">CounterState</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>                     </span><span class="annot"><span class="hs-identifier">nameCounter</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.LogItem</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Severity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Severity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Tracer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">traceWith</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Plugin</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.BM.Trace</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Trace</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span class="hs-operator">%</span><span class="hs-identifier">endif</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Plugin</span><span> </span><span class="hs-identifier">definition</span><span class="hs-special">}</span><span>
+</span><span id="line-55"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-56"></span><span id="local-6989586621679101460"><span id="local-6989586621679101461"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#plugin"><span class="hs-identifier hs-type">plugin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">IsEffectuator</span></span><span> </span><span class="annot"><a href="#local-6989586621679101460"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Configuration</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace.Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679101460"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Plugin</span></span><span> </span><span class="annot"><a href="#local-6989586621679101461"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-58"></span><span id="plugin"><span class="annot"><span class="annottext">plugin :: forall (s :: * -&gt; *) a.
+(IsEffectuator s a, ToJSON a, FromJSON a) =&gt;
+Configuration -&gt; Trace IO a -&gt; s a -&gt; IO (Plugin a)
+</span><a href="Cardano.BM.Backend.Aggregation.html#plugin"><span class="hs-identifier hs-var hs-var">plugin</span></a></span></span><span> </span><span id="local-6989586621679101645"><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101645"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679101646"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101646"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679101647"><span class="annot"><span class="annottext">s a
+</span><a href="#local-6989586621679101647"><span class="hs-identifier hs-var">sb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621679101648"><span id="local-6989586621679101649"><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101649"><span class="hs-identifier hs-var">be</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-type">Cardano.BM.Backend.Aggregation.Aggregation</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101648"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Configuration -&gt; Trace IO a -&gt; s a -&gt; IO (Aggregation a)
+forall (s :: * -&gt; *).
+IsEffectuator s a =&gt;
+Configuration -&gt; Trace IO a -&gt; s a -&gt; IO (Aggregation a)
+forall (t :: * -&gt; *) a (s :: * -&gt; *).
+(IsBackend t a, IsEffectuator s a) =&gt;
+Configuration -&gt; Trace IO a -&gt; s a -&gt; IO (t a)
+</span><span class="hs-identifier hs-var">realizefrom</span></span><span> </span><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101645"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101646"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">s a
+</span><a href="#local-6989586621679101647"><span class="hs-identifier hs-var">sb</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Plugin a -&gt; IO (Plugin a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Plugin a -&gt; IO (Plugin a)) -&gt; Plugin a -&gt; IO (Plugin a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Backend a -&gt; BackendKind -&gt; Plugin a
+forall a. Backend a -&gt; BackendKind -&gt; Plugin a
+</span><span class="hs-identifier hs-var">BackendPlugin</span></span><span>
+</span><span id="line-61"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MkBackend</span></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">bEffectuate :: LogObject a -&gt; IO ()
+</span><span class="hs-identifier hs-var">bEffectuate</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Aggregation a -&gt; LogObject a -&gt; IO ()
+forall (t :: * -&gt; *) a.
+IsEffectuator t a =&gt;
+t a -&gt; LogObject a -&gt; IO ()
+</span><span class="hs-identifier hs-var">effectuate</span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101649"><span class="hs-identifier hs-var">be</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">bUnrealize :: IO ()
+</span><span class="hs-identifier hs-var">bUnrealize</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Aggregation a -&gt; IO ()
+forall (t :: * -&gt; *) a. IsBackend t a =&gt; t a -&gt; IO ()
+</span><span class="hs-identifier hs-var">unrealize</span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101649"><span class="hs-identifier hs-var">be</span></a></span><span> </span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Aggregation a -&gt; BackendKind
+forall (t :: * -&gt; *) a. IsBackend t a =&gt; t a -&gt; BackendKind
+</span><span class="hs-identifier hs-var">bekind</span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101649"><span class="hs-identifier hs-var">be</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Internal</span><span> </span><span class="hs-identifier">representation</span><span class="hs-special">}</span><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-glyph">:</span><span class="hs-identifier">Aggregation</span><span class="hs-special">}</span><span class="hs-glyph">\</span><span class="hs-identifier">index</span><span class="hs-special">{</span><span class="hs-identifier">Aggregation</span><span class="hs-special">}</span><span>
+</span><span id="line-66"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">type</span><span> </span><span id="AggregationMVar"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMVar"><span class="hs-identifier hs-var">AggregationMVar</span></a></span></span><span> </span><span id="local-6989586621679101658"><span class="annot"><a href="#local-6989586621679101658"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationInternal"><span class="hs-identifier hs-type">AggregationInternal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101658"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">newtype</span><span> </span><span id="Aggregation"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-var">Aggregation</span></a></span></span><span> </span><span id="local-6989586621679101488"><span class="annot"><a href="#local-6989586621679101488"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Aggregation"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-var">Aggregation</span></a></span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="getAg"><span class="annot"><span class="annottext">forall a. Aggregation a -&gt; AggregationMVar a
+</span><a href="Cardano.BM.Backend.Aggregation.html#getAg"><span class="hs-identifier hs-var hs-var">getAg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMVar"><span class="hs-identifier hs-type">AggregationMVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101488"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">data</span><span> </span><span id="AggregationInternal"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationInternal"><span class="hs-identifier hs-var">AggregationInternal</span></a></span></span><span> </span><span id="local-6989586621679101491"><span class="annot"><a href="#local-6989586621679101491"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AggregationInternal"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationInternal"><span class="hs-identifier hs-var">AggregationInternal</span></a></span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="agQueue"><span class="annot"><span class="annottext">forall a. AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+</span><a href="Cardano.BM.Backend.Aggregation.html#agQueue"><span class="hs-identifier hs-var hs-var">agQueue</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#TBQueue"><span class="hs-identifier hs-type">TBQ.TBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span class="annot"><a href="#local-6989586621679101491"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="agDispatch"><span class="annot"><span class="annottext">forall a. AggregationInternal a -&gt; Async ()
+</span><a href="Cardano.BM.Backend.Aggregation.html#agDispatch"><span class="hs-identifier hs-var hs-var">agDispatch</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Async.Async</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Relation</span><span> </span><span class="hs-identifier">from</span><span> </span><span class="hs-identifier">context</span><span> </span><span class="hs-identifier">name</span><span> </span><span class="hs-identifier">to</span><span> </span><span class="hs-identifier">aggregated</span><span> </span><span class="hs-identifier">statistics</span><span class="hs-special">}</span><span>
+</span><span id="line-79"></span><span class="hs-identifier">We</span><span> </span><span class="hs-identifier">keep</span><span> </span><span class="hs-identifier">the</span><span> </span><span class="hs-identifier">aggregated</span><span> </span><span class="hs-identifier">values</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregated</span><span class="hs-glyph">|</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">for</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-identifier">named</span><span> </span><span class="hs-identifier">context</span><span> </span><span class="hs-keyword">in</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">HashMap</span><span class="hs-operator">|.</span><span>
+</span><span id="line-80"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-81"></span><span class="hs-keyword">type</span><span> </span><span id="AggregationMap"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-var">AggregationMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HM.HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span>
+</span><span id="line-82"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregation</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">implements</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">effectuate</span><span class="hs-glyph">|</span><span class="hs-special">}</span><span class="hs-glyph">\</span><span class="hs-identifier">index</span><span class="hs-special">{</span><span class="hs-identifier">Aggregation</span><span class="hs-operator">!</span><span class="hs-keyword">instance</span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-identifier">IsEffectuator</span><span class="hs-special">}</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregation</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">is</span><span> </span><span class="hs-identifier">an</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">IsEffectuator</span><span class="hs-glyph">|</span><span>
+</span><span id="line-87"></span><span class="hs-identifier">Enter</span><span> </span><span class="hs-identifier">the</span><span> </span><span class="hs-identifier">log</span><span> </span><span class="hs-identifier">item</span><span> </span><span class="hs-identifier">into</span><span> </span><span class="hs-identifier">the</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregation</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">queue</span><span class="hs-operator">.</span><span>
+</span><span id="line-88"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679101473"><span id="local-6989586621679101666"><span class="annot"><span class="hs-identifier hs-type">IsEffectuator</span></span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-type">Aggregation</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101473"><span class="hs-identifier hs-type">a</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679101675"><span class="annot"><span class="annottext">effectuate :: Aggregation a -&gt; LogObject a -&gt; IO ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">effectuate</span></span></span><span> </span><span id="local-6989586621679101676"><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var">agg</span></a></span></span><span> </span><span id="local-6989586621679101677"><span class="annot"><span class="annottext">LogObject a
+</span><a href="#local-6989586621679101677"><span class="hs-identifier hs-var">item</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>        </span><span id="local-6989586621679101678"><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101678"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (AggregationInternal a) -&gt; IO (AggregationInternal a)
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Aggregation a -&gt; MVar (AggregationInternal a)
+forall a. Aggregation a -&gt; AggregationMVar a
+</span><a href="Cardano.BM.Backend.Aggregation.html#getAg"><span class="hs-identifier hs-var">getAg</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var">agg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>        </span><span id="local-6989586621679101679"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679101679"><span class="hs-identifier hs-var">nocapacity</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM Bool -&gt; IO Bool
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM Bool -&gt; IO Bool) -&gt; STM Bool -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a)) -&gt; STM Bool
+forall a. TBQueue a -&gt; STM Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#isFullTBQueue"><span class="hs-identifier hs-var">TBQ.isFullTBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+forall a. AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+</span><a href="Cardano.BM.Backend.Aggregation.html#agQueue"><span class="hs-identifier hs-var">agQueue</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101678"><span class="hs-identifier hs-var">ag</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679101679"><span class="hs-identifier hs-var">nocapacity</span></a></span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Aggregation a -&gt; IO ()
+forall (t :: * -&gt; *) a. IsEffectuator t a =&gt; t a -&gt; IO ()
+</span><span class="hs-identifier hs-var">handleOverflow</span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101676"><span class="hs-identifier hs-var">agg</span></a></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a)) -&gt; Maybe (LogObject a) -&gt; STM ()
+forall a. TBQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#writeTBQueue"><span class="hs-identifier hs-var">TBQ.writeTBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+forall a. AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+</span><a href="Cardano.BM.Backend.Aggregation.html#agQueue"><span class="hs-identifier hs-var">agQueue</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101678"><span class="hs-identifier hs-var">ag</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (LogObject a) -&gt; STM ()) -&gt; Maybe (LogObject a) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject a -&gt; Maybe (LogObject a)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject a
+</span><a href="#local-6989586621679101677"><span class="hs-identifier hs-var">item</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679101686"><span class="annot"><span class="annottext">handleOverflow :: Aggregation a -&gt; IO ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">handleOverflow</span></span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; Text -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.IO.html#hPutStrLn"><span class="hs-identifier hs-var">TIO.hPutStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Notice: Aggregation's queue full, dropping log items!&quot;</span></span><span>
+</span><span id="line-98"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregation</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">implements</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">Backend</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">functions</span><span class="hs-special">}</span><span class="hs-glyph">\</span><span class="hs-identifier">index</span><span class="hs-special">{</span><span class="hs-identifier">Aggregation</span><span class="hs-operator">!</span><span class="hs-keyword">instance</span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-identifier">IsBackend</span><span class="hs-special">}</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-glyph">|</span><span class="hs-identifier">Aggregation</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">is</span><span> </span><span class="hs-identifier">an</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">IsBackend</span><span class="hs-glyph">|</span><span>
+</span><span id="line-103"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679101472"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679101472"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsBackend</span></span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-type">Aggregation</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101472"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679101702"><span class="annot"><span class="annottext">bekind :: Aggregation a -&gt; BackendKind
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">bekind</span></span></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendKind
+</span><span class="hs-identifier hs-var">AggregationBK</span></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679101706"><span class="annot"><span class="annottext">realize :: Configuration -&gt; IO (Aggregation a)
+</span><a href="#local-6989586621679101706"><span class="hs-identifier hs-var hs-var hs-var hs-var">realize</span></a></span></span><span> </span><span class="annot"><span class="annottext">Configuration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Aggregation a)
+forall a. String -&gt; IO a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Aggregation cannot be instantiated by 'realize'&quot;</span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679101715"><span class="annot"><span class="annottext">realizefrom :: forall (s :: * -&gt; *).
+IsEffectuator s a =&gt;
+Configuration -&gt; Trace IO a -&gt; s a -&gt; IO (Aggregation a)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">realizefrom</span></span></span><span> </span><span id="local-6989586621679101716"><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101716"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679101717"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101717"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="annot"><span class="annottext">s a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>        </span><span id="local-6989586621679101718"><span class="annot"><span class="annottext">MVar (AggregationInternal a)
+</span><a href="#local-6989586621679101718"><span class="hs-identifier hs-var">aggref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (MVar (AggregationInternal a))
+forall a. IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span class="hs-cpp">
+#ifdef PERFORMANCE_TEST_QUEUE
+</span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="hs-identifier">qSize</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-number">1000000</span><span class="hs-cpp">
+#else
+</span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101721"><span class="annot"><span class="annottext">qSize :: Natural
+</span><a href="#local-6989586621679101721"><span class="hs-identifier hs-var hs-var">qSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2048</span></span><span class="hs-cpp">
+#endif
+</span><span>        </span><span id="local-6989586621679101722"><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101722"><span class="hs-identifier hs-var">aggregationQueue</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (TBQueue (Maybe (LogObject a)))
+-&gt; IO (TBQueue (Maybe (LogObject a)))
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (TBQueue (Maybe (LogObject a)))
+ -&gt; IO (TBQueue (Maybe (LogObject a))))
+-&gt; STM (TBQueue (Maybe (LogObject a)))
+-&gt; IO (TBQueue (Maybe (LogObject a)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; STM (TBQueue (Maybe (LogObject a)))
+forall a. Natural -&gt; STM (TBQueue a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#newTBQueue"><span class="hs-identifier hs-var">TBQ.newTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679101721"><span class="hs-identifier hs-var">qSize</span></a></span><span>
+</span><span id="line-117"></span><span>        </span><span id="local-6989586621679101724"><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679101724"><span class="hs-identifier hs-var">dispatcher</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Configuration
+-&gt; AggregationMap
+-&gt; TBQueue (Maybe (LogObject a))
+-&gt; Trace IO a
+-&gt; IO (Async ())
+forall a.
+Configuration
+-&gt; AggregationMap
+-&gt; TBQueue (Maybe (LogObject a))
+-&gt; Trace IO a
+-&gt; IO (Async ())
+</span><a href="Cardano.BM.Backend.Aggregation.html#spawnDispatcher"><span class="hs-identifier hs-var">spawnDispatcher</span></a></span><span> </span><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101716"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">HM.empty</span></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101722"><span class="hs-identifier hs-var">aggregationQueue</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101717"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-118"></span><span>        </span><span class="hs-comment">-- link the given Async to the current thread, such that if the Async</span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-comment">-- raises an exception, that exception will be re-thrown in the current</span><span>
+</span><span id="line-120"></span><span>        </span><span class="hs-comment">-- thread, wrapped in ExceptionInLinkedThread.</span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><span class="annottext">Async () -&gt; IO ()
+forall a. Async a -&gt; IO ()
+</span><span class="hs-identifier hs-var">Async.link</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679101724"><span class="hs-identifier hs-var">dispatcher</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">MVar (AggregationInternal a) -&gt; AggregationInternal a -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (AggregationInternal a)
+</span><a href="#local-6989586621679101718"><span class="hs-identifier hs-var">aggref</span></a></span><span> </span><span class="annot"><span class="annottext">(AggregationInternal a -&gt; IO ()) -&gt; AggregationInternal a -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a)) -&gt; Async () -&gt; AggregationInternal a
+forall a.
+TBQueue (Maybe (LogObject a)) -&gt; Async () -&gt; AggregationInternal a
+</span><a href="Cardano.BM.Backend.Aggregation.html#AggregationInternal"><span class="hs-identifier hs-var">AggregationInternal</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101722"><span class="hs-identifier hs-var">aggregationQueue</span></a></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679101724"><span class="hs-identifier hs-var">dispatcher</span></a></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">Aggregation a -&gt; IO (Aggregation a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Aggregation a -&gt; IO (Aggregation a))
+-&gt; Aggregation a -&gt; IO (Aggregation a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (AggregationInternal a) -&gt; Aggregation a
+forall a. AggregationMVar a -&gt; Aggregation a
+</span><a href="Cardano.BM.Backend.Aggregation.html#Aggregation"><span class="hs-identifier hs-var">Aggregation</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (AggregationInternal a)
+</span><a href="#local-6989586621679101718"><span class="hs-identifier hs-var">aggref</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679101740"><span class="annot"><span class="annottext">unrealize :: Aggregation a -&gt; IO ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">unrealize</span></span></span><span> </span><span id="local-6989586621679101741"><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101741"><span class="hs-identifier hs-var">aggregation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-126"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101744"><span class="annot"><span class="annottext">clearMVar :: MVar a -&gt; IO ()
+</span><a href="#local-6989586621679101744"><span class="hs-identifier hs-var hs-var">clearMVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; IO ())
+-&gt; (MVar a -&gt; IO (Maybe a)) -&gt; MVar a -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO (Maybe a)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryTakeMVar"><span class="hs-identifier hs-var">tryTakeMVar</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101746"><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679101746"><span class="hs-identifier hs-var">dispatcher</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101747"><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101747"><span class="hs-identifier hs-var">queue</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (AggregationInternal a)
+-&gt; (AggregationInternal a
+    -&gt; IO (Async (), TBQueue (Maybe (LogObject a))))
+-&gt; IO (Async (), TBQueue (Maybe (LogObject a)))
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Aggregation a -&gt; MVar (AggregationInternal a)
+forall a. Aggregation a -&gt; AggregationMVar a
+</span><a href="Cardano.BM.Backend.Aggregation.html#getAg"><span class="hs-identifier hs-var">getAg</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101741"><span class="hs-identifier hs-var">aggregation</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679101748"><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101748"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>                            </span><span class="annot"><span class="annottext">(Async (), TBQueue (Maybe (LogObject a)))
+-&gt; IO (Async (), TBQueue (Maybe (LogObject a)))
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationInternal a -&gt; Async ()
+forall a. AggregationInternal a -&gt; Async ()
+</span><a href="Cardano.BM.Backend.Aggregation.html#agDispatch"><span class="hs-identifier hs-var">agDispatch</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101748"><span class="hs-identifier hs-var">ag</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+forall a. AggregationInternal a -&gt; TBQueue (Maybe (LogObject a))
+</span><a href="Cardano.BM.Backend.Aggregation.html#agQueue"><span class="hs-identifier hs-var">agQueue</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationInternal a
+</span><a href="#local-6989586621679101748"><span class="hs-identifier hs-var">ag</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>        </span><span class="hs-comment">-- send terminating item to the queue</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a)) -&gt; Maybe (LogObject a) -&gt; STM ()
+forall a. TBQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#writeTBQueue"><span class="hs-identifier hs-var">TBQ.writeTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101747"><span class="hs-identifier hs-var">queue</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (LogObject a)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span class="hs-comment">-- wait for the dispatcher to exit</span><span>
+</span><span id="line-133"></span><span>        </span><span class="hs-comment">-- TODO add a timeout to waitCatch in order</span><span>
+</span><span id="line-134"></span><span>        </span><span class="hs-comment">-- to be sure that it will finish</span><span>
+</span><span id="line-135"></span><span>        </span><span id="local-6989586621679101749"><span class="annot"><span class="annottext">Either SomeException ()
+</span><a href="#local-6989586621679101749"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Async () -&gt; IO (Either SomeException ())
+forall a. Async a -&gt; IO (Either SomeException a)
+</span><span class="hs-identifier hs-var">Async.waitCatch</span></span><span> </span><span class="annot"><span class="annottext">Async ()
+</span><a href="#local-6989586621679101746"><span class="hs-identifier hs-var">dispatcher</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">(SomeException -&gt; IO ())
+-&gt; (() -&gt; IO ()) -&gt; Either SomeException () -&gt; IO ()
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; IO ()
+forall (m :: * -&gt; *) e a.
+(HasCallStack, MonadThrow m, Exception e) =&gt;
+e -&gt; m a
+</span><span class="hs-identifier hs-var">throwM</span></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Either SomeException ()
+</span><a href="#local-6989586621679101749"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-137"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar (AggregationInternal a) -&gt; IO ()
+forall {a}. MVar a -&gt; IO ()
+</span><a href="#local-6989586621679101744"><span class="hs-identifier hs-var">clearMVar</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar (AggregationInternal a) -&gt; IO ())
+-&gt; (Aggregation a -&gt; MVar (AggregationInternal a))
+-&gt; Aggregation a
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregation a -&gt; MVar (AggregationInternal a)
+forall a. Aggregation a -&gt; AggregationMVar a
+</span><a href="Cardano.BM.Backend.Aggregation.html#getAg"><span class="hs-identifier hs-var">getAg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Aggregation a
+</span><a href="#local-6989586621679101741"><span class="hs-identifier hs-var">aggregation</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Asynchronously</span><span> </span><span class="hs-identifier">reading</span><span> </span><span class="hs-identifier">log</span><span> </span><span class="hs-identifier">items</span><span> </span><span class="hs-identifier">from</span><span> </span><span class="hs-identifier">the</span><span> </span><span class="hs-identifier">queue</span><span> </span><span class="hs-identifier">and</span><span> </span><span class="hs-identifier">their</span><span> </span><span class="hs-identifier">processing</span><span class="hs-special">}</span><span>
+</span><span id="line-142"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-143"></span><span id="local-6989586621679101519"><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#spawnDispatcher"><span class="hs-identifier hs-type">spawnDispatcher</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Configuration</span></span><span>
+</span><span id="line-144"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span>
+</span><span id="line-145"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#TBQueue"><span class="hs-identifier hs-type">TBQ.TBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span class="annot"><a href="#local-6989586621679101519"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace.Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101519"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-147"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Async.Async</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-148"></span><span id="spawnDispatcher"><span class="annot"><span class="annottext">spawnDispatcher :: forall a.
+Configuration
+-&gt; AggregationMap
+-&gt; TBQueue (Maybe (LogObject a))
+-&gt; Trace IO a
+-&gt; IO (Async ())
+</span><a href="Cardano.BM.Backend.Aggregation.html#spawnDispatcher"><span class="hs-identifier hs-var hs-var">spawnDispatcher</span></a></span></span><span> </span><span id="local-6989586621679101767"><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101767"><span class="hs-identifier hs-var">conf</span></a></span></span><span> </span><span id="local-6989586621679101768"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101768"><span class="hs-identifier hs-var">aggMap</span></a></span></span><span> </span><span id="local-6989586621679101769"><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101769"><span class="hs-identifier hs-var">aggregationQueue</span></a></span></span><span> </span><span id="local-6989586621679101770"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101770"><span class="hs-identifier hs-var">basetrace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101772"><span class="annot"><span class="annottext">trace :: Trace IO a
+</span><a href="#local-6989586621679101772"><span class="hs-identifier hs-var hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Trace IO a -&gt; Trace IO a
+forall (m :: * -&gt; *) a. Text -&gt; Trace m a -&gt; Trace m a
+</span><span class="hs-identifier hs-var">Trace.appendName</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;#aggregation&quot;</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101770"><span class="hs-identifier hs-var">basetrace</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-keyword">in</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; IO (Async ())
+forall a. IO a -&gt; IO (Async a)
+</span><span class="hs-identifier hs-var">Async.async</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (Async ())) -&gt; IO () -&gt; IO (Async ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>      </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span> </span><span class="annot"><span class="annottext">IO ThreadId -&gt; (ThreadId -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(ThreadId -&gt; String -&gt; IO ()) -&gt; String -&gt; ThreadId -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#labelThread"><span class="hs-identifier hs-var">labelThread</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Aggregation dispatcher (lobemo-backend-aggregation)&quot;</span></span><span>
+</span><span id="line-153"></span><span>      </span><span class="annot"><span class="annottext">Trace IO a -&gt; AggregationMap -&gt; IO ()
+</span><a href="#local-6989586621679101776"><span class="hs-identifier hs-var">qProc</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101772"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101768"><span class="hs-identifier hs-var">aggMap</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">{-@ lazy qProc @-}</span><span>
+</span><span id="line-156"></span><span>    </span><span id="local-6989586621679101776"><span class="annot"><span class="annottext">qProc :: Trace IO a -&gt; AggregationMap -&gt; IO ()
+</span><a href="#local-6989586621679101776"><span class="hs-identifier hs-var hs-var">qProc</span></a></span></span><span> </span><span id="local-6989586621679101779"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101779"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679101780"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101780"><span class="hs-identifier hs-var">aggregatedMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>        </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+-&gt; (LogObject a
+    -&gt; (Trace IO a, AggregationMap) -&gt; IO (Trace IO a, AggregationMap))
+-&gt; (Trace IO a, AggregationMap)
+-&gt; ((Trace IO a, AggregationMap) -&gt; IO ())
+-&gt; IO ()
+forall a b.
+TBQueue (Maybe (LogObject a))
+-&gt; (LogObject a -&gt; b -&gt; IO b) -&gt; b -&gt; (b -&gt; IO ()) -&gt; IO ()
+</span><span class="hs-identifier hs-var">processQueue</span></span><span>
+</span><span id="line-158"></span><span>            </span><span class="annot"><span class="annottext">TBQueue (Maybe (LogObject a))
+</span><a href="#local-6989586621679101769"><span class="hs-identifier hs-var">aggregationQueue</span></a></span><span>
+</span><span id="line-159"></span><span>            </span><span class="annot"><span class="annottext">LogObject a
+-&gt; (Trace IO a, AggregationMap) -&gt; IO (Trace IO a, AggregationMap)
+forall {a}.
+LogObject a
+-&gt; (Trace IO a, AggregationMap) -&gt; IO (Trace IO a, AggregationMap)
+</span><a href="#local-6989586621679101781"><span class="hs-identifier hs-var">processAggregated</span></a></span><span>
+</span><span id="line-160"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101779"><span class="hs-identifier hs-var">trace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101780"><span class="hs-identifier hs-var">aggregatedMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">(Trace IO a, AggregationMap)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>    </span><span id="local-6989586621679101781"><span class="annot"><span class="annottext">processAggregated :: LogObject a
+-&gt; (Trace IO a, AggregationMap) -&gt; IO (Trace IO a, AggregationMap)
+</span><a href="#local-6989586621679101781"><span class="hs-identifier hs-var hs-var">processAggregated</span></a></span></span><span> </span><span id="local-6989586621679101785"><span class="annot"><span class="annottext">lo :: LogObject a
+</span><a href="#local-6989586621679101785"><span class="hs-identifier hs-var">lo</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101787"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101787"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101788"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101788"><span class="hs-identifier hs-var">lm</span></a></span></span><span> </span><span class="annot"><span class="annottext">LOContent a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101789"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101789"><span class="hs-identifier hs-var">trace</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101790"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101790"><span class="hs-identifier hs-var">aggregatedMap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-164"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679101791"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101791"><span class="hs-identifier hs-var">updatedMap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101792"><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101792"><span class="hs-identifier hs-var">aggregations</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">LogObject a
+-&gt; AggregationMap
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+LogObject a
+-&gt; AggregationMap
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject a
+</span><a href="#local-6989586621679101785"><span class="hs-identifier hs-var">lo</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101790"><span class="hs-identifier hs-var">aggregatedMap</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101789"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-165"></span><span>        </span><span class="annot"><span class="annottext">Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+forall a.
+Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+</span><a href="#local-6989586621679101794"><span class="hs-identifier hs-var">sendAggregated</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101789"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101787"><span class="hs-identifier hs-var">loname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LOMeta -&gt; Severity
+</span><span class="hs-identifier hs-var">severity</span></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101788"><span class="hs-identifier hs-var">lm</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101792"><span class="hs-identifier hs-var">aggregations</span></a></span><span>
+</span><span id="line-166"></span><span>        </span><span class="annot"><span class="annottext">(Trace IO a, AggregationMap) -&gt; IO (Trace IO a, AggregationMap)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101789"><span class="hs-identifier hs-var">trace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101791"><span class="hs-identifier hs-var">updatedMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><a href="#local-6989586621679101796"><span class="hs-identifier hs-type">createNupdate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Measurable</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LOMeta</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>    </span><span id="local-6989586621679101796"><span class="annot"><span class="annottext">createNupdate :: Text
+-&gt; Measurable
+-&gt; LOMeta
+-&gt; AggregationMap
+-&gt; IO (Either Text Aggregated)
+</span><a href="#local-6989586621679101796"><span class="hs-identifier hs-var hs-var">createNupdate</span></a></span></span><span> </span><span id="local-6989586621679101797"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101797"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679101798"><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101798"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span id="local-6989586621679101799"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101799"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span id="local-6989586621679101800"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101800"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; AggregationMap -&gt; Maybe Aggregated
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">HM.lookup</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101797"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101800"><span class="hs-identifier hs-var">agmap</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-171"></span><span>            </span><span class="annot"><span class="annottext">Maybe Aggregated
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-172"></span><span>                </span><span class="hs-comment">-- if Aggregated does not exist; initialize it.</span><span>
+</span><span id="line-173"></span><span>                </span><span id="local-6989586621679101802"><span class="annot"><span class="annottext">AggregatedKind
+</span><a href="#local-6989586621679101802"><span class="hs-identifier hs-var">aggregatedKind</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Configuration -&gt; Text -&gt; IO AggregatedKind
+</span><span class="hs-identifier hs-var">getAggregatedKind</span></span><span> </span><span class="annot"><span class="annottext">Configuration
+</span><a href="#local-6989586621679101767"><span class="hs-identifier hs-var">conf</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101797"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-174"></span><span>                </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AggregatedKind
+</span><a href="#local-6989586621679101802"><span class="hs-identifier hs-var">aggregatedKind</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-175"></span><span>                    </span><span class="annot"><span class="annottext">AggregatedKind
+</span><span class="hs-identifier hs-var">StatsAK</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text Aggregated -&gt; IO (Either Text Aggregated))
+-&gt; Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated -&gt; Either Text Aggregated
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Measurable -&gt; Aggregated
+</span><span class="hs-identifier hs-var">singletonStats</span></span><span> </span><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101798"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>                    </span><span class="annot"><span class="hs-identifier hs-type">EwmaAK</span></span><span> </span><span id="local-6989586621679101805"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679101805"><span class="hs-identifier hs-var">aEWMA</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-177"></span><span>                        </span><span class="annot"><span class="annottext">Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text Aggregated -&gt; IO (Either Text Aggregated))
+-&gt; Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EWMA -&gt; Aggregated
+</span><span class="hs-identifier hs-var">AggregatedEWMA</span></span><span> </span><span class="annot"><span class="annottext">(EWMA -&gt; Aggregated) -&gt; Either Text EWMA -&gt; Either Text Aggregated
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EWMA -&gt; Measurable -&gt; Either Text EWMA
+</span><span class="hs-identifier hs-var">ewma</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; EWMA
+</span><span class="hs-identifier hs-var">EmptyEWMA</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679101805"><span class="hs-identifier hs-var">aEWMA</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101798"><span class="hs-identifier hs-var">value</span></a></span><span>
+</span><span id="line-178"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679101809"><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101809"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text Aggregated -&gt; IO (Either Text Aggregated))
+-&gt; Either Text Aggregated -&gt; IO (Either Text Aggregated)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Measurable -&gt; Aggregated -&gt; Word64 -&gt; Either Text Aggregated
+</span><span class="hs-identifier hs-var">updateAggregation</span></span><span> </span><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101798"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101809"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><span class="hs-identifier hs-var">utc2ns</span></span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; Word64) -&gt; UTCTime -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta -&gt; UTCTime
+</span><span class="hs-identifier hs-var">tstamp</span></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101799"><span class="hs-identifier hs-var">lme</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span>    </span><span id="local-6989586621679101567"><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-type">update</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span class="annot"><a href="#local-6989586621679101567"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-181"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span>
+</span><span id="line-182"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace.Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101567"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-183"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-184"></span><span>    </span><span id="local-6989586621679101793"><span class="annot"><span class="annottext">update :: forall a.
+LogObject a
+-&gt; AggregationMap
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101793"><span class="hs-identifier hs-var hs-var">update</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101841"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101841"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101842"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101842"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogValue</span></span><span> </span><span id="local-6989586621679101844"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101844"><span class="hs-identifier hs-var">iname</span></a></span></span><span> </span><span id="local-6989586621679101845"><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101845"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101846"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101846"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span id="local-6989586621679101847"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101847"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-185"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101852"><span class="annot"><span class="annottext">fullname :: Text
+</span><a href="#local-6989586621679101852"><span class="hs-identifier hs-var hs-var">fullname</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101841"><span class="hs-identifier hs-var">loname</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101844"><span class="hs-identifier hs-var">iname</span></a></span><span>
+</span><span id="line-186"></span><span>        </span><span id="local-6989586621679101853"><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101853"><span class="hs-identifier hs-var">eitherAggregated</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; Measurable
+-&gt; LOMeta
+-&gt; AggregationMap
+-&gt; IO (Either Text Aggregated)
+</span><a href="#local-6989586621679101796"><span class="hs-identifier hs-var">createNupdate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101852"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101845"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101842"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101846"><span class="hs-identifier hs-var">agmap</span></a></span><span>
+</span><span id="line-187"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101853"><span class="hs-identifier hs-var">eitherAggregated</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-188"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679101854"><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101854"><span class="hs-identifier hs-var">aggregated</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-189"></span><span>                </span><span class="annot"><span class="annottext">Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+forall a.
+Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+</span><a href="#local-6989586621679101794"><span class="hs-identifier hs-var">sendAggregated</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101847"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101852"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LOMeta -&gt; Severity
+</span><span class="hs-identifier hs-var">severity</span></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101842"><span class="hs-identifier hs-var">lme</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101844"><span class="hs-identifier hs-var">iname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101854"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101857"><span class="annot"><span class="annottext">updatedMap :: AggregationMap
+</span><a href="#local-6989586621679101857"><span class="hs-identifier hs-var hs-var">updatedMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Text -&gt; AggregationMap -&gt; AggregationMap
+forall k v.
+(Eq k, Hashable k) =&gt;
+(Maybe v -&gt; Maybe v) -&gt; k -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.alter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated -&gt; Maybe Aggregated
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Aggregated -&gt; Maybe Aggregated) -&gt; Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101854"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101852"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101846"><span class="hs-identifier hs-var">agmap</span></a></span><span>
+</span><span id="line-191"></span><span>                </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101857"><span class="hs-identifier hs-var">updatedMap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679101860"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101860"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-193"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101862"><span class="annot"><span class="annottext">trace' :: Trace IO a
+</span><a href="#local-6989586621679101862"><span class="hs-identifier hs-var hs-var">trace'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Trace IO a -&gt; Trace IO a
+forall (m :: * -&gt; *) a. Text -&gt; Trace m a -&gt; Trace m a
+</span><span class="hs-identifier hs-var">Trace.appendName</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;update&quot;</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101847"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-194"></span><span>                </span><span class="annot"><span class="annottext">Trace IO a -&gt; (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+Trace m a -&gt; (LOMeta, LOContent a) -&gt; m ()
+</span><span class="hs-identifier hs-var">Trace.traceNamedObject</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101862"><span class="hs-identifier hs-var">trace'</span></a></span><span> </span><span class="annot"><span class="annottext">((LOMeta, LOContent a) -&gt; IO ())
+-&gt; IO (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span>
+</span><span id="line-195"></span><span>                    </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LOMeta -&gt; LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO LOMeta -&gt; IO (LOContent a -&gt; (LOMeta, LOContent a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO LOMeta -&gt; IO LOMeta
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Severity -&gt; PrivacyAnnotation -&gt; IO LOMeta
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Severity -&gt; PrivacyAnnotation -&gt; m LOMeta
+</span><span class="hs-identifier hs-var">mkLOMeta</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">Warning</span></span><span> </span><span class="annot"><span class="annottext">PrivacyAnnotation
+</span><span class="hs-identifier hs-var">Public</span></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>                        </span><span class="annot"><span class="annottext">IO (LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO (LOContent a) -&gt; IO (LOMeta, LOContent a)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LOContent a -&gt; IO (LOContent a)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; LOContent a
+forall a. Text -&gt; LOContent a
+</span><span class="hs-identifier hs-var">LogError</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101860"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span>                </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101846"><span class="hs-identifier hs-var">agmap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101869"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101869"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101870"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101870"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ObserveDiff</span></span><span> </span><span id="local-6989586621679101872"><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101872"><span class="hs-identifier hs-var">counterState</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101873"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101873"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span id="local-6989586621679101874"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101874"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-200"></span><span>        </span><span class="annot"><span class="annottext">[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CounterState -&gt; [Counter]
+</span><span class="hs-identifier hs-var">csCounters</span></span><span> </span><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101872"><span class="hs-identifier hs-var">counterState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101870"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101869"><span class="hs-identifier hs-var">loname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;diff&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101873"><span class="hs-identifier hs-var">agmap</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101874"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101877"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101877"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101878"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101878"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ObserveOpen</span></span><span> </span><span id="local-6989586621679101880"><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101880"><span class="hs-identifier hs-var">counterState</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101881"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101881"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span id="local-6989586621679101882"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101882"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-202"></span><span>        </span><span class="annot"><span class="annottext">[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CounterState -&gt; [Counter]
+</span><span class="hs-identifier hs-var">csCounters</span></span><span> </span><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101880"><span class="hs-identifier hs-var">counterState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101878"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101877"><span class="hs-identifier hs-var">loname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;open&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101881"><span class="hs-identifier hs-var">agmap</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101882"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101883"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101883"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101884"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101884"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ObserveClose</span></span><span> </span><span id="local-6989586621679101886"><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101886"><span class="hs-identifier hs-var">counterState</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101887"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101887"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span id="local-6989586621679101888"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101888"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-204"></span><span>        </span><span class="annot"><span class="annottext">[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CounterState -&gt; [Counter]
+</span><span class="hs-identifier hs-var">csCounters</span></span><span> </span><span class="annot"><span class="annottext">CounterState
+</span><a href="#local-6989586621679101886"><span class="hs-identifier hs-var">counterState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101884"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101883"><span class="hs-identifier hs-var">loname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;close&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101887"><span class="hs-identifier hs-var">agmap</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101888"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogObject</span></span><span> </span><span id="local-6989586621679101889"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101889"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101890"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101890"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LogMessage</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101892"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101892"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span id="local-6989586621679101893"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101893"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-207"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101896"><span class="annot"><span class="annottext">iname :: Text
+</span><a href="#local-6989586621679101896"><span class="hs-identifier hs-var hs-var">iname</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; String -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Severity -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LOMeta -&gt; Severity
+</span><span class="hs-identifier hs-var">severity</span></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101890"><span class="hs-identifier hs-var">lme</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101901"><span class="annot"><span class="annottext">fullname :: Text
+</span><a href="#local-6989586621679101901"><span class="hs-identifier hs-var hs-var">fullname</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101889"><span class="hs-identifier hs-var">loname</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101896"><span class="hs-identifier hs-var">iname</span></a></span><span>
+</span><span id="line-209"></span><span>        </span><span id="local-6989586621679101902"><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101902"><span class="hs-identifier hs-var">eitherAggregated</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; Measurable
+-&gt; LOMeta
+-&gt; AggregationMap
+-&gt; IO (Either Text Aggregated)
+</span><a href="#local-6989586621679101796"><span class="hs-identifier hs-var">createNupdate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101901"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Measurable
+</span><span class="hs-identifier hs-var">PureI</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101890"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101892"><span class="hs-identifier hs-var">agmap</span></a></span><span>
+</span><span id="line-210"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101902"><span class="hs-identifier hs-var">eitherAggregated</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-211"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679101904"><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101904"><span class="hs-identifier hs-var">aggregated</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-212"></span><span>                </span><span class="annot"><span class="annottext">Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+forall a.
+Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+</span><a href="#local-6989586621679101794"><span class="hs-identifier hs-var">sendAggregated</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101893"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101901"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LOMeta -&gt; Severity
+</span><span class="hs-identifier hs-var">severity</span></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101890"><span class="hs-identifier hs-var">lme</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101896"><span class="hs-identifier hs-var">iname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101904"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-213"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101907"><span class="annot"><span class="annottext">updatedMap :: AggregationMap
+</span><a href="#local-6989586621679101907"><span class="hs-identifier hs-var hs-var">updatedMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Text -&gt; AggregationMap -&gt; AggregationMap
+forall k v.
+(Eq k, Hashable k) =&gt;
+(Maybe v -&gt; Maybe v) -&gt; k -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.alter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated -&gt; Maybe Aggregated
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Aggregated -&gt; Maybe Aggregated) -&gt; Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101904"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101901"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101892"><span class="hs-identifier hs-var">agmap</span></a></span><span>
+</span><span id="line-214"></span><span>                </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101907"><span class="hs-identifier hs-var">updatedMap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679101908"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101908"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-216"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101910"><span class="annot"><span class="annottext">trace' :: Trace IO a
+</span><a href="#local-6989586621679101910"><span class="hs-identifier hs-var hs-var">trace'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Trace IO a -&gt; Trace IO a
+forall (m :: * -&gt; *) a. Text -&gt; Trace m a -&gt; Trace m a
+</span><span class="hs-identifier hs-var">Trace.appendName</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;update&quot;</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101893"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-217"></span><span>                </span><span class="annot"><span class="annottext">Trace IO a -&gt; (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+Trace m a -&gt; (LOMeta, LOContent a) -&gt; m ()
+</span><span class="hs-identifier hs-var">Trace.traceNamedObject</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101910"><span class="hs-identifier hs-var">trace'</span></a></span><span> </span><span class="annot"><span class="annottext">((LOMeta, LOContent a) -&gt; IO ())
+-&gt; IO (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span>
+</span><span id="line-218"></span><span>                    </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LOMeta -&gt; LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO LOMeta -&gt; IO (LOContent a -&gt; (LOMeta, LOContent a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO LOMeta -&gt; IO LOMeta
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Severity -&gt; PrivacyAnnotation -&gt; IO LOMeta
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Severity -&gt; PrivacyAnnotation -&gt; m LOMeta
+</span><span class="hs-identifier hs-var">mkLOMeta</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">Warning</span></span><span> </span><span class="annot"><span class="annottext">PrivacyAnnotation
+</span><span class="hs-identifier hs-var">Public</span></span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>                        </span><span class="annot"><span class="annottext">IO (LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO (LOContent a) -&gt; IO (LOMeta, LOContent a)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LOContent a -&gt; IO (LOContent a)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; LOContent a
+forall a. Text -&gt; LOContent a
+</span><span class="hs-identifier hs-var">LogError</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101908"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>                </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101892"><span class="hs-identifier hs-var">agmap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-comment">-- everything else</span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><a href="#local-6989586621679101793"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="annot"><span class="annottext">LogObject a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101911"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101911"><span class="hs-identifier hs-var">agmap</span></a></span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101911"><span class="hs-identifier hs-var">agmap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621679101602"><span class="annot"><a href="#local-6989586621679101875"><span class="hs-identifier hs-type">updateCounters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Counter</span></span><span class="hs-special">]</span><span>
+</span><span id="line-226"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LOMeta</span></span><span>
+</span><span id="line-227"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">LoggerName</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier hs-type">LoggerName</span></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span>
+</span><span id="line-229"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-230"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace.Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101602"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-231"></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.BM.Backend.Aggregation.html#AggregationMap"><span class="hs-identifier hs-type">AggregationMap</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-232"></span><span>    </span><span id="local-6989586621679101875"><span class="annot"><span class="annottext">updateCounters :: forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var hs-var">updateCounters</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">(Text, Text)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679101923"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101923"><span class="hs-identifier hs-var">aggrMap</span></a></span></span><span> </span><span id="local-6989586621679101924"><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101924"><span class="hs-identifier hs-var">aggs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AggregationMap, [(Text, Aggregated)])
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101923"><span class="hs-identifier hs-var">aggrMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101924"><span class="hs-identifier hs-var">aggs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span>    </span><span class="annot"><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101925"><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679101925"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679101926"><span class="annot"><span class="annottext">[Counter]
+</span><a href="#local-6989586621679101926"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101927"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101927"><span class="hs-identifier hs-var">lme</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679101928"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101928"><span class="hs-identifier hs-var">logname</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679101929"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101929"><span class="hs-identifier hs-var">msgname</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679101930"><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101930"><span class="hs-identifier hs-var">aggrMap</span></a></span></span><span> </span><span id="local-6989586621679101931"><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101931"><span class="hs-identifier hs-var">aggs</span></a></span></span><span> </span><span id="local-6989586621679101932"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101932"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-234"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101933"><span class="annot"><span class="annottext">name :: Text
+</span><a href="#local-6989586621679101933"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Counter -&gt; Text
+</span><span class="hs-identifier hs-var">cName</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679101925"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-235"></span><span>            </span><span id="local-6989586621679101941"><span class="annot"><span class="annottext">subname :: Text
+</span><a href="#local-6989586621679101941"><span class="hs-identifier hs-var hs-var">subname</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101929"><span class="hs-identifier hs-var">msgname</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Counter -&gt; Text
+</span><span class="hs-identifier hs-var">nameCounter</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679101925"><span class="hs-identifier hs-var">counter</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101933"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-236"></span><span>            </span><span id="local-6989586621679101945"><span class="annot"><span class="annottext">fullname :: Text
+</span><a href="#local-6989586621679101945"><span class="hs-identifier hs-var hs-var">fullname</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101928"><span class="hs-identifier hs-var">logname</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101941"><span class="hs-identifier hs-var">subname</span></a></span><span>
+</span><span id="line-237"></span><span>            </span><span id="local-6989586621679101946"><span class="annot"><span class="annottext">value :: Measurable
+</span><a href="#local-6989586621679101946"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Counter -&gt; Measurable
+</span><span class="hs-identifier hs-var">cValue</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679101925"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-238"></span><span>        </span><span id="local-6989586621679101948"><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101948"><span class="hs-identifier hs-var">eitherAggregated</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; Measurable
+-&gt; LOMeta
+-&gt; AggregationMap
+-&gt; IO (Either Text Aggregated)
+</span><a href="#local-6989586621679101796"><span class="hs-identifier hs-var">createNupdate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101945"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="annot"><span class="annottext">Measurable
+</span><a href="#local-6989586621679101946"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101927"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101930"><span class="hs-identifier hs-var">aggrMap</span></a></span><span>
+</span><span id="line-239"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either Text Aggregated
+</span><a href="#local-6989586621679101948"><span class="hs-identifier hs-var">eitherAggregated</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-240"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679101949"><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101949"><span class="hs-identifier hs-var">aggregated</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-241"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101950"><span class="annot"><span class="annottext">namedAggregated :: (Text, Aggregated)
+</span><a href="#local-6989586621679101950"><span class="hs-identifier hs-var hs-var">namedAggregated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101941"><span class="hs-identifier hs-var">subname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101949"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>                    </span><span id="local-6989586621679101953"><span class="annot"><span class="annottext">updatedMap :: AggregationMap
+</span><a href="#local-6989586621679101953"><span class="hs-identifier hs-var hs-var">updatedMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Text -&gt; AggregationMap -&gt; AggregationMap
+forall k v.
+(Eq k, Hashable k) =&gt;
+(Maybe v -&gt; Maybe v) -&gt; k -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.alter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated)
+-&gt; Maybe Aggregated -&gt; Maybe Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated -&gt; Maybe Aggregated
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Aggregated -&gt; Maybe Aggregated) -&gt; Aggregated -&gt; Maybe Aggregated
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Aggregated
+</span><a href="#local-6989586621679101949"><span class="hs-identifier hs-var">aggregated</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101945"><span class="hs-identifier hs-var">fullname</span></a></span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101930"><span class="hs-identifier hs-var">aggrMap</span></a></span><span>
+</span><span id="line-243"></span><span>                </span><span class="annot"><span class="annottext">[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="annot"><span class="annottext">[Counter]
+</span><a href="#local-6989586621679101926"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101927"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101928"><span class="hs-identifier hs-var">logname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101929"><span class="hs-identifier hs-var">msgname</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101953"><span class="hs-identifier hs-var">updatedMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text, Aggregated)
+</span><a href="#local-6989586621679101950"><span class="hs-identifier hs-var">namedAggregated</span></a></span><span> </span><span class="annot"><span class="annottext">(Text, Aggregated) -&gt; [(Text, Aggregated)] -&gt; [(Text, Aggregated)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101931"><span class="hs-identifier hs-var">aggs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101932"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-244"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679101954"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101954"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-245"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679101956"><span class="annot"><span class="annottext">trace' :: Trace IO a
+</span><a href="#local-6989586621679101956"><span class="hs-identifier hs-var hs-var">trace'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Trace IO a -&gt; Trace IO a
+forall (m :: * -&gt; *) a. Text -&gt; Trace m a -&gt; Trace m a
+</span><span class="hs-identifier hs-var">Trace.appendName</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;updateCounters&quot;</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101932"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-246"></span><span>                </span><span class="annot"><span class="annottext">Trace IO a -&gt; (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+Trace m a -&gt; (LOMeta, LOContent a) -&gt; m ()
+</span><span class="hs-identifier hs-var">Trace.traceNamedObject</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101956"><span class="hs-identifier hs-var">trace'</span></a></span><span> </span><span class="annot"><span class="annottext">((LOMeta, LOContent a) -&gt; IO ())
+-&gt; IO (LOMeta, LOContent a) -&gt; IO ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span>
+</span><span id="line-247"></span><span>                    </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(LOMeta -&gt; LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO LOMeta -&gt; IO (LOContent a -&gt; (LOMeta, LOContent a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO LOMeta -&gt; IO LOMeta
+forall a. IO a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Severity -&gt; PrivacyAnnotation -&gt; IO LOMeta
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Severity -&gt; PrivacyAnnotation -&gt; m LOMeta
+</span><span class="hs-identifier hs-var">mkLOMeta</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">Warning</span></span><span> </span><span class="annot"><span class="annottext">PrivacyAnnotation
+</span><span class="hs-identifier hs-var">Public</span></span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>                        </span><span class="annot"><span class="annottext">IO (LOContent a -&gt; (LOMeta, LOContent a))
+-&gt; IO (LOContent a) -&gt; IO (LOMeta, LOContent a)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">LOContent a -&gt; IO (LOContent a)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; LOContent a
+forall a. Text -&gt; LOContent a
+</span><span class="hs-identifier hs-var">LogError</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101954"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>                </span><span class="annot"><span class="annottext">[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+forall a.
+[Counter]
+-&gt; LOMeta
+-&gt; (Text, Text)
+-&gt; AggregationMap
+-&gt; [(Text, Aggregated)]
+-&gt; Trace IO a
+-&gt; IO (AggregationMap, [(Text, Aggregated)])
+</span><a href="#local-6989586621679101875"><span class="hs-identifier hs-var">updateCounters</span></a></span><span> </span><span class="annot"><span class="annottext">[Counter]
+</span><a href="#local-6989586621679101926"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101927"><span class="hs-identifier hs-var">lme</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101928"><span class="hs-identifier hs-var">logname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101929"><span class="hs-identifier hs-var">msgname</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AggregationMap
+</span><a href="#local-6989586621679101930"><span class="hs-identifier hs-var">aggrMap</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101931"><span class="hs-identifier hs-var">aggs</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101932"><span class="hs-identifier hs-var">trace</span></a></span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span>    </span><span id="local-6989586621679101569"><span class="annot"><a href="#local-6989586621679101794"><span class="hs-identifier hs-type">sendAggregated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace.Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679101569"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Severity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aggregated</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-252"></span><span>    </span><span id="local-6989586621679101794"><span class="annot"><span class="annottext">sendAggregated :: forall a.
+Trace IO a -&gt; Text -&gt; Severity -&gt; [(Text, Aggregated)] -&gt; IO ()
+</span><a href="#local-6989586621679101794"><span class="hs-identifier hs-var hs-var">sendAggregated</span></a></span></span><span> </span><span id="local-6989586621679101962"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101962"><span class="hs-identifier hs-var">_trace</span></a></span></span><span> </span><span id="local-6989586621679101963"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101963"><span class="hs-identifier hs-var">_loname</span></a></span></span><span> </span><span id="local-6989586621679101964"><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679101964"><span class="hs-identifier hs-var">_sev</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-253"></span><span>    </span><span class="annot"><a href="#local-6989586621679101794"><span class="hs-identifier hs-var">sendAggregated</span></a></span><span> </span><span id="local-6989586621679101965"><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101965"><span class="hs-identifier hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679101966"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101966"><span class="hs-identifier hs-var">loname</span></a></span></span><span> </span><span id="local-6989586621679101967"><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679101967"><span class="hs-identifier hs-var">sev</span></a></span></span><span> </span><span id="local-6989586621679101968"><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101968"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-254"></span><span>        </span><span id="local-6989586621679101969"><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101969"><span class="hs-identifier hs-var">meta</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Severity -&gt; PrivacyAnnotation -&gt; IO LOMeta
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Severity -&gt; PrivacyAnnotation -&gt; m LOMeta
+</span><span class="hs-identifier hs-var">mkLOMeta</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679101967"><span class="hs-identifier hs-var">sev</span></a></span><span> </span><span class="annot"><span class="annottext">PrivacyAnnotation
+</span><span class="hs-identifier hs-var">Public</span></span><span>
+</span><span id="line-255"></span><span>        </span><span class="annot"><span class="annottext">Trace IO a -&gt; (Text, LogObject a) -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><a href="#local-6989586621679101965"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679101966"><span class="hs-identifier hs-var">loname</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LOMeta -&gt; LOContent a -&gt; LogObject a
+forall a. Text -&gt; LOMeta -&gt; LOContent a -&gt; LogObject a
+</span><span class="hs-identifier hs-var">LogObject</span></span><span> </span><span class="annot"><span class="annottext">Text
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">LOMeta
+</span><a href="#local-6989586621679101969"><span class="hs-identifier hs-var">meta</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Text, Aggregated)] -&gt; LOContent a
+forall a. [(Text, Aggregated)] -&gt; LOContent a
+</span><span class="hs-identifier hs-var">AggregatedMessage</span></span><span> </span><span class="annot"><span class="annottext">[(Text, Aggregated)]
+</span><a href="#local-6989586621679101968"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-258"></span></pre></body></html>

@@ -1,0 +1,950 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PatternGuards #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span class="hs-cpp">
+
+#include &quot;lens-common.h&quot;
+</span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Module      :  Control.Lens.Internal.Deque</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Copyright   :  (C) 2012-16 Edward Kmett</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- Stability   :  experimental</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- Portability :  non-portable</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- This module is designed to be imported qualified.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Lens.Internal.Deque</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier">Deque</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier">size</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier">fromList</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#null"><span class="hs-identifier">null</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#singleton"><span class="hs-identifier">singleton</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Cons.html"><span class="hs-identifier">Control.Lens.Cons</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Fold.html"><span class="hs-identifier">Control.Lens.Fold</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Indexed.html"><span class="hs-identifier">Control.Lens.Indexed</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Indexed.html#%3C.%3E"><span class="hs-operator">(&lt;.&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Prelude.html"><span class="hs-identifier">Control.Lens.Internal.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier">null</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Iso.html"><span class="hs-identifier">Control.Lens.Iso</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Lens.html"><span class="hs-identifier">Control.Lens.Lens</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Lens.Prism.html"><span class="hs-identifier">Control.Lens.Prism</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier">toList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Bind</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Plus</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Data.Functor.Reverse.html"><span class="hs-identifier">Data.Functor.Reverse</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- &gt;&gt;&gt; import Control.Applicative (empty)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | A Banker's deque based on Chris Okasaki's \&quot;Purely Functional Data Structures\&quot;</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="Deque"><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-var">Deque</span></a></span></span><span> </span><span id="local-6989586621679368726"><span class="annot"><a href="#local-6989586621679368726"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BD"><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679368726"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679368726"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679368991"><span id="local-6989586621679369001"><span id="local-6989586621679369005"><span class="annot"><span class="annottext">Int -&gt; Deque a -&gt; ShowS
+[Deque a] -&gt; ShowS
+Deque a -&gt; String
+(Int -&gt; Deque a -&gt; ShowS)
+-&gt; (Deque a -&gt; String) -&gt; ([Deque a] -&gt; ShowS) -&gt; Show (Deque a)
+forall a. Show a =&gt; Int -&gt; Deque a -&gt; ShowS
+forall a. Show a =&gt; [Deque a] -&gt; ShowS
+forall a. Show a =&gt; Deque a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Deque a -&gt; ShowS
+showsPrec :: Int -&gt; Deque a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Deque a -&gt; String
+show :: Deque a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Deque a] -&gt; ShowS
+showList :: [Deque a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | /O(1)/. Determine if a 'Deque' is 'empty'.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- &gt;&gt;&gt; Control.Lens.Internal.Deque.null empty</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- True</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- &gt;&gt;&gt; Control.Lens.Internal.Deque.null (singleton 1)</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- False</span><span>
+</span><span id="line-57"></span><span id="local-6989586621679368720"><span class="annot"><a href="Control.Lens.Internal.Deque.html#null"><span class="hs-identifier hs-type">null</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368720"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-58"></span><span id="null"><span class="annot"><span class="annottext">null :: forall a. Deque a -&gt; Bool
+</span><a href="Control.Lens.Internal.Deque.html#null"><span class="hs-identifier hs-var hs-var">null</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369014"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369014"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679369015"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369015"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369014"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369015"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-59"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#null"><span class="hs-pragma hs-type">null</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | /O(1)/. Generate a singleton 'Deque'</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- &gt;&gt;&gt; singleton 1</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- BD 1 [1] 0 []</span><span>
+</span><span id="line-65"></span><span id="local-6989586621679368724"><span class="annot"><a href="Control.Lens.Internal.Deque.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679368724"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368724"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-66"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: forall a. a -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span id="local-6989586621679369017"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369017"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369017"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#singleton"><span class="hs-pragma hs-type">singleton</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | /O(1)/. Calculate the size of a 'Deque'</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- &gt;&gt;&gt; size (fromList [1,4,6])</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- 3</span><span>
+</span><span id="line-73"></span><span id="local-6989586621679368728"><span class="annot"><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-type">size</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368728"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span><span>
+</span><span id="line-74"></span><span id="size"><span class="annot"><span class="annottext">size :: forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369019"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369019"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679369020"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369020"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369019"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369020"><span class="hs-identifier hs-var">lr</span></a></span><span>
+</span><span id="line-75"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-pragma hs-type">size</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | /O(n)/ amortized. Construct a 'Deque' from a list of values.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- &gt;&gt;&gt; fromList [1,2]</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- BD 1 [1] 1 [2]</span><span>
+</span><span id="line-81"></span><span id="local-6989586621679368730"><span class="annot"><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-type">fromList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679368730"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368730"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-82"></span><span id="fromList"><span class="annot"><span class="annottext">fromList :: forall a. [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-var hs-var">fromList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Deque a -&gt; Deque a) -&gt; Deque a -&gt; [a] -&gt; Deque a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque a -&gt; Deque a
+forall s a. Cons s s a a =&gt; a -&gt; s -&gt; s
+</span><a href="Control.Lens.Cons.html#cons"><span class="hs-identifier hs-var">cons</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-83"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-pragma hs-type">fromList</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368744"><span id="local-6989586621679369032"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368744"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368744"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679369040"><span class="annot"><span class="annottext">== :: Deque a -&gt; Deque a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">(==)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">(==)</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a] -&gt; Bool)
+-&gt; (Deque a -&gt; [a]) -&gt; Deque a -&gt; Deque a -&gt; Bool
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">==</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368752"><span id="local-6989586621679369048"><span id="local-6989586621679369052"><span id="local-6989586621679369055"><span id="local-6989586621679369058"><span id="local-6989586621679369061"><span id="local-6989586621679369064"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368752"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368752"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679369071"><span class="annot"><span class="annottext">compare :: Deque a -&gt; Deque a -&gt; Ordering
+</span><a href="#local-6989586621679369071"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a] -&gt; Ordering)
+-&gt; (Deque a -&gt; [a]) -&gt; Deque a -&gt; Deque a -&gt; Ordering
+forall b c a. (b -&gt; b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#on"><span class="hs-operator hs-var">`on`</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#compare"><span class="hs-pragma hs-type">compare</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369075"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679369082"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Deque a -&gt; Deque b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679369083"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679369083"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369084"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369084"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369085"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369085"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369086"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369086"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369087"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369087"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369084"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; [a] -&gt; [b]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679369083"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369085"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369086"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; [a] -&gt; [b]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679369083"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369087"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-pragma hs-type">fmap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FunctorWithIndex</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679369097"><span class="annot"><span class="annottext">imap :: forall a b. (Int -&gt; a -&gt; b) -&gt; Deque a -&gt; Deque b
+</span><a href="#local-6989586621679369097"><span class="hs-identifier hs-var hs-var hs-var hs-var">imap</span></a></span></span><span> </span><span id="local-6989586621679369099"><span class="annot"><span class="annottext">Int -&gt; a -&gt; b
+</span><a href="#local-6989586621679369099"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369100"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369100"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369101"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369101"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369102"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369102"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369103"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369103"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369100"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; b) -&gt; [a] -&gt; [b]
+forall a b. (Int -&gt; a -&gt; b) -&gt; [a] -&gt; [b]
+forall i (f :: * -&gt; *) a b.
+FunctorWithIndex i f =&gt;
+(i -&gt; a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">imap</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; b
+</span><a href="#local-6989586621679369099"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369101"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369102"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; b) -&gt; [a] -&gt; [b]
+forall a b. (Int -&gt; a -&gt; b) -&gt; [a] -&gt; [b]
+forall i (f :: * -&gt; *) a b.
+FunctorWithIndex i f =&gt;
+(i -&gt; a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">imap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679369104"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369104"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; b
+</span><a href="#local-6989586621679369099"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369105"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369104"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369103"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679369105"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679369105"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369100"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369102"><span class="hs-identifier hs-var">lr</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369111"><span id="local-6989586621679369115"><span id="local-6989586621679369118"><span class="annot"><span class="hs-identifier hs-type">Apply</span></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679369125"><span class="annot"><span class="annottext">Deque (a -&gt; b)
+</span><a href="#local-6989586621679369125"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679369126"><span class="annot"><span class="annottext">&lt;.&gt; :: forall a b. Deque (a -&gt; b) -&gt; Deque a -&gt; Deque b
+</span><a href="#local-6989586621679369126"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;.&gt;</span></a></span></span><span> </span><span id="local-6989586621679369128"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369128"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[b] -&gt; Deque b
+forall a. [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Deque (a -&gt; b) -&gt; [a -&gt; b]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque (a -&gt; b)
+</span><a href="#local-6989586621679369125"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="annot"><span class="annottext">[a -&gt; b] -&gt; [a] -&gt; [b]
+forall a b. [a -&gt; b] -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Apply f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;.&gt;</span></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369128"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;.&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369134"><span id="local-6989586621679369138"><span id="local-6989586621679369141"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679369144"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Deque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span id="local-6989586621679369145"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369145"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369145"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-pragma hs-type">pure</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679369150"><span class="annot"><span class="annottext">Deque (a -&gt; b)
+</span><a href="#local-6989586621679369150"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679369151"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Deque (a -&gt; b) -&gt; Deque a -&gt; Deque b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span id="local-6989586621679369152"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369152"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[b] -&gt; Deque b
+forall a. [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Deque (a -&gt; b) -&gt; [a -&gt; b]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque (a -&gt; b)
+</span><a href="#local-6989586621679369150"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="annot"><span class="annottext">[a -&gt; b] -&gt; [a] -&gt; [b]
+forall a b. [a -&gt; b] -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369152"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;*&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369157"><span id="local-6989586621679369163"><span class="annot"><span class="hs-identifier hs-type">Alt</span></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679369174"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369174"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679369175"><span class="annot"><span class="annottext">&lt;!&gt; :: forall a. Deque a -&gt; Deque a -&gt; Deque a
+</span><a href="#local-6989586621679369175"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;!&gt;</span></a></span></span><span> </span><span id="local-6989586621679369177"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369177"><span class="hs-identifier hs-var">ys</span></a></span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369174"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369177"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Deque a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque a -&gt; Deque a
+forall s a. Cons s s a a =&gt; a -&gt; s -&gt; s
+</span><a href="Control.Lens.Cons.html#cons"><span class="hs-identifier hs-var">cons</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369177"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369174"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Deque a -&gt; a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; a -&gt; Deque a
+forall s a. Snoc s s a a =&gt; s -&gt; a -&gt; s
+</span><a href="Control.Lens.Cons.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369174"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369177"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;!&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plus</span></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621679369186"><span class="annot"><span class="annottext">zero :: forall a. Deque a
+</span><a href="#local-6989586621679369186"><span class="hs-identifier hs-var hs-var hs-var hs-var">zero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">zero</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369193"><span id="local-6989586621679369196"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679369199"><span class="annot"><span class="annottext">empty :: forall a. Deque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var hs-var hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-pragma hs-type">empty</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679369205"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369205"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679369206"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. Deque a -&gt; Deque a -&gt; Deque a
+</span><a href="#local-6989586621679369206"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;|&gt;</span></a></span></span><span> </span><span id="local-6989586621679369208"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369208"><span class="hs-identifier hs-var">ys</span></a></span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369205"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369208"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Deque a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque a -&gt; Deque a
+forall s a. Cons s s a a =&gt; a -&gt; s -&gt; s
+</span><a href="Control.Lens.Cons.html#cons"><span class="hs-identifier hs-var">cons</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369208"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369205"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Deque a -&gt; a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; a -&gt; Deque a
+forall s a. Snoc s s a a =&gt; s -&gt; a -&gt; s
+</span><a href="Control.Lens.Cons.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369205"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369208"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;|&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368818"><span class="annot"><a href="Control.Lens.Internal.Iso.html#Reversing"><span class="hs-identifier hs-type">Reversing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368818"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679369212"><span class="annot"><span class="annottext">reversing :: Deque a -&gt; Deque a
+</span><a href="#local-6989586621679369212"><span class="hs-identifier hs-var hs-var hs-var hs-var">reversing</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369214"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369214"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369215"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369215"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369216"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369216"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369217"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369217"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369216"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369217"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369214"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369215"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Iso.html#reversing"><span class="hs-pragma hs-type">reversing</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369222"><span class="annot"><span class="hs-identifier hs-type">Bind</span></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679369230"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369230"><span class="hs-identifier hs-var">ma</span></a></span></span><span> </span><span id="local-6989586621679369231"><span class="annot"><span class="annottext">&gt;&gt;- :: forall a b. Deque a -&gt; (a -&gt; Deque b) -&gt; Deque b
+</span><a href="#local-6989586621679369231"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;-</span></a></span></span><span> </span><span id="local-6989586621679369233"><span class="annot"><span class="annottext">a -&gt; Deque b
+</span><a href="#local-6989586621679369233"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[b] -&gt; Deque b
+forall a. [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369230"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; (a -&gt; [b]) -&gt; [b]
+forall a b. [a] -&gt; (a -&gt; [b]) -&gt; [b]
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Deque b -&gt; [b]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">(Deque b -&gt; [b]) -&gt; (a -&gt; Deque b) -&gt; a -&gt; [b]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque b
+</span><a href="#local-6989586621679369233"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;-</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369239"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679369245"><span class="annot"><span class="annottext">return :: forall a. a -&gt; Deque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque a
+forall a. a -&gt; Deque a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-pragma hs-type">return</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621679369249"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369249"><span class="hs-identifier hs-var">ma</span></a></span></span><span> </span><span id="local-6989586621679369250"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. Deque a -&gt; (a -&gt; Deque b) -&gt; Deque b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679369251"><span class="annot"><span class="annottext">a -&gt; Deque b
+</span><a href="#local-6989586621679369251"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[b] -&gt; Deque b
+forall a. [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Deque a -&gt; [a]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369249"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; (a -&gt; [b]) -&gt; [b]
+forall a b. [a] -&gt; (a -&gt; [b]) -&gt; [b]
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Deque b -&gt; [b]
+forall a. Deque a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">(Deque b -&gt; [b]) -&gt; (a -&gt; Deque b) -&gt; a -&gt; [b]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque b
+</span><a href="#local-6989586621679369251"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&gt;&gt;=</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#MonadPlus"><span class="hs-identifier hs-type">MonadPlus</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679369261"><span class="annot"><span class="annottext">mzero :: forall a. Deque a
+</span><a href="#local-6989586621679369261"><span class="hs-identifier hs-var hs-var hs-var hs-var">mzero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Deque a
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mzero"><span class="hs-pragma hs-type">mzero</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621679369264"><span class="annot"><span class="annottext">mplus :: forall a. Deque a -&gt; Deque a -&gt; Deque a
+</span><a href="#local-6989586621679369264"><span class="hs-identifier hs-var hs-var hs-var hs-var">mplus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Deque a -&gt; Deque a
+forall a. Deque a -&gt; Deque a -&gt; Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">(&lt;|&gt;)</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mplus"><span class="hs-pragma hs-type">mplus</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369267"><span id="local-6989586621679369273"><span id="local-6989586621679369278"><span id="local-6989586621679369281"><span id="local-6989586621679369284"><span id="local-6989586621679369287"><span id="local-6989586621679369290"><span id="local-6989586621679369293"><span id="local-6989586621679369296"><span id="local-6989586621679369299"><span id="local-6989586621679369302"><span id="local-6989586621679369305"><span id="local-6989586621679369310"><span id="local-6989586621679369315"><span id="local-6989586621679369320"><span id="local-6989586621679369325"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679369340"><span class="annot"><span class="annottext">foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Deque a -&gt; m
+</span><a href="#local-6989586621679369340"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldMap</span></a></span></span><span> </span><span id="local-6989586621679369342"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679369342"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679369343"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369343"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679369344"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369344"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; [a] -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; [a] -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679369342"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369343"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Dual m -&gt; m
+forall a. Dual a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.Internal.html#getDual"><span class="hs-identifier hs-var">getDual</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; Dual m) -&gt; [a] -&gt; Dual m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; [a] -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">foldMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m -&gt; Dual m
+forall a. a -&gt; Dual a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.Internal.html#Dual"><span class="hs-identifier hs-var">Dual</span></a></span><span> </span><span class="annot"><span class="annottext">(m -&gt; Dual m) -&gt; (a -&gt; m) -&gt; a -&gt; Dual m
+forall a b c (q :: * -&gt; * -&gt; *).
+Coercible c b =&gt;
+q b c -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall (p :: * -&gt; * -&gt; *) a b c (q :: * -&gt; * -&gt; *).
+(Profunctor p, Coercible c b) =&gt;
+q b c -&gt; p a b -&gt; p a c
+</span><span class="hs-operator hs-var">#.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679369342"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369344"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldMap"><span class="hs-pragma hs-type">foldMap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369352"><span id="local-6989586621679369358"><span id="local-6989586621679369361"><span id="local-6989586621679369364"><span id="local-6989586621679369367"><span class="annot"><span class="hs-identifier hs-type">FoldableWithIndex</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621679369380"><span class="annot"><span class="annottext">ifoldMap :: forall m a. Monoid m =&gt; (Int -&gt; a -&gt; m) -&gt; Deque a -&gt; m
+</span><a href="#local-6989586621679369380"><span class="hs-identifier hs-var hs-var hs-var hs-var">ifoldMap</span></a></span></span><span> </span><span id="local-6989586621679369382"><span class="annot"><span class="annottext">Int -&gt; a -&gt; m
+</span><a href="#local-6989586621679369382"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369383"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369383"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369384"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369384"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369385"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369385"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369386"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369386"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; m) -&gt; [a] -&gt; m
+forall m a. Monoid m =&gt; (Int -&gt; a -&gt; m) -&gt; [a] -&gt; m
+forall i (f :: * -&gt; *) m a.
+(FoldableWithIndex i f, Monoid m) =&gt;
+(i -&gt; a -&gt; m) -&gt; f a -&gt; m
+</span><span class="hs-identifier hs-var">ifoldMap</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; m
+</span><a href="#local-6989586621679369382"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369384"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">m -&gt; m -&gt; m
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Dual m -&gt; m
+forall a. Dual a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.Internal.html#getDual"><span class="hs-identifier hs-var">getDual</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; Dual m) -&gt; [a] -&gt; Dual m
+forall m a. Monoid m =&gt; (Int -&gt; a -&gt; m) -&gt; [a] -&gt; m
+forall i (f :: * -&gt; *) m a.
+(FoldableWithIndex i f, Monoid m) =&gt;
+(i -&gt; a -&gt; m) -&gt; f a -&gt; m
+</span><span class="hs-identifier hs-var">ifoldMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679369387"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369387"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m -&gt; Dual m
+forall a. a -&gt; Dual a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Semigroup.Internal.html#Dual"><span class="hs-identifier hs-var">Dual</span></a></span><span> </span><span class="annot"><span class="annottext">(m -&gt; Dual m) -&gt; (a -&gt; m) -&gt; a -&gt; Dual m
+forall a b c (q :: * -&gt; * -&gt; *).
+Coercible c b =&gt;
+q b c -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall (p :: * -&gt; * -&gt; *) a b c (q :: * -&gt; * -&gt; *).
+(Profunctor p, Coercible c b) =&gt;
+q b c -&gt; p a b -&gt; p a c
+</span><span class="hs-operator hs-var">#.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; m
+</span><a href="#local-6989586621679369382"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369388"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369387"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369386"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679369388"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679369388"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369383"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369385"><span class="hs-identifier hs-var">lr</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">ifoldMap</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679369396"><span id="local-6989586621679369402"><span id="local-6989586621679369407"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#Traversable"><span class="hs-identifier hs-type">Traversable</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679369427"><span class="annot"><span class="annottext">traverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Deque a -&gt; f (Deque b)
+</span><a href="#local-6989586621679369427"><span class="hs-identifier hs-var hs-var hs-var hs-var">traverse</span></a></span></span><span> </span><span id="local-6989586621679369429"><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679369429"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369430"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369430"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369431"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369431"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369432"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369432"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369433"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369433"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369430"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">([b] -&gt; Int -&gt; [b] -&gt; Deque b) -&gt; Int -&gt; [b] -&gt; [b] -&gt; Deque b
+forall (f :: * -&gt; *) a b. Functor f =&gt; f (a -&gt; b) -&gt; a -&gt; f b
+</span><a href="Control.Lens.Lens.html#%3F%3F"><span class="hs-operator hs-var">??</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369432"><span class="hs-identifier hs-var">lr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([b] -&gt; [b] -&gt; Deque b) -&gt; f [b] -&gt; f ([b] -&gt; Deque b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; f b) -&gt; [a] -&gt; f [b]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679369429"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369431"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">f ([b] -&gt; Deque b) -&gt; f [b] -&gt; f (Deque b)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Optical (-&gt;) (-&gt;) (Backwards f) [a] [b] a b
+-&gt; (a -&gt; f b) -&gt; [a] -&gt; f [b]
+forall (p :: * -&gt; * -&gt; *) (q :: * -&gt; * -&gt; *) (f :: * -&gt; *) s t a b.
+(Profunctor p, Profunctor q) =&gt;
+Optical p q (Backwards f) s t a b -&gt; Optical p q f s t a b
+</span><a href="Control.Lens.Fold.html#backwards"><span class="hs-identifier hs-var">backwards</span></a></span><span> </span><span class="annot"><span class="annottext">Optical (-&gt;) (-&gt;) (Backwards f) [a] [b] a b
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; f b
+</span><a href="#local-6989586621679369429"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369433"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-pragma hs-type">traverse</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TraversableWithIndex</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621679369457"><span class="annot"><span class="annottext">itraverse :: forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(Int -&gt; a -&gt; f b) -&gt; Deque a -&gt; f (Deque b)
+</span><a href="#local-6989586621679369457"><span class="hs-identifier hs-var hs-var hs-var hs-var">itraverse</span></a></span></span><span> </span><span id="local-6989586621679369459"><span class="annot"><span class="annottext">Int -&gt; a -&gt; f b
+</span><a href="#local-6989586621679369459"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369460"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369460"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369461"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369461"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369462"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369462"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369463"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369463"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679369464"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369464"><span class="hs-identifier hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679369465"><span class="annot"><span class="annottext">Reverse [] b
+</span><a href="#local-6989586621679369465"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369462"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369464"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369462"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Reverse [] b -&gt; [b]
+forall {k} (f :: k -&gt; *) (a :: k). Reverse f a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Data.Functor.Reverse.html#getReverse"><span class="hs-identifier hs-var">getReverse</span></a></span><span> </span><span class="annot"><span class="annottext">Reverse [] b
+</span><a href="#local-6989586621679369465"><span class="hs-identifier hs-var">r'</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([b] -&gt; Reverse [] b -&gt; Deque b)
+-&gt; f [b] -&gt; f (Reverse [] b -&gt; Deque b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; f b) -&gt; [a] -&gt; f [b]
+forall i (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(TraversableWithIndex i t, Applicative f) =&gt;
+(i -&gt; a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(Int -&gt; a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><span class="hs-identifier hs-var">itraverse</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; f b
+</span><a href="#local-6989586621679369459"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369461"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">f (Reverse [] b -&gt; Deque b) -&gt; f (Reverse [] b) -&gt; f (Deque b)
+forall a b. f (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; f b) -&gt; Reverse [] a -&gt; f (Reverse [] b)
+forall i (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(TraversableWithIndex i t, Applicative f) =&gt;
+(i -&gt; a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(Int -&gt; a -&gt; f b) -&gt; Reverse [] a -&gt; f (Reverse [] b)
+</span><span class="hs-identifier hs-var">itraverse</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679369467"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369467"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; f b
+</span><a href="#local-6989586621679369459"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369468"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369467"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a] -&gt; Reverse [] a
+forall {k} (f :: k -&gt; *) (a :: k). f a -&gt; Reverse f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Data.Functor.Reverse.html#Reverse"><span class="hs-identifier hs-var">Reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369463"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679369468"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679369468"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369460"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369462"><span class="hs-identifier hs-var">lr</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">itraverse</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368943"><span id="local-6989586621679369473"><span id="local-6989586621679369477"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368943"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-168"></span><span>  </span><span id="local-6989586621679369487"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369487"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679369488"><span class="annot"><span class="annottext">&lt;&gt; :: Deque a -&gt; Deque a -&gt; Deque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></a></span></span><span> </span><span id="local-6989586621679369489"><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369489"><span class="hs-identifier hs-var">ys</span></a></span></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369487"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; Int
+forall a. Deque a -&gt; Int
+</span><a href="Control.Lens.Internal.Deque.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369489"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Deque a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Deque a -&gt; Deque a
+forall s a. Cons s s a a =&gt; a -&gt; s -&gt; s
+</span><a href="Control.Lens.Cons.html#cons"><span class="hs-identifier hs-var">cons</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369489"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369487"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Deque a -&gt; a -&gt; Deque a) -&gt; Deque a -&gt; Deque a -&gt; Deque a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Deque a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a -&gt; a -&gt; Deque a
+forall s a. Snoc s s a a =&gt; s -&gt; a -&gt; s
+</span><a href="Control.Lens.Cons.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369487"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Deque a
+</span><a href="#local-6989586621679369489"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">&lt;&gt;</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368945"><span id="local-6989586621679369494"><span id="local-6989586621679369498"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368945"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679369501"><span class="annot"><span class="annottext">mempty :: Deque a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-pragma hs-type">mempty</span></a></span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#if !(MIN_VERSION_base(4,11,0))
+</span><span>  </span><span class="hs-identifier">mappend</span><span> </span><span class="hs-identifier">xs</span><span> </span><span class="hs-identifier">ys</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">size</span><span> </span><span class="hs-identifier">xs</span><span> </span><span class="hs-operator">&lt;</span><span> </span><span class="hs-identifier">size</span><span> </span><span class="hs-identifier">ys</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">foldr</span><span> </span><span class="hs-identifier">cons</span><span> </span><span class="hs-identifier">ys</span><span> </span><span class="hs-identifier">xs</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">otherwise</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">foldl</span><span> </span><span class="hs-identifier">snoc</span><span> </span><span class="hs-identifier">xs</span><span> </span><span class="hs-identifier">ys</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">mappend</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-183"></span><span class="annot"><span class="hs-comment">-- | Check that a 'Deque' satisfies the balance invariants and rebalance if not.</span></span><span>
+</span><span id="line-184"></span><span id="local-6989586621679369502"><span class="annot"><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-type">check</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679369502"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679369502"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679369502"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-185"></span><span id="check"><span class="annot"><span class="annottext">check :: forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-var hs-var">check</span></a></span></span><span> </span><span id="local-6989586621679369525"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369526"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369526"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369527"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369528"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369528"><span class="hs-identifier hs-var">r</span></a></span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679369531"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369531"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-identifier hs-var">div</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679369533"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369533"><span class="hs-identifier hs-var">f'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679369534"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369534"><span class="hs-identifier hs-var">f''</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; ([a], [a])
+forall a. Int -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#splitAt"><span class="hs-identifier hs-var">splitAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369531"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369526"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369531"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369533"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369531"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369528"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369534"><span class="hs-identifier hs-var">f''</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679369537"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369537"><span class="hs-identifier hs-var">j</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#div"><span class="hs-identifier hs-var">div</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679369538"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369538"><span class="hs-identifier hs-var">r'</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679369539"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369539"><span class="hs-identifier hs-var">r''</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; ([a], [a])
+forall a. Int -&gt; [a] -&gt; ([a], [a])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#splitAt"><span class="hs-identifier hs-var">splitAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369537"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369528"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369537"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369526"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369539"><span class="hs-identifier hs-var">r''</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369537"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369538"><span class="hs-identifier hs-var">r'</span></a></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-var">BD</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369525"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369526"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369527"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369528"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-189"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-pragma hs-type">check</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368734"><span id="local-6989586621679368735"><span class="annot"><a href="Control.Lens.Cons.html#Cons"><span class="hs-identifier hs-type">Cons</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368734"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368735"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679368734"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368735"><span class="hs-identifier hs-type">b</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-192"></span><span>  </span><span id="local-6989586621679369557"><span class="annot"><span class="annottext">_Cons :: Prism (Deque a) (Deque b) (a, Deque a) (b, Deque b)
+</span><a href="#local-6989586621679369557"><span class="hs-identifier hs-var hs-var hs-var hs-var">_Cons</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((b, Deque b) -&gt; Deque b)
+-&gt; (Deque a -&gt; Either (Deque b) (a, Deque a))
+-&gt; Prism (Deque a) (Deque b) (a, Deque a) (b, Deque b)
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="Control.Lens.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679369560"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679369560"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369561"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369561"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369562"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369562"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369563"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369563"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369564"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369564"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369561"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679369560"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; [b] -&gt; [b]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369562"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369563"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369564"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Deque a -&gt; Either (Deque b) (a, Deque a))
+ -&gt; Prism (Deque a) (Deque b) (a, Deque a) (b, Deque b))
+-&gt; (Deque a -&gt; Either (Deque b) (a, Deque a))
+-&gt; Prism (Deque a) (Deque b) (a, Deque a) (b, Deque b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369565"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369565"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369566"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369566"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369567"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369567"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369568"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369568"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369565"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369567"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Deque b -&gt; Either (Deque b) (a, Deque a)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">Deque b
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">(a, Deque a) -&gt; Either (Deque b) (a, Deque a)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((a, Deque a) -&gt; Either (Deque b) (a, Deque a))
+-&gt; (a, Deque a) -&gt; Either (Deque b) (a, Deque a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369566"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-196"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369568"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-197"></span><span>                  </span><span id="local-6989586621679369569"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369569"><span class="hs-identifier hs-var">y</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369569"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Deque a
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>                  </span><span class="hs-special">[</span><span class="hs-special">]</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; (a, Deque a)
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Control.Lens.Internal.Deque._Cons: Internal check failed&quot;</span></span><span>
+</span><span id="line-199"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679369571"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369571"><span class="hs-identifier hs-var">x</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679369572"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369572"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369571"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369565"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369572"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369567"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369568"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Cons.html#_Cons"><span class="hs-pragma hs-type">_Cons</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679368801"><span id="local-6989586621679368802"><span class="annot"><a href="Control.Lens.Cons.html#Snoc"><span class="hs-identifier hs-type">Snoc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368801"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#Deque"><span class="hs-identifier hs-type">Deque</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368802"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679368801"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679368802"><span class="hs-identifier hs-type">b</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-203"></span><span>  </span><span id="local-6989586621679369590"><span class="annot"><span class="annottext">_Snoc :: Prism (Deque a) (Deque b) (Deque a, a) (Deque b, b)
+</span><a href="#local-6989586621679369590"><span class="hs-identifier hs-var hs-var hs-var hs-var">_Snoc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Deque b, b) -&gt; Deque b)
+-&gt; (Deque a -&gt; Either (Deque b) (Deque a, a))
+-&gt; Prism (Deque a) (Deque b) (Deque a, a) (Deque b, b)
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="Control.Lens.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369592"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369592"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369593"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369593"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369594"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369594"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369595"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369595"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679369596"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679369596"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [b] -&gt; Int -&gt; [b] -&gt; Deque b
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369592"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369593"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369594"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679369596"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; [b] -&gt; [b]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679369595"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Deque a -&gt; Either (Deque b) (Deque a, a))
+ -&gt; Prism (Deque a) (Deque b) (Deque a, a) (Deque b, b))
+-&gt; (Deque a -&gt; Either (Deque b) (Deque a, a))
+-&gt; Prism (Deque a) (Deque b) (Deque a, a) (Deque b, b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Lens.Internal.Deque.html#BD"><span class="hs-identifier hs-type">BD</span></a></span><span> </span><span id="local-6989586621679369597"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369597"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span id="local-6989586621679369598"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369598"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679369599"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369599"><span class="hs-identifier hs-var">lr</span></a></span></span><span> </span><span id="local-6989586621679369600"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369600"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369597"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369599"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Deque b -&gt; Either (Deque b) (Deque a, a)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">Deque b
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">(Deque a, a) -&gt; Either (Deque b) (Deque a, a)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">((Deque a, a) -&gt; Either (Deque b) (Deque a, a))
+-&gt; (Deque a, a) -&gt; Either (Deque b) (Deque a, a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369600"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-207"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">]</span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369598"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-208"></span><span>                  </span><span id="local-6989586621679369601"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369601"><span class="hs-identifier hs-var">y</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Deque a
+forall a. Deque a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369601"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>                  </span><span class="hs-special">[</span><span class="hs-special">]</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Deque a, a)
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Control.Lens.Internal.Deque._Snoc: Internal check failed&quot;</span></span><span>
+</span><span id="line-210"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679369602"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369602"><span class="hs-identifier hs-var">x</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679369603"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369603"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+forall a. Int -&gt; [a] -&gt; Int -&gt; [a] -&gt; Deque a
+</span><a href="Control.Lens.Internal.Deque.html#check"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369597"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369598"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679369599"><span class="hs-identifier hs-var">lr</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679369603"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679369602"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Lens.Cons.html#_Snoc"><span class="hs-pragma hs-type">_Snoc</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-212"></span></pre></body></html>

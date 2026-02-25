@@ -1,0 +1,346 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Cardano.Benchmarking.Script.Selftest
+Description : Run self-tests using statically-defined data.
+
+The statically-defined data is the action list to execute, 'testScript'.
+It actually does use a protocol file taken in from IO.
+-}</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Script.Selftest</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.LedgerState.html#Env"><span class="hs-identifier">Env</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html"><span class="hs-identifier">Cardano.Benchmarking.LogTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier">EnvConsts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Action</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Aeson.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Script.Aeson.html#prettyPrint"><span class="hs-identifier">prettyPrint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Env</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Env</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#Env"><span class="hs-identifier">Env</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Env</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Env</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#Error"><span class="hs-identifier">Error</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#runActionMEnv"><span class="hs-identifier">runActionMEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#setBenchTracers"><span class="hs-identifier">setBenchTracers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Types</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Tracer.html"><span class="hs-identifier">Cardano.Benchmarking.Tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.Tracer.html#initNullTracers"><span class="hs-identifier">initNullTracers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Setup.SigningKey.html"><span class="hs-identifier">Cardano.TxGenerator.Setup.SigningKey</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Utils.html"><span class="hs-identifier">Cardano.TxGenerator.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Utils.html#mkTxIn"><span class="hs-identifier">mkTxIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier">readTVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html"><span class="hs-identifier">Data.Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#fromRight"><span class="hs-identifier">fromRight</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unwords"><span class="hs-identifier">unwords</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Paths_tx_generator.html"><span class="hs-identifier">Paths_tx_generator</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | 'runSelftest' is the interface to actually run the self-test.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- @iom@ is the IO manager from &quot;Ouroboros.Network.IOManager&quot;.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @outFile@ is the file to output to;</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Core.evalGenerator' returns a</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- transaction 'Streaming.Stream' that</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- 'Cardano.Benchmarking.Script.Core.submitInEra'</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- does 'show' and 'writeFile' on.</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Cardano.Benchmarking.Script.Selftest.html#runSelftest"><span class="hs-identifier hs-type">runSelftest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier hs-type">EnvConsts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#Error"><span class="hs-identifier hs-type">Env.Error</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span id="runSelftest"><span class="annot"><span class="annottext">runSelftest :: Env -&gt; EnvConsts -&gt; Maybe FilePath -&gt; IO (Either Error ())
+</span><a href="Cardano.Benchmarking.Script.Selftest.html#runSelftest"><span class="hs-identifier hs-var hs-var">runSelftest</span></a></span></span><span> </span><span id="local-6989586621679930263"><span class="annot"><span class="annottext">Env
+</span><a href="#local-6989586621679930263"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679930264"><span class="annot"><span class="annottext">envConsts :: EnvConsts
+</span><a href="#local-6989586621679930264"><span class="hs-identifier hs-var">envConsts</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Benchmarking.LogTypes.html#EnvConsts"><span class="hs-identifier hs-type">EnvConsts</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679930266"><span id="local-6989586621679930267"><span id="local-6989586621679930268"><span id="local-6989586621679930269"><span class="annot"><span class="annottext">Maybe NixServiceOptions
+TVar (Maybe BenchTracers)
+TVar (Maybe AsyncBenchmarkControl)
+IOManager
+envIOManager :: IOManager
+envThreads :: TVar (Maybe AsyncBenchmarkControl)
+envNixSvcOpts :: Maybe NixServiceOptions
+benchTracers :: TVar (Maybe BenchTracers)
+envIOManager :: EnvConsts -&gt; IOManager
+envThreads :: EnvConsts -&gt; TVar (Maybe AsyncBenchmarkControl)
+envNixSvcOpts :: EnvConsts -&gt; Maybe NixServiceOptions
+benchTracers :: EnvConsts -&gt; TVar (Maybe BenchTracers)
+</span><a href="#local-6989586621679930266"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span> </span><span class="hs-special">}</span><span> </span><span id="local-6989586621679930274"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679930274"><span class="hs-identifier hs-var">outFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679930275"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930275"><span class="hs-identifier hs-var">protocolFile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; IO FilePath
+</span><a href="Paths_tx_generator.html#getDataFileName"><span class="hs-identifier hs-var">getDataFileName</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;data/protocol-parameters.json&quot;</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679930277"><span class="annot"><span class="annottext">submitMode :: SubmitMode
+</span><a href="#local-6989586621679930277"><span class="hs-identifier hs-var hs-var">submitMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SubmitMode
+-&gt; (FilePath -&gt; SubmitMode) -&gt; Maybe FilePath -&gt; SubmitMode
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="Cardano.Benchmarking.Script.Types.html#DiscardTX"><span class="hs-identifier hs-var">DiscardTX</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; SubmitMode
+</span><a href="Cardano.Benchmarking.Script.Types.html#DumpToFile"><span class="hs-identifier hs-var">DumpToFile</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679930274"><span class="hs-identifier hs-var">outFile</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679930291"><span class="annot"><span class="annottext">fullScript :: ExceptT Error (RWST EnvConsts () Env IO) ()
+</span><a href="#local-6989586621679930291"><span class="hs-identifier hs-var hs-var">fullScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">BenchTracers -&gt; ExceptT Error (RWST EnvConsts () Env IO) ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setBenchTracers"><span class="hs-identifier hs-var">Env.setBenchTracers</span></a></span><span> </span><span class="annot"><span class="annottext">BenchTracers
+</span><a href="Cardano.Benchmarking.Tracer.html#initNullTracers"><span class="hs-identifier hs-var">initNullTracers</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">[Action]
+-&gt; (Action -&gt; ExceptT Error (RWST EnvConsts () Env IO) ())
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; SubmitMode -&gt; [Action]
+</span><a href="Cardano.Benchmarking.Script.Selftest.html#testScript"><span class="hs-identifier hs-var">testScript</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930275"><span class="hs-identifier hs-var">protocolFile</span></a></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679930277"><span class="hs-identifier hs-var">submitMode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Action -&gt; ExceptT Error (RWST EnvConsts () Env IO) ()
+</span><a href="Cardano.Benchmarking.Script.Action.html#action"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679930294"><span class="annot"><span class="annottext">Either Error ()
+</span><a href="#local-6989586621679930294"><span class="hs-identifier hs-var">result</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="hs-special">{</span><span>  </span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Env
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) ()
+-&gt; EnvConsts
+-&gt; IO (Either Error (), Env, ())
+forall ret.
+Env -&gt; ActionM ret -&gt; EnvConsts -&gt; IO (Either Error ret, Env, ())
+</span><a href="Cardano.Benchmarking.Script.Env.html#runActionMEnv"><span class="hs-identifier hs-var">Env.runActionMEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Env
+</span><a href="#local-6989586621679930263"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">ExceptT Error (RWST EnvConsts () Env IO) ()
+</span><a href="#local-6989586621679930291"><span class="hs-identifier hs-var">fullScript</span></a></span><span> </span><span class="annot"><span class="annottext">EnvConsts
+</span><a href="#local-6989586621679930264"><span class="hs-identifier hs-var">envConsts</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679930296"><span class="annot"><span class="annottext">Maybe AsyncBenchmarkControl
+</span><a href="#local-6989586621679930296"><span class="hs-identifier hs-var">abcMaybe</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM (Maybe AsyncBenchmarkControl)
+-&gt; IO (Maybe AsyncBenchmarkControl)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe AsyncBenchmarkControl)
+ -&gt; IO (Maybe AsyncBenchmarkControl))
+-&gt; STM (Maybe AsyncBenchmarkControl)
+-&gt; IO (Maybe AsyncBenchmarkControl)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Maybe AsyncBenchmarkControl)
+-&gt; STM (Maybe AsyncBenchmarkControl)
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">STM.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Maybe AsyncBenchmarkControl)
+</span><a href="#local-6989586621679930267"><span class="hs-identifier hs-var">envThreads</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe AsyncBenchmarkControl
+</span><a href="#local-6989586621679930296"><span class="hs-identifier hs-var">abcMaybe</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">AsyncBenchmarkControl
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Either Error ())
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; IO (Either Error ()))
+-&gt; FilePath -&gt; IO (Either Error ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-56"></span><span>          </span><span class="annot"><span class="annottext">[FilePath] -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unwords"><span class="hs-identifier hs-var">List.unwords</span></a></span><span>
+</span><span id="line-57"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Cardano.Benchmarking.Script.Selftest.runSelftest:&quot;</span></span><span>
+</span><span id="line-58"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;thread state spuriously initialized&quot;</span></span><span> </span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Maybe AsyncBenchmarkControl
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either Error () -&gt; IO (Either Error ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Either Error ()
+</span><a href="#local-6989586621679930294"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | 'printJSON' prints out the list of actions using Aeson.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- It has no callers within @cardano-node@.</span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.Benchmarking.Script.Selftest.html#printJSON"><span class="hs-identifier hs-type">printJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span id="printJSON"><span class="annot"><span class="annottext">printJSON :: IO ()
+</span><a href="Cardano.Benchmarking.Script.Selftest.html#printJSON"><span class="hs-identifier hs-var hs-var">printJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Char8.html#putStrLn"><span class="hs-identifier hs-var">BSL.putStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ByteString -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Action] -&gt; ByteString
+</span><a href="Cardano.Benchmarking.Script.Aeson.html#prettyPrint"><span class="hs-identifier hs-var">prettyPrint</span></a></span><span> </span><span class="annot"><span class="annottext">([Action] -&gt; ByteString) -&gt; [Action] -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; SubmitMode -&gt; [Action]
+</span><a href="Cardano.Benchmarking.Script.Selftest.html#testScript"><span class="hs-identifier hs-var">testScript</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;/dev/zero&quot;</span></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="Cardano.Benchmarking.Script.Types.html#DiscardTX"><span class="hs-identifier hs-var">DiscardTX</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | 'testScript' is a static list of 'Action' parametrised with a</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- file name and a mode indicating how to submit a transaction in</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- 'SubmitMode' passed along as a parameter within a 'Submit' action.</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.Benchmarking.Script.Selftest.html#testScript"><span class="hs-identifier hs-type">testScript</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#SubmitMode"><span class="hs-identifier hs-type">SubmitMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span id="testScript"><span class="annot"><span class="annottext">testScript :: FilePath -&gt; SubmitMode -&gt; [Action]
+</span><a href="Cardano.Benchmarking.Script.Selftest.html#testScript"><span class="hs-identifier hs-var hs-var">testScript</span></a></span></span><span> </span><span id="local-6989586621679930301"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930301"><span class="hs-identifier hs-var">protocolFile</span></a></span></span><span> </span><span id="local-6989586621679930302"><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679930302"><span class="hs-identifier hs-var">submitMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">ProtocolParametersSource -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#SetProtocolParameters"><span class="hs-identifier hs-var">SetProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; ProtocolParametersSource
+</span><a href="Cardano.Benchmarking.Script.Types.html#UseLocalProtocolFile"><span class="hs-identifier hs-var">UseLocalProtocolFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930301"><span class="hs-identifier hs-var">protocolFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NetworkId -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#SetNetworkId"><span class="hs-identifier hs-var">SetNetworkId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NetworkMagic -&gt; NetworkId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Network.Internal.NetworkId.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">unNetworkMagic :: Word32
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-api-0.16.0.0-163b172e362d1754f617ff8c601db22188194bfd2b41560ffef0f4a7c53413a3/share/doc/html/src/Ouroboros.Network.Magic.html#unNetworkMagic"><span class="hs-identifier hs-var">unNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">42</span></span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-var">InitWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930310"><span class="hs-identifier hs-var">genesisWallet</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-var">InitWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930311"><span class="hs-identifier hs-var">splitWallet1</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-var">InitWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930312"><span class="hs-identifier hs-var">splitWallet2</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-var">InitWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930313"><span class="hs-identifier hs-var">splitWallet3</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-var">InitWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930314"><span class="hs-identifier hs-var">doneWallet</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; SigningKey PaymentKey -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#DefineSigningKey"><span class="hs-identifier hs-var">DefineSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930316"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="#local-6989586621679930317"><span class="hs-identifier hs-var">skey</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra -&gt; FilePath -&gt; TxIn -&gt; Coin -&gt; FilePath -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#AddFund"><span class="hs-identifier hs-var">AddFund</span></a></span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679930319"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930310"><span class="hs-identifier hs-var">genesisWallet</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; TxIn
+Text -&gt; TxIn
+</span><a href="Cardano.TxGenerator.Utils.html#mkTxIn"><span class="hs-identifier hs-var">mkTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-core-1.18.0.0-de488ea88debdff77149aa5c20a982c63f5e157ac09516d9dbde72e48a7c31c6/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">90000000000000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930316"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; Int -&gt; Int -&gt; Action
+</span><a href="#local-6989586621679930321"><span class="hs-identifier hs-var">createChange</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930310"><span class="hs-identifier hs-var">genesisWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930311"><span class="hs-identifier hs-var">splitWallet1</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; Int -&gt; Int -&gt; Action
+</span><a href="#local-6989586621679930321"><span class="hs-identifier hs-var">createChange</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930311"><span class="hs-identifier hs-var">splitWallet1</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930312"><span class="hs-identifier hs-var">splitWallet2</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">30</span></span><span> </span><span class="hs-comment">-- 10 TXs with 30 outputs -&gt; in total 300 outputs</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; Int -&gt; Int -&gt; Action
+</span><a href="#local-6989586621679930321"><span class="hs-identifier hs-var">createChange</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930312"><span class="hs-identifier hs-var">splitWallet2</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930313"><span class="hs-identifier hs-var">splitWallet3</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">300</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-85"></span><span class="hs-comment">{-
+  , createChange genesisWallet splitWallet3 1 10
+  -- Fifo implementation should also work fine when sourceWallet==destWallet
+  , createChange splitWallet3 splitWallet3 10 30
+  , createChange splitWallet3 splitWallet3 300 30
+-}</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra -&gt; SubmitMode -&gt; TxGenTxParams -&gt; Generator -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#Submit"><span class="hs-identifier hs-var">Submit</span></a></span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679930319"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679930302"><span class="hs-identifier hs-var">submitMode</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="#local-6989586621679930322"><span class="hs-identifier hs-var">txParams</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator -&gt; Action) -&gt; Generator -&gt; Action
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Generator -&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#Take"><span class="hs-identifier hs-var">Take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4000</span></span><span> </span><span class="annot"><span class="annottext">(Generator -&gt; Generator) -&gt; Generator -&gt; Generator
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Generator -&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#Cycle"><span class="hs-identifier hs-var">Cycle</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">(Generator -&gt; Generator) -&gt; Generator -&gt; Generator
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+-&gt; PayMode
+-&gt; Int
+-&gt; Int
+-&gt; Maybe Int
+-&gt; Maybe FilePath
+-&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#NtoM"><span class="hs-identifier hs-var">NtoM</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930313"><span class="hs-identifier hs-var">splitWallet3</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; PayMode
+</span><a href="Cardano.Benchmarking.Script.Types.html#PayToAddr"><span class="hs-identifier hs-var">PayToAddr</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930316"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930314"><span class="hs-identifier hs-var">doneWallet</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679930317"><span class="annot"><span class="annottext">skey :: SigningKey PaymentKey
+</span><a href="#local-6989586621679930317"><span class="hs-identifier hs-var hs-var">skey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+-&gt; Either TxGenError (SigningKey PaymentKey)
+-&gt; SigningKey PaymentKey
+forall b a. b -&gt; Either a b -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#fromRight"><span class="hs-identifier hs-var">fromRight</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; SigningKey PaymentKey
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;could not parse hardcoded signing key&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either TxGenError (SigningKey PaymentKey)
+ -&gt; SigningKey PaymentKey)
+-&gt; Either TxGenError (SigningKey PaymentKey)
+-&gt; SigningKey PaymentKey
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey)
+</span><a href="Cardano.TxGenerator.Setup.SigningKey.html#parseSigningKeyTE"><span class="hs-identifier hs-var">parseSigningKeyTE</span></a></span><span> </span><span class="annot"><span class="annottext">(TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey))
+-&gt; TextEnvelope -&gt; Either TxGenError (SigningKey PaymentKey)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelope"><span class="hs-identifier hs-type">TextEnvelope</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-99"></span><span>            </span><span class="annot"><span class="annottext">teType :: TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teType"><span class="hs-identifier hs-var">teType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; TextEnvelopeType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeType"><span class="hs-identifier hs-var">TextEnvelopeType</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;GenesisUTxOSigningKey_ed25519&quot;</span></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teDescription :: TextEnvelopeDescr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teDescription"><span class="hs-identifier hs-var">teDescription</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; TextEnvelopeDescr
+forall a. IsString a =&gt; FilePath -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Genesis Initial UTxO Signing Key&quot;</span></span><span>
+</span><span id="line-101"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRawCBOR :: ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Serialise.TextEnvelope.Internal.html#teRawCBOR"><span class="hs-identifier hs-var">teRawCBOR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&amp;\162&quot;</span></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679930319"><span class="annot"><span class="annottext">era :: AnyCardanoEra
+</span><a href="#local-6989586621679930319"><span class="hs-identifier hs-var hs-var">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoEra AllegraEra -&gt; AnyCardanoEra
+forall era. Typeable era =&gt; CardanoEra era -&gt; AnyCardanoEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#AnyCardanoEra"><span class="hs-identifier hs-var">AnyCardanoEra</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra AllegraEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-api-10.23.0.0-55981b91ae50edc31842d8498b1155b7576ac4ef83fd1f978e46c756e3ab8162/share/doc/html/src/Cardano.Api.Era.Internal.Core.html#AllegraEra"><span class="hs-identifier hs-var">AllegraEra</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679930322"><span class="annot"><span class="annottext">txParams :: TxGenTxParams
+</span><a href="#local-6989586621679930322"><span class="hs-identifier hs-var hs-var">txParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="Cardano.TxGenerator.Types.html#defaultTxGenTxParams"><span class="hs-identifier hs-var">defaultTxGenTxParams</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.TxGenerator.Types.html#txParamFee"><span class="hs-identifier hs-var">txParamFee</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">1000000</span></span><span class="hs-special">}</span><span>
+</span><span id="line-105"></span><span>    </span><span id="local-6989586621679930310"><span class="annot"><span class="annottext">genesisWallet :: FilePath
+</span><a href="#local-6989586621679930310"><span class="hs-identifier hs-var hs-var">genesisWallet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;genesisWallet&quot;</span></span><span>
+</span><span id="line-106"></span><span>    </span><span id="local-6989586621679930311"><span class="annot"><span class="annottext">splitWallet1 :: FilePath
+</span><a href="#local-6989586621679930311"><span class="hs-identifier hs-var hs-var">splitWallet1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SplitWallet-1&quot;</span></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679930312"><span class="annot"><span class="annottext">splitWallet2 :: FilePath
+</span><a href="#local-6989586621679930312"><span class="hs-identifier hs-var hs-var">splitWallet2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SplitWallet-2&quot;</span></span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679930313"><span class="annot"><span class="annottext">splitWallet3 :: FilePath
+</span><a href="#local-6989586621679930313"><span class="hs-identifier hs-var hs-var">splitWallet3</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;SplitWallet-3&quot;</span></span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679930314"><span class="annot"><span class="annottext">doneWallet :: FilePath
+</span><a href="#local-6989586621679930314"><span class="hs-identifier hs-var hs-var">doneWallet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;doneWallet&quot;</span></span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679930316"><span class="annot"><span class="annottext">key :: FilePath
+</span><a href="#local-6989586621679930316"><span class="hs-identifier hs-var hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;pass-partout&quot;</span></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><a href="#local-6989586621679930321"><span class="hs-identifier hs-type">createChange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621679930321"><span class="annot"><span class="annottext">createChange :: FilePath -&gt; FilePath -&gt; Int -&gt; Int -&gt; Action
+</span><a href="#local-6989586621679930321"><span class="hs-identifier hs-var hs-var">createChange</span></a></span></span><span> </span><span id="local-6989586621679930359"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930359"><span class="hs-identifier hs-var">src</span></a></span></span><span> </span><span id="local-6989586621679930360"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930360"><span class="hs-identifier hs-var">dest</span></a></span></span><span> </span><span id="local-6989586621679930361"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679930361"><span class="hs-identifier hs-var">txCount</span></a></span></span><span> </span><span id="local-6989586621679930362"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679930362"><span class="hs-identifier hs-var">outputs</span></a></span></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra -&gt; SubmitMode -&gt; TxGenTxParams -&gt; Generator -&gt; Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#Submit"><span class="hs-identifier hs-var">Submit</span></a></span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679930319"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679930302"><span class="hs-identifier hs-var">submitMode</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="#local-6989586621679930322"><span class="hs-identifier hs-var">txParams</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator -&gt; Action) -&gt; Generator -&gt; Action
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Generator -&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#Take"><span class="hs-identifier hs-var">Take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679930361"><span class="hs-identifier hs-var">txCount</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator -&gt; Generator) -&gt; Generator -&gt; Generator
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Generator -&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#Cycle"><span class="hs-identifier hs-var">Cycle</span></a></span><span> </span><span class="annot"><span class="annottext">(Generator -&gt; Generator) -&gt; Generator -&gt; Generator
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; PayMode -&gt; Int -&gt; Generator
+</span><a href="Cardano.Benchmarking.Script.Types.html#SplitN"><span class="hs-identifier hs-var">SplitN</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930359"><span class="hs-identifier hs-var">src</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; PayMode
+</span><a href="Cardano.Benchmarking.Script.Types.html#PayToAddr"><span class="hs-identifier hs-var">PayToAddr</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930316"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679930360"><span class="hs-identifier hs-var">dest</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679930362"><span class="hs-identifier hs-var">outputs</span></a></span><span>
+</span><span id="line-114"></span></pre></body></html>

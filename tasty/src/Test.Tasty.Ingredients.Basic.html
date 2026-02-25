@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module exports the basic ingredients defined in the @tasty@</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- packages.</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Note that if 'Test.Tasty.defaultIngredients' from &quot;Test.Tasty&quot; suits your needs,</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- use that instead of importing this module.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Ingredients.Basic</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Console test reporter</span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Test.Tasty.Ingredients.ConsoleReporter.html#consoleTestReporter"><span class="hs-identifier">consoleTestReporter</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ConsoleReporter.html#Quiet"><span class="hs-identifier">Quiet</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ConsoleReporter.html#HideSuccesses"><span class="hs-identifier">HideSuccesses</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ConsoleReporter.html#AnsiTricks"><span class="hs-identifier">AnsiTricks</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Listing tests</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#listingTests"><span class="hs-identifier">listingTests</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#ListTests"><span class="hs-identifier">ListTests</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html#testsNames"><span class="hs-identifier">testsNames</span></a></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Adding options</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.IncludingOptions.html#includingOptions"><span class="hs-identifier">includingOptions</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ConsoleReporter.html"><span class="hs-identifier">Test.Tasty.Ingredients.ConsoleReporter</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.ListTests.html"><span class="hs-identifier">Test.Tasty.Ingredients.ListTests</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.IncludingOptions.html"><span class="hs-identifier">Test.Tasty.Ingredients.IncludingOptions</span></a></span><span>
+</span><span id="line-27"></span></pre></body></html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-2"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Cardano.Benchmarking.Script.Action
+Description : Convert an 'Action' to a monadic 'ActionM'.
+
+This is just exporting 'action', and 'liftToAction' is tough
+to use because of the risk of circular imports.
+-}</span></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Script.Action</span><span>
+</span><span id="line-11"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html#action"><span class="hs-identifier">action</span></a></span><span>
+</span><span id="line-12"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html#liftToAction"><span class="hs-identifier">liftToAction</span></a></span><span>
+</span><span id="line-13"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>       </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.OuroborosImports.html"><span class="hs-identifier">Cardano.Benchmarking.OuroborosImports</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Core</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Benchmarking.OuroborosImports.html#protocolToNetworkId"><span class="hs-identifier">protocolToNetworkId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Core.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Core</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Env</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html"><span class="hs-identifier">Cardano.Benchmarking.Script.Types</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Benchmarking.Tracer.html"><span class="hs-identifier">Cardano.Benchmarking.Tracer</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Setup.NodeConfig.html"><span class="hs-identifier">Cardano.TxGenerator.Setup.NodeConfig</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.TxGenerator.Types.html"><span class="hs-identifier">Cardano.TxGenerator.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier">TxGenError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html"><span class="hs-identifier">Control.Monad.Trans.Except.Extra</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier">unpack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | 'action' has as its sole callers</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- 'Cardano.Benchmark.Script.runScript' from &quot;Cardano.Benchmark.Script&quot;</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- and 'Cardano.Benchmark.Script.Selftest' from</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- &quot;Cardano.Benchmark.Script.Selftest&quot;.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- It translates the various cases of the 'Action' to monadic values</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- which execute the specified actions when evaluated. It passes all</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- the cases' fields to functions with very similar names to the</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- constructors.</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html#action"><span class="hs-identifier hs-type">action</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Action"><span class="hs-identifier hs-type">Action</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#ActionM"><span class="hs-identifier hs-type">ActionM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span id="action"><span class="annot"><span class="annottext">action :: Action -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Action.html#action"><span class="hs-identifier hs-var hs-var">action</span></a></span></span><span> </span><span id="local-6989586621679929922"><span class="annot"><span class="annottext">Action
+</span><a href="#local-6989586621679929922"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Action
+</span><a href="#local-6989586621679929922"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#SetNetworkId"><span class="hs-identifier hs-type">SetNetworkId</span></a></span><span> </span><span id="local-6989586621679929924"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679929924"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NetworkId -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setEnvNetworkId"><span class="hs-identifier hs-var">setEnvNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679929924"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#SetSocketPath"><span class="hs-identifier hs-type">SetSocketPath</span></a></span><span> </span><span id="local-6989586621679929927"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929927"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setEnvSocketPath"><span class="hs-identifier hs-var">setEnvSocketPath</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929927"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#InitWallet"><span class="hs-identifier hs-type">InitWallet</span></a></span><span> </span><span id="local-6989586621679929930"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929930"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#initWallet"><span class="hs-identifier hs-var">initWallet</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929930"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#SetProtocolParameters"><span class="hs-identifier hs-type">SetProtocolParameters</span></a></span><span> </span><span id="local-6989586621679929933"><span class="annot"><span class="annottext">ProtocolParametersSource
+</span><a href="#local-6989586621679929933"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ProtocolParametersSource -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#setProtocolParameters"><span class="hs-identifier hs-var">setProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersSource
+</span><a href="#local-6989586621679929933"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#StartProtocol"><span class="hs-identifier hs-type">StartProtocol</span></a></span><span> </span><span id="local-6989586621679929936"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929936"><span class="hs-identifier hs-var">configFile</span></a></span></span><span> </span><span id="local-6989586621679929937"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679929937"><span class="hs-identifier hs-var">cardanoTracerSocket</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Maybe FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Action.html#startProtocol"><span class="hs-identifier hs-var">startProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929936"><span class="hs-identifier hs-var">configFile</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679929937"><span class="hs-identifier hs-var">cardanoTracerSocket</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#ReadSigningKey"><span class="hs-identifier hs-type">ReadSigningKey</span></a></span><span> </span><span id="local-6989586621679929940"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929940"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679929941"><span class="annot"><span class="annottext">SigningKeyFile 'In
+</span><a href="#local-6989586621679929941"><span class="hs-identifier hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; SigningKeyFile 'In -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#readSigningKey"><span class="hs-identifier hs-var">readSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929940"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKeyFile 'In
+</span><a href="#local-6989586621679929941"><span class="hs-identifier hs-var">filePath</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#DefineSigningKey"><span class="hs-identifier hs-type">DefineSigningKey</span></a></span><span> </span><span id="local-6989586621679929944"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929944"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679929945"><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="#local-6989586621679929945"><span class="hs-identifier hs-var">descr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; SigningKey PaymentKey -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#defineSigningKey"><span class="hs-identifier hs-var">defineSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929944"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey PaymentKey
+</span><a href="#local-6989586621679929945"><span class="hs-identifier hs-var">descr</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#AddFund"><span class="hs-identifier hs-type">AddFund</span></a></span><span> </span><span id="local-6989586621679929948"><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679929948"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621679929949"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929949"><span class="hs-identifier hs-var">wallet</span></a></span></span><span> </span><span id="local-6989586621679929950"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679929950"><span class="hs-identifier hs-var">txIn</span></a></span></span><span> </span><span id="local-6989586621679929951"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679929951"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span> </span><span id="local-6989586621679929952"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929952"><span class="hs-identifier hs-var">keyName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra -&gt; FilePath -&gt; TxIn -&gt; Coin -&gt; FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#addFund"><span class="hs-identifier hs-var">addFund</span></a></span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679929948"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929949"><span class="hs-identifier hs-var">wallet</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679929950"><span class="hs-identifier hs-var">txIn</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679929951"><span class="hs-identifier hs-var">lovelace</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929952"><span class="hs-identifier hs-var">keyName</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Delay"><span class="hs-identifier hs-type">Delay</span></a></span><span> </span><span id="local-6989586621679929955"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679929955"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Double -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#delay"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679929955"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Submit"><span class="hs-identifier hs-type">Submit</span></a></span><span> </span><span id="local-6989586621679929958"><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679929958"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621679929959"><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679929959"><span class="hs-identifier hs-var">submitMode</span></a></span></span><span> </span><span id="local-6989586621679929960"><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="#local-6989586621679929960"><span class="hs-identifier hs-var">txParams</span></a></span></span><span> </span><span id="local-6989586621679929961"><span class="annot"><span class="annottext">Generator
+</span><a href="#local-6989586621679929961"><span class="hs-identifier hs-var">generator</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+-&gt; SubmitMode -&gt; Generator -&gt; TxGenTxParams -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#submitAction"><span class="hs-identifier hs-var">submitAction</span></a></span><span> </span><span class="annot"><span class="annottext">AnyCardanoEra
+</span><a href="#local-6989586621679929958"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">SubmitMode
+</span><a href="#local-6989586621679929959"><span class="hs-identifier hs-var">submitMode</span></a></span><span> </span><span class="annot"><span class="annottext">Generator
+</span><a href="#local-6989586621679929961"><span class="hs-identifier hs-var">generator</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenTxParams
+</span><a href="#local-6989586621679929960"><span class="hs-identifier hs-var">txParams</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#WaitBenchmark"><span class="hs-identifier hs-var">WaitBenchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#waitBenchmark"><span class="hs-identifier hs-var">waitBenchmark</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">Action
+</span><a href="Cardano.Benchmarking.Script.Types.html#CancelBenchmark"><span class="hs-identifier hs-var">CancelBenchmark</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#cancelBenchmark"><span class="hs-identifier hs-var">cancelBenchmark</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#WaitForEra"><span class="hs-identifier hs-type">WaitForEra</span></a></span><span> </span><span id="local-6989586621679929968"><span class="annot"><span class="annottext">AnyShelleyBasedEra
+</span><a href="#local-6989586621679929968"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#waitForEra"><span class="hs-identifier hs-var">waitForEra</span></a></span><span> </span><span class="annot"><span class="annottext">AnyShelleyBasedEra
+</span><a href="#local-6989586621679929968"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#LogMsg"><span class="hs-identifier hs-type">LogMsg</span></a></span><span> </span><span id="local-6989586621679929971"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679929971"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#traceDebug"><span class="hs-identifier hs-var">traceDebug</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; ActionM ()) -&gt; FilePath -&gt; ActionM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679929971"><span class="hs-identifier hs-var">txt</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Script.Types.html#Reserved"><span class="hs-identifier hs-type">Reserved</span></a></span><span> </span><span id="local-6989586621679929974"><span class="annot"><span class="annottext">[FilePath]
+</span><a href="#local-6989586621679929974"><span class="hs-identifier hs-var">options</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[FilePath] -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Core.html#reserved"><span class="hs-identifier hs-var">reserved</span></a></span><span> </span><span class="annot"><span class="annottext">[FilePath]
+</span><a href="#local-6989586621679929974"><span class="hs-identifier hs-var">options</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | 'liftToAction' first lifts from IO, then converts an 'Either'</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- to an 'Control.Monad.Trans.Except.ExceptT' and then transforms</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- the error type to 'Cardano.Benchmarking.Script.Env.Error'.</span><span>
+</span><span id="line-58"></span><span id="local-6989586621679929864"><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html#liftToAction"><span class="hs-identifier hs-type">liftToAction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Types.html#TxGenError"><span class="hs-identifier hs-type">TxGenError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679929864"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#ActionM"><span class="hs-identifier hs-type">ActionM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679929864"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-59"></span><span id="liftToAction"><span class="annot"><span class="annottext">liftToAction :: forall a. IO (Either TxGenError a) -&gt; ActionM a
+</span><a href="Cardano.Benchmarking.Script.Action.html#liftToAction"><span class="hs-identifier hs-var hs-var">liftToAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxGenError -&gt; Error)
+-&gt; ExceptT TxGenError (RWST EnvConsts () Env IO) a
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) a
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#firstExceptT"><span class="hs-identifier hs-var">firstExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">TxGenError -&gt; Error
+</span><a href="Cardano.Benchmarking.Script.Env.html#TxGenError"><span class="hs-identifier hs-var">TxGenError</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT TxGenError (RWST EnvConsts () Env IO) a
+ -&gt; ExceptT Error (RWST EnvConsts () Env IO) a)
+-&gt; (IO (Either TxGenError a)
+    -&gt; ExceptT TxGenError (RWST EnvConsts () Env IO) a)
+-&gt; IO (Either TxGenError a)
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">RWST EnvConsts () Env IO (Either TxGenError a)
+-&gt; ExceptT TxGenError (RWST EnvConsts () Env IO) a
+forall (m :: * -&gt; *) x a. m (Either x a) -&gt; ExceptT x m a
+</span><a href="file:///nix/store/jkr7kzls9671bpkks59g99rgazlza8rc-transformers-except-lib-transformers-except-0.1.4-haddock-doc/share/doc/transformers-except/html/src/Control.Monad.Trans.Except.Extra.html#newExceptT"><span class="hs-identifier hs-var">newExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(RWST EnvConsts () Env IO (Either TxGenError a)
+ -&gt; ExceptT TxGenError (RWST EnvConsts () Env IO) a)
+-&gt; (IO (Either TxGenError a)
+    -&gt; RWST EnvConsts () Env IO (Either TxGenError a))
+-&gt; IO (Either TxGenError a)
+-&gt; ExceptT TxGenError (RWST EnvConsts () Env IO) a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either TxGenError a)
+-&gt; RWST EnvConsts () Env IO (Either TxGenError a)
+forall a. IO a -&gt; RWST EnvConsts () Env IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | 'startProtocol' sets up the protocol for the transaction</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- generator from the first argument, @configFile@ and optionally</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- traces to the second, @tracerSocket@.</span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Benchmarking.Script.Action.html#startProtocol"><span class="hs-identifier hs-type">startProtocol</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Script.Env.html#ActionM"><span class="hs-identifier hs-type">ActionM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span id="startProtocol"><span class="annot"><span class="annottext">startProtocol :: FilePath -&gt; Maybe FilePath -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Action.html#startProtocol"><span class="hs-identifier hs-var hs-var">startProtocol</span></a></span></span><span> </span><span id="local-6989586621679929986"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929986"><span class="hs-identifier hs-var">configFile</span></a></span></span><span> </span><span id="local-6989586621679929987"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679929987"><span class="hs-identifier hs-var">tracerSocket</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679929988"><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621679929988"><span class="hs-identifier hs-var">nodeConfig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Either TxGenError NodeConfiguration)
+-&gt; ActionM NodeConfiguration
+forall a. IO (Either TxGenError a) -&gt; ActionM a
+</span><a href="Cardano.Benchmarking.Script.Action.html#liftToAction"><span class="hs-identifier hs-var">liftToAction</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either TxGenError NodeConfiguration)
+ -&gt; ActionM NodeConfiguration)
+-&gt; IO (Either TxGenError NodeConfiguration)
+-&gt; ActionM NodeConfiguration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Either TxGenError NodeConfiguration)
+</span><a href="Cardano.TxGenerator.Setup.NodeConfig.html#mkNodeConfig"><span class="hs-identifier hs-var">mkNodeConfig</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679929986"><span class="hs-identifier hs-var">configFile</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679929990"><span class="annot"><span class="annottext">SomeConsensusProtocol
+</span><a href="#local-6989586621679929990"><span class="hs-identifier hs-var">protocol</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>  </span><span class="annot"><span class="annottext">IO (Either TxGenError SomeConsensusProtocol)
+-&gt; ActionM SomeConsensusProtocol
+forall a. IO (Either TxGenError a) -&gt; ActionM a
+</span><a href="Cardano.Benchmarking.Script.Action.html#liftToAction"><span class="hs-identifier hs-var">liftToAction</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either TxGenError SomeConsensusProtocol)
+ -&gt; ActionM SomeConsensusProtocol)
+-&gt; IO (Either TxGenError SomeConsensusProtocol)
+-&gt; ActionM SomeConsensusProtocol
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration -&gt; IO (Either TxGenError SomeConsensusProtocol)
+</span><a href="Cardano.TxGenerator.Setup.NodeConfig.html#mkConsensusProtocol"><span class="hs-identifier hs-var">mkConsensusProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration
+</span><a href="#local-6989586621679929988"><span class="hs-identifier hs-var">nodeConfig</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">SomeConsensusProtocol -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setEnvProtocol"><span class="hs-identifier hs-var">setEnvProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">SomeConsensusProtocol
+</span><a href="#local-6989586621679929990"><span class="hs-identifier hs-var">protocol</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">ShelleyGenesis -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setEnvGenesis"><span class="hs-identifier hs-var">setEnvGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyGenesis -&gt; ActionM ()) -&gt; ShelleyGenesis -&gt; ActionM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeConsensusProtocol -&gt; ShelleyGenesis
+</span><a href="Cardano.TxGenerator.Setup.NodeConfig.html#getGenesis"><span class="hs-identifier hs-var">getGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">SomeConsensusProtocol
+</span><a href="#local-6989586621679929990"><span class="hs-identifier hs-var">protocol</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679929995"><span class="annot"><span class="annottext">IOManager
+</span><a href="#local-6989586621679929995"><span class="hs-identifier hs-var">iomgr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ActionM IOManager
+</span><a href="Cardano.Benchmarking.Script.Env.html#askIOManager"><span class="hs-identifier hs-var">askIOManager</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679929997"><span class="annot"><span class="annottext">networkId :: NetworkId
+</span><a href="#local-6989586621679929997"><span class="hs-identifier hs-var hs-var">networkId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeConsensusProtocol -&gt; NetworkId
+</span><a href="Cardano.Benchmarking.OuroborosImports.html#protocolToNetworkId"><span class="hs-identifier hs-var">protocolToNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">SomeConsensusProtocol
+</span><a href="#local-6989586621679929990"><span class="hs-identifier hs-var">protocol</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679929998"><span class="annot"><span class="annottext">tracerSocket' :: Maybe (IOManager, NetworkId, FilePath)
+</span><a href="#local-6989586621679929998"><span class="hs-identifier hs-var hs-var">tracerSocket'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IOManager
+</span><a href="#local-6989586621679929995"><span class="hs-identifier hs-var">iomgr</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679929997"><span class="hs-identifier hs-var">networkId</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; (IOManager, NetworkId, FilePath))
+-&gt; Maybe FilePath -&gt; Maybe (IOManager, NetworkId, FilePath)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-operator hs-var">`fmap`</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679929987"><span class="hs-identifier hs-var">tracerSocket</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">NetworkId -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setEnvNetworkId"><span class="hs-identifier hs-var">setEnvNetworkId</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621679929997"><span class="hs-identifier hs-var">networkId</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">IO BenchTracers
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) BenchTracers
+forall a. IO a -&gt; ExceptT Error (RWST EnvConsts () Env IO) a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (IOManager, NetworkId, FilePath) -&gt; IO BenchTracers
+</span><a href="Cardano.Benchmarking.Tracer.html#initTxGenTracers"><span class="hs-identifier hs-var">initTxGenTracers</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (IOManager, NetworkId, FilePath)
+</span><a href="#local-6989586621679929998"><span class="hs-identifier hs-var">tracerSocket'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ExceptT Error (RWST EnvConsts () Env IO) BenchTracers
+-&gt; (BenchTracers -&gt; ActionM ()) -&gt; ActionM ()
+forall a b.
+ExceptT Error (RWST EnvConsts () Env IO) a
+-&gt; (a -&gt; ExceptT Error (RWST EnvConsts () Env IO) b)
+-&gt; ExceptT Error (RWST EnvConsts () Env IO) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">BenchTracers -&gt; ActionM ()
+</span><a href="Cardano.Benchmarking.Script.Env.html#setBenchTracers"><span class="hs-identifier hs-var">setBenchTracers</span></a></span><span>
+</span><span id="line-78"></span></pre></body></html>

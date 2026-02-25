@@ -1,0 +1,346 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Region</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier">Region</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#newEmptyRegion"><span class="hs-identifier">newEmptyRegion</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#newOpenRegion"><span class="hs-identifier">newOpenRegion</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#openRegion"><span class="hs-identifier">openRegion</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#setRegion"><span class="hs-identifier">setRegion</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#displayRegions"><span class="hs-identifier">displayRegions</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#displayRegion"><span class="hs-identifier">displayRegion</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#moveToBottom"><span class="hs-identifier">moveToBottom</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#finishRegion"><span class="hs-identifier">finishRegion</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier">STM</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier">TVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html"><span class="hs-identifier">Control.Concurrent.STM.TMVar</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TMVar</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TVar</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier">MonadMask</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bracket</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Console.Regions</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ConsoleRegion</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">RegionLayout</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">LiftRegion</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Console.Regions</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Console</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="Body"><span class="annot"><a href="Hedgehog.Internal.Region.html#Body"><span class="hs-identifier hs-var">Body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>    </span><span id="Empty"><span class="annot"><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Open"><span class="annot"><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-var">Open</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ConsoleRegion</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Closed"><span class="annot"><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">newtype</span><span> </span><span id="Region"><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-var">Region</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>  </span><span id="Region"><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-var">Region</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-31"></span><span>      </span><span id="unRegion"><span class="annot"><span class="annottext">Region -&gt; TVar Body
+</span><a href="Hedgehog.Internal.Region.html#unRegion"><span class="hs-identifier hs-var hs-var">unRegion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Body"><span class="hs-identifier hs-type">Body</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span id="local-6989586621679474718"><span class="annot"><a href="Hedgehog.Internal.Region.html#newEmptyRegion"><span class="hs-identifier hs-type">newEmptyRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474718"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474718"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span></span><span>
+</span><span id="line-35"></span><span id="newEmptyRegion"><span class="annot"><span class="annottext">newEmptyRegion :: forall (m :: * -&gt; *). LiftRegion m =&gt; m Region
+</span><a href="Hedgehog.Internal.Region.html#newEmptyRegion"><span class="hs-identifier hs-var hs-var">newEmptyRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">STM Region -&gt; m Region
+forall a. STM a -&gt; m a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM Region -&gt; m Region) -&gt; STM Region -&gt; m Region
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>    </span><span id="local-6989586621679474799"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474799"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Body -&gt; STM (TVar Body)
+forall a. a -&gt; STM (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVar"><span class="hs-identifier hs-var">TVar.newTVar</span></a></span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">Region -&gt; STM Region
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Region -&gt; STM Region) -&gt; Region -&gt; STM Region
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; Region
+</span><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-var">Region</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474799"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679474801"><span class="annot"><a href="Hedgehog.Internal.Region.html#newOpenRegion"><span class="hs-identifier hs-type">newOpenRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474801"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474801"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span></span><span>
+</span><span id="line-41"></span><span id="newOpenRegion"><span class="annot"><span class="annottext">newOpenRegion :: forall (m :: * -&gt; *). LiftRegion m =&gt; m Region
+</span><a href="Hedgehog.Internal.Region.html#newOpenRegion"><span class="hs-identifier hs-var hs-var">newOpenRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">STM Region -&gt; m Region
+forall a. STM a -&gt; m a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM Region -&gt; m Region) -&gt; STM Region -&gt; m Region
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679474808"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474808"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RegionLayout -&gt; STM ConsoleRegion
+forall (m :: * -&gt; *).
+LiftRegion m =&gt;
+RegionLayout -&gt; m ConsoleRegion
+</span><span class="hs-identifier hs-var">Console.openConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">RegionLayout
+</span><span class="hs-identifier hs-var">Linear</span></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679474811"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474811"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Body -&gt; STM (TVar Body)
+forall a. a -&gt; STM (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVar"><span class="hs-identifier hs-var">TVar.newTVar</span></a></span><span> </span><span class="annot"><span class="annottext">(Body -&gt; STM (TVar Body)) -&gt; Body -&gt; STM (TVar Body)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Body
+</span><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-var">Open</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474808"><span class="hs-identifier hs-var">region</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">Region -&gt; STM Region
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Region -&gt; STM Region) -&gt; Region -&gt; STM Region
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; Region
+</span><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-var">Region</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474811"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span id="local-6989586621679474732"><span class="annot"><a href="Hedgehog.Internal.Region.html#openRegion"><span class="hs-identifier hs-type">openRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474732"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474732"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-48"></span><span id="openRegion"><span class="annot"><span class="annottext">openRegion :: forall (m :: * -&gt; *). LiftRegion m =&gt; Region -&gt; String -&gt; m ()
+</span><a href="Hedgehog.Internal.Region.html#openRegion"><span class="hs-identifier hs-var hs-var">openRegion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span id="local-6989586621679474824"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474824"><span class="hs-identifier hs-var">var</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679474825"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474825"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; m ()
+forall a. STM a -&gt; m a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; m ()) -&gt; STM () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679474826"><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474826"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; STM Body
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">TVar.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474824"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474826"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>        </span><span id="local-6989586621679474828"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474828"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RegionLayout -&gt; STM ConsoleRegion
+forall (m :: * -&gt; *).
+LiftRegion m =&gt;
+RegionLayout -&gt; m ConsoleRegion
+</span><span class="hs-identifier hs-var">Console.openConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">RegionLayout
+</span><span class="hs-identifier hs-var">Linear</span></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">TVar Body -&gt; Body -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">TVar.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474824"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">(Body -&gt; STM ()) -&gt; Body -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Body
+</span><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-var">Open</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474828"><span class="hs-identifier hs-var">region</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; String -&gt; STM ()
+forall v (m :: * -&gt; *).
+(ToRegionContent v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><span class="hs-identifier hs-var">Console.setConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474828"><span class="hs-identifier hs-var">region</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474825"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-type">Open</span></a></span><span> </span><span id="local-6989586621679474831"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474831"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; String -&gt; STM ()
+forall v (m :: * -&gt; *).
+(ToRegionContent v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><span class="hs-identifier hs-var">Console.setConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474831"><span class="hs-identifier hs-var">region</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474825"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679474832"><span class="annot"><a href="Hedgehog.Internal.Region.html#setRegion"><span class="hs-identifier hs-type">setRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474832"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474832"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-64"></span><span id="setRegion"><span class="annot"><span class="annottext">setRegion :: forall (m :: * -&gt; *). LiftRegion m =&gt; Region -&gt; String -&gt; m ()
+</span><a href="Hedgehog.Internal.Region.html#setRegion"><span class="hs-identifier hs-var hs-var">setRegion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span id="local-6989586621679474840"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474840"><span class="hs-identifier hs-var">var</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679474841"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474841"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; m ()
+forall a. STM a -&gt; m a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; m ()) -&gt; STM () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679474842"><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474842"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; STM Body
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">TVar.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474840"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474842"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-type">Open</span></a></span><span> </span><span id="local-6989586621679474843"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474843"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; String -&gt; STM ()
+forall v (m :: * -&gt; *).
+(ToRegionContent v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><span class="hs-identifier hs-var">Console.setConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474843"><span class="hs-identifier hs-var">region</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474841"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679474740"><span id="local-6989586621679474743"><span class="annot"><a href="Hedgehog.Internal.Region.html#displayRegions"><span class="hs-identifier hs-type">displayRegions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474740"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474740"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474740"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474743"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474740"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474743"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-78"></span><span id="displayRegions"><span class="annot"><span class="annottext">displayRegions :: forall (m :: * -&gt; *) a. (MonadIO m, MonadMask m) =&gt; m a -&gt; m a
+</span><a href="Hedgehog.Internal.Region.html#displayRegions"><span class="hs-identifier hs-var hs-var">displayRegions</span></a></span></span><span> </span><span id="local-6989586621679474848"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679474848"><span class="hs-identifier hs-var">io</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall (m :: * -&gt; *) a. (MonadIO m, MonadMask m) =&gt; m a -&gt; m a
+</span><span class="hs-identifier hs-var">Console.displayConsoleRegions</span></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679474848"><span class="hs-identifier hs-var">io</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679474746"><span id="local-6989586621679474747"><span class="annot"><a href="Hedgehog.Internal.Region.html#displayRegion"><span class="hs-identifier hs-type">displayRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-82"></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474746"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474746"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474746"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474746"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474747"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474746"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474747"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-87"></span><span id="displayRegion"><span class="annot"><span class="annottext">displayRegion :: forall (m :: * -&gt; *) a.
+(MonadIO m, MonadMask m, LiftRegion m) =&gt;
+(Region -&gt; m a) -&gt; m a
+</span><a href="Hedgehog.Internal.Region.html#displayRegion"><span class="hs-identifier hs-var hs-var">displayRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall (m :: * -&gt; *) a. (MonadIO m, MonadMask m) =&gt; m a -&gt; m a
+</span><a href="Hedgehog.Internal.Region.html#displayRegions"><span class="hs-identifier hs-var">displayRegions</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; m a) -&gt; ((Region -&gt; m a) -&gt; m a) -&gt; (Region -&gt; m a) -&gt; m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">m Region -&gt; (Region -&gt; m ()) -&gt; (Region -&gt; m a) -&gt; m a
+forall (m :: * -&gt; *) a b c.
+(HasCallStack, MonadMask m) =&gt;
+m a -&gt; (a -&gt; m b) -&gt; (a -&gt; m c) -&gt; m c
+</span><span class="hs-identifier hs-var">bracket</span></span><span> </span><span class="annot"><span class="annottext">m Region
+forall (m :: * -&gt; *). LiftRegion m =&gt; m Region
+</span><a href="Hedgehog.Internal.Region.html#newOpenRegion"><span class="hs-identifier hs-var">newOpenRegion</span></a></span><span> </span><span class="annot"><span class="annottext">Region -&gt; m ()
+forall (m :: * -&gt; *). LiftRegion m =&gt; Region -&gt; m ()
+</span><a href="Hedgehog.Internal.Region.html#finishRegion"><span class="hs-identifier hs-var">finishRegion</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Hedgehog.Internal.Region.html#moveToBottom"><span class="hs-identifier hs-type">moveToBottom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span id="moveToBottom"><span class="annot"><span class="annottext">moveToBottom :: Region -&gt; STM ()
+</span><a href="Hedgehog.Internal.Region.html#moveToBottom"><span class="hs-identifier hs-var hs-var">moveToBottom</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span id="local-6989586621679474861"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474861"><span class="hs-identifier hs-var">var</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; STM ()
+forall a. STM a -&gt; STM a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; STM ()) -&gt; STM () -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679474862"><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474862"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; STM Body
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">TVar.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474861"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474862"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-type">Open</span></a></span><span> </span><span id="local-6989586621679474863"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474863"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>        </span><span id="local-6989586621679474864"><span class="annot"><span class="annottext">Maybe [ConsoleRegion]
+</span><a href="#local-6989586621679474864"><span class="hs-identifier hs-var">mxs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TMVar [ConsoleRegion] -&gt; STM (Maybe [ConsoleRegion])
+forall a. TMVar a -&gt; STM (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#tryTakeTMVar"><span class="hs-identifier hs-var">TMVar.tryTakeTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar [ConsoleRegion]
+</span><span class="hs-identifier hs-var">Console.regionList</span></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe [ConsoleRegion]
+</span><a href="#local-6989586621679474864"><span class="hs-identifier hs-var">mxs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>          </span><span class="annot"><span class="annottext">Maybe [ConsoleRegion]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>            </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>          </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679474867"><span class="annot"><span class="annottext">[ConsoleRegion]
+</span><a href="#local-6989586621679474867"><span class="hs-identifier hs-var">xs0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>            </span><span class="hs-keyword">let</span><span>
+</span><span id="line-106"></span><span>              </span><span id="local-6989586621679474870"><span class="annot"><span class="annottext">xs1 :: [ConsoleRegion]
+</span><a href="#local-6989586621679474870"><span class="hs-identifier hs-var hs-var">xs1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-107"></span><span>                </span><span class="annot"><span class="annottext">(ConsoleRegion -&gt; Bool) -&gt; [ConsoleRegion] -&gt; [ConsoleRegion]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConsoleRegion -&gt; ConsoleRegion -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474863"><span class="hs-identifier hs-var">region</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ConsoleRegion]
+</span><a href="#local-6989586621679474867"><span class="hs-identifier hs-var">xs0</span></a></span><span>
+</span><span id="line-108"></span><span>            </span><span class="hs-keyword">in</span><span>
+</span><span id="line-109"></span><span>              </span><span class="annot"><span class="annottext">TMVar [ConsoleRegion] -&gt; [ConsoleRegion] -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TMVar.html#putTMVar"><span class="hs-identifier hs-var">TMVar.putTMVar</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar [ConsoleRegion]
+</span><span class="hs-identifier hs-var">Console.regionList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474863"><span class="hs-identifier hs-var">region</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; [ConsoleRegion] -&gt; [ConsoleRegion]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[ConsoleRegion]
+</span><a href="#local-6989586621679474870"><span class="hs-identifier hs-var">xs1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span id="local-6989586621679474758"><span class="annot"><a href="Hedgehog.Internal.Region.html#finishRegion"><span class="hs-identifier hs-type">finishRegion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LiftRegion</span></span><span> </span><span class="annot"><a href="#local-6989586621679474758"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474758"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-115"></span><span id="finishRegion"><span class="annot"><span class="annottext">finishRegion :: forall (m :: * -&gt; *). LiftRegion m =&gt; Region -&gt; m ()
+</span><a href="Hedgehog.Internal.Region.html#finishRegion"><span class="hs-identifier hs-var hs-var">finishRegion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Region.html#Region"><span class="hs-identifier hs-type">Region</span></a></span><span> </span><span id="local-6989586621679474883"><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474883"><span class="hs-identifier hs-var">var</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; m ()
+forall a. STM a -&gt; m a
+forall (m :: * -&gt; *) a. LiftRegion m =&gt; STM a -&gt; m a
+</span><span class="hs-identifier hs-var">liftRegion</span></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; m ()) -&gt; STM () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679474884"><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474884"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Body -&gt; STM Body
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">TVar.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474883"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="#local-6989586621679474884"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">TVar Body -&gt; Body -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">TVar.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474883"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Region.html#Open"><span class="hs-identifier hs-type">Open</span></a></span><span> </span><span id="local-6989586621679474885"><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474885"><span class="hs-identifier hs-var">region</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>        </span><span id="local-6989586621679474886"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679474886"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; STM Text
+forall (m :: * -&gt; *). LiftRegion m =&gt; ConsoleRegion -&gt; m Text
+</span><span class="hs-identifier hs-var">Console.getConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474885"><span class="hs-identifier hs-var">region</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Text -&gt; STM ()
+forall v (m :: * -&gt; *).
+(Outputable v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><span class="hs-identifier hs-var">Console.finishConsoleRegion</span></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+</span><a href="#local-6989586621679474885"><span class="hs-identifier hs-var">region</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679474886"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">TVar Body -&gt; Body -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">TVar.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Body
+</span><a href="#local-6989586621679474883"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Body
+</span><a href="Hedgehog.Internal.Region.html#Closed"><span class="hs-identifier hs-var">Closed</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span></pre></body></html>

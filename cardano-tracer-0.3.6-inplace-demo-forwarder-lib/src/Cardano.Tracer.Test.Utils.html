@@ -1,0 +1,503 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Test.Utils</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html"><span class="hs-identifier">Cardano.Tracer.Test.Utils</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html"><span class="hs-identifier">Cardano.Tracer.Test.TestSetup</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier">HowToConnect</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Net</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier">MVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier">newMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#takeMVar"><span class="hs-identifier">takeMVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier">putMVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html"><span class="hs-identifier">Data.Vector</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier">Vector</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html"><span class="hs-identifier">Data.Vector</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vector</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/cxdrn1pmkrjj8pi014vhalwmcaqxfzjd-vector-algorithms-lib-vector-algorithms-0.9.1.0-haddock-doc/share/doc/vector-algorithms/html/src/Data.Vector.Algorithms.Merge.html"><span class="hs-identifier">Data.Vector.Algorithms.Merge</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Directory.Extra.html"><span class="hs-identifier">System.Directory.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Directory.Extra.html#listDirectories"><span class="hs-identifier">listDirectories</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#dropDrive"><span class="hs-identifier">dropDrive</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#dropExtension"><span class="hs-identifier">dropExtension</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Info.Extra.html"><span class="hs-identifier">System.Info.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Info.Extra.html#isMac"><span class="hs-identifier">isMac</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Info.Extra.html#isWindows"><span class="hs-identifier">isWindows</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html"><span class="hs-identifier">System.IO.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier">newTempDirWithin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">QuickCheck</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/5whhnd1ir56w7i843j3755yai37vac4y-tasty-quickcheck-lib-tasty-quickcheck-0.11.1-haddock-doc/share/doc/tasty-quickcheck/html/src/Test.Tasty.QuickCheck.html"><span class="hs-identifier">Test.Tasty.QuickCheck</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span id="local-6989586621679142974"><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-type">unI</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679142974"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679142974"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-27"></span><span id="unI"><span class="annot"><span class="annottext">unI :: forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var hs-var">unI</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span id="local-6989586621679143083"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679143083"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679143083"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#false"><span class="hs-identifier hs-type">false</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-30"></span><span id="false"><span class="annot"><span class="annottext">false :: FilePath -&gt; IO Property
+</span><a href="Cardano.Tracer.Test.Utils.html#false"><span class="hs-identifier hs-var hs-var">false</span></a></span></span><span> </span><span id="local-6989586621679143085"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143085"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Property -&gt; IO Property
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; IO Property)
+-&gt; (Property -&gt; Property) -&gt; Property -&gt; IO Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; FilePath -&gt; prop -&gt; Property
+</span><span class="hs-identifier hs-var">counterexample</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143085"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; IO Property) -&gt; Property -&gt; IO Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><span class="hs-identifier hs-var">property</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructure"><span class="hs-identifier hs-type">propRunInLogsStructure</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-35"></span><span id="propRunInLogsStructure"><span class="annot"><span class="annottext">propRunInLogsStructure :: TestSetup Identity
+-&gt; (FilePath -&gt; FilePath -&gt; IO Property) -&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructure"><span class="hs-identifier hs-var hs-var">propRunInLogsStructure</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143091"><span id="local-6989586621679143092"><span id="local-6989586621679143093"><span id="local-6989586621679143094"><span id="local-6989586621679143095"><span id="local-6989586621679143096"><span id="local-6989586621679143097"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+</span><a href="#local-6989586621679143091"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143105"><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; IO Property
+</span><a href="#local-6989586621679143105"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143107"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143107"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143097"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; IO Property
+</span><a href="#local-6989586621679143105"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143107"><span class="hs-identifier hs-var">rootDir</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143094"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructure2"><span class="hs-identifier hs-type">propRunInLogsStructure2</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-43"></span><span id="propRunInLogsStructure2"><span class="annot"><span class="annottext">propRunInLogsStructure2 :: TestSetup Identity
+-&gt; (FilePath -&gt; FilePath -&gt; FilePath -&gt; IO Property) -&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructure2"><span class="hs-identifier hs-var hs-var">propRunInLogsStructure2</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143110"><span id="local-6989586621679143111"><span id="local-6989586621679143112"><span id="local-6989586621679143113"><span id="local-6989586621679143114"><span id="local-6989586621679143115"><span id="local-6989586621679143116"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143117"><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath -&gt; IO Property
+</span><a href="#local-6989586621679143117"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="annot"><span class="annottext">(IO Property -&gt; Property) -&gt; IO Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143118"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143118"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143116"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath -&gt; IO Property
+</span><a href="#local-6989586621679143117"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143118"><span class="hs-identifier hs-var">rootDir</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var">replaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;1.sock&quot;</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143113"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var">replaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;2.sock&quot;</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143113"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructureLocal"><span class="hs-identifier hs-type">propRunInLogsStructureLocal</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-52"></span><span id="propRunInLogsStructureLocal"><span class="annot"><span class="annottext">propRunInLogsStructureLocal :: TestSetup Identity
+-&gt; (FilePath -&gt; HowToConnect -&gt; IO Property) -&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructureLocal"><span class="hs-identifier hs-var hs-var">propRunInLogsStructureLocal</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143121"><span id="local-6989586621679143122"><span id="local-6989586621679143123"><span id="local-6989586621679143124"><span id="local-6989586621679143125"><span id="local-6989586621679143126"><span id="local-6989586621679143127"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143128"><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143128"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="annot"><span class="annottext">(IO Property -&gt; Property) -&gt; IO Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143129"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143129"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143127"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143128"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143129"><span class="hs-identifier hs-var">rootDir</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LocalPipe"><span class="hs-identifier hs-var">Net.LocalPipe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143124"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructureLocal2"><span class="hs-identifier hs-type">propRunInLogsStructureLocal2</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-60"></span><span id="propRunInLogsStructureLocal2"><span class="annot"><span class="annottext">propRunInLogsStructureLocal2 :: TestSetup Identity
+-&gt; (FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property)
+-&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructureLocal2"><span class="hs-identifier hs-var hs-var">propRunInLogsStructureLocal2</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143132"><span id="local-6989586621679143133"><span id="local-6989586621679143134"><span id="local-6989586621679143135"><span id="local-6989586621679143136"><span id="local-6989586621679143137"><span id="local-6989586621679143138"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143139"><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143139"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="annot"><span class="annottext">(IO Property -&gt; Property) -&gt; IO Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143140"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143140"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143138"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143139"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143140"><span class="hs-identifier hs-var">rootDir</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LocalPipe"><span class="hs-identifier hs-var">Net.LocalPipe</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; HowToConnect)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; HowToConnect
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var">replaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;1.sock&quot;</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; HowToConnect) -&gt; FilePath -&gt; HowToConnect
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143135"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#LocalPipe"><span class="hs-identifier hs-var">Net.LocalPipe</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; HowToConnect)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; HowToConnect
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var">prepareLocalSock</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePath)
+-&gt; (FilePath -&gt; FilePath) -&gt; FilePath -&gt; FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var">replaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;2.sock&quot;</span></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; HowToConnect) -&gt; FilePath -&gt; HowToConnect
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143135"><span class="hs-identifier hs-var">tsSockInternal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructurePort"><span class="hs-identifier hs-type">propRunInLogsStructurePort</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-69"></span><span id="propRunInLogsStructurePort"><span class="annot"><span class="annottext">propRunInLogsStructurePort :: TestSetup Identity
+-&gt; (FilePath -&gt; HowToConnect -&gt; IO Property) -&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructurePort"><span class="hs-identifier hs-var hs-var">propRunInLogsStructurePort</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143142"><span id="local-6989586621679143143"><span id="local-6989586621679143144"><span id="local-6989586621679143145"><span id="local-6989586621679143146"><span id="local-6989586621679143147"><span id="local-6989586621679143148"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143149"><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143149"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143150"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143150"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143148"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143149"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143150"><span class="hs-identifier hs-var">rootDir</span></a></span><span> </span><span class="annot"><span class="annottext">HowToConnect
+</span><a href="#local-6989586621679143151"><span class="hs-identifier hs-var">howToConnect</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="#local-6989586621679143151"><span class="hs-identifier hs-type">howToConnect</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679143151"><span class="annot"><span class="annottext">howToConnect :: HowToConnect
+</span><a href="#local-6989586621679143151"><span class="hs-identifier hs-var hs-var">howToConnect</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Host -&gt; Port -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#RemoteSocket"><span class="hs-identifier hs-var">Net.RemoteSocket</span></a></span><span> </span><span class="annot"><span class="annottext">Host
+</span><span class="hs-string">&quot;localhost&quot;</span></span><span> </span><span class="annot"><span class="annottext">Port
+</span><span class="hs-number">22557</span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructurePort2"><span class="hs-identifier hs-type">propRunInLogsStructurePort2</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-79"></span><span id="propRunInLogsStructurePort2"><span class="annot"><span class="annottext">propRunInLogsStructurePort2 :: TestSetup Identity
+-&gt; (FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property)
+-&gt; Property
+</span><a href="Cardano.Tracer.Test.Utils.html#propRunInLogsStructurePort2"><span class="hs-identifier hs-var hs-var">propRunInLogsStructurePort2</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.TestSetup.html#TestSetup"><span class="hs-identifier hs-type">TestSetup</span></a></span><span class="hs-special">{</span><span id="local-6989586621679143154"><span id="local-6989586621679143155"><span id="local-6989586621679143156"><span id="local-6989586621679143157"><span id="local-6989586621679143158"><span id="local-6989586621679143159"><span id="local-6989586621679143160"><span class="annot"><span class="annottext">Identity Double
+Identity Int
+Identity FilePath
+Identity (Maybe Int)
+Identity NetworkMagic
+tsTime :: forall (a :: * -&gt; *). TestSetup a -&gt; a Double
+tsThreads :: forall (a :: * -&gt; *). TestSetup a -&gt; a Int
+tsMessages :: forall (a :: * -&gt; *). TestSetup a -&gt; a (Maybe Int)
+tsSockInternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsSockExternal :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsNetworkMagic :: forall (a :: * -&gt; *). TestSetup a -&gt; a NetworkMagic
+tsWorkDir :: forall (a :: * -&gt; *). TestSetup a -&gt; a FilePath
+tsTime :: Identity Double
+tsThreads :: Identity Int
+tsMessages :: Identity (Maybe Int)
+tsSockInternal :: Identity FilePath
+tsSockExternal :: Identity FilePath
+tsNetworkMagic :: Identity NetworkMagic
+tsWorkDir :: Identity FilePath
+</span><a href="Cardano.Tracer.Test.TestSetup.html#tsTime"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679143161"><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143161"><span class="hs-identifier hs-var">testAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Property -&gt; Property
+forall prop. Testable prop =&gt; IO prop -&gt; Property
+</span><span class="hs-identifier hs-var">ioProperty</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679143162"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143162"><span class="hs-identifier hs-var">rootDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (FilePath, IO ())
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.IO.Extra.html#newTempDirWithin"><span class="hs-identifier hs-var">newTempDirWithin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Identity FilePath -&gt; FilePath
+forall a. Identity a -&gt; a
+</span><a href="Cardano.Tracer.Test.Utils.html#unI"><span class="hs-identifier hs-var">unI</span></a></span><span> </span><span class="annot"><span class="annottext">Identity FilePath
+</span><a href="#local-6989586621679143160"><span class="hs-identifier hs-var">tsWorkDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; HowToConnect -&gt; HowToConnect -&gt; IO Property
+</span><a href="#local-6989586621679143161"><span class="hs-identifier hs-var">testAction</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143162"><span class="hs-identifier hs-var">rootDir</span></a></span><span> </span><span class="annot"><span class="annottext">HowToConnect
+</span><a href="#local-6989586621679143163"><span class="hs-identifier hs-var">howToConnect1</span></a></span><span> </span><span class="annot"><span class="annottext">HowToConnect
+</span><a href="#local-6989586621679143164"><span class="hs-identifier hs-var">howToConnect2</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="#local-6989586621679143163"><span class="hs-identifier hs-type">howToConnect1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679143164"><span class="hs-identifier hs-type">howToConnect2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#HowToConnect"><span class="hs-identifier hs-type">HowToConnect</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679143163"><span class="annot"><span class="annottext">howToConnect1 :: HowToConnect
+</span><a href="#local-6989586621679143163"><span class="hs-identifier hs-var hs-var">howToConnect1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Host -&gt; Port -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#RemoteSocket"><span class="hs-identifier hs-var">Net.RemoteSocket</span></a></span><span> </span><span class="annot"><span class="annottext">Host
+</span><span class="hs-string">&quot;localhost&quot;</span></span><span> </span><span class="annot"><span class="annottext">Port
+</span><span class="hs-number">22555</span></span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679143164"><span class="annot"><span class="annottext">howToConnect2 :: HowToConnect
+</span><a href="#local-6989586621679143164"><span class="hs-identifier hs-var hs-var">howToConnect2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Host -&gt; Port -&gt; HowToConnect
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#RemoteSocket"><span class="hs-identifier hs-var">Net.RemoteSocket</span></a></span><span> </span><span class="annot"><span class="annottext">Host
+</span><span class="hs-string">&quot;localhost&quot;</span></span><span> </span><span class="annot"><span class="annottext">Port
+</span><span class="hs-number">22556</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-type">prepareLocalSock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-88"></span><span id="prepareLocalSock"><span class="annot"><span class="annottext">prepareLocalSock :: FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#prepareLocalSock"><span class="hs-identifier hs-var hs-var">prepareLocalSock</span></a></span></span><span> </span><span id="local-6989586621679143165"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143165"><span class="hs-identifier hs-var">localSock</span></a></span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Info.Extra.html#isWindows"><span class="hs-identifier hs-var">isWindows</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;\\\\.\\pipe\\build\\&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#dropDrive"><span class="hs-identifier hs-var">dropDrive</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143165"><span class="hs-identifier hs-var">localSock</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Info.Extra.html#isMac"><span class="hs-identifier hs-var">isMac</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var">replaceExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;pipe&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143165"><span class="hs-identifier hs-var">localSock</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143165"><span class="hs-identifier hs-var">localSock</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-type">replaceExtension</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-94"></span><span id="replaceExtension"><span class="annot"><span class="annottext">replaceExtension :: FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="Cardano.Tracer.Test.Utils.html#replaceExtension"><span class="hs-identifier hs-var hs-var">replaceExtension</span></a></span></span><span> </span><span id="local-6989586621679143166"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143166"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span id="local-6989586621679143167"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143167"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#dropExtension"><span class="hs-identifier hs-var">dropExtension</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143167"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679143166"><span class="hs-identifier hs-var">new</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#isDirectoryEmpty"><span class="hs-identifier hs-type">isDirectoryEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-97"></span><span id="isDirectoryEmpty"><span class="annot"><span class="annottext">isDirectoryEmpty :: FilePath -&gt; IO Bool
+</span><a href="Cardano.Tracer.Test.Utils.html#isDirectoryEmpty"><span class="hs-identifier hs-var hs-var">isDirectoryEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([FilePath] -&gt; Bool) -&gt; IO [FilePath] -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[FilePath] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [FilePath] -&gt; IO Bool)
+-&gt; (FilePath -&gt; IO [FilePath]) -&gt; FilePath -&gt; IO Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO [FilePath]
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/System.Directory.Extra.html#listDirectories"><span class="hs-identifier hs-var">listDirectories</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span id="local-6989586621679143002"><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#vectorOf"><span class="hs-identifier hs-type">vectorOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="#local-6989586621679143002"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679143002"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-100"></span><span id="vectorOf"><span class="annot"><span class="annottext">vectorOf :: forall a. Gen a -&gt; Gen (Vector a)
+</span><a href="Cardano.Tracer.Test.Utils.html#vectorOf"><span class="hs-identifier hs-var hs-var">vectorOf</span></a></span></span><span> </span><span id="local-6989586621679143173"><span class="annot"><span class="annottext">Gen a
+</span><a href="#local-6989586621679143173"><span class="hs-identifier hs-var">gen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Gen (Vector a)) -&gt; Gen (Vector a)
+forall a. (Int -&gt; Gen a) -&gt; Gen a
+</span><span class="hs-identifier hs-var">sized</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679143175"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143175"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679143176"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143176"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Gen Int
+</span><span class="hs-identifier hs-var">chooseInt</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143175"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Gen a -&gt; Gen (Vector a)
+forall a. Int -&gt; Gen a -&gt; Gen (Vector a)
+</span><a href="Cardano.Tracer.Test.Utils.html#sizedVectorOf"><span class="hs-identifier hs-var">sizedVectorOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143176"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Gen a
+</span><a href="#local-6989586621679143173"><span class="hs-identifier hs-var">gen</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621679143007"><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#sizedVectorOf"><span class="hs-identifier hs-type">sizedVectorOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="#local-6989586621679143007"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679143007"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-105"></span><span id="sizedVectorOf"><span class="annot"><span class="annottext">sizedVectorOf :: forall a. Int -&gt; Gen a -&gt; Gen (Vector a)
+</span><a href="Cardano.Tracer.Test.Utils.html#sizedVectorOf"><span class="hs-identifier hs-var hs-var">sizedVectorOf</span></a></span></span><span> </span><span id="local-6989586621679143181"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143181"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679143182"><span class="annot"><span class="annottext">Gen a
+</span><a href="#local-6989586621679143182"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [a] -&gt; Vector a
+forall a. Int -&gt; [a] -&gt; Vector a
+</span><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#fromListN"><span class="hs-identifier hs-var">Vector.fromListN</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143181"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Vector a) -&gt; Gen [a] -&gt; Gen (Vector a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Gen a -&gt; Gen [a]
+forall a. Int -&gt; Gen a -&gt; Gen [a]
+</span><span class="hs-identifier hs-var">QuickCheck.vectorOf</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679143181"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Gen a
+</span><a href="#local-6989586621679143182"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span id="local-6989586621679143014"><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#vectorSort"><span class="hs-identifier hs-type">vectorSort</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679143014"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679143014"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679143014"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-108"></span><span id="vectorSort"><span class="annot"><span class="annottext">vectorSort :: forall a. Ord a =&gt; Vector a -&gt; Vector a
+</span><a href="Cardano.Tracer.Test.Utils.html#vectorSort"><span class="hs-identifier hs-var hs-var">vectorSort</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall s. MVector s a -&gt; ST s ()) -&gt; Vector a -&gt; Vector a
+forall a.
+(forall s. MVector s a -&gt; ST s ()) -&gt; Vector a -&gt; Vector a
+</span><a href="file:///nix/store/r1w60k2f32sdf4w183vq7ayicmqw7p4h-vector-lib-vector-0.13.2.0-haddock-doc/share/doc/vector/html/src/Data.Vector.html#modify"><span class="hs-identifier hs-var">Vector.modify</span></a></span><span> </span><span class="annot"><span class="annottext">MVector s a -&gt; ST s ()
+MVector (PrimState (ST s)) a -&gt; ST s ()
+forall s. MVector s a -&gt; ST s ()
+forall (m :: * -&gt; *) (v :: * -&gt; * -&gt; *) e.
+(PrimMonad m, MVector v e, Ord e) =&gt;
+v (PrimState m) e -&gt; m ()
+</span><a href="file:///nix/store/cxdrn1pmkrjj8pi014vhalwmcaqxfzjd-vector-algorithms-lib-vector-algorithms-0.9.1.0-haddock-doc/share/doc/vector-algorithms/html/src/Data.Vector.Algorithms.Merge.html#sort"><span class="hs-identifier hs-var">sort</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Basic Lock synchronisation.</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- From: https://hackage.haskell.org/package/concurrent-extra-0.7.0.12/docs/Control-Concurrent-Lock.html</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">type</span><span> </span><span id="Lock"><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#Lock"><span class="hs-identifier hs-var">Lock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#newLock"><span class="hs-identifier hs-type">newLock</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#Lock"><span class="hs-identifier hs-type">Lock</span></a></span><span>
+</span><span id="line-117"></span><span id="newLock"><span class="annot"><span class="annottext">newLock :: IO Lock
+</span><a href="Cardano.Tracer.Test.Utils.html#newLock"><span class="hs-identifier hs-var hs-var">newLock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO Lock
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#acquire"><span class="hs-identifier hs-type">acquire</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#Lock"><span class="hs-identifier hs-type">Lock</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span id="acquire"><span class="annot"><span class="annottext">acquire :: Lock -&gt; IO ()
+</span><a href="Cardano.Tracer.Test.Utils.html#acquire"><span class="hs-identifier hs-var hs-var">acquire</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lock -&gt; IO ()
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#release"><span class="hs-identifier hs-type">release</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Test.Utils.html#Lock"><span class="hs-identifier hs-type">Lock</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span id="release"><span class="annot"><span class="annottext">release :: Lock -&gt; IO ()
+</span><a href="Cardano.Tracer.Test.Utils.html#release"><span class="hs-identifier hs-var hs-var">release</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Lock -&gt; () -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-operator hs-var">`putMVar`</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span></pre></body></html>

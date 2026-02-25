@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>RIO.List.Partial</title><link href="linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">rio</span><ul class="links" id="page-menu"><li><a href="src/RIO.List.Partial.html">Source</a></li><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr><tr><th>Language</th><td>Haskell2010</td></tr></table><p class="caption">RIO.List.Partial</p></div><div id="table-of-contents"><div id="contents-list"><p class="caption" onclick="window.scrollTo(0,0)">Contents</p><ul><li><a href="#g:1">Basic functions</a></li><li><a href="#g:2">Reducing lists (folds)</a><ul><li><a href="#g:3">Special folds</a></li></ul></li><li><a href="#g:4">Building lists</a><ul><li><a href="#g:5">Scans</a></li></ul></li><li><a href="#g:6">Indexing lists</a></li></ul></div></div><div id="description"><p class="caption">Description</p><div class="doc"><p><code>List</code> partial functions. Import as:</p><pre>import qualified RIO.List.Partial as L'</pre></div></div><div id="synopsis"><details id="syn"><summary>Synopsis</summary><ul class="details-toggle" data-details-id="syn"><li class="src short"><a href="#v:head">head</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; a</li><li class="src short"><a href="#v:last">last</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; a</li><li class="src short"><a href="#v:tail">tail</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; [a]</li><li class="src short"><a href="#v:init">init</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; [a]</li><li class="src short"><a href="#v:foldl1">foldl1</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a</li><li class="src short"><a href="#v:foldl1-39-">foldl1'</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; (a -&gt; a -&gt; a) -&gt; [a] -&gt; a</li><li class="src short"><a href="#v:foldr1">foldr1</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a</li><li class="src short"><a href="#v:maximum">maximum</a> :: (<a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t, <a href="RIO-Prelude-Types.html#t:Ord" title="RIO.Prelude.Types">Ord</a> a) =&gt; t a -&gt; a</li><li class="src short"><a href="#v:minimum">minimum</a> :: (<a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t, <a href="RIO-Prelude-Types.html#t:Ord" title="RIO.Prelude.Types">Ord</a> a) =&gt; t a -&gt; a</li><li class="src short"><a href="#v:maximumBy">maximumBy</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; <a href="RIO-Prelude-Types.html#t:Ordering" title="RIO.Prelude.Types">Ordering</a>) -&gt; t a -&gt; a</li><li class="src short"><a href="#v:minimumBy">minimumBy</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; <a href="RIO-Prelude-Types.html#t:Ordering" title="RIO.Prelude.Types">Ordering</a>) -&gt; t a -&gt; a</li><li class="src short"><a href="#v:scanl1">scanl1</a> :: (a -&gt; a -&gt; a) -&gt; [a] -&gt; [a]</li><li class="src short"><a href="#v:scanr1">scanr1</a> :: (a -&gt; a -&gt; a) -&gt; [a] -&gt; [a]</li><li class="src short"><a href="#v:-33--33-">(!!)</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; <a href="RIO-Prelude-Types.html#t:Int" title="RIO.Prelude.Types">Int</a> -&gt; a</li></ul></details></div><div id="interface"><a href="#g:1" id="g:1"><h1>Basic functions</h1></a><div class="top"><p class="src"><a id="v:head" class="def">head</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:head" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(1)\)</span>. Extract the first element of a list, which must be non-empty.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>head [1, 2, 3]
+</code></strong>1
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>head [1..]
+</code></strong>1
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>head []
+</code></strong>*** Exception: Prelude.head: empty list
+</pre><p>WARNING: This function is partial. You can use case-matching, <code><a href="RIO-List.html#v:uncons" title="RIO.List">uncons</a></code> or
+ <code><a href="RIO-Prelude.html#v:listToMaybe" title="RIO.Prelude">listToMaybe</a></code> instead.</p></div></div><div class="top"><p class="src"><a id="v:last" class="def">last</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:last" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(n)\)</span>. Extract the last element of a list, which must be
+ finite and non-empty.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>last [1, 2, 3]
+</code></strong>3
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>last [1..]
+</code></strong>* Hangs forever *
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>last []
+</code></strong>*** Exception: Prelude.last: empty list
+</pre><p>WARNING: This function is partial. You can use <code><a href="RIO-List.html#v:reverse" title="RIO.List">reverse</a></code> with case-matching,
+ <code><a href="RIO-List.html#v:uncons" title="RIO.List">uncons</a></code> or <code><a href="RIO-Prelude.html#v:listToMaybe" title="RIO.Prelude">listToMaybe</a></code> instead.</p></div></div><div class="top"><p class="src"><a id="v:tail" class="def">tail</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; [a] <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:tail" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(1)\)</span>. Extract the elements after the head of a list, which
+ must be non-empty.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>tail [1, 2, 3]
+</code></strong>[2,3]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>tail [1]
+</code></strong>[]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>tail []
+</code></strong>*** Exception: Prelude.tail: empty list
+</pre><p>WARNING: This function is partial. You can use case-matching or <code><a href="RIO-List.html#v:uncons" title="RIO.List">uncons</a></code>
+ instead.</p></div></div><div class="top"><p class="src"><a id="v:init" class="def">init</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; [a] <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:init" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(n)\)</span>. Return all the elements of a list except the last one.
+ The list must be non-empty.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>init [1, 2, 3]
+</code></strong>[1,2]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>init [1]
+</code></strong>[]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>init []
+</code></strong>*** Exception: Prelude.init: empty list
+</pre><p>WARNING: This function is partial. You can use <code><a href="RIO-List.html#v:reverse" title="RIO.List">reverse</a></code> with case-matching
+ or <code><a href="RIO-List.html#v:uncons" title="RIO.List">uncons</a></code> instead.</p></div></div><a href="#g:2" id="g:2"><h1>Reducing lists (folds)</h1></a><div class="top"><p class="src"><a id="v:foldl1" class="def">foldl1</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:foldl1" class="selflink">#</a></p><div class="doc"><p>A variant of <code><a href="RIO-List.html#v:foldl" title="RIO.List">foldl</a></code> that has no base case,
+ and thus may only be applied to non-empty structures.</p><p>This function is non-total and will raise a runtime exception if the
+ structure happens to be empty.</p><pre><code><a href="RIO-List-Partial.html#v:foldl1" title="RIO.List.Partial">foldl1</a></code> f = <code><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/GHC-List.html#v:foldl1" title="GHC.List">foldl1</a></code> f . <code><a href="RIO-Prelude.html#v:toList" title="RIO.Prelude">toList</a></code></pre><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:foldl10">Examples</h4><details id="ch:foldl10"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (+) [1..4]
+</code></strong>10
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (+) []
+</code></strong>*** Exception: Prelude.foldl1: empty list
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (+) Nothing
+</code></strong>*** Exception: foldl1: empty structure
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (-) [1..4]
+</code></strong>-8
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (&amp;&amp;) [True, False, True, True]
+</code></strong>False
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (||) [False, False, True, True]
+</code></strong>True
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldl1 (+) [1..]
+</code></strong>* Hangs forever *
+</pre></details></div></div><div class="top"><p class="src"><a id="v:foldl1-39-" class="def">foldl1'</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; (a -&gt; a -&gt; a) -&gt; [a] -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:foldl1-39-" class="selflink">#</a></p><div class="doc"><p>A strict version of <code><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/GHC-List.html#v:foldl1" title="GHC.List">foldl1</a></code>.</p></div></div><div class="top"><p class="src"><a id="v:foldr1" class="def">foldr1</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:foldr1" class="selflink">#</a></p><div class="doc"><p>A variant of <code><a href="RIO-List.html#v:foldr" title="RIO.List">foldr</a></code> that has no base case,
+ and thus may only be applied to non-empty structures.</p><p>This function is non-total and will raise a runtime exception if the
+ structure happens to be empty.</p><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:foldr10">Examples</h4><details id="ch:foldr10"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (+) [1..4]
+</code></strong>10
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (+) []
+</code></strong>Exception: Prelude.foldr1: empty list
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (+) Nothing
+</code></strong>*** Exception: foldr1: empty structure
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (-) [1..4]
+</code></strong>-2
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (&amp;&amp;) [True, False, True, True]
+</code></strong>False
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (||) [False, False, True, True]
+</code></strong>True
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>foldr1 (+) [1..]
+</code></strong>* Hangs forever *
+</pre></details></div></div><a href="#g:3" id="g:3"><h2>Special folds</h2></a><div class="top"><p class="src"><a id="v:maximum" class="def">maximum</a> :: (<a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t, <a href="RIO-Prelude-Types.html#t:Ord" title="RIO.Prelude.Types">Ord</a> a) =&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:maximum" class="selflink">#</a></p><div class="doc"><p>The largest element of a non-empty structure.</p><p>This function is non-total and will raise a runtime exception if the
+ structure happens to be empty.  A structure that supports random access
+ and maintains its elements in order should provide a specialised
+ implementation to return the maximum in faster than linear time.</p><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:maximum0">Examples</h4><details id="ch:maximum0"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>maximum [1..10]
+</code></strong>10
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>maximum []
+</code></strong>*** Exception: Prelude.maximum: empty list
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>maximum Nothing
+</code></strong>*** Exception: maximum: empty structure
+</pre><p>WARNING: This function is partial for possibly-empty structures like lists.</p></details><p><em>Since: base-4.8.0.0</em></p></div></div><div class="top"><p class="src"><a id="v:minimum" class="def">minimum</a> :: (<a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t, <a href="RIO-Prelude-Types.html#t:Ord" title="RIO.Prelude.Types">Ord</a> a) =&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:minimum" class="selflink">#</a></p><div class="doc"><p>The least element of a non-empty structure.</p><p>This function is non-total and will raise a runtime exception if the
+ structure happens to be empty.  A structure that supports random access
+ and maintains its elements in order should provide a specialised
+ implementation to return the minimum in faster than linear time.</p><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:minimum0">Examples</h4><details id="ch:minimum0"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>minimum [1..10]
+</code></strong>1
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>minimum []
+</code></strong>*** Exception: Prelude.minimum: empty list
+</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>minimum Nothing
+</code></strong>*** Exception: minimum: empty structure
+</pre><p>WARNING: This function is partial for possibly-empty structures like lists.</p></details><p><em>Since: base-4.8.0.0</em></p></div></div><div class="top"><p class="src"><a id="v:maximumBy" class="def">maximumBy</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; <a href="RIO-Prelude-Types.html#t:Ordering" title="RIO.Prelude.Types">Ordering</a>) -&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:maximumBy" class="selflink">#</a></p><div class="doc"><p>The largest element of a non-empty structure with respect to the
+ given comparison function.</p><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:maximumBy0">Examples</h4><details id="ch:maximumBy0"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>maximumBy (compare `on` length) [&quot;Hello&quot;, &quot;World&quot;, &quot;!&quot;, &quot;Longest&quot;, &quot;bar&quot;]
+</code></strong>&quot;Longest&quot;
+</pre><p>WARNING: This function is partial for possibly-empty structures like lists.</p></details></div></div><div class="top"><p class="src"><a id="v:minimumBy" class="def">minimumBy</a> :: <a href="RIO-Prelude-Types.html#t:Foldable" title="RIO.Prelude.Types">Foldable</a> t =&gt; (a -&gt; a -&gt; <a href="RIO-Prelude-Types.html#t:Ordering" title="RIO.Prelude.Types">Ordering</a>) -&gt; t a -&gt; a <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:minimumBy" class="selflink">#</a></p><div class="doc"><p>The least element of a non-empty structure with respect to the
+ given comparison function.</p><h4 class="subheading details-toggle-control details-toggle" data-details-id="ch:minimumBy0">Examples</h4><details id="ch:minimumBy0"><summary class="hide-when-js-enabled">Expand</summary><p>Basic usage:</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>minimumBy (compare `on` length) [&quot;Hello&quot;, &quot;World&quot;, &quot;!&quot;, &quot;Longest&quot;, &quot;bar&quot;]
+</code></strong>&quot;!&quot;
+</pre><p>WARNING: This function is partial for possibly-empty structures like lists.</p></details></div></div><a href="#g:4" id="g:4"><h1>Building lists</h1></a><a href="#g:5" id="g:5"><h2>Scans</h2></a><div class="top"><p class="src"><a id="v:scanl1" class="def">scanl1</a> :: (a -&gt; a -&gt; a) -&gt; [a] -&gt; [a] <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:scanl1" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(n)\)</span>. <code><a href="RIO-List-Partial.html#v:scanl1" title="RIO.List.Partial">scanl1</a></code> is a variant of <code><a href="RIO-List.html#v:scanl" title="RIO.List">scanl</a></code> that has no starting
+ value argument:</p><pre>scanl1 f [x1, x2, ...] == [x1, x1 `f` x2, ...]</pre><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (+) [1..4]
+</code></strong>[1,3,6,10]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (+) []
+</code></strong>[]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (-) [1..4]
+</code></strong>[1,-1,-4,-8]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (&amp;&amp;) [True, False, True, True]
+</code></strong>[True,False,False,False]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (||) [False, False, True, True]
+</code></strong>[False,False,True,True]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanl1 (+) [1..]
+</code></strong>* Hangs forever *
+</pre></div></div><div class="top"><p class="src"><a id="v:scanr1" class="def">scanr1</a> :: (a -&gt; a -&gt; a) -&gt; [a] -&gt; [a] <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:scanr1" class="selflink">#</a></p><div class="doc"><p><span class="mathjax">\(\mathcal{O}(n)\)</span>. <code><a href="RIO-List-Partial.html#v:scanr1" title="RIO.List.Partial">scanr1</a></code> is a variant of <code><a href="RIO-List.html#v:scanr" title="RIO.List">scanr</a></code> that has no starting
+ value argument.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanr1 (+) [1..4]
+</code></strong>[10,9,7,4]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanr1 (+) []
+</code></strong>[]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanr1 (-) [1..4]
+</code></strong>[-2,3,-1,4]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanr1 (&amp;&amp;) [True, False, True, True]
+</code></strong>[False,False,True,True]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>scanr1 (||) [True, True, False, False]
+</code></strong>[True,True,False,False]
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>force $ scanr1 (+) [1..]
+</code></strong>*** Exception: stack overflow
+</pre></div></div><a href="#g:6" id="g:6"><h1>Indexing lists</h1></a><div class="top"><p class="src"><a id="v:-33--33-" class="def">(!!)</a> :: <a href="RIO-Prelude-Types.html#t:HasCallStack" title="RIO.Prelude.Types">HasCallStack</a> =&gt; [a] -&gt; <a href="RIO-Prelude-Types.html#t:Int" title="RIO.Prelude.Types">Int</a> -&gt; a <span class="fixity">infixl 9</span><span class="rightedge"></span> <a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src" class="link">Source</a> <a href="#v:-33--33-" class="selflink">#</a></p><div class="doc"><p>List index (subscript) operator, starting from 0.
+ It is an instance of the more general <code><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/Data-List.html#v:genericIndex" title="Data.List">genericIndex</a></code>,
+ which takes an index of any integral type.</p><pre class="screen"><code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>['a', 'b', 'c'] !! 0
+</code></strong>'a'
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>['a', 'b', 'c'] !! 2
+</code></strong>'c'
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>['a', 'b', 'c'] !! 3
+</code></strong>*** Exception: Prelude.!!: index too large
+<code class="prompt">&gt;&gt;&gt; </code><strong class="userinput"><code>['a', 'b', 'c'] !! (-1)
+</code></strong>*** Exception: Prelude.!!: negative index
+</pre><p>WARNING: This function is partial. You can use
+ <a href="https://hackage.haskell.org/package/safe/docs/Safe.html#v:atMay">atMay</a>
+ instead.</p></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.29.2</p></div></body></html>

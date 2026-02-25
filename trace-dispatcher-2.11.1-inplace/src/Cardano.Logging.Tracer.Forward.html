@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Tracer.Forward</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Tracer.Forward.html#forwardTracer"><span class="hs-identifier">forwardTracer</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.DocuGenerator.html"><span class="hs-identifier">Cardano.Logging.DocuGenerator</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">---------------------------------------------------------------------------</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | It is mandatory to construct only one forwardTracer tracer in any application!</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- Throwing away a forwardTracer tracer and using a new one will result in an exception</span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Cardano.Logging.Tracer.Forward.html#forwardTracer"><span class="hs-identifier hs-type">forwardTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679147344"><span class="annot"><a href="#local-6989586621679147344"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679147344"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#TraceObject"><span class="hs-identifier hs-type">TraceObject</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679147344"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedMessage"><span class="hs-identifier hs-type">FormattedMessage</span></a></span><span>
+</span><span id="line-24"></span><span id="forwardTracer"><span class="annot"><span class="annottext">forwardTracer :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+(TraceObject -&gt; IO ()) -&gt; Trace m FormattedMessage
+</span><a href="Cardano.Logging.Tracer.Forward.html#forwardTracer"><span class="hs-identifier hs-var hs-var">forwardTracer</span></a></span></span><span> </span><span id="local-6989586621679147390"><span class="annot"><span class="annottext">TraceObject -&gt; IO ()
+</span><a href="#local-6989586621679147390"><span class="hs-identifier hs-var">write</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; Trace m FormattedMessage
+forall (m :: * -&gt; *) a.
+Tracer m (LoggingContext, Either TraceControl a) -&gt; Trace m a
+</span><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-var">Trace</span></a></span><span> </span><span class="annot"><span class="annottext">(Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+ -&gt; Trace m FormattedMessage)
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; Trace m FormattedMessage
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m (LoggingContext, Either TraceControl FormattedMessage) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#arrow"><span class="hs-identifier hs-var">T.arrow</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerA
+   m (LoggingContext, Either TraceControl FormattedMessage) ()
+ -&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage))
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+(a -&gt; m ()) -&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-var">T.emit</span></a></span><span> </span><span class="annot"><span class="annottext">(((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+ -&gt; TracerA
+      m (LoggingContext, Either TraceControl FormattedMessage) ())
+-&gt; ((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LoggingContext -&gt; Either TraceControl FormattedMessage -&gt; m ())
+-&gt; (LoggingContext, Either TraceControl FormattedMessage) -&gt; m ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">LoggingContext -&gt; Either TraceControl FormattedMessage -&gt; m ()
+</span><a href="#local-6989586621679147395"><span class="hs-identifier hs-var">output</span></a></span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="#local-6989586621679147395"><span class="hs-identifier hs-type">output</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-28"></span><span>       </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceControl"><span class="hs-identifier hs-type">TraceControl</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedMessage"><span class="hs-identifier hs-type">FormattedMessage</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147344"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679147395"><span class="annot"><span class="annottext">output :: LoggingContext -&gt; Either TraceControl FormattedMessage -&gt; m ()
+</span><a href="#local-6989586621679147395"><span class="hs-identifier hs-var hs-var">output</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedForwarder"><span class="hs-identifier hs-type">FormattedForwarder</span></a></span><span> </span><span id="local-6989586621679147398"><span class="annot"><span class="annottext">TraceObject
+</span><a href="#local-6989586621679147398"><span class="hs-identifier hs-var">lo</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">TraceObject -&gt; IO ()
+</span><a href="#local-6989586621679147390"><span class="hs-identifier hs-var">write</span></a></span><span> </span><span class="annot"><span class="annottext">TraceObject
+</span><a href="#local-6989586621679147398"><span class="hs-identifier hs-var">lo</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="#local-6989586621679147395"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceControl
+</span><a href="Cardano.Logging.Types.html#TCReset"><span class="hs-identifier hs-var">TCReset</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="#local-6989586621679147395"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span id="local-6989586621679147401"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679147401"><span class="hs-identifier hs-var">lk</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679147402"><span class="annot"><span class="annottext">c :: TraceControl
+</span><a href="#local-6989586621679147402"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Logging.Types.html#TCDocument"><span class="hs-identifier hs-type">TCDocument</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">BackendConfig -&gt; (LoggingContext, Either TraceControl Any) -&gt; m ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+BackendConfig -&gt; (LoggingContext, Either TraceControl a) -&gt; m ()
+</span><a href="Cardano.Logging.DocuGenerator.html#docIt"><span class="hs-identifier hs-var">docIt</span></a></span><span> </span><span class="annot"><span class="annottext">BackendConfig
+</span><a href="Cardano.Logging.Types.html#Forwarder"><span class="hs-identifier hs-var">Forwarder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679147401"><span class="hs-identifier hs-var">lk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TraceControl -&gt; Either TraceControl Any
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceControl
+</span><a href="#local-6989586621679147402"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="#local-6989586621679147395"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="annot"><span class="annottext">FormattedMessage
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="#local-6989586621679147395"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">Either TraceControl FormattedMessage
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span></pre></body></html>

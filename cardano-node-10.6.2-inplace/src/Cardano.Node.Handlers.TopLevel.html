@@ -1,0 +1,265 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Handlers.TopLevel</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Node.Handlers.TopLevel.html#toplevelExceptionHandler"><span class="hs-identifier">toplevelExceptionHandler</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- The code in this module derives from multiple authors over many years.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- It is all under the BSD3 license below.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Copyright (c) 2019 Input Output Global Inc (IOG).</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--               2017 Edward Z. Yang</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--               2015 Edsko de Vries</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--               2009 Duncan Coutts</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--               2007 Galois Inc.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--               2003 Isaac Jones, Simon Marlow</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Copyright (c) 2003-2017, Cabal Development Team.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- See the AUTHORS file for the full list of copyright holders.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- All rights reserved.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Redistribution and use in source and binary forms, with or without</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- modification, are permitted provided that the following conditions are</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- met:</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--     * Redistributions of source code must retain the above copyright</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--       notice, this list of conditions and the following disclaimer.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--     * Redistributions in binary form must reproduce the above</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--       copyright notice, this list of conditions and the following</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--       disclaimer in the documentation and/or other materials provided</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--       with the distribution.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--     * Neither the name of Isaac Jones nor the names of other</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--       contributors may be used to endorse or promote products derived</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--       from this software without specific prior written permission.</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.Diffusion.Types.html"><span class="hs-identifier">Ouroboros.Network.Diffusion.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Network</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html#ExceptionInLinkedThread"><span class="hs-identifier">ExceptionInLinkedThread</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html"><span class="hs-identifier">System.Environment</span></a></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | An exception handler to use for a program top level, as an alternative to</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- the default top level handler provided by GHC.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- Use like:</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- &gt; main = toplevelExceptionHandler $ do</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- &gt;   ...</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span id="local-6989586621681670112"><span class="annot"><a href="Cardano.Node.Handlers.TopLevel.html#toplevelExceptionHandler"><span class="hs-identifier hs-type">toplevelExceptionHandler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670112"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670112"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-69"></span><span id="toplevelExceptionHandler"><span class="annot"><span class="annottext">toplevelExceptionHandler :: forall a. IO a -&gt; IO a
+</span><a href="Cardano.Node.Handlers.TopLevel.html#toplevelExceptionHandler"><span class="hs-identifier hs-var hs-var">toplevelExceptionHandler</span></a></span></span><span> </span><span id="local-6989586621681670161"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621681670161"><span class="hs-identifier hs-var">prog</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- Use line buffering in case we have to print big error messages, because</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- by default stderr to a terminal device is NoBuffering which is slow.</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">Handle -&gt; BufferMode -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.html#hSetBuffering"><span class="hs-identifier hs-var">hSetBuffering</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span> </span><span class="annot"><span class="annottext">BufferMode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#LineBuffering"><span class="hs-identifier hs-var">LineBuffering</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">IO a -&gt; [Handler a] -&gt; IO a
+forall a. IO a -&gt; [Handler a] -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html#catches"><span class="hs-identifier hs-var">catches</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621681670161"><span class="hs-identifier hs-var">prog</span></a></span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">(SomeAsyncException -&gt; IO a) -&gt; Handler a
+forall a e. Exception e =&gt; (e -&gt; IO a) -&gt; Handler a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span><span> </span><span class="annot"><span class="annottext">SomeAsyncException -&gt; IO a
+forall a. SomeAsyncException -&gt; IO a
+</span><a href="#local-6989586621681670167"><span class="hs-identifier hs-var">rethrowAsyncExceptions</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(ExitCode -&gt; IO a) -&gt; Handler a
+forall a e. Exception e =&gt; (e -&gt; IO a) -&gt; Handler a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span><span> </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall a. ExitCode -&gt; IO a
+</span><a href="#local-6989586621681670168"><span class="hs-identifier hs-var">rethrowExitCode</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Failure -&gt; IO a) -&gt; Handler a
+forall a e. Exception e =&gt; (e -&gt; IO a) -&gt; Handler a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span><span> </span><span class="annot"><span class="annottext">Failure -&gt; IO a
+forall a. Failure -&gt; IO a
+</span><a href="#local-6989586621681670169"><span class="hs-identifier hs-var">handleDiffusionError</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; IO a) -&gt; Handler a
+forall a e. Exception e =&gt; (e -&gt; IO a) -&gt; Handler a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html#Handler"><span class="hs-identifier hs-var">Handler</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; IO a
+forall a. SomeException -&gt; IO a
+</span><a href="#local-6989586621681670170"><span class="hs-identifier hs-var">handleSomeException</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- Let async exceptions rise to the top for the default GHC top-handler.</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- This includes things like CTRL-C. If a linked thread throws ExitSuccess,</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- then we rethrow ExitSuccess. This happens for example when using the</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- `--shutdown-on-slot-synced` option.</span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621681670125"><span class="annot"><a href="#local-6989586621681670167"><span class="hs-identifier hs-type">rethrowAsyncExceptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#SomeAsyncException"><span class="hs-identifier hs-type">SomeAsyncException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670125"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621681670167"><span class="annot"><span class="annottext">rethrowAsyncExceptions :: forall a. SomeAsyncException -&gt; IO a
+</span><a href="#local-6989586621681670167"><span class="hs-identifier hs-var hs-var">rethrowAsyncExceptions</span></a></span></span><span> </span><span id="local-6989586621681670171"><span class="annot"><span class="annottext">full :: SomeAsyncException
+</span><a href="#local-6989586621681670171"><span class="hs-identifier hs-var">full</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#SomeAsyncException"><span class="hs-identifier hs-type">SomeAsyncException</span></a></span><span> </span><span id="local-6989586621681670180"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670180"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe ExceptionInLinkedThread
+forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#fromException"><span class="hs-identifier hs-var">fromException</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">e -&gt; SomeException
+forall e. Exception e =&gt; e -&gt; SomeException
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#toException"><span class="hs-identifier hs-var">toException</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670180"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/io-classes-1.8.0.1-7837f065120a19e807dbf6909c402ead8aac09620d24c7e85ce061271b549127/share/doc/html/src/Control.Monad.Class.MonadAsync.html#ExceptionInLinkedThread"><span class="hs-identifier hs-type">ExceptionInLinkedThread</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681670184"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681670184"><span class="hs-identifier hs-var">eInner</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ExitCode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitSuccess"><span class="hs-identifier hs-var">ExitSuccess</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe ExitCode
+forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#fromException"><span class="hs-identifier hs-var">fromException</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681670184"><span class="hs-identifier hs-var">eInner</span></a></span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">ExitCode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitSuccess"><span class="hs-identifier hs-var">ExitSuccess</span></a></span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">Maybe ExceptionInLinkedThread
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SomeAsyncException -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">SomeAsyncException
+</span><a href="#local-6989586621681670171"><span class="hs-identifier hs-var">full</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- We don't want to print ExitCode, and it should be handled by the default</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- top handler because that sets the actual OS process exit code.</span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621681670126"><span class="annot"><a href="#local-6989586621681670168"><span class="hs-identifier hs-type">rethrowExitCode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitCode"><span class="hs-identifier hs-type">ExitCode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670126"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621681670168"><span class="annot"><span class="annottext">rethrowExitCode :: forall a. ExitCode -&gt; IO a
+</span><a href="#local-6989586621681670168"><span class="hs-identifier hs-var hs-var">rethrowExitCode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- Handle errors thrown by the diffusion.</span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621681670127"><span class="annot"><a href="#local-6989586621681670169"><span class="hs-identifier hs-type">handleDiffusionError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.Diffusion.Types.html#Failure"><span class="hs-identifier hs-type">Network.Failure</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670127"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621681670169"><span class="annot"><span class="annottext">handleDiffusionError :: forall a. Failure -&gt; IO a
+</span><a href="#local-6989586621681670169"><span class="hs-identifier hs-var hs-var">handleDiffusionError</span></a></span></span><span> </span><span id="local-6989586621681670191"><span class="annot"><span class="annottext">Failure
+</span><a href="#local-6989586621681670191"><span class="hs-identifier hs-var">full</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Failure
+</span><a href="#local-6989586621681670191"><span class="hs-identifier hs-var">full</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ouroboros-network-0.22.6.0-dab16ef42a841a03a710b896a8d7e270e40ec3b9dfe3b1576b6dde59e490575c/share/doc/html/src/Ouroboros.Network.Diffusion.Types.html#DiffusionError"><span class="hs-identifier hs-type">Network.DiffusionError</span></a></span><span> </span><span id="local-6989586621681670193"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681670193"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681670194"><span class="annot"><span class="annottext">SomeAsyncException
+</span><a href="#local-6989586621681670194"><span class="hs-identifier hs-var">e'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#fromException"><span class="hs-identifier hs-var">fromException</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#SomeAsyncException"><span class="hs-identifier hs-type">SomeAsyncException</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681670193"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-103"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SomeAsyncException -&gt; IO a
+forall a. SomeAsyncException -&gt; IO a
+</span><a href="#local-6989586621681670167"><span class="hs-identifier hs-var">rethrowAsyncExceptions</span></a></span><span> </span><span class="annot"><span class="annottext">SomeAsyncException
+</span><a href="#local-6989586621681670194"><span class="hs-identifier hs-var">e'</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681670195"><span class="annot"><span class="annottext">ExitCode
+</span><a href="#local-6989586621681670195"><span class="hs-identifier hs-var">e'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#fromException"><span class="hs-identifier hs-var">fromException</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitCode"><span class="hs-identifier hs-type">ExitCode</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681670193"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-106"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall a. ExitCode -&gt; IO a
+</span><a href="#local-6989586621681670168"><span class="hs-identifier hs-var">rethrowExitCode</span></a></span><span> </span><span class="annot"><span class="annottext">ExitCode
+</span><a href="#local-6989586621681670195"><span class="hs-identifier hs-var">e'</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">Failure
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Failure -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="#local-6989586621681670196"><span class="hs-identifier hs-var">handleException</span></a></span><span> </span><span class="annot"><span class="annottext">Failure
+</span><a href="#local-6989586621681670191"><span class="hs-identifier hs-var">full</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- Print all other exceptions</span><span>
+</span><span id="line-111"></span><span>    </span><span id="local-6989586621681670128"><span class="annot"><a href="#local-6989586621681670170"><span class="hs-identifier hs-type">handleSomeException</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670128"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621681670170"><span class="annot"><span class="annottext">handleSomeException :: forall a. SomeException -&gt; IO a
+</span><a href="#local-6989586621681670170"><span class="hs-identifier hs-var hs-var">handleSomeException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="#local-6989586621681670196"><span class="hs-identifier hs-var">handleException</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- utils</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- A helper function to handle an exception.</span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621681670198"><span id="local-6989586621681670199"><span class="annot"><a href="#local-6989586621681670196"><span class="hs-identifier hs-type">handleException</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670198"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681670198"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670199"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621681670196"><span class="annot"><span class="annottext">handleException :: forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="#local-6989586621681670196"><span class="hs-identifier hs-var hs-var">handleException</span></a></span></span><span> </span><span id="local-6989586621681670206"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670206"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.html#hFlush"><span class="hs-identifier hs-var">hFlush</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stdout"><span class="hs-identifier hs-var">stdout</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span id="local-6989586621681670209"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670209"><span class="hs-identifier hs-var">progname</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Environment.html#getProgName"><span class="hs-identifier hs-var">getProgName</span></a></span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">Handle -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Text.html#hPutStr"><span class="hs-identifier hs-var">hPutStr</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; e -&gt; String
+forall e. Exception e =&gt; String -&gt; e -&gt; String
+</span><a href="#local-6989586621681670212"><span class="hs-identifier hs-var">renderException</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670209"><span class="hs-identifier hs-var">progname</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670206"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">ExitCode -&gt; IO a
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ExitCode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitFailure"><span class="hs-identifier hs-var">ExitFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-comment">-- Print the human-readable output of 'displayException' if it differs</span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-comment">-- from the default output (of 'show'), so that the user/sysadmin</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-comment">-- sees something readable in the log.</span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621681670140"><span class="annot"><a href="#local-6989586621681670212"><span class="hs-identifier hs-type">renderException</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681670140"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681670140"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621681670212"><span class="annot"><span class="annottext">renderException :: forall e. Exception e =&gt; String -&gt; e -&gt; String
+</span><a href="#local-6989586621681670212"><span class="hs-identifier hs-var hs-var">renderException</span></a></span></span><span> </span><span id="local-6989586621681670229"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670229"><span class="hs-identifier hs-var">progname</span></a></span></span><span> </span><span id="local-6989586621681670230"><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670230"><span class="hs-identifier hs-var">e</span></a></span></span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670231"><span class="hs-identifier hs-var">showOutput</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670233"><span class="hs-identifier hs-var">displayOutput</span></a></span><span>
+</span><span id="line-132"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670231"><span class="hs-identifier hs-var">showOutput</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670229"><span class="hs-identifier hs-var">progname</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670233"><span class="hs-identifier hs-var">displayOutput</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670229"><span class="hs-identifier hs-var">progname</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681670231"><span class="hs-identifier hs-var">showOutput</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>        </span><span id="local-6989586621681670231"><span class="annot"><span class="annottext">showOutput :: String
+</span><a href="#local-6989586621681670231"><span class="hs-identifier hs-var hs-var">showOutput</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">e -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670230"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-138"></span><span>        </span><span id="local-6989586621681670233"><span class="annot"><span class="annottext">displayOutput :: String
+</span><a href="#local-6989586621681670233"><span class="hs-identifier hs-var hs-var">displayOutput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">e -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">e
+</span><a href="#local-6989586621681670230"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-139"></span></pre></body></html>

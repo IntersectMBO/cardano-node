@@ -1,0 +1,1034 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PatternGuards #-}</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Show</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><span class="hs-identifier">Name</span></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier">ValueDiff</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier">LineDiff</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier">mkValue</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier">showPretty</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier">valueDiff</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#lineDiff"><span class="hs-identifier">lineDiff</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#toLineDiff"><span class="hs-identifier">toLineDiff</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier">renderValue</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderValueDiff"><span class="hs-identifier">renderValueDiff</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier">renderLineDiff</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier">takeLeft</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier">takeRight</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#second"><span class="hs-identifier">second</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Text.Show.Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Name</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">reify</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">valToStr</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ppShow</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">data</span><span> </span><span id="ValueDiff"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-var">ValueDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>    </span><span id="ValueCon"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueCon"><span class="hs-identifier hs-var">ValueCon</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Name</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValueRec"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueRec"><span class="hs-identifier hs-var">ValueRec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Name</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Name</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValueTuple"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueTuple"><span class="hs-identifier hs-var">ValueTuple</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValueList"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueList"><span class="hs-identifier hs-var">ValueList</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValueSame"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueSame"><span class="hs-identifier hs-var">ValueSame</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ValueDiff"><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-var">ValueDiff</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475365"><span id="local-6989586621679475378"><span class="annot"><span class="annottext">ValueDiff -&gt; ValueDiff -&gt; Bool
+(ValueDiff -&gt; ValueDiff -&gt; Bool)
+-&gt; (ValueDiff -&gt; ValueDiff -&gt; Bool) -&gt; Eq ValueDiff
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ValueDiff -&gt; ValueDiff -&gt; Bool
+== :: ValueDiff -&gt; ValueDiff -&gt; Bool
+$c/= :: ValueDiff -&gt; ValueDiff -&gt; Bool
+/= :: ValueDiff -&gt; ValueDiff -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475384"><span id="local-6989586621679475407"><span id="local-6989586621679475411"><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; ShowS
+[ValueDiff] -&gt; ShowS
+ValueDiff -&gt; Name
+(Int -&gt; ValueDiff -&gt; ShowS)
+-&gt; (ValueDiff -&gt; Name) -&gt; ([ValueDiff] -&gt; ShowS) -&gt; Show ValueDiff
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; Name) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ValueDiff -&gt; ShowS
+showsPrec :: Int -&gt; ValueDiff -&gt; ShowS
+$cshow :: ValueDiff -&gt; Name
+show :: ValueDiff -&gt; Name
+$cshowList :: [ValueDiff] -&gt; ShowS
+showList :: [ValueDiff] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="LineDiff"><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-var">LineDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>    </span><span id="LineSame"><span class="annot"><a href="Hedgehog.Internal.Show.html#LineSame"><span class="hs-identifier hs-var">LineSame</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="LineRemoved"><span class="annot"><a href="Hedgehog.Internal.Show.html#LineRemoved"><span class="hs-identifier hs-var">LineRemoved</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="LineAdded"><span class="annot"><a href="Hedgehog.Internal.Show.html#LineAdded"><span class="hs-identifier hs-var">LineAdded</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475420"><span id="local-6989586621679475425"><span class="annot"><span class="annottext">LineDiff -&gt; LineDiff -&gt; Bool
+(LineDiff -&gt; LineDiff -&gt; Bool)
+-&gt; (LineDiff -&gt; LineDiff -&gt; Bool) -&gt; Eq LineDiff
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LineDiff -&gt; LineDiff -&gt; Bool
+== :: LineDiff -&gt; LineDiff -&gt; Bool
+$c/= :: LineDiff -&gt; LineDiff -&gt; Bool
+/= :: LineDiff -&gt; LineDiff -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475429"><span id="local-6989586621679475438"><span id="local-6989586621679475442"><span class="annot"><span class="annottext">Int -&gt; LineDiff -&gt; ShowS
+[LineDiff] -&gt; ShowS
+LineDiff -&gt; Name
+(Int -&gt; LineDiff -&gt; ShowS)
+-&gt; (LineDiff -&gt; Name) -&gt; ([LineDiff] -&gt; ShowS) -&gt; Show LineDiff
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; Name) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LineDiff -&gt; ShowS
+showsPrec :: Int -&gt; LineDiff -&gt; ShowS
+$cshow :: LineDiff -&gt; Name
+show :: LineDiff -&gt; Name
+$cshowList :: [LineDiff] -&gt; ShowS
+showList :: [LineDiff] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="DocDiff"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-var">DocDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>    </span><span id="DocSame"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocSame"><span class="hs-identifier hs-var">DocSame</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DocRemoved"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocRemoved"><span class="hs-identifier hs-var">DocRemoved</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DocAdded"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocAdded"><span class="hs-identifier hs-var">DocAdded</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DocOpen"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-var">DocOpen</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DocItem"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DocClose"><span class="annot"><a href="Hedgehog.Internal.Show.html#DocClose"><span class="hs-identifier hs-var">DocClose</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475451"><span id="local-6989586621679475467"><span class="annot"><span class="annottext">DocDiff -&gt; DocDiff -&gt; Bool
+(DocDiff -&gt; DocDiff -&gt; Bool)
+-&gt; (DocDiff -&gt; DocDiff -&gt; Bool) -&gt; Eq DocDiff
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DocDiff -&gt; DocDiff -&gt; Bool
+== :: DocDiff -&gt; DocDiff -&gt; Bool
+$c/= :: DocDiff -&gt; DocDiff -&gt; Bool
+/= :: DocDiff -&gt; DocDiff -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475471"><span id="local-6989586621679475495"><span id="local-6989586621679475499"><span class="annot"><span class="annottext">Int -&gt; DocDiff -&gt; ShowS
+[DocDiff] -&gt; ShowS
+DocDiff -&gt; Name
+(Int -&gt; DocDiff -&gt; ShowS)
+-&gt; (DocDiff -&gt; Name) -&gt; ([DocDiff] -&gt; ShowS) -&gt; Show DocDiff
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; Name) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DocDiff -&gt; ShowS
+showsPrec :: Int -&gt; DocDiff -&gt; ShowS
+$cshow :: DocDiff -&gt; Name
+show :: DocDiff -&gt; Name
+$cshowList :: [DocDiff] -&gt; ShowS
+showList :: [DocDiff] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-type">renderValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-55"></span><span id="renderValue"><span class="annot"><span class="annottext">renderValue :: Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var hs-var">renderValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><span class="hs-identifier hs-var">valToStr</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderValueDiff"><span class="hs-identifier hs-type">renderValueDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-59"></span><span id="renderValueDiff"><span class="annot"><span class="annottext">renderValueDiff :: ValueDiff -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValueDiff"><span class="hs-identifier hs-var hs-var">renderValueDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">[Name] -&gt; Name
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#unlines"><span class="hs-identifier hs-var">unlines</span></a></span><span> </span><span class="annot"><span class="annottext">([Name] -&gt; Name) -&gt; (ValueDiff -&gt; [Name]) -&gt; ValueDiff -&gt; Name
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">(LineDiff -&gt; Name) -&gt; [LineDiff] -&gt; [Name]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">LineDiff -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier hs-var">renderLineDiff</span></a></span><span> </span><span class="annot"><span class="annottext">([LineDiff] -&gt; [Name])
+-&gt; (ValueDiff -&gt; [LineDiff]) -&gt; ValueDiff -&gt; [Name]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">ValueDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#toLineDiff"><span class="hs-identifier hs-var">toLineDiff</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier hs-type">renderLineDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-type">LineDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-65"></span><span id="renderLineDiff"><span class="annot"><span class="annottext">renderLineDiff :: LineDiff -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier hs-var hs-var">renderLineDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineSame"><span class="hs-identifier hs-type">LineSame</span></a></span><span> </span><span id="local-6989586621679475503"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475503"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;  &quot;</span></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475503"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineRemoved"><span class="hs-identifier hs-type">LineRemoved</span></a></span><span> </span><span id="local-6989586621679475504"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475504"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;- &quot;</span></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475504"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineAdded"><span class="hs-identifier hs-type">LineAdded</span></a></span><span> </span><span id="local-6989586621679475505"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475505"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;+ &quot;</span></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475505"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span id="local-6989586621679475256"><span class="annot"><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-type">mkValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475256"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679475256"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span></span><span>
+</span><span id="line-74"></span><span id="mkValue"><span class="annot"><span class="annottext">mkValue :: forall a. Show a =&gt; a -&gt; Maybe Value
+</span><a href="Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-var hs-var">mkValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; Maybe Value
+forall a. Show a =&gt; a -&gt; Maybe Value
+</span><span class="hs-identifier hs-var">reify</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679475258"><span class="annot"><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-type">showPretty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475258"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679475258"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-78"></span><span id="showPretty"><span class="annot"><span class="annottext">showPretty :: forall a. Show a =&gt; a -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var hs-var">showPretty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; Name
+forall a. Show a =&gt; a -&gt; Name
+</span><span class="hs-identifier hs-var">ppShow</span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#lineDiff"><span class="hs-identifier hs-type">lineDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-type">LineDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-82"></span><span id="lineDiff"><span class="annot"><span class="annottext">lineDiff :: Value -&gt; Value -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#lineDiff"><span class="hs-identifier hs-var hs-var">lineDiff</span></a></span></span><span> </span><span id="local-6989586621679475510"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475510"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679475511"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475511"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">ValueDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#toLineDiff"><span class="hs-identifier hs-var">toLineDiff</span></a></span><span> </span><span class="annot"><span class="annottext">(ValueDiff -&gt; [LineDiff]) -&gt; ValueDiff -&gt; [LineDiff]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475510"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475511"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#toLineDiff"><span class="hs-identifier hs-type">toLineDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-type">LineDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span id="toLineDiff"><span class="annot"><span class="annottext">toLineDiff :: ValueDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#toLineDiff"><span class="hs-identifier hs-var hs-var">toLineDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="annottext">(DocDiff -&gt; [LineDiff]) -&gt; [DocDiff] -&gt; [LineDiff]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([DocDiff] -&gt; [LineDiff])
+-&gt; (ValueDiff -&gt; [DocDiff]) -&gt; ValueDiff -&gt; [LineDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var">collapseOpen</span></a></span><span> </span><span class="annot"><span class="annottext">([DocDiff] -&gt; [DocDiff])
+-&gt; (ValueDiff -&gt; [DocDiff]) -&gt; ValueDiff -&gt; [DocDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">([DocDiff] -&gt; [DocDiff])
+-&gt; (ValueDiff -&gt; [DocDiff]) -&gt; ValueDiff -&gt; [DocDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var">mkDocDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-type">valueDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span>
+</span><span id="line-93"></span><span id="valueDiff"><span class="annot"><span class="annottext">valueDiff :: Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var hs-var">valueDiff</span></a></span></span><span> </span><span id="local-6989586621679475517"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475517"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679475518"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475518"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475517"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475518"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueSame"><span class="hs-identifier hs-var">ValueSame</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475517"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">else</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475517"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475518"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Con</span></span><span> </span><span id="local-6989586621679475520"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475520"><span class="hs-identifier hs-var">nx</span></a></span></span><span> </span><span id="local-6989586621679475521"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475521"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Con</span></span><span> </span><span id="local-6989586621679475522"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475522"><span class="hs-identifier hs-var">ny</span></a></span></span><span> </span><span id="local-6989586621679475523"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475523"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475520"><span class="hs-identifier hs-var">nx</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Name -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475522"><span class="hs-identifier hs-var">ny</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475521"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475523"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>          </span><span class="annot"><span class="annottext">Name -&gt; [ValueDiff] -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueCon"><span class="hs-identifier hs-var">ValueCon</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475520"><span class="hs-identifier hs-var">nx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; ValueDiff) -&gt; [Value] -&gt; [Value] -&gt; [ValueDiff]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475521"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475523"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Rec</span></span><span> </span><span id="local-6989586621679475527"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475527"><span class="hs-identifier hs-var">nx</span></a></span></span><span> </span><span id="local-6989586621679475528"><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475528"><span class="hs-identifier hs-var">nxs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rec</span></span><span> </span><span id="local-6989586621679475529"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475529"><span class="hs-identifier hs-var">ny</span></a></span></span><span> </span><span id="local-6989586621679475530"><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475530"><span class="hs-identifier hs-var">nys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475527"><span class="hs-identifier hs-var">nx</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Name -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475529"><span class="hs-identifier hs-var">ny</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">((Name, Value) -&gt; Name) -&gt; [(Name, Value)] -&gt; [Name]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Name, Value) -&gt; Name
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475528"><span class="hs-identifier hs-var">nxs</span></a></span><span> </span><span class="annot"><span class="annottext">[Name] -&gt; [Name] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">((Name, Value) -&gt; Name) -&gt; [(Name, Value)] -&gt; [Name]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Name, Value) -&gt; Name
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475530"><span class="hs-identifier hs-var">nys</span></a></span><span>
+</span><span id="line-107"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475532"><span class="annot"><span class="annottext">[Name]
+</span><a href="#local-6989586621679475532"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Name, Value) -&gt; Name) -&gt; [(Name, Value)] -&gt; [Name]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Name, Value) -&gt; Name
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475528"><span class="hs-identifier hs-var">nxs</span></a></span><span>
+</span><span id="line-108"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475533"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475533"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Name, Value) -&gt; Value) -&gt; [(Name, Value)] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Name, Value) -&gt; Value
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475528"><span class="hs-identifier hs-var">nxs</span></a></span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475535"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475535"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Name, Value) -&gt; Value) -&gt; [(Name, Value)] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">(Name, Value) -&gt; Value
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="annot"><span class="annottext">[(Name, Value)]
+</span><a href="#local-6989586621679475530"><span class="hs-identifier hs-var">nys</span></a></span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-111"></span><span>          </span><span class="annot"><span class="annottext">Name -&gt; [(Name, ValueDiff)] -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueRec"><span class="hs-identifier hs-var">ValueRec</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475527"><span class="hs-identifier hs-var">nx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Name] -&gt; [ValueDiff] -&gt; [(Name, ValueDiff)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="annot"><span class="annottext">[Name]
+</span><a href="#local-6989586621679475532"><span class="hs-identifier hs-var">ns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; ValueDiff) -&gt; [Value] -&gt; [Value] -&gt; [ValueDiff]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475533"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475535"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tuple</span></span><span> </span><span id="local-6989586621679475537"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475537"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tuple</span></span><span> </span><span id="local-6989586621679475538"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475538"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475537"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475538"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>          </span><span class="annot"><span class="annottext">[ValueDiff] -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueTuple"><span class="hs-identifier hs-var">ValueTuple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; ValueDiff) -&gt; [Value] -&gt; [Value] -&gt; [ValueDiff]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475537"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475538"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">List</span></span><span> </span><span id="local-6989586621679475540"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475540"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">List</span></span><span> </span><span id="local-6989586621679475541"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475541"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475540"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">[Value] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475541"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-120"></span><span>        </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-121"></span><span>          </span><span class="annot"><span class="annottext">[ValueDiff] -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueList"><span class="hs-identifier hs-var">ValueList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; ValueDiff) -&gt; [Value] -&gt; [Value] -&gt; [ValueDiff]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#zipWith"><span class="hs-identifier hs-var">zipWith</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#valueDiff"><span class="hs-identifier hs-var">valueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475540"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679475541"><span class="hs-identifier hs-var">ys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">(Value, Value)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; ValueDiff
+</span><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-var">ValueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475517"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475518"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-type">takeLeft</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-127"></span><span id="takeLeft"><span class="annot"><span class="annottext">takeLeft :: ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var hs-var">takeLeft</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueCon"><span class="hs-identifier hs-type">ValueCon</span></a></span><span> </span><span id="local-6989586621679475542"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475542"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475543"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475543"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">Name -&gt; [Value] -&gt; Value
+</span><span class="hs-identifier hs-var">Con</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475542"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var">takeLeft</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475543"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueRec"><span class="hs-identifier hs-type">ValueRec</span></a></span><span> </span><span id="local-6989586621679475544"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475544"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475545"><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475545"><span class="hs-identifier hs-var">nxs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">Name -&gt; [(Name, Value)] -&gt; Value
+</span><span class="hs-identifier hs-var">Rec</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475544"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Name, ValueDiff) -&gt; (Name, Value))
+-&gt; [(Name, ValueDiff)] -&gt; [(Name, Value)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; (Name, ValueDiff) -&gt; (Name, Value)
+forall b c a. (b -&gt; c) -&gt; (a, b) -&gt; (a, c)
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var">takeLeft</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475545"><span class="hs-identifier hs-var">nxs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueTuple"><span class="hs-identifier hs-type">ValueTuple</span></a></span><span> </span><span id="local-6989586621679475546"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475546"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">[Value] -&gt; Value
+</span><span class="hs-identifier hs-var">Tuple</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var">takeLeft</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475546"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueList"><span class="hs-identifier hs-type">ValueList</span></a></span><span> </span><span id="local-6989586621679475547"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475547"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">[Value] -&gt; Value
+</span><span class="hs-identifier hs-var">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var">takeLeft</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475547"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueSame"><span class="hs-identifier hs-type">ValueSame</span></a></span><span> </span><span id="local-6989586621679475548"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475548"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475548"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span id="local-6989586621679475549"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475549"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475549"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-type">takeRight</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-142"></span><span id="takeRight"><span class="annot"><span class="annottext">takeRight :: ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var hs-var">takeRight</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueCon"><span class="hs-identifier hs-type">ValueCon</span></a></span><span> </span><span id="local-6989586621679475550"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475550"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475551"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475551"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">Name -&gt; [Value] -&gt; Value
+</span><span class="hs-identifier hs-var">Con</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475550"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var">takeRight</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475551"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueRec"><span class="hs-identifier hs-type">ValueRec</span></a></span><span> </span><span id="local-6989586621679475552"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475552"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475553"><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475553"><span class="hs-identifier hs-var">nxs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><span class="annottext">Name -&gt; [(Name, Value)] -&gt; Value
+</span><span class="hs-identifier hs-var">Rec</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475552"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Name, ValueDiff) -&gt; (Name, Value))
+-&gt; [(Name, ValueDiff)] -&gt; [(Name, Value)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; (Name, ValueDiff) -&gt; (Name, Value)
+forall b c a. (b -&gt; c) -&gt; (a, b) -&gt; (a, c)
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var">takeRight</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475553"><span class="hs-identifier hs-var">nxs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueTuple"><span class="hs-identifier hs-type">ValueTuple</span></a></span><span> </span><span id="local-6989586621679475554"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475554"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">[Value] -&gt; Value
+</span><span class="hs-identifier hs-var">Tuple</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var">takeRight</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475554"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueList"><span class="hs-identifier hs-type">ValueList</span></a></span><span> </span><span id="local-6989586621679475555"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475555"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><span class="annottext">[Value] -&gt; Value
+</span><span class="hs-identifier hs-var">List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ValueDiff -&gt; Value) -&gt; [ValueDiff] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var">takeRight</span></a></span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475555"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueSame"><span class="hs-identifier hs-type">ValueSame</span></a></span><span> </span><span id="local-6989586621679475556"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475556"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475556"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679475557"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475557"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475557"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-type">mkLineDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-type">LineDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span id="mkLineDiff"><span class="annot"><span class="annottext">mkLineDiff :: Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var hs-var">mkLineDiff</span></a></span></span><span> </span><span id="local-6989586621679475558"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475558"><span class="hs-identifier hs-var">indent0</span></a></span></span><span> </span><span id="local-6989586621679475559"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475559"><span class="hs-identifier hs-var">prefix0</span></a></span></span><span> </span><span id="local-6989586621679475560"><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475560"><span class="hs-identifier hs-var">diff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-159"></span><span>    </span><span id="local-6989586621679475561"><span class="annot"><span class="annottext">mkLinePrefix :: Int -&gt; Name
+</span><a href="#local-6989586621679475561"><span class="hs-identifier hs-var hs-var">mkLinePrefix</span></a></span></span><span> </span><span id="local-6989586621679475562"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475562"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#spaces"><span class="hs-identifier hs-var">spaces</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475558"><span class="hs-identifier hs-var">indent0</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475559"><span class="hs-identifier hs-var">prefix0</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#spaces"><span class="hs-identifier hs-var">spaces</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475562"><span class="hs-identifier hs-var">indent</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679475567"><span class="annot"><span class="annottext">mkLineIndent :: Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var hs-var">mkLineIndent</span></a></span></span><span> </span><span id="local-6989586621679475568"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475568"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475558"><span class="hs-identifier hs-var">indent0</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475559"><span class="hs-identifier hs-var">prefix0</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475568"><span class="hs-identifier hs-var">indent</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475560"><span class="hs-identifier hs-var">diff</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-166"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocSame"><span class="hs-identifier hs-type">DocSame</span></a></span><span> </span><span id="local-6989586621679475570"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475570"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475571"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475571"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-167"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Name -&gt; LineDiff
+</span><a href="Hedgehog.Internal.Show.html#LineSame"><span class="hs-identifier hs-var">LineSame</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; LineDiff) -&gt; Name -&gt; LineDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="#local-6989586621679475561"><span class="hs-identifier hs-var">mkLinePrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475570"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475571"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocRemoved"><span class="hs-identifier hs-type">DocRemoved</span></a></span><span> </span><span id="local-6989586621679475572"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475572"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475573"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475573"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Name -&gt; LineDiff
+</span><a href="Hedgehog.Internal.Show.html#LineRemoved"><span class="hs-identifier hs-var">LineRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; LineDiff) -&gt; Name -&gt; LineDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="#local-6989586621679475561"><span class="hs-identifier hs-var">mkLinePrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475572"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475573"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocAdded"><span class="hs-identifier hs-type">DocAdded</span></a></span><span> </span><span id="local-6989586621679475574"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475574"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475575"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475575"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Name -&gt; LineDiff
+</span><a href="Hedgehog.Internal.Show.html#LineAdded"><span class="hs-identifier hs-var">LineAdded</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; LineDiff) -&gt; Name -&gt; LineDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="#local-6989586621679475561"><span class="hs-identifier hs-var">mkLinePrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475574"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475575"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-type">DocOpen</span></a></span><span> </span><span id="local-6989586621679475576"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475576"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475577"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475577"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-176"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Name -&gt; LineDiff
+</span><a href="Hedgehog.Internal.Show.html#LineSame"><span class="hs-identifier hs-var">LineSame</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; LineDiff) -&gt; Name -&gt; LineDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="#local-6989586621679475561"><span class="hs-identifier hs-var">mkLinePrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475576"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475577"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-179"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span id="local-6989586621679475578"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475578"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475579"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475579"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475580"><span class="annot"><span class="annottext">x :: DocDiff
+</span><a href="#local-6989586621679475580"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocRemoved"><span class="hs-identifier hs-type">DocRemoved</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475581"><span class="annot"><span class="annottext">y :: DocDiff
+</span><a href="#local-6989586621679475581"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocAdded"><span class="hs-identifier hs-type">DocAdded</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475582"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475582"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-182"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475578"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475579"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475580"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">[LineDiff] -&gt; [LineDiff] -&gt; [LineDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-183"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475578"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475579"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475581"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">[LineDiff] -&gt; [LineDiff] -&gt; [LineDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">(DocDiff -&gt; [LineDiff]) -&gt; [DocDiff] -&gt; [LineDiff]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475578"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475579"><span class="hs-identifier hs-var">prefix</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475582"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span id="local-6989586621679475583"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475583"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475584"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475584"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475585"><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475585"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475586"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475586"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475583"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475584"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475585"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">[LineDiff] -&gt; [LineDiff] -&gt; [LineDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-188"></span><span>        </span><span class="annot"><span class="annottext">(DocDiff -&gt; [LineDiff]) -&gt; [DocDiff] -&gt; [LineDiff]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff -&gt; [LineDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkLineDiff"><span class="hs-identifier hs-var">mkLineDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475583"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475584"><span class="hs-identifier hs-var">prefix</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475586"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>      </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocClose"><span class="hs-identifier hs-type">DocClose</span></a></span><span> </span><span id="local-6989586621679475587"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475587"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475588"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475588"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-191"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Name -&gt; LineDiff
+</span><a href="Hedgehog.Internal.Show.html#LineSame"><span class="hs-identifier hs-var">LineSame</span></a></span><span> </span><span class="annot"><span class="annottext">(Name -&gt; LineDiff) -&gt; Name -&gt; LineDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#spaces"><span class="hs-identifier hs-var">spaces</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621679475567"><span class="hs-identifier hs-var">mkLineIndent</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475587"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475588"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#spaces"><span class="hs-identifier hs-type">spaces</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-194"></span><span id="spaces"><span class="annot"><span class="annottext">spaces :: Int -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#spaces"><span class="hs-identifier hs-var hs-var">spaces</span></a></span></span><span> </span><span id="local-6989586621679475589"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475589"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Name
+forall a. Int -&gt; a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#replicate"><span class="hs-identifier hs-var">replicate</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475589"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-type">collapseOpen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-198"></span><span id="collapseOpen"><span class="annot"><span class="annottext">collapseOpen :: [DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var hs-var">collapseOpen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocSame"><span class="hs-identifier hs-type">DocSame</span></a></span><span> </span><span id="local-6989586621679475591"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475591"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475592"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475592"><span class="hs-identifier hs-var">line</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-type">DocOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679475593"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475593"><span class="hs-identifier hs-var">bra</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475594"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475594"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocSame"><span class="hs-identifier hs-var">DocSame</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475591"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475592"><span class="hs-identifier hs-var">line</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475593"><span class="hs-identifier hs-var">bra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var">collapseOpen</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475594"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span id="local-6989586621679475595"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475595"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475596"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475596"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679475597"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475597"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475598"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475598"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475595"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475596"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var">collapseOpen</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475597"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var">collapseOpen</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475598"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span id="local-6989586621679475599"><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475599"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475600"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475600"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475599"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#collapseOpen"><span class="hs-identifier hs-var">collapseOpen</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475600"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-type">dropLeadingSep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-209"></span><span id="dropLeadingSep"><span class="annot"><span class="annottext">dropLeadingSep :: [DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var hs-var">dropLeadingSep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-210"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-type">DocOpen</span></a></span><span> </span><span id="local-6989586621679475601"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475601"><span class="hs-identifier hs-var">oindent</span></a></span></span><span> </span><span id="local-6989586621679475602"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475602"><span class="hs-identifier hs-var">bra</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span id="local-6989586621679475603"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475603"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475604"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475604"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679475605"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475605"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475606"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475606"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-var">DocOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475601"><span class="hs-identifier hs-var">oindent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475602"><span class="hs-identifier hs-var">bra</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475603"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475604"><span class="hs-identifier hs-var">prefix</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475605"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475606"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-type">DocItem</span></a></span><span> </span><span id="local-6989586621679475607"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475607"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span id="local-6989586621679475608"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475608"><span class="hs-identifier hs-var">prefix</span></a></span></span><span> </span><span id="local-6989586621679475609"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475609"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475610"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475610"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475607"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475608"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475609"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475610"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-214"></span><span>  </span><span id="local-6989586621679475611"><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475611"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679475612"><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475612"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><span class="annottext">DocDiff
+</span><a href="#local-6989586621679475611"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">DocDiff -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#dropLeadingSep"><span class="hs-identifier hs-var">dropLeadingSep</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff]
+</span><a href="#local-6989586621679475612"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-type">mkDocDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-220"></span><span id="mkDocDiff"><span class="annot"><span class="annottext">mkDocDiff :: Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var hs-var">mkDocDiff</span></a></span></span><span> </span><span id="local-6989586621679475613"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-221"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueSame"><span class="hs-identifier hs-type">ValueSame</span></a></span><span> </span><span id="local-6989586621679475614"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475614"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-var">same</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475614"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span>  </span><span id="local-6989586621679475616"><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679475616"><span class="hs-identifier hs-var">diff</span></a></span></span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679475617"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475617"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeLeft"><span class="hs-identifier hs-var">takeLeft</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679475616"><span class="hs-identifier hs-var">diff</span></a></span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475618"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475618"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ValueDiff -&gt; Value
+</span><a href="Hedgehog.Internal.Show.html#takeRight"><span class="hs-identifier hs-var">takeRight</span></a></span><span> </span><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679475616"><span class="hs-identifier hs-var">diff</span></a></span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Bool
+</span><a href="Hedgehog.Internal.Show.html#oneLiner"><span class="hs-identifier hs-var">oneLiner</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475617"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Bool
+</span><a href="Hedgehog.Internal.Show.html#oneLiner"><span class="hs-identifier hs-var">oneLiner</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475618"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-230"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#removed"><span class="hs-identifier hs-var">removed</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475617"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-231"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#added"><span class="hs-identifier hs-var">added</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475618"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueCon"><span class="hs-identifier hs-type">ValueCon</span></a></span><span> </span><span id="local-6989586621679475622"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475622"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475623"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475623"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-var">same</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475622"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">(ValueDiff -&gt; [DocDiff]) -&gt; [ValueDiff] -&gt; [DocDiff]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var">mkDocDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475623"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueRec"><span class="hs-identifier hs-type">ValueRec</span></a></span><span> </span><span id="local-6989586621679475624"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475624"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679475625"><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475625"><span class="hs-identifier hs-var">nxs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-var">same</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475624"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-var">DocOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;{&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-240"></span><span>    </span><span class="annot"><span class="annottext">((Name, ValueDiff) -&gt; DocDiff) -&gt; [(Name, ValueDiff)] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679475626"><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475626"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475627"><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679475627"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-var">same</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Name
+</span><a href="#local-6989586621679475626"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot; =&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var">mkDocDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">ValueDiff
+</span><a href="#local-6989586621679475627"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Name, ValueDiff)]
+</span><a href="#local-6989586621679475625"><span class="hs-identifier hs-var">nxs</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-241"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocClose"><span class="hs-identifier hs-var">DocClose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;}&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueTuple"><span class="hs-identifier hs-type">ValueTuple</span></a></span><span> </span><span id="local-6989586621679475628"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475628"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-244"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-var">DocOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;(&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="annot"><span class="annottext">(ValueDiff -&gt; DocDiff) -&gt; [ValueDiff] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">([DocDiff] -&gt; DocDiff)
+-&gt; (ValueDiff -&gt; [DocDiff]) -&gt; ValueDiff -&gt; DocDiff
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var">mkDocDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475628"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-246"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocClose"><span class="hs-identifier hs-var">DocClose</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;)&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueList"><span class="hs-identifier hs-type">ValueList</span></a></span><span> </span><span id="local-6989586621679475629"><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475629"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-249"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocOpen"><span class="hs-identifier hs-var">DocOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;[&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-250"></span><span>    </span><span class="annot"><span class="annottext">(ValueDiff -&gt; DocDiff) -&gt; [ValueDiff] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff] -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocItem"><span class="hs-identifier hs-var">DocItem</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">([DocDiff] -&gt; DocDiff)
+-&gt; (ValueDiff -&gt; [DocDiff]) -&gt; ValueDiff -&gt; DocDiff
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; ValueDiff -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#mkDocDiff"><span class="hs-identifier hs-var">mkDocDiff</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ValueDiff]
+</span><a href="#local-6989586621679475629"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocClose"><span class="hs-identifier hs-var">DocClose</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-string">&quot;]&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-252"></span><span>
+</span><span id="line-253"></span><span>  </span><span class="annot"><a href="Hedgehog.Internal.Show.html#ValueDiff"><span class="hs-identifier hs-type">ValueDiff</span></a></span><span> </span><span id="local-6989586621679475630"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475630"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679475631"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475631"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-254"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#removed"><span class="hs-identifier hs-var">removed</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475630"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[DocDiff] -&gt; [DocDiff] -&gt; [DocDiff]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-255"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#added"><span class="hs-identifier hs-var">added</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475613"><span class="hs-identifier hs-var">indent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475631"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#oneLiner"><span class="hs-identifier hs-type">oneLiner</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-258"></span><span id="oneLiner"><span class="annot"><span class="annottext">oneLiner :: Value -&gt; Bool
+</span><a href="Hedgehog.Internal.Show.html#oneLiner"><span class="hs-identifier hs-var hs-var">oneLiner</span></a></span></span><span> </span><span id="local-6989586621679475632"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475632"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Name -&gt; [Name]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Name
+</span><a href="Hedgehog.Internal.Show.html#renderValue"><span class="hs-identifier hs-var">renderValue</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679475632"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-260"></span><span>    </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">Name
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[Name]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-261"></span><span>      </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-262"></span><span>    </span><span class="annot"><span class="annottext">[Name]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-263"></span><span>      </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-264"></span><span>
+</span><span id="line-265"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-type">same</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-266"></span><span id="same"><span class="annot"><span class="annottext">same :: Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#same"><span class="hs-identifier hs-var hs-var">same</span></a></span></span><span> </span><span id="local-6989586621679475634"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475634"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">(Name -&gt; DocDiff) -&gt; [Name] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocSame"><span class="hs-identifier hs-var">DocSame</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475634"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Name] -&gt; [DocDiff]) -&gt; (Name -&gt; [Name]) -&gt; Name -&gt; [DocDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; [Name]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#removed"><span class="hs-identifier hs-type">removed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-270"></span><span id="removed"><span class="annot"><span class="annottext">removed :: Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#removed"><span class="hs-identifier hs-var hs-var">removed</span></a></span></span><span> </span><span id="local-6989586621679475635"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475635"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-271"></span><span>  </span><span class="annot"><span class="annottext">(Name -&gt; DocDiff) -&gt; [Name] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocRemoved"><span class="hs-identifier hs-var">DocRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475635"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Name] -&gt; [DocDiff]) -&gt; (Name -&gt; [Name]) -&gt; Name -&gt; [DocDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; [Name]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span>
+</span><span id="line-272"></span><span>
+</span><span id="line-273"></span><span class="annot"><a href="Hedgehog.Internal.Show.html#added"><span class="hs-identifier hs-type">added</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Hedgehog.Internal.Show.html#DocDiff"><span class="hs-identifier hs-type">DocDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-274"></span><span id="added"><span class="annot"><span class="annottext">added :: Int -&gt; Name -&gt; [DocDiff]
+</span><a href="Hedgehog.Internal.Show.html#added"><span class="hs-identifier hs-var hs-var">added</span></a></span></span><span> </span><span id="local-6989586621679475636"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475636"><span class="hs-identifier hs-var">indent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-275"></span><span>  </span><span class="annot"><span class="annottext">(Name -&gt; DocDiff) -&gt; [Name] -&gt; [DocDiff]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Name -&gt; DocDiff
+</span><a href="Hedgehog.Internal.Show.html#DocAdded"><span class="hs-identifier hs-var">DocAdded</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679475636"><span class="hs-identifier hs-var">indent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Name] -&gt; [DocDiff]) -&gt; (Name -&gt; [Name]) -&gt; Name -&gt; [DocDiff]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Name -&gt; [Name]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#lines"><span class="hs-identifier hs-var">lines</span></a></span><span>
+</span><span id="line-276"></span></pre></body></html>

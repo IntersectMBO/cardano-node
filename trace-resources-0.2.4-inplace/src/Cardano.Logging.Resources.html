@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Resources</span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html#Resources"><span class="hs-identifier">Resources</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html#ResourceStats"><span class="hs-identifier">ResourceStats</span></a></span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.html#readResourceStats"><span class="hs-identifier">readResourceStats</span></a></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html"><span class="hs-identifier">Cardano.Logging.Resources.Types</span></a></span><span class="hs-cpp">
+#if defined(linux_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.Linux.html"><span class="hs-identifier">Cardano.Logging.Resources.Linux</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Platform</span></span><span class="hs-cpp">
+#elif defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Cardano.Logging.Resources.Windows</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Platform</span><span class="hs-cpp">
+#elif defined(darwin_HOST_OS)
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Cardano.Logging.Resources.Darwin</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Platform</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Cardano.Logging.Resources.Dummy</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Platform</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="annot"><a href="Cardano.Logging.Resources.html#readResourceStats"><span class="hs-identifier hs-type">readResourceStats</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Resources.Types.html#ResourceStats"><span class="hs-identifier hs-type">ResourceStats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span id="readResourceStats"><span class="annot"><span class="annottext">readResourceStats :: IO (Maybe ResourceStats)
+</span><a href="Cardano.Logging.Resources.html#readResourceStats"><span class="hs-identifier hs-var hs-var">readResourceStats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe ResourceStats)
+</span><a href="Cardano.Logging.Resources.Linux.html#readResourceStatsInternal"><span class="hs-identifier hs-var">Platform.readResourceStatsInternal</span></a></span><span>
+</span><span id="line-24"></span></pre></body></html>

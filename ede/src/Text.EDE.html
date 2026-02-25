@@ -1,0 +1,1209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Module      : Text.EDE</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Copyright   : (c) 2013-2022 Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- License     : This Source Code Form is subject to the terms of</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--               the Mozilla Public License, v. 2.0.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--               A copy of the MPL can be found in the LICENSE file or</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--               you can obtain it at http://mozilla.org/MPL/2.0/.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Maintainer  : Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Portability : non-portable (GHC extensions)</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- A (mostly) logic-less textual templating language with similar syntax to</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- &lt;https://github.com/Shopify/liquid Liquid&gt; or &lt;http://jinja.pocoo.org/docs/ Jinja2&gt;.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- (ED-E is a character from Fallout New Vegas, pronounced 'Eddie'.)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Text.EDE</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * How to use this library</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- $usage</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Parsing and Rendering</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- $parsing_and_rendering</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier">Template</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Parsing</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Text.EDE.html#parse"><span class="hs-identifier">parse</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Text.EDE.html#parseIO"><span class="hs-identifier">parseIO</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Text.EDE.html#parseFile"><span class="hs-identifier">parseFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Text.EDE.html#parseFileWith"><span class="hs-identifier">parseFileWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="Text.EDE.html#parseWith"><span class="hs-identifier">parseWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Includes</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="hs-comment">-- $resolvers</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier">Resolver</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier">Id</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="Text.EDE.html#includeMap"><span class="hs-identifier">includeMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><a href="Text.EDE.html#includeFile"><span class="hs-identifier">includeFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Rendering</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><a href="Text.EDE.html#render"><span class="hs-identifier">render</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><a href="Text.EDE.html#renderWith"><span class="hs-identifier">renderWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Either Variants</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><a href="Text.EDE.html#eitherParse"><span class="hs-identifier">eitherParse</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="Text.EDE.html#eitherParseFile"><span class="hs-identifier">eitherParseFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="Text.EDE.html#eitherParseWith"><span class="hs-identifier">eitherParseWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="Text.EDE.html#eitherRender"><span class="hs-identifier">eitherRender</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="Text.EDE.html#eitherRenderWith"><span class="hs-identifier">eitherRenderWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Results and Errors</span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="hs-comment">-- $results</span></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="hs-identifier">Trifecta.Delta.Delta</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier">Result</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier">eitherResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#result"><span class="hs-identifier">result</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#success"><span class="hs-identifier">success</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier">failure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Input</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="hs-comment">-- $input</span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#fromValue"><span class="hs-identifier">fromValue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#fromPairs"><span class="hs-identifier">fromPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Version</span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="Text.EDE.html#version"><span class="hs-identifier">version</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Syntax</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Delim"><span class="hs-identifier">Delim</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier">Syntax</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#delimPragma"><span class="hs-identifier">delimPragma</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#delimInline"><span class="hs-identifier">delimInline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#delimComment"><span class="hs-identifier">delimComment</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#delimBlock"><span class="hs-identifier">delimBlock</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier">defaultSyntax</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Syntax.html#alternateSyntax"><span class="hs-identifier">alternateSyntax</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Pragmas</span></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="hs-comment">-- $pragmas</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Expressions</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="hs-comment">-- $expressions</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Variables</span></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="hs-comment">-- $variables</span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Conditionals</span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="hs-comment">-- $conditionals</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Case Analysis</span></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="hs-comment">-- $case</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Loops</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="hs-comment">-- $loops</span></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Includes</span></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="hs-comment">-- $includes</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Filters</span></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="hs-comment">-- $filters</span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Raw</span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="hs-comment">-- $raw</span></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Comments</span></span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="hs-comment">-- $comments</span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Let Expressions</span></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="hs-comment">-- $let</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Set</span></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="hs-comment">-- $set</span></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Monad</span></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ByteString</span></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Foldable</span></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HashMap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HashMap</span></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier">NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-129"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Lazy</span></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Builder</span></span><span>
+</span><span id="line-131"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html"><span class="hs-identifier">Data.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Paths_ede.html"><span class="hs-identifier">Paths_ede</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Paths</span></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Pretty</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Directory</span></span><span>
+</span><span id="line-135"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">FilePath</span></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Eval.html"><span class="hs-identifier">Text.EDE.Internal.Eval</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Eval</span></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Parser.html"><span class="hs-identifier">Text.EDE.Internal.Parser</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Parser</span></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html"><span class="hs-identifier">Text.EDE.Internal.Quoting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier">Term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Syntax.html"><span class="hs-identifier">Text.EDE.Internal.Syntax</span></a></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html"><span class="hs-identifier">Text.EDE.Internal.Types</span></a></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Text.Trifecta.Delta</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Trifecta.Delta</span></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><span class="hs-comment">-- | ED-E Version.</span></span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Text.EDE.html#version"><span class="hs-identifier hs-type">version</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-145"></span><span id="version"><span class="annot"><span class="annottext">version :: Version
+</span><a href="Text.EDE.html#version"><span class="hs-identifier hs-var hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Paths_ede.html#version"><span class="hs-identifier hs-var">Paths.version</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- | Parse a 'ByteString' into a compiled 'Template'.</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- Because this function is pure and does not resolve @include@s,</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- encountering an @include@ expression during parsing will result in an 'Error'.</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- See 'parseFile' or 'parseWith' for mechanisms to deal with @include@</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- dependencies.</span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Text.EDE.html#parse"><span class="hs-identifier hs-type">parse</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Strict 'ByteString' template definition.</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span>
+</span><span id="line-158"></span><span id="parse"><span class="annot"><span class="annottext">parse :: ByteString -&gt; Result Template
+</span><a href="Text.EDE.html#parse"><span class="hs-identifier hs-var hs-var">parse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Result (Result Template) -&gt; Result Template
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">Monad.join</span></a></span><span> </span><span class="annot"><span class="annottext">(Result (Result Template) -&gt; Result Template)
+-&gt; (ByteString -&gt; Result (Result Template))
+-&gt; ByteString
+-&gt; Result Template
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+-&gt; Resolver Result -&gt; Id -&gt; ByteString -&gt; Result (Result Template)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var">parseWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier hs-var">defaultSyntax</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id Template -&gt; Resolver Result
+forall (m :: * -&gt; *). Monad m =&gt; HashMap Id Template -&gt; Resolver m
+</span><a href="Text.EDE.html#includeMap"><span class="hs-identifier hs-var">includeMap</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id Template
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Id
+</span><span class="hs-string">&quot;Text.EDE.parse&quot;</span></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- | Parse a 'ByteString' into a compiled 'Template'.</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- This function handles all @include@ expressions as 'FilePath's and performs</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- recursive loading/parsing.</span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Text.EDE.html#parseIO"><span class="hs-identifier hs-type">parseIO</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-165"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Parent directory for relatively pathed includes.</span></span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-167"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Strict 'ByteString' template definition.</span></span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span id="parseIO"><span class="annot"><span class="annottext">parseIO :: FilePath -&gt; ByteString -&gt; IO (Result Template)
+</span><a href="Text.EDE.html#parseIO"><span class="hs-identifier hs-var hs-var">parseIO</span></a></span></span><span> </span><span id="local-6989586621679160268"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160268"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Syntax -&gt; Resolver IO -&gt; Id -&gt; ByteString -&gt; IO (Result Template)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var">parseWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier hs-var">defaultSyntax</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Resolver IO
+</span><a href="Text.EDE.html#includeFile"><span class="hs-identifier hs-var">includeFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160268"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Id
+</span><span class="hs-string">&quot;Text.EDE.parse&quot;</span></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- | Load and parse a 'Template' from a file.</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- This function handles all @include@ expressions as 'FilePath's and performs</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- recursive loading/parsing, with pathing of @include@s relatively to the</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- target (unless absolute paths are used).</span><span>
+</span><span id="line-177"></span><span class="annot"><a href="Text.EDE.html#parseFile"><span class="hs-identifier hs-type">parseFile</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Path to the template to load and parse.</span></span><span>
+</span><span id="line-179"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span id="parseFile"><span class="annot"><span class="annottext">parseFile :: FilePath -&gt; IO (Result Template)
+</span><a href="Text.EDE.html#parseFile"><span class="hs-identifier hs-var hs-var">parseFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Syntax -&gt; FilePath -&gt; IO (Result Template)
+</span><a href="Text.EDE.html#parseFileWith"><span class="hs-identifier hs-var">parseFileWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="Text.EDE.Internal.Syntax.html#defaultSyntax"><span class="hs-identifier hs-var">defaultSyntax</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'parseFile'.</span></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Text.EDE.html#parseFileWith"><span class="hs-identifier hs-type">parseFileWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Delimiters and parsing options.</span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Path to the template to load and parse.</span></span><span>
+</span><span id="line-188"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span id="parseFileWith"><span class="annot"><span class="annottext">parseFileWith :: Syntax -&gt; FilePath -&gt; IO (Result Template)
+</span><a href="Text.EDE.html#parseFileWith"><span class="hs-identifier hs-var hs-var">parseFileWith</span></a></span></span><span> </span><span id="local-6989586621679160269"><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160269"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679160270"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160270"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Result ByteString)
+</span><a href="Text.EDE.html#loadFile"><span class="hs-identifier hs-var">loadFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160270"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><span class="annottext">IO (Result ByteString)
+-&gt; (Result ByteString -&gt; IO (Result Template))
+-&gt; IO (Result Template)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(AnsiDoc -&gt; IO (Result Template))
+-&gt; (ByteString -&gt; IO (Result Template))
+-&gt; Result ByteString
+-&gt; IO (Result Template)
+forall b a. (AnsiDoc -&gt; b) -&gt; (a -&gt; b) -&gt; Result a -&gt; b
+</span><a href="Text.EDE.Internal.Types.html#result"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-193"></span><span>      </span><span class="annot"><span class="annottext">AnsiDoc -&gt; IO (Result Template)
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-194"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Syntax -&gt; Resolver IO -&gt; Id -&gt; ByteString -&gt; IO (Result Template)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var">parseWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160269"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Resolver IO
+</span><a href="Text.EDE.html#includeFile"><span class="hs-identifier hs-var">includeFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#takeDirectory"><span class="hs-identifier hs-var">FilePath.takeDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160270"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Id
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160270"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- | Parse a 'Template' from a Strict 'ByteString' using a custom function for</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- resolving @include@ expressions.</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- Two custom @include@ resolvers are supplied:</span><span>
+</span><span id="line-200"></span><span class="hs-comment">--</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- * 'includeMap'</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- * 'includeFile'</span><span>
+</span><span id="line-204"></span><span class="hs-comment">--</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- 'parseFile' for example, is defined as: 'parseWith' 'includeFile'.</span><span>
+</span><span id="line-206"></span><span id="local-6989586621679160149"><span class="annot"><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-type">parseWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160149"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-208"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Delimiters and parsing options.</span></span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-210"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Function to resolve includes.</span></span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier hs-type">Resolver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160149"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Strict 'Text' name.</span></span><span>
+</span><span id="line-213"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-214"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Strict 'ByteString' template definition.</span></span><span>
+</span><span id="line-215"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-216"></span><span>  </span><span class="annot"><a href="#local-6989586621679160149"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-217"></span><span id="parseWith"><span class="annot"><span class="annottext">parseWith :: forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var hs-var">parseWith</span></a></span></span><span> </span><span id="local-6989586621679160295"><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160295"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679160296"><span class="annot"><span class="annottext">Resolver m
+</span><a href="#local-6989586621679160296"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679160297"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160297"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679160298"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679160298"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Syntax
+-&gt; Id
+-&gt; ByteString
+-&gt; Result
+     (Exp Delta, HashMap Id (NonEmpty Delta),
+      HashMap Id (NonEmpty Delta), HashMap Id (Exp Delta))
+</span><a href="Text.EDE.Internal.Parser.html#runParser"><span class="hs-identifier hs-var">Parser.runParser</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160295"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160297"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679160298"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160301"><span class="annot"><span class="annottext">Exp Delta
+</span><a href="#local-6989586621679160301"><span class="hs-identifier hs-var">u</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160302"><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta)
+</span><a href="#local-6989586621679160302"><span class="hs-identifier hs-var">is'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160303"><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta)
+</span><a href="#local-6989586621679160303"><span class="hs-identifier hs-var">es'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160304"><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160304"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-220"></span><span>      </span><span id="local-6989586621679160305"><span class="annot"><span class="annottext">Result (HashMap Id (Exp Delta))
+</span><a href="#local-6989586621679160305"><span class="hs-identifier hs-var">is</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Id, NonEmpty Delta)
+ -&gt; Result (HashMap Id (Exp Delta))
+ -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; [(Id, NonEmpty Delta)]
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; b -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldrM"><span class="hs-identifier hs-var">Foldable.foldrM</span></a></span><span> </span><span class="annot"><span class="annottext">(Id, NonEmpty Delta)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+</span><a href="#local-6989586621679160307"><span class="hs-identifier hs-var">include</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (Exp Delta) -&gt; Result (HashMap Id (Exp Delta))
+forall a. a -&gt; Result a
+</span><a href="Text.EDE.Internal.Types.html#Success"><span class="hs-identifier hs-var">Success</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; Exp Delta -&gt; HashMap Id (Exp Delta)
+forall k v. Hashable k =&gt; k -&gt; v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HashMap.singleton</span></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160297"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Exp Delta
+</span><a href="#local-6989586621679160301"><span class="hs-identifier hs-var">u</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta) -&gt; [(Id, NonEmpty Delta)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HashMap.toList</span></span><span> </span><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta)
+</span><a href="#local-6989586621679160302"><span class="hs-identifier hs-var">is'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>      </span><span id="local-6989586621679160310"><span class="annot"><span class="annottext">Result (HashMap Id (Exp Delta))
+</span><a href="#local-6989586621679160310"><span class="hs-identifier hs-var">es</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Id, NonEmpty Delta)
+ -&gt; Result (HashMap Id (Exp Delta))
+ -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; [(Id, NonEmpty Delta)]
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; b -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldrM"><span class="hs-identifier hs-var">Foldable.foldrM</span></a></span><span> </span><span class="annot"><span class="annottext">(Id, NonEmpty Delta)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+</span><a href="#local-6989586621679160311"><span class="hs-identifier hs-var">extends</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (Exp Delta) -&gt; Result (HashMap Id (Exp Delta))
+forall a. a -&gt; Result a
+</span><a href="Text.EDE.Internal.Types.html#Success"><span class="hs-identifier hs-var">Success</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta) -&gt; [(Id, NonEmpty Delta)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">HashMap.toList</span></span><span> </span><span class="annot"><span class="annottext">HashMap Id (NonEmpty Delta)
+</span><a href="#local-6989586621679160303"><span class="hs-identifier hs-var">es'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>      </span><span class="annot"><span class="annottext">Result Template -&gt; m (Result Template)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+-&gt; Exp Delta
+-&gt; HashMap Id (Exp Delta)
+-&gt; HashMap Id (Exp Delta)
+-&gt; HashMap Id (Exp Delta)
+-&gt; Template
+</span><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-var">Template</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160297"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Exp Delta
+</span><a href="#local-6989586621679160301"><span class="hs-identifier hs-var">u</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Id (Exp Delta)
+ -&gt; HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta) -&gt; Template)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; Result
+     (HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta) -&gt; Template)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Result (HashMap Id (Exp Delta))
+</span><a href="#local-6989586621679160305"><span class="hs-identifier hs-var">is</span></a></span><span> </span><span class="annot"><span class="annottext">Result
+  (HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta) -&gt; Template)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; Result (HashMap Id (Exp Delta) -&gt; Template)
+forall a b. Result (a -&gt; b) -&gt; Result a -&gt; Result b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Result (HashMap Id (Exp Delta))
+</span><a href="#local-6989586621679160310"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">Result (HashMap Id (Exp Delta) -&gt; Template)
+-&gt; Result (HashMap Id (Exp Delta)) -&gt; Result Template
+forall a b. Result (a -&gt; b) -&gt; Result a -&gt; Result b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta) -&gt; Result (HashMap Id (Exp Delta))
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160304"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Failure"><span class="hs-identifier hs-type">Failure</span></a></span><span> </span><span id="local-6989586621679160314"><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160314"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-224"></span><span>      </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result Template)
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160314"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-comment">-- Presuming self is always in self's includes, see singleton above.</span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-comment">-- FIXME: utilise the list of deltas for failures</span><span>
+</span><span id="line-228"></span><span>    </span><span id="local-6989586621679160307"><span class="annot"><span class="annottext">include :: (Id, NonEmpty Delta)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+</span><a href="#local-6989586621679160307"><span class="hs-identifier hs-var hs-var">include</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmpty Delta
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Failure"><span class="hs-identifier hs-type">Failure</span></a></span><span> </span><span id="local-6989586621679160324"><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160324"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160324"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-229"></span><span>    </span><span class="annot"><a href="#local-6989586621679160307"><span class="hs-identifier hs-var">include</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160325"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160325"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160326"><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160326"><span class="hs-identifier hs-var">delta</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3A%7C"><span class="hs-operator hs-type">:|</span></a></span><span> </span><span class="annot"><span class="annottext">[Delta]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span id="local-6989586621679160328"><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160328"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-230"></span><span>      </span><span class="annot"><span class="annottext">Resolver m
+</span><a href="#local-6989586621679160296"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160295"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160325"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160326"><span class="hs-identifier hs-var">delta</span></a></span><span>
+</span><span id="line-231"></span><span>        </span><span class="annot"><span class="annottext">m (Result Template)
+-&gt; (Result Template -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; (Template -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; Result Template
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall b a. (AnsiDoc -&gt; b) -&gt; (a -&gt; b) -&gt; Result a -&gt; b
+</span><a href="Text.EDE.Internal.Types.html#result"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (Exp Delta) -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#success"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Id (Exp Delta) -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; (Template -&gt; HashMap Id (Exp Delta))
+-&gt; Template
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+-&gt; HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta)
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160328"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta))
+-&gt; (Template -&gt; HashMap Id (Exp Delta))
+-&gt; Template
+-&gt; HashMap Id (Exp Delta)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Template -&gt; HashMap Id (Exp Delta)
+</span><a href="Text.EDE.Internal.Types.html#_tmplIncl"><span class="hs-identifier hs-var">_tmplIncl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>    </span><span id="local-6989586621679160311"><span class="annot"><span class="annottext">extends :: (Id, NonEmpty Delta)
+-&gt; Result (HashMap Id (Exp Delta))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+</span><a href="#local-6989586621679160311"><span class="hs-identifier hs-var hs-var">extends</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmpty Delta
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Failure"><span class="hs-identifier hs-type">Failure</span></a></span><span> </span><span id="local-6989586621679160339"><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160339"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc
+</span><a href="#local-6989586621679160339"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="#local-6989586621679160311"><span class="hs-identifier hs-var">extends</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160340"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160340"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160341"><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160341"><span class="hs-identifier hs-var">delta</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3A%7C"><span class="hs-operator hs-type">:|</span></a></span><span> </span><span class="annot"><span class="annottext">[Delta]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Success"><span class="hs-identifier hs-type">Success</span></a></span><span> </span><span id="local-6989586621679160342"><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160342"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-235"></span><span>      </span><span class="annot"><span class="annottext">Resolver m
+</span><a href="#local-6989586621679160296"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160295"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160340"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160341"><span class="hs-identifier hs-var">delta</span></a></span><span>
+</span><span id="line-236"></span><span>        </span><span class="annot"><span class="annottext">m (Result Template)
+-&gt; (Result Template -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; (Template -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; Result Template
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall b a. (AnsiDoc -&gt; b) -&gt; (a -&gt; b) -&gt; Result a -&gt; b
+</span><a href="Text.EDE.Internal.Types.html#result"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Id (Exp Delta) -&gt; m (Result (HashMap Id (Exp Delta)))
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#success"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Id (Exp Delta) -&gt; m (Result (HashMap Id (Exp Delta))))
+-&gt; (Template -&gt; HashMap Id (Exp Delta))
+-&gt; Template
+-&gt; m (Result (HashMap Id (Exp Delta)))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+-&gt; HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta)
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+</span><a href="#local-6989586621679160342"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta))
+-&gt; (Template -&gt; HashMap Id (Exp Delta))
+-&gt; Template
+-&gt; HashMap Id (Exp Delta)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Template -&gt; HashMap Id (Exp Delta)
+</span><a href="Text.EDE.Internal.Types.html#_tmplIncl"><span class="hs-identifier hs-var">_tmplIncl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- | 'HashMap' resolver for @include@ expressions.</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- The 'identifier' component of the @include@ expression is treated as a lookup</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- key into the supplied 'HashMap'.</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- If the 'identifier' doesn't exist in the 'HashMap', an 'Error' is returned.</span><span>
+</span><span id="line-243"></span><span id="local-6989586621679160150"><span class="annot"><a href="Text.EDE.html#includeMap"><span class="hs-identifier hs-type">includeMap</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-244"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160150"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-245"></span><span>  </span><span class="annot"><span class="hs-comment">-- | A 'HashMap' of named 'Template's.</span></span><span>
+</span><span id="line-246"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-247"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Resolver for 'parseWith'.</span></span><span>
+</span><span id="line-248"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier hs-type">Resolver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160150"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-249"></span><span id="includeMap"><span class="annot"><span class="annottext">includeMap :: forall (m :: * -&gt; *). Monad m =&gt; HashMap Id Template -&gt; Resolver m
+</span><a href="Text.EDE.html#includeMap"><span class="hs-identifier hs-var hs-var">includeMap</span></a></span></span><span> </span><span id="local-6989586621679160351"><span class="annot"><span class="annottext">HashMap Id Template
+</span><a href="#local-6989586621679160351"><span class="hs-identifier hs-var">templates</span></a></span></span><span> </span><span id="local-6989586621679160352"><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160352"><span class="hs-identifier hs-var">_config</span></a></span></span><span> </span><span id="local-6989586621679160353"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160353"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679160354"><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160354"><span class="hs-identifier hs-var">_delta</span></a></span></span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679160355"><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160355"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Id -&gt; HashMap Id Template -&gt; Maybe Template
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">HashMap.lookup</span></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160353"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id Template
+</span><a href="#local-6989586621679160351"><span class="hs-identifier hs-var">templates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Template -&gt; m (Result Template)
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#success"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160355"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; m (Result Template)
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AnsiDoc
+</span><span class="hs-string">&quot;unable to resolve &quot;</span></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; AnsiDoc -&gt; AnsiDoc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; AnsiDoc
+forall ann. FilePath -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160353"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-252"></span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- FIXME: utilise deltas in error messages</span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- | 'FilePath' resolver for @include@ expressions.</span><span>
+</span><span id="line-256"></span><span class="hs-comment">--</span><span>
+</span><span id="line-257"></span><span class="hs-comment">-- The 'identifier' component of the @include@ expression is treated as a relative</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- 'FilePath' and the template is loaded and parsed using 'parseFile'.</span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- If the 'identifier' doesn't exist as a valid 'FilePath', an 'Error' is returned.</span><span>
+</span><span id="line-260"></span><span class="annot"><a href="Text.EDE.html#includeFile"><span class="hs-identifier hs-type">includeFile</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-261"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Parent directory for relatively pathed includes.</span></span><span>
+</span><span id="line-262"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-263"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier hs-type">Resolver</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-264"></span><span id="includeFile"><span class="annot"><span class="annottext">includeFile :: FilePath -&gt; Resolver IO
+</span><a href="Text.EDE.html#includeFile"><span class="hs-identifier hs-var hs-var">includeFile</span></a></span></span><span> </span><span id="local-6989586621679160359"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160359"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621679160360"><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160360"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679160361"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160361"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679160362"><span class="annot"><span class="annottext">Delta
+</span><a href="#local-6989586621679160362"><span class="hs-identifier hs-var">_delta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-265"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Result ByteString)
+</span><a href="Text.EDE.html#loadFile"><span class="hs-identifier hs-var">loadFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160363"><span class="hs-identifier hs-var">file</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Result ByteString)
+-&gt; (Result ByteString -&gt; IO (Result Template))
+-&gt; IO (Result Template)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(AnsiDoc -&gt; IO (Result Template))
+-&gt; (ByteString -&gt; IO (Result Template))
+-&gt; Result ByteString
+-&gt; IO (Result Template)
+forall b a. (AnsiDoc -&gt; b) -&gt; (a -&gt; b) -&gt; Result a -&gt; b
+</span><a href="Text.EDE.Internal.Types.html#result"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; IO (Result Template)
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Syntax -&gt; Resolver IO -&gt; Id -&gt; ByteString -&gt; IO (Result Template)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var">parseWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160360"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver IO
+</span><a href="#local-6989586621679160364"><span class="hs-identifier hs-var">include</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160361"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-267"></span><span>    </span><span class="annot"><a href="#local-6989586621679160364"><span class="hs-identifier hs-type">include</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier hs-type">Resolver</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span id="local-6989586621679160364"><span class="annot"><span class="annottext">include :: Resolver IO
+</span><a href="#local-6989586621679160364"><span class="hs-identifier hs-var hs-var">include</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Resolver IO
+</span><a href="Text.EDE.html#includeFile"><span class="hs-identifier hs-var">includeFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#takeDirectory"><span class="hs-identifier hs-var">FilePath.takeDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160363"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-269"></span><span>
+</span><span id="line-270"></span><span>    </span><span id="local-6989586621679160363"><span class="annot"><span class="annottext">file :: FilePath
+</span><a href="#local-6989586621679160363"><span class="hs-identifier hs-var hs-var">file</span></a></span></span><span>
+</span><span id="line-271"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Id -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">Text.null</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160361"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Id -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160361"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-272"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#combine"><span class="hs-identifier hs-var">FilePath.combine</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160359"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id -&gt; FilePath
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">Text.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160361"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>
+</span><span id="line-274"></span><span class="annot"><a href="Text.EDE.html#loadFile"><span class="hs-identifier hs-type">loadFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span id="loadFile"><span class="annot"><span class="annottext">loadFile :: FilePath -&gt; IO (Result ByteString)
+</span><a href="Text.EDE.html#loadFile"><span class="hs-identifier hs-var hs-var">loadFile</span></a></span></span><span> </span><span id="local-6989586621679160367"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160367"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-276"></span><span>  </span><span id="local-6989586621679160368"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679160368"><span class="hs-identifier hs-var">exists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#doesFileExist"><span class="hs-identifier hs-var">Directory.doesFileExist</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160367"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-277"></span><span>
+</span><span id="line-278"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679160368"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-279"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; IO (Result ByteString)
+forall (m :: * -&gt; *) a. Monad m =&gt; AnsiDoc -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AnsiDoc
+</span><span class="hs-string">&quot;file &quot;</span></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; AnsiDoc -&gt; AnsiDoc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; AnsiDoc
+forall ann. FilePath -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160367"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc -&gt; AnsiDoc -&gt; AnsiDoc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">AnsiDoc
+</span><span class="hs-string">&quot; doesn't exist.&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-280"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">ByteString.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679160367"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString
+-&gt; (ByteString -&gt; IO (Result ByteString)) -&gt; IO (Result ByteString)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO (Result ByteString)
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m (Result a)
+</span><a href="Text.EDE.Internal.Types.html#success"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-281"></span><span>
+</span><span id="line-282"></span><span class="annot"><span class="hs-comment">-- | Render an 'HashMap Text Value' using the supplied 'Template'.</span></span><span>
+</span><span id="line-283"></span><span class="annot"><a href="Text.EDE.html#render"><span class="hs-identifier hs-type">render</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-284"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Parsed 'Template' to render.</span></span><span>
+</span><span id="line-285"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-286"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bindings to make available in the environment.</span></span><span>
+</span><span id="line-287"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-288"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text.Lazy.Text</span></a></span><span>
+</span><span id="line-289"></span><span id="render"><span class="annot"><span class="annottext">render :: Template -&gt; HashMap Id Value -&gt; Result Text
+</span><a href="Text.EDE.html#render"><span class="hs-identifier hs-var hs-var">render</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashMap Id Term -&gt; Template -&gt; HashMap Id Value -&gt; Result Text
+</span><a href="Text.EDE.html#renderWith"><span class="hs-identifier hs-var">renderWith</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id Term
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-290"></span><span>
+</span><span id="line-291"></span><span class="annot"><span class="hs-comment">-- | Render an 'HashMap Text Value' using the supplied 'Template'.</span></span><span>
+</span><span id="line-292"></span><span class="annot"><a href="Text.EDE.html#renderWith"><span class="hs-identifier hs-type">renderWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-293"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Filters to make available in the environment.</span></span><span>
+</span><span id="line-294"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-295"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Parsed 'Template' to render.</span></span><span>
+</span><span id="line-296"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-297"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bindings to make available in the environment.</span></span><span>
+</span><span id="line-298"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-299"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text.Lazy.Text</span></a></span><span>
+</span><span id="line-300"></span><span id="renderWith"><span class="annot"><span class="annottext">renderWith :: HashMap Id Term -&gt; Template -&gt; HashMap Id Value -&gt; Result Text
+</span><a href="Text.EDE.html#renderWith"><span class="hs-identifier hs-var hs-var">renderWith</span></a></span></span><span> </span><span id="local-6989586621679160372"><span class="annot"><span class="annottext">HashMap Id Term
+</span><a href="#local-6989586621679160372"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679160373"><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160373"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-301"></span><span>  </span><span class="annot"><span class="annottext">(Builder -&gt; Text) -&gt; Result Builder -&gt; Result Text
+forall a b. (a -&gt; b) -&gt; Result a -&gt; Result b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier hs-var">Text.Builder.toLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Result Builder -&gt; Result Text)
+-&gt; (HashMap Id Value -&gt; Result Builder)
+-&gt; HashMap Id Value
+-&gt; Result Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-302"></span><span>    </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+-&gt; HashMap Id Term
+-&gt; Exp Delta
+-&gt; HashMap Id Value
+-&gt; Result Builder
+</span><a href="Text.EDE.Internal.Eval.html#render"><span class="hs-identifier hs-var">Eval.render</span></a></span><span>
+</span><span id="line-303"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Template -&gt; HashMap Id (Exp Delta)
+</span><a href="Text.EDE.Internal.Types.html#_tmplIncl"><span class="hs-identifier hs-var">_tmplIncl</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160373"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id (Exp Delta)
+-&gt; HashMap Id (Exp Delta) -&gt; HashMap Id (Exp Delta)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Template -&gt; HashMap Id (Exp Delta)
+</span><a href="Text.EDE.Internal.Types.html#_tmplExtends"><span class="hs-identifier hs-var">_tmplExtends</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160373"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-304"></span><span>      </span><span class="annot"><span class="annottext">HashMap Id Term
+</span><a href="#local-6989586621679160372"><span class="hs-identifier hs-var">fs</span></a></span><span>
+</span><span id="line-305"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Template -&gt; Exp Delta
+</span><a href="Text.EDE.Internal.Types.html#_tmplExp"><span class="hs-identifier hs-var">_tmplExp</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160373"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-306"></span><span>
+</span><span id="line-307"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'parse'</span></span><span>
+</span><span id="line-308"></span><span class="annot"><a href="Text.EDE.html#eitherParse"><span class="hs-identifier hs-type">eitherParse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span>
+</span><span id="line-309"></span><span id="eitherParse"><span class="annot"><span class="annottext">eitherParse :: ByteString -&gt; Either FilePath Template
+</span><a href="Text.EDE.html#eitherParse"><span class="hs-identifier hs-var hs-var">eitherParse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Result Template -&gt; Either FilePath Template
+forall a. Result a -&gt; Either FilePath a
+</span><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier hs-var">eitherResult</span></a></span><span> </span><span class="annot"><span class="annottext">(Result Template -&gt; Either FilePath Template)
+-&gt; (ByteString -&gt; Result Template)
+-&gt; ByteString
+-&gt; Either FilePath Template
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Result Template
+</span><a href="Text.EDE.html#parse"><span class="hs-identifier hs-var">parse</span></a></span><span>
+</span><span id="line-310"></span><span>
+</span><span id="line-311"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'parseFile'</span></span><span>
+</span><span id="line-312"></span><span class="annot"><a href="Text.EDE.html#eitherParseFile"><span class="hs-identifier hs-type">eitherParseFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-313"></span><span id="eitherParseFile"><span class="annot"><span class="annottext">eitherParseFile :: FilePath -&gt; IO (Either FilePath Template)
+</span><a href="Text.EDE.html#eitherParseFile"><span class="hs-identifier hs-var hs-var">eitherParseFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Result Template -&gt; Either FilePath Template)
+-&gt; IO (Result Template) -&gt; IO (Either FilePath Template)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Result Template -&gt; Either FilePath Template
+forall a. Result a -&gt; Either FilePath a
+</span><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier hs-var">eitherResult</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Result Template) -&gt; IO (Either FilePath Template))
+-&gt; (FilePath -&gt; IO (Result Template))
+-&gt; FilePath
+-&gt; IO (Either FilePath Template)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Result Template)
+</span><a href="Text.EDE.html#parseFile"><span class="hs-identifier hs-var">parseFile</span></a></span><span>
+</span><span id="line-314"></span><span>
+</span><span id="line-315"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'parseWith'</span></span><span>
+</span><span id="line-316"></span><span id="local-6989586621679160191"><span class="annot"><a href="Text.EDE.html#eitherParseWith"><span class="hs-identifier hs-type">eitherParseWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-317"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160191"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160191"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-318"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-319"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Resolver"><span class="hs-identifier hs-type">Resolver</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160191"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-320"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-321"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-322"></span><span>  </span><span class="annot"><a href="#local-6989586621679160191"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-323"></span><span id="eitherParseWith"><span class="annot"><span class="annottext">eitherParseWith :: forall (m :: * -&gt; *).
+(Functor m, Monad m) =&gt;
+Syntax
+-&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Either FilePath Template)
+</span><a href="Text.EDE.html#eitherParseWith"><span class="hs-identifier hs-var hs-var">eitherParseWith</span></a></span></span><span> </span><span id="local-6989586621679160382"><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160382"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679160383"><span class="annot"><span class="annottext">Resolver m
+</span><a href="#local-6989586621679160383"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679160384"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160384"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Result Template -&gt; Either FilePath Template)
+-&gt; m (Result Template) -&gt; m (Either FilePath Template)
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Result Template -&gt; Either FilePath Template
+forall a. Result a -&gt; Either FilePath a
+</span><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier hs-var">eitherResult</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Result Template) -&gt; m (Either FilePath Template))
+-&gt; (ByteString -&gt; m (Result Template))
+-&gt; ByteString
+-&gt; m (Either FilePath Template)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+Syntax -&gt; Resolver m -&gt; Id -&gt; ByteString -&gt; m (Result Template)
+</span><a href="Text.EDE.html#parseWith"><span class="hs-identifier hs-var">parseWith</span></a></span><span> </span><span class="annot"><span class="annottext">Syntax
+</span><a href="#local-6989586621679160382"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Resolver m
+</span><a href="#local-6989586621679160383"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679160384"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-324"></span><span>
+</span><span id="line-325"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'render'</span></span><span>
+</span><span id="line-326"></span><span class="annot"><a href="Text.EDE.html#eitherRender"><span class="hs-identifier hs-type">eitherRender</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-327"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-328"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-329"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text.Lazy.Text</span></a></span><span>
+</span><span id="line-330"></span><span id="eitherRender"><span class="annot"><span class="annottext">eitherRender :: Template -&gt; HashMap Id Value -&gt; Either FilePath Text
+</span><a href="Text.EDE.html#eitherRender"><span class="hs-identifier hs-var hs-var">eitherRender</span></a></span></span><span> </span><span id="local-6989586621679160385"><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160385"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Result Text -&gt; Either FilePath Text
+forall a. Result a -&gt; Either FilePath a
+</span><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier hs-var">eitherResult</span></a></span><span> </span><span class="annot"><span class="annottext">(Result Text -&gt; Either FilePath Text)
+-&gt; (HashMap Id Value -&gt; Result Text)
+-&gt; HashMap Id Value
+-&gt; Either FilePath Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Template -&gt; HashMap Id Value -&gt; Result Text
+</span><a href="Text.EDE.html#render"><span class="hs-identifier hs-var">render</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160385"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-331"></span><span>
+</span><span id="line-332"></span><span class="annot"><span class="hs-comment">-- | /See:/ 'renderWith'</span></span><span>
+</span><span id="line-333"></span><span class="annot"><a href="Text.EDE.html#eitherRenderWith"><span class="hs-identifier hs-type">eitherRenderWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-334"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-335"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Template"><span class="hs-identifier hs-type">Template</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-336"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-337"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text.Lazy.Text</span></a></span><span>
+</span><span id="line-338"></span><span id="eitherRenderWith"><span class="annot"><span class="annottext">eitherRenderWith :: HashMap Id Term
+-&gt; Template -&gt; HashMap Id Value -&gt; Either FilePath Text
+</span><a href="Text.EDE.html#eitherRenderWith"><span class="hs-identifier hs-var hs-var">eitherRenderWith</span></a></span></span><span> </span><span id="local-6989586621679160386"><span class="annot"><span class="annottext">HashMap Id Term
+</span><a href="#local-6989586621679160386"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span id="local-6989586621679160387"><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160387"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Result Text -&gt; Either FilePath Text
+forall a. Result a -&gt; Either FilePath a
+</span><a href="Text.EDE.Internal.Types.html#eitherResult"><span class="hs-identifier hs-var">eitherResult</span></a></span><span> </span><span class="annot"><span class="annottext">(Result Text -&gt; Either FilePath Text)
+-&gt; (HashMap Id Value -&gt; Result Text)
+-&gt; HashMap Id Value
+-&gt; Either FilePath Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id Term -&gt; Template -&gt; HashMap Id Value -&gt; Result Text
+</span><a href="Text.EDE.html#renderWith"><span class="hs-identifier hs-var">renderWith</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Id Term
+</span><a href="#local-6989586621679160386"><span class="hs-identifier hs-var">fs</span></a></span><span> </span><span class="annot"><span class="annottext">Template
+</span><a href="#local-6989586621679160387"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-339"></span><span>
+</span><span id="line-340"></span><span class="hs-comment">-- $usage</span><span>
+</span><span id="line-341"></span><span class="hs-comment">--</span><span>
+</span><span id="line-342"></span><span class="hs-comment">-- A simple example of parsing and rendering 'Text' containing a basic conditional</span><span>
+</span><span id="line-343"></span><span class="hs-comment">-- expression and variable interpolation follows.</span><span>
+</span><span id="line-344"></span><span class="hs-comment">--</span><span>
+</span><span id="line-345"></span><span class="hs-comment">-- First the 'Template' is defined and parsed in the 'Result' monad:</span><span>
+</span><span id="line-346"></span><span class="hs-comment">--</span><span>
+</span><span id="line-347"></span><span class="hs-comment">-- &gt;&gt;&gt; tmpl &lt;- parse &quot;{% if var %}\nHello, {{ var }}!\n{% else %}\nnegative!\n{% endif %}\n&quot; :: Result Template</span><span>
+</span><span id="line-348"></span><span class="hs-comment">--</span><span>
+</span><span id="line-349"></span><span class="hs-comment">-- Then an 'HashMap Text Value' is defined containing the environment which will be</span><span>
+</span><span id="line-350"></span><span class="hs-comment">-- available to the 'Template' during rendering:</span><span>
+</span><span id="line-351"></span><span class="hs-comment">--</span><span>
+</span><span id="line-352"></span><span class="hs-comment">-- &gt;&gt;&gt; let env = fromPairs [ &quot;var&quot; .= &quot;World&quot; ] :: HashMap Text Value</span><span>
+</span><span id="line-353"></span><span class="hs-comment">--</span><span>
+</span><span id="line-354"></span><span class="hs-comment">-- Note: the 'fromPairs' function above is a wrapper over Aeson's 'object'</span><span>
+</span><span id="line-355"></span><span class="hs-comment">-- which removes the outer 'Data.Aeson.Object' 'Value' constructor, exposing the underlying 'HashMap'.</span><span>
+</span><span id="line-356"></span><span class="hs-comment">--</span><span>
+</span><span id="line-357"></span><span class="hs-comment">-- Then, the 'Template' is rendered using the 'HashMap Text Value' environment:</span><span>
+</span><span id="line-358"></span><span class="hs-comment">--</span><span>
+</span><span id="line-359"></span><span class="hs-comment">-- &gt;&gt;&gt; render tmpl env :: Result Text</span><span>
+</span><span id="line-360"></span><span class="hs-comment">-- &gt; Success &quot;Hello, World!&quot;</span><span>
+</span><span id="line-361"></span><span class="hs-comment">--</span><span>
+</span><span id="line-362"></span><span class="hs-comment">-- In this manner, 'Template's can be pre-compiled to the internal AST and</span><span>
+</span><span id="line-363"></span><span class="hs-comment">-- the cost of parsing can be amortised if the same 'Template' is rendered multiple times.</span><span>
+</span><span id="line-364"></span><span class="hs-comment">--</span><span>
+</span><span id="line-365"></span><span class="hs-comment">-- Another example, this time rendering a 'Template' from a file:</span><span>
+</span><span id="line-366"></span><span class="hs-comment">--</span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- &gt; import qualified Data.Text.Lazy as Text.Lazy</span><span>
+</span><span id="line-368"></span><span class="hs-comment">-- &gt; import qualified           Text.EDE as EDE</span><span>
+</span><span id="line-369"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-370"></span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-371"></span><span class="hs-comment">-- &gt; main = do</span><span>
+</span><span id="line-372"></span><span class="hs-comment">-- &gt;     r &lt;- eitherParseFile &quot;template.ede&quot;</span><span>
+</span><span id="line-373"></span><span class="hs-comment">-- &gt;     either error print $ r &gt;&gt;= (`eitherRender` env)</span><span>
+</span><span id="line-374"></span><span class="hs-comment">-- &gt;   where</span><span>
+</span><span id="line-375"></span><span class="hs-comment">-- &gt;     env = fromPairs</span><span>
+</span><span id="line-376"></span><span class="hs-comment">-- &gt;         [ &quot;text&quot; .= &quot;Some Text.&quot;</span><span>
+</span><span id="line-377"></span><span class="hs-comment">-- &gt;         , &quot;int&quot;  .= 1</span><span>
+</span><span id="line-378"></span><span class="hs-comment">-- &gt;         , &quot;list&quot; .= [5..10]</span><span>
+</span><span id="line-379"></span><span class="hs-comment">-- &gt;         ]</span><span>
+</span><span id="line-380"></span><span class="hs-comment">--</span><span>
+</span><span id="line-381"></span><span class="hs-comment">-- Please see the syntax section for more information about available</span><span>
+</span><span id="line-382"></span><span class="hs-comment">-- statements and expressions.</span><span>
+</span><span id="line-383"></span><span>
+</span><span id="line-384"></span><span class="hs-comment">-- $parsing_and_rendering</span><span>
+</span><span id="line-385"></span><span class="hs-comment">--</span><span>
+</span><span id="line-386"></span><span class="hs-comment">-- Parsing and rendering require two separate steps intentionally so that the</span><span>
+</span><span id="line-387"></span><span class="hs-comment">-- more expensive (and potentially impure) action of parsing and resolving</span><span>
+</span><span id="line-388"></span><span class="hs-comment">-- @include@s can be embedded and re-used in a pure fashion.</span><span>
+</span><span id="line-389"></span><span class="hs-comment">--</span><span>
+</span><span id="line-390"></span><span class="hs-comment">-- * Parsing tokenises the input and converts it to an internal AST representation,</span><span>
+</span><span id="line-391"></span><span class="hs-comment">-- resolving @include@s using a custom function. The result is a compiled template</span><span>
+</span><span id="line-392"></span><span class="hs-comment">-- which can be cached for future use.</span><span>
+</span><span id="line-393"></span><span class="hs-comment">--</span><span>
+</span><span id="line-394"></span><span class="hs-comment">-- * Rendering takes a 'HashMap' of custom 'Fun's (functions available in the</span><span>
+</span><span id="line-395"></span><span class="hs-comment">-- template context), an 'HashMap Text Value' as the binding environment, and a parsed</span><span>
+</span><span id="line-396"></span><span class="hs-comment">-- 'Template' to subsitute the values into.</span><span>
+</span><span id="line-397"></span><span class="hs-comment">-- The result is a Lazy 'Text.Lazy.Text' value containing the rendered output.</span><span>
+</span><span id="line-398"></span><span>
+</span><span id="line-399"></span><span class="hs-comment">-- $resolvers</span><span>
+</span><span id="line-400"></span><span class="hs-comment">--</span><span>
+</span><span id="line-401"></span><span class="hs-comment">-- The 'Resolver' used to resolve @include@ expressions determines the purity</span><span>
+</span><span id="line-402"></span><span class="hs-comment">-- of 'Template' parsing.</span><span>
+</span><span id="line-403"></span><span class="hs-comment">--</span><span>
+</span><span id="line-404"></span><span class="hs-comment">-- For example, using the 'includeFile' 'Resolver' means parsing is restricted</span><span>
+</span><span id="line-405"></span><span class="hs-comment">-- to 'IO', while pre-caching a 'HashMap' of 'Template's and supplying them to</span><span>
+</span><span id="line-406"></span><span class="hs-comment">-- 'parseWith' using 'includeMap' offers a pure variant for @include@ resolution.</span><span>
+</span><span id="line-407"></span><span>
+</span><span id="line-408"></span><span class="hs-comment">-- $results</span><span>
+</span><span id="line-409"></span><span class="hs-comment">--</span><span>
+</span><span id="line-410"></span><span class="hs-comment">-- The 'Result' of a 'parse' or 'render' steps can be inspected or analysed using</span><span>
+</span><span id="line-411"></span><span class="hs-comment">-- 'result' as follows:</span><span>
+</span><span id="line-412"></span><span class="hs-comment">--</span><span>
+</span><span id="line-413"></span><span class="hs-comment">-- &gt;&gt;&gt; result failure success $ render tmpl env</span><span>
+</span><span id="line-414"></span><span class="hs-comment">--</span><span>
+</span><span id="line-415"></span><span class="hs-comment">-- If you're only interested in dealing with errors as strings, and the positional</span><span>
+</span><span id="line-416"></span><span class="hs-comment">-- information contained in 'Meta' is not of use you can use the convenience functions</span><span>
+</span><span id="line-417"></span><span class="hs-comment">-- 'eitherParse', 'eitherRender', or convert a 'Result' to 'Either' using 'eitherResult'.</span><span>
+</span><span id="line-418"></span><span class="hs-comment">--</span><span>
+</span><span id="line-419"></span><span class="hs-comment">-- &gt;&gt;&gt; either failure success $ eitherParse tmpl</span><span>
+</span><span id="line-420"></span><span>
+</span><span id="line-421"></span><span class="hs-comment">-- $input</span><span>
+</span><span id="line-422"></span><span class="hs-comment">--</span><span>
+</span><span id="line-423"></span><span class="hs-comment">-- 'fromPairs' (or 'fromValue') is a wrapper around Aeson's 'object' function which</span><span>
+</span><span id="line-424"></span><span class="hs-comment">--  safely strips the outer 'Value' constructor, providing the correct type</span><span>
+</span><span id="line-425"></span><span class="hs-comment">-- signature for input into 'render'.</span><span>
+</span><span id="line-426"></span><span class="hs-comment">--</span><span>
+</span><span id="line-427"></span><span class="hs-comment">-- It is used in combination with the re-exported '.=' as follows:</span><span>
+</span><span id="line-428"></span><span class="hs-comment">--</span><span>
+</span><span id="line-429"></span><span class="hs-comment">-- &gt;&gt;&gt; render (fromPairs [ &quot;foo&quot; .= &quot;value&quot;, &quot;bar&quot; .= 1 ]) :: Template -&gt; Result Text</span><span>
+</span><span id="line-430"></span><span>
+</span><span id="line-431"></span><span class="hs-comment">-- #syntax#</span><span>
+</span><span id="line-432"></span><span class="hs-comment">--</span><span>
+</span><span id="line-433"></span><span>
+</span><span id="line-434"></span><span class="hs-comment">-- $pragmas</span><span>
+</span><span id="line-435"></span><span class="hs-comment">--</span><span>
+</span><span id="line-436"></span><span class="hs-comment">-- Syntax can be modified either via the arguments to 'parseWith' or alternatively</span><span>
+</span><span id="line-437"></span><span class="hs-comment">-- by specifying the delimiters via an @EDE_SYNTAX@ pragma.</span><span>
+</span><span id="line-438"></span><span class="hs-comment">--</span><span>
+</span><span id="line-439"></span><span class="hs-comment">-- /Note:/ The pragmas must start on line1. Subsequently encountered</span><span>
+</span><span id="line-440"></span><span class="hs-comment">-- pragmas are parsed as textual template contents.</span><span>
+</span><span id="line-441"></span><span class="hs-comment">--</span><span>
+</span><span id="line-442"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-443"></span><span class="hs-comment">--</span><span>
+</span><span id="line-444"></span><span class="hs-comment">-- &gt; {! EDE_SYNTAX pragma=(&quot;{*&quot;, &quot;*}&quot;) inline=(&quot;#@&quot;, &quot;@#&quot;) comment=(&quot;&lt;#&quot;, &quot;#&gt;&quot;) block=(&quot;$$&quot;, &quot;$$&quot;) !}</span><span>
+</span><span id="line-445"></span><span class="hs-comment">-- &gt; {* EDE_SYNTAX block=(&quot;#[&quot;, &quot;]#&quot;)  *}</span><span>
+</span><span id="line-446"></span><span class="hs-comment">-- &gt; ...</span><span>
+</span><span id="line-447"></span><span class="hs-comment">--</span><span>
+</span><span id="line-448"></span><span class="hs-comment">-- Would result in the following syntax:</span><span>
+</span><span id="line-449"></span><span class="hs-comment">--</span><span>
+</span><span id="line-450"></span><span class="hs-comment">-- * Pragmas: @{* ... *}@</span><span>
+</span><span id="line-451"></span><span class="hs-comment">--</span><span>
+</span><span id="line-452"></span><span class="hs-comment">-- * Inline: @\#\@ ... \@\#@</span><span>
+</span><span id="line-453"></span><span class="hs-comment">--</span><span>
+</span><span id="line-454"></span><span class="hs-comment">-- * Comment: @\&lt;\# ... \#&gt;@</span><span>
+</span><span id="line-455"></span><span class="hs-comment">--</span><span>
+</span><span id="line-456"></span><span class="hs-comment">-- * Block: @\#[ ... ]\#@</span><span>
+</span><span id="line-457"></span><span class="hs-comment">--</span><span>
+</span><span id="line-458"></span><span class="hs-comment">-- /Note:/ @EDE_SYNTAX@ pragmas only take effect for the current template, not</span><span>
+</span><span id="line-459"></span><span class="hs-comment">-- child includes. If you want to override the syntax for all templates use 'parseWith'</span><span>
+</span><span id="line-460"></span><span class="hs-comment">-- and custom 'Syntax' settings.</span><span>
+</span><span id="line-461"></span><span>
+</span><span id="line-462"></span><span class="hs-comment">-- $expressions</span><span>
+</span><span id="line-463"></span><span class="hs-comment">--</span><span>
+</span><span id="line-464"></span><span class="hs-comment">-- Expressions behave as any simplistic programming language with a variety of</span><span>
+</span><span id="line-465"></span><span class="hs-comment">-- prefix, infix, and postifx operators available. (/See:/ &quot;Text.EDE.Filters&quot;)</span><span>
+</span><span id="line-466"></span><span class="hs-comment">--</span><span>
+</span><span id="line-467"></span><span class="hs-comment">-- A rough overview of the expression grammar:</span><span>
+</span><span id="line-468"></span><span class="hs-comment">--</span><span>
+</span><span id="line-469"></span><span class="hs-comment">-- &gt; expression ::= literal | identifier | '|' filter</span><span>
+</span><span id="line-470"></span><span class="hs-comment">-- &gt; filter     ::= identifier</span><span>
+</span><span id="line-471"></span><span class="hs-comment">-- &gt; identifier ::= [a-zA-Z_]{1}[0-9A-Za-z_']*</span><span>
+</span><span id="line-472"></span><span class="hs-comment">-- &gt; object     ::= '{' pairs '}'</span><span>
+</span><span id="line-473"></span><span class="hs-comment">-- &gt; pairs      ::= string ':' literal | string ':' literal ',' pairs</span><span>
+</span><span id="line-474"></span><span class="hs-comment">-- &gt; array      ::= '[' elements ']'</span><span>
+</span><span id="line-475"></span><span class="hs-comment">-- &gt; elements   ::= literal | literal ',' elements</span><span>
+</span><span id="line-476"></span><span class="hs-comment">-- &gt; literal    ::= object | array | boolean | number | string</span><span>
+</span><span id="line-477"></span><span class="hs-comment">-- &gt; boolean    ::= true | false</span><span>
+</span><span id="line-478"></span><span class="hs-comment">-- &gt; number     ::= integer | double</span><span>
+</span><span id="line-479"></span><span class="hs-comment">-- &gt; string     ::= &quot;char+|escape&quot;</span><span>
+</span><span id="line-480"></span><span>
+</span><span id="line-481"></span><span class="hs-comment">--</span><span>
+</span><span id="line-482"></span><span class="hs-comment">-- /Note:/</span><span>
+</span><span id="line-483"></span><span class="hs-comment">--</span><span>
+</span><span id="line-484"></span><span>
+</span><span id="line-485"></span><span class="annot"><span class="hs-comment">-- * Identifiers are named similarly to Haskell's rules.</span></span><span>
+</span><span id="line-486"></span><span>
+</span><span id="line-487"></span><span class="hs-comment">--</span><span>
+</span><span id="line-488"></span><span>
+</span><span id="line-489"></span><span class="annot"><span class="hs-comment">-- * Booleans are lowered cased.</span></span><span>
+</span><span id="line-490"></span><span>
+</span><span id="line-491"></span><span class="hs-comment">--</span><span>
+</span><span id="line-492"></span><span>
+</span><span id="line-493"></span><span class="annot"><span class="hs-comment">-- * The string quoting and escaping follows Haskell's rules.</span></span><span>
+</span><span id="line-494"></span><span>
+</span><span id="line-495"></span><span class="hs-comment">--</span><span>
+</span><span id="line-496"></span><span>
+</span><span id="line-497"></span><span class="annot"><span class="hs-comment">-- * The Numeric format shares the same characteristics as the &lt;http://json.org/ JSON specification.&gt;</span></span><span>
+</span><span id="line-498"></span><span>
+</span><span id="line-499"></span><span class="hs-comment">-- $variables</span><span>
+</span><span id="line-500"></span><span class="hs-comment">--</span><span>
+</span><span id="line-501"></span><span class="hs-comment">-- Variables are substituted directly for their renderable representation.</span><span>
+</span><span id="line-502"></span><span class="hs-comment">-- An error is raised if the varaible being substituted is not a literal type</span><span>
+</span><span id="line-503"></span><span class="hs-comment">-- (ie. an 'Array' or 'HashMap Text Value') or doesn't exist in the supplied environment.</span><span>
+</span><span id="line-504"></span><span class="hs-comment">--</span><span>
+</span><span id="line-505"></span><span class="hs-comment">-- &gt; {{ var }}</span><span>
+</span><span id="line-506"></span><span class="hs-comment">--</span><span>
+</span><span id="line-507"></span><span class="hs-comment">-- Nested variable access is also supported for variables which resolve to an 'HashMap Text Value'.</span><span>
+</span><span id="line-508"></span><span class="hs-comment">-- Dot delimiters are used to chain access through multiple nested 'HashMap Text Value's.</span><span>
+</span><span id="line-509"></span><span class="hs-comment">-- The right-most accessor must resolve to a renderable type as with the previous</span><span>
+</span><span id="line-510"></span><span class="hs-comment">-- non-nested variable access.</span><span>
+</span><span id="line-511"></span><span class="hs-comment">--</span><span>
+</span><span id="line-512"></span><span class="hs-comment">-- &gt; {{ nested.var.access }}</span><span>
+</span><span id="line-513"></span><span>
+</span><span id="line-514"></span><span class="hs-comment">-- $conditionals</span><span>
+</span><span id="line-515"></span><span class="hs-comment">--</span><span>
+</span><span id="line-516"></span><span class="hs-comment">-- A conditional is introduced and completed with the section syntax:</span><span>
+</span><span id="line-517"></span><span class="hs-comment">--</span><span>
+</span><span id="line-518"></span><span class="hs-comment">-- &gt; {% if &lt;expr1&gt; %}</span><span>
+</span><span id="line-519"></span><span class="hs-comment">-- &gt;    ... consequent expressions</span><span>
+</span><span id="line-520"></span><span class="hs-comment">-- &gt; {% elif &lt;expr2&gt; %}</span><span>
+</span><span id="line-521"></span><span class="hs-comment">-- &gt;    ... consequent expressions</span><span>
+</span><span id="line-522"></span><span class="hs-comment">-- &gt; {% elif &lt;expr3&gt; %}</span><span>
+</span><span id="line-523"></span><span class="hs-comment">-- &gt;    ... consequent expressions</span><span>
+</span><span id="line-524"></span><span class="hs-comment">-- &gt; {% else %}</span><span>
+</span><span id="line-525"></span><span class="hs-comment">-- &gt;    ... alternate expressions</span><span>
+</span><span id="line-526"></span><span class="hs-comment">-- &gt; {% endif %}</span><span>
+</span><span id="line-527"></span><span class="hs-comment">--</span><span>
+</span><span id="line-528"></span><span class="hs-comment">-- The boolean result of the @expr@ determines the branch that is rendered by</span><span>
+</span><span id="line-529"></span><span class="hs-comment">-- the template with multiple (or none) elif branches supported, and the</span><span>
+</span><span id="line-530"></span><span class="hs-comment">-- else branch being optional.</span><span>
+</span><span id="line-531"></span><span class="hs-comment">--</span><span>
+</span><span id="line-532"></span><span class="hs-comment">-- In the case of a literal it conforms directly to the supported boolean or relation logical</span><span>
+</span><span id="line-533"></span><span class="hs-comment">-- operators from Haskell.</span><span>
+</span><span id="line-534"></span><span class="hs-comment">-- If a variable is singularly used its existence determines the result of the predicate;</span><span>
+</span><span id="line-535"></span><span class="hs-comment">-- the exception to this rule is boolean values which will be substituted into the</span><span>
+</span><span id="line-536"></span><span class="hs-comment">-- expression if they exist in the supplied environment.</span><span>
+</span><span id="line-537"></span><span class="hs-comment">--</span><span>
+</span><span id="line-538"></span><span class="hs-comment">-- The following logical expressions are supported as predicates in conditional statements</span><span>
+</span><span id="line-539"></span><span class="hs-comment">-- with parameters type checked and an error raised if the left and right</span><span>
+</span><span id="line-540"></span><span class="hs-comment">-- hand sides are not type equivalent.</span><span>
+</span><span id="line-541"></span><span class="hs-comment">--</span><span>
+</span><span id="line-542"></span><span class="hs-comment">-- * @And@: '&amp;&amp;'</span><span>
+</span><span id="line-543"></span><span class="hs-comment">--</span><span>
+</span><span id="line-544"></span><span class="hs-comment">-- * @Or@: '||'</span><span>
+</span><span id="line-545"></span><span class="hs-comment">--</span><span>
+</span><span id="line-546"></span><span class="hs-comment">-- * @Equal@: '=='</span><span>
+</span><span id="line-547"></span><span class="hs-comment">--</span><span>
+</span><span id="line-548"></span><span class="hs-comment">-- * @Not Equal@: @!=@ (/See:/ '/=')</span><span>
+</span><span id="line-549"></span><span class="hs-comment">--</span><span>
+</span><span id="line-550"></span><span class="hs-comment">-- * @Greater@: '&gt;'</span><span>
+</span><span id="line-551"></span><span class="hs-comment">--</span><span>
+</span><span id="line-552"></span><span class="hs-comment">-- * @Greater Or Equal@: '&gt;='</span><span>
+</span><span id="line-553"></span><span class="hs-comment">--</span><span>
+</span><span id="line-554"></span><span class="hs-comment">-- * @Less@: '&lt;'</span><span>
+</span><span id="line-555"></span><span class="hs-comment">--</span><span>
+</span><span id="line-556"></span><span class="hs-comment">-- * @Less Or Equal@: '&lt;='</span><span>
+</span><span id="line-557"></span><span class="hs-comment">--</span><span>
+</span><span id="line-558"></span><span class="hs-comment">-- * @Negation@: @!@ (/See:/ 'not')</span><span>
+</span><span id="line-559"></span><span class="hs-comment">--</span><span>
+</span><span id="line-560"></span><span class="hs-comment">-- /See:/ &quot;Text.EDE.Filters&quot;</span><span>
+</span><span id="line-561"></span><span>
+</span><span id="line-562"></span><span class="hs-comment">-- $case</span><span>
+</span><span id="line-563"></span><span class="hs-comment">--</span><span>
+</span><span id="line-564"></span><span class="hs-comment">-- To pattern match a literal or variable, you can use the @case@ statement:</span><span>
+</span><span id="line-565"></span><span class="hs-comment">--</span><span>
+</span><span id="line-566"></span><span class="hs-comment">-- &gt; {% case var %}</span><span>
+</span><span id="line-567"></span><span class="hs-comment">-- &gt; {% when &quot;a&quot; %}</span><span>
+</span><span id="line-568"></span><span class="hs-comment">-- &gt;    .. matched expressions</span><span>
+</span><span id="line-569"></span><span class="hs-comment">-- &gt; {% when &quot;b&quot; %}</span><span>
+</span><span id="line-570"></span><span class="hs-comment">-- &gt;    .. matched expressions</span><span>
+</span><span id="line-571"></span><span class="hs-comment">-- &gt; {% else %}</span><span>
+</span><span id="line-572"></span><span class="hs-comment">-- &gt;    .. alternate expressions</span><span>
+</span><span id="line-573"></span><span class="hs-comment">-- &gt; {% endcase %}</span><span>
+</span><span id="line-574"></span><span class="hs-comment">--</span><span>
+</span><span id="line-575"></span><span class="hs-comment">-- Patterns take the form of @variables@, @literals@, or the wild-card</span><span>
+</span><span id="line-576"></span><span class="hs-comment">-- '@_@' pattern (which matches anything).</span><span>
+</span><span id="line-577"></span><span>
+</span><span id="line-578"></span><span class="hs-comment">-- $loops</span><span>
+</span><span id="line-579"></span><span class="hs-comment">--</span><span>
+</span><span id="line-580"></span><span class="hs-comment">-- Iterating over an 'Array' or 'HashMap Text Value' can be acheived using the 'for ... in' section syntax.</span><span>
+</span><span id="line-581"></span><span class="hs-comment">-- Attempting to iterate over any other type will raise an error.</span><span>
+</span><span id="line-582"></span><span class="hs-comment">--</span><span>
+</span><span id="line-583"></span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-584"></span><span class="hs-comment">--</span><span>
+</span><span id="line-585"></span><span class="hs-comment">-- &gt; {% for var in list %}</span><span>
+</span><span id="line-586"></span><span class="hs-comment">-- &gt;     ... iteration expression</span><span>
+</span><span id="line-587"></span><span class="hs-comment">-- &gt; {% else %}</span><span>
+</span><span id="line-588"></span><span class="hs-comment">-- &gt;     ... alternate expression</span><span>
+</span><span id="line-589"></span><span class="hs-comment">-- &gt; {% endfor %}</span><span>
+</span><span id="line-590"></span><span class="hs-comment">--</span><span>
+</span><span id="line-591"></span><span class="hs-comment">-- The iteration branch is rendering per item with the else branch being (which is optional)</span><span>
+</span><span id="line-592"></span><span class="hs-comment">-- being rendered if the @{{ list }}@ variable is empty.</span><span>
+</span><span id="line-593"></span><span class="hs-comment">--</span><span>
+</span><span id="line-594"></span><span class="hs-comment">-- When iterating over an 'HashMap Text Value', a stable sort using key equivalence is applied, 'Array's</span><span>
+</span><span id="line-595"></span><span class="hs-comment">-- are unmodified.</span><span>
+</span><span id="line-596"></span><span class="hs-comment">--</span><span>
+</span><span id="line-597"></span><span class="hs-comment">-- The resulting binding within the iteration expression (in this case, @{{ var }}@) is</span><span>
+</span><span id="line-598"></span><span class="hs-comment">-- an 'HashMap Text Value' containing the following keys:</span><span>
+</span><span id="line-599"></span><span class="hs-comment">--</span><span>
+</span><span id="line-600"></span><span class="hs-comment">-- * @key        :: Text@: They key if the loop target is an 'HashMap Text Value'</span><span>
+</span><span id="line-601"></span><span class="hs-comment">--</span><span>
+</span><span id="line-602"></span><span class="hs-comment">-- * @value      :: a@: The value of the loop target</span><span>
+</span><span id="line-603"></span><span class="hs-comment">--</span><span>
+</span><span id="line-604"></span><span class="hs-comment">-- * @loop       :: Object@: Loop metadata.</span><span>
+</span><span id="line-605"></span><span class="hs-comment">--</span><span>
+</span><span id="line-606"></span><span class="hs-comment">-- * @length     :: Int@: Length of the loop</span><span>
+</span><span id="line-607"></span><span class="hs-comment">--</span><span>
+</span><span id="line-608"></span><span class="hs-comment">-- * @index      :: Int@: Index of the iteration</span><span>
+</span><span id="line-609"></span><span class="hs-comment">--</span><span>
+</span><span id="line-610"></span><span class="hs-comment">-- * @index0     :: Int@: Zero based index of the iteration</span><span>
+</span><span id="line-611"></span><span class="hs-comment">--</span><span>
+</span><span id="line-612"></span><span class="hs-comment">-- * @remainder  :: Int@: Remaining number of iterations</span><span>
+</span><span id="line-613"></span><span class="hs-comment">--</span><span>
+</span><span id="line-614"></span><span class="hs-comment">-- * @remainder0 :: Int@: Zero based remaining number of iterations</span><span>
+</span><span id="line-615"></span><span class="hs-comment">--</span><span>
+</span><span id="line-616"></span><span class="hs-comment">-- * @first      :: Bool@: Is this the first iteration?</span><span>
+</span><span id="line-617"></span><span class="hs-comment">--</span><span>
+</span><span id="line-618"></span><span class="hs-comment">-- * @last       :: Bool@: Is this the last iteration?</span><span>
+</span><span id="line-619"></span><span class="hs-comment">--</span><span>
+</span><span id="line-620"></span><span class="hs-comment">-- * @odd        :: Bool@: Is this an odd iteration?</span><span>
+</span><span id="line-621"></span><span class="hs-comment">--</span><span>
+</span><span id="line-622"></span><span class="hs-comment">-- * @even       :: Bool@: Is this an even iteration?</span><span>
+</span><span id="line-623"></span><span class="hs-comment">--</span><span>
+</span><span id="line-624"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-625"></span><span class="hs-comment">--</span><span>
+</span><span id="line-626"></span><span class="hs-comment">-- &gt; {% for item in items %}</span><span>
+</span><span id="line-627"></span><span class="hs-comment">-- &gt;     {{ item.index }}:{{ item.value }}</span><span>
+</span><span id="line-628"></span><span class="hs-comment">-- &gt;     {% if !item.last %}</span><span>
+</span><span id="line-629"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-630"></span><span class="hs-comment">-- &gt;     {% endif %}</span><span>
+</span><span id="line-631"></span><span class="hs-comment">-- &gt; {% endfor %}</span><span>
+</span><span id="line-632"></span><span class="hs-comment">--</span><span>
+</span><span id="line-633"></span><span class="hs-comment">-- Will render each item with its (1-based) loop index as a prefix, separated</span><span>
+</span><span id="line-634"></span><span class="hs-comment">-- by a blank newline, without a trailing at the end of the document.</span><span>
+</span><span id="line-635"></span><span class="hs-comment">--</span><span>
+</span><span id="line-636"></span><span class="hs-comment">-- Valid loop targets are 'HashMap Text Value's, 'Array's, and 'String's, with</span><span>
+</span><span id="line-637"></span><span class="hs-comment">-- only 'HashMap Text Value's having an available @{{ &lt;var&gt;.key }}@ in scope.</span><span>
+</span><span id="line-638"></span><span>
+</span><span id="line-639"></span><span class="hs-comment">-- $includes</span><span>
+</span><span id="line-640"></span><span class="hs-comment">--</span><span>
+</span><span id="line-641"></span><span class="hs-comment">-- Includes are a way to reduce the amount of noise in large templates.</span><span>
+</span><span id="line-642"></span><span class="hs-comment">-- They can be used to abstract out common snippets and idioms into partials.</span><span>
+</span><span id="line-643"></span><span class="hs-comment">--</span><span>
+</span><span id="line-644"></span><span class="hs-comment">-- If 'parseFile' or the 'includeFile' resolver is used, templates will be loaded</span><span>
+</span><span id="line-645"></span><span class="hs-comment">-- using 'FilePath's. (This is the default.)</span><span>
+</span><span id="line-646"></span><span class="hs-comment">--</span><span>
+</span><span id="line-647"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-648"></span><span class="hs-comment">--</span><span>
+</span><span id="line-649"></span><span class="hs-comment">-- &gt; {% include &quot;/var/tmp/partial.ede&quot; %}</span><span>
+</span><span id="line-650"></span><span class="hs-comment">--</span><span>
+</span><span id="line-651"></span><span class="hs-comment">-- Loads @partial.ede@ from the file system.</span><span>
+</span><span id="line-652"></span><span class="hs-comment">--</span><span>
+</span><span id="line-653"></span><span class="hs-comment">-- The current environment is made directly available to the included template.</span><span>
+</span><span id="line-654"></span><span class="hs-comment">-- Additional bindings can be created (/See:/ @let@) which will be additionally</span><span>
+</span><span id="line-655"></span><span class="hs-comment">-- available only within the include under a specific identifier:</span><span>
+</span><span id="line-656"></span><span class="hs-comment">--</span><span>
+</span><span id="line-657"></span><span class="hs-comment">-- &gt; {% include &quot;/var/tmp/partial.ede&quot; with some_number = 123 %}</span><span>
+</span><span id="line-658"></span><span class="hs-comment">--</span><span>
+</span><span id="line-659"></span><span class="hs-comment">-- Includes can also be resolved using pure 'Resolver's such as 'includeMap',</span><span>
+</span><span id="line-660"></span><span class="hs-comment">-- which will treat the @include@ expression's identifier as a 'HashMap' key:</span><span>
+</span><span id="line-661"></span><span class="hs-comment">--</span><span>
+</span><span id="line-662"></span><span class="hs-comment">-- &gt; {% include &quot;arbitrary_key&quot; %}</span><span>
+</span><span id="line-663"></span><span class="hs-comment">--</span><span>
+</span><span id="line-664"></span><span class="hs-comment">-- Uses 'Map.lookup' to find @arbitrary_key@ in the 'HashMap' supplied to 'includeMap'.</span><span>
+</span><span id="line-665"></span><span>
+</span><span id="line-666"></span><span class="hs-comment">-- $filters</span><span>
+</span><span id="line-667"></span><span class="hs-comment">--</span><span>
+</span><span id="line-668"></span><span class="hs-comment">-- Filters are typed functions which can be applied to variables and literals.</span><span>
+</span><span id="line-669"></span><span class="hs-comment">-- An example of rendering a lower cased boolean would be:</span><span>
+</span><span id="line-670"></span><span class="hs-comment">--</span><span>
+</span><span id="line-671"></span><span class="hs-comment">-- &gt; {{ true | show | lower }}</span><span>
+</span><span id="line-672"></span><span class="hs-comment">--</span><span>
+</span><span id="line-673"></span><span class="hs-comment">-- The input is on the LHS and chained filters (delimited by the pipe operator @|@)</span><span>
+</span><span id="line-674"></span><span class="hs-comment">-- are on the RHS, with filters being applied postfix, left associatively.</span><span>
+</span><span id="line-675"></span><span class="hs-comment">--</span><span>
+</span><span id="line-676"></span><span class="hs-comment">-- /See:/ &quot;Text.EDE.Filters&quot;</span><span>
+</span><span id="line-677"></span><span>
+</span><span id="line-678"></span><span class="hs-comment">-- $raw</span><span>
+</span><span id="line-679"></span><span class="hs-comment">--</span><span>
+</span><span id="line-680"></span><span class="hs-comment">-- You can disable template processing for blocks of text using the @raw@ section:</span><span>
+</span><span id="line-681"></span><span class="hs-comment">--</span><span>
+</span><span id="line-682"></span><span class="hs-comment">-- &gt; {% raw %}</span><span>
+</span><span id="line-683"></span><span class="hs-comment">-- &gt; Some {{{ handlebars }}} or {{ mustache }} or {{ jinja2 }} output tags etc.</span><span>
+</span><span id="line-684"></span><span class="hs-comment">-- &gt; {% endraw %}</span><span>
+</span><span id="line-685"></span><span class="hs-comment">--</span><span>
+</span><span id="line-686"></span><span class="hs-comment">-- This can be used to avoid parsing expressions which would otherwise be</span><span>
+</span><span id="line-687"></span><span class="hs-comment">-- considered valid @ED-E@ syntax.</span><span>
+</span><span id="line-688"></span><span>
+</span><span id="line-689"></span><span class="hs-comment">-- $comments</span><span>
+</span><span id="line-690"></span><span class="hs-comment">--</span><span>
+</span><span id="line-691"></span><span class="hs-comment">-- Comments are ignored by the parser and omitted from the rendered output.</span><span>
+</span><span id="line-692"></span><span class="hs-comment">--</span><span>
+</span><span id="line-693"></span><span class="hs-comment">-- &gt; {# singleline comment #}</span><span>
+</span><span id="line-694"></span><span class="hs-comment">--</span><span>
+</span><span id="line-695"></span><span class="hs-comment">-- &gt; {#</span><span>
+</span><span id="line-696"></span><span class="hs-comment">-- &gt;    multiline</span><span>
+</span><span id="line-697"></span><span class="hs-comment">-- &gt;    comment</span><span>
+</span><span id="line-698"></span><span class="hs-comment">-- &gt; #}</span><span>
+</span><span id="line-699"></span><span>
+</span><span id="line-700"></span><span class="hs-comment">-- $let</span><span>
+</span><span id="line-701"></span><span class="hs-comment">--</span><span>
+</span><span id="line-702"></span><span class="hs-comment">-- You can also bind an identifier to values which will be available within</span><span>
+</span><span id="line-703"></span><span class="hs-comment">-- the following expression scope.</span><span>
+</span><span id="line-704"></span><span class="hs-comment">--</span><span>
+</span><span id="line-705"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-706"></span><span class="hs-comment">--</span><span>
+</span><span id="line-707"></span><span class="hs-comment">-- &gt; {% let var = false %}</span><span>
+</span><span id="line-708"></span><span class="hs-comment">-- &gt; ...</span><span>
+</span><span id="line-709"></span><span class="hs-comment">-- &gt; {{ var }}</span><span>
+</span><span id="line-710"></span><span class="hs-comment">-- &gt; ...</span><span>
+</span><span id="line-711"></span><span class="hs-comment">-- &gt; {% endlet %}</span><span>
+</span><span id="line-712"></span><span>
+</span><span id="line-713"></span><span class="hs-comment">-- $set</span><span>
+</span><span id="line-714"></span><span class="hs-comment">--</span><span>
+</span><span id="line-715"></span><span class="hs-comment">-- You can also bind an identifier to whole templates which will be available within</span><span>
+</span><span id="line-716"></span><span class="hs-comment">-- the following expression scope. The identifier will be available in subsequent template.</span><span>
+</span><span id="line-717"></span><span class="hs-comment">--</span><span>
+</span><span id="line-718"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-719"></span><span class="hs-comment">--</span><span>
+</span><span id="line-720"></span><span class="hs-comment">-- &gt; {% set var %}</span><span>
+</span><span id="line-721"></span><span class="hs-comment">-- &gt;   ...</span><span>
+</span><span id="line-722"></span><span class="hs-comment">-- &gt; {% endset %}</span><span>
+</span><span id="line-723"></span><span class="hs-comment">-- &gt; ...</span><span>
+</span><span id="line-724"></span><span class="hs-comment">-- &gt; {{ var }}</span><span>
+</span><span id="line-725"></span><span>
+</span><span id="line-726"></span><span class="hs-comment">-- $block</span><span>
+</span><span id="line-727"></span><span class="hs-comment">--</span><span>
+</span><span id="line-728"></span><span class="hs-comment">-- Blocks are used for inheritance and act as both placeholders and replacements at the same time: The most powerful</span><span>
+</span><span id="line-729"></span><span class="hs-comment">-- part of @ED-E@ is template inheritance. Template inheritance allows you to build a base &quot;skeleton&quot; template that</span><span>
+</span><span id="line-730"></span><span class="hs-comment">-- contains all the common elements of your site and defines blocks that child templates can override.</span><span>
+</span><span id="line-731"></span><span class="hs-comment">--</span><span>
+</span><span id="line-732"></span><span class="hs-comment">-- Base template:</span><span>
+</span><span id="line-733"></span><span class="hs-comment">--</span><span>
+</span><span id="line-734"></span><span class="hs-comment">-- &gt; &lt;!doctype html&gt;</span><span>
+</span><span id="line-735"></span><span class="hs-comment">-- &gt; {% block head %}</span><span>
+</span><span id="line-736"></span><span class="hs-comment">-- &gt; &lt;title&gt;{% block title %}{% endblock %}&lt;/title&gt;</span><span>
+</span><span id="line-737"></span><span class="hs-comment">-- &gt; {% endblock %}</span><span>
+</span><span id="line-738"></span><span class="hs-comment">-- &gt; {% block body %}{% endblock %}</span><span>
+</span><span id="line-739"></span><span class="hs-comment">--</span><span>
+</span><span id="line-740"></span><span class="hs-comment">-- Child template:</span><span>
+</span><span id="line-741"></span><span class="hs-comment">--</span><span>
+</span><span id="line-742"></span><span class="hs-comment">-- &gt; {% extends &quot;base.html&quot; %}</span><span>
+</span><span id="line-743"></span><span class="hs-comment">-- &gt; {% block title %}Index{% endblock %}</span><span>
+</span><span id="line-744"></span><span class="hs-comment">-- &gt; {% block head %}</span><span>
+</span><span id="line-745"></span><span class="hs-comment">-- &gt;  {{ super }}</span><span>
+</span><span id="line-746"></span><span class="hs-comment">-- &gt;  &lt;style type=&quot;text/css&quot;&gt;</span><span>
+</span><span id="line-747"></span><span class="hs-comment">-- &gt;   .important { color: #336699; }</span><span>
+</span><span id="line-748"></span><span class="hs-comment">-- &gt; &lt;/style&gt;</span><span>
+</span><span id="line-749"></span><span class="hs-comment">-- &gt; {% endblock %}</span><span>
+</span><span id="line-750"></span><span class="hs-comment">-- &gt; {% block body %}</span><span>
+</span><span id="line-751"></span><span class="hs-comment">-- &gt;  &lt;h1&gt;Index&lt;/h1&gt;</span><span>
+</span><span id="line-752"></span><span class="hs-comment">-- &gt;  &lt;p class=&quot;important&quot;&gt;</span><span>
+</span><span id="line-753"></span><span class="hs-comment">-- &gt;    Welcome to my awesome homepage.</span><span>
+</span><span id="line-754"></span><span class="hs-comment">-- &gt;  &lt;/p&gt;</span><span>
+</span><span id="line-755"></span><span class="hs-comment">-- &gt; {% endblock %}</span><span>
+</span><span id="line-756"></span><span class="hs-comment">--</span><span>
+</span><span id="line-757"></span><span class="hs-comment">-- The @{% extends %}@ tag is the key here. It tells the template engine that this template &quot;extends&quot; another template.</span><span>
+</span><span id="line-758"></span><span class="hs-comment">-- When the template system evaluates this template, it first locates the parent. The extends tag should be the first tag in the template.</span><span>
+</span><span id="line-759"></span><span class="hs-comment">--</span><span>
+</span><span id="line-760"></span><span class="hs-comment">-- As you can see it's also possible to render the contents of the parent block by calling super(). You can&#8217;t define multiple {% block %}</span><span>
+</span><span id="line-761"></span><span class="hs-comment">-- tags with the same name in the same template. This limitation exists because a block tag works in &#8220;both&#8221; directions. That is, a block</span><span>
+</span><span id="line-762"></span><span class="hs-comment">-- tag doesn&#8217;t just provide a placeholder to fill - it also defines the content that fills the placeholder in the parent. If there were two</span><span>
+</span><span id="line-763"></span><span class="hs-comment">-- similarly-named {% block %} tags in a template, that template's parent wouldn&#8217;t know which one of the blocks&#8217; content to use.</span></pre></body></html>

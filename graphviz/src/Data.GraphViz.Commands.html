@@ -1,0 +1,890 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679225292"><span id="local-6989586621679225293"></span></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses, OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Commands
+   Description : Functions to run Graphviz commands.
+   Copyright   : (c) Matthew Sackman, Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This module defines functions to call the various Graphviz
+   commands.
+
+   Whilst various output formats are supported (see 'GraphvizOutput'
+   for a complete list), it is not yet possible to choose a desired
+   renderer and formatter.  Being able to determine which renderers
+   and formatters are applicable for a specific 'GraphvizOutput' is
+   not easy (there is no listing of available renderers or formatters
+   on the Graphviz website), and for the most part the default ones do
+   the job well.
+
+   Please note that for 'GraphvizOutput' and 'GraphvizCanvas', you
+   will see that they are instances of a @GraphvizResult@ class; this is
+   an internal class that should not be visible outside this module, but
+   Haddock is being too helpful for its own good.
+-}</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Commands</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * The different Graphviz tools available.</span></span><span>
+</span><span id="line-28"></span><span>      </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier">GraphvizCommand</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#dirCommand"><span class="hs-identifier">dirCommand</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#undirCommand"><span class="hs-identifier">undirCommand</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#commandFor"><span class="hs-identifier">commandFor</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="hs-comment">-- * The possible outputs that Graphviz supports.</span></span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="hs-comment">-- $outputs</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier">GraphvizOutput</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizCanvas"><span class="hs-identifier">GraphvizCanvas</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Running Graphviz.</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphviz"><span class="hs-identifier">runGraphviz</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCommand"><span class="hs-identifier">runGraphvizCommand</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#addExtension"><span class="hs-identifier">addExtension</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCanvas"><span class="hs-identifier">runGraphvizCanvas</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCanvas%27"><span class="hs-identifier">runGraphvizCanvas'</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#graphvizWithHandle"><span class="hs-identifier">graphvizWithHandle</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="hs-comment">-- * Testing if Graphviz is installed</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#isGraphvizInstalled"><span class="hs-identifier">isGraphvizInstalled</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#quitWithoutGraphviz"><span class="hs-identifier">quitWithoutGraphviz</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Types.html"><span class="hs-identifier">Data.GraphViz.Types</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- This is here just for Haddock linking purposes.</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html"><span class="hs-identifier">Data.GraphViz.Commands.Available</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.IO.html"><span class="hs-identifier">Data.GraphViz.Commands.IO</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Commands.IO.html#runCommand"><span class="hs-identifier">runCommand</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.GraphViz.Exception.html"><span class="hs-identifier">Data.GraphViz.Exception</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM"><span class="hs-identifier">liftM</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier">unless</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SB</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier">isJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html"><span class="hs-identifier">Data.Version</span></a></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier">showVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#findExecutable"><span class="hs-identifier">findExecutable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html"><span class="hs-identifier">System.Exit</span></a></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitCode"><span class="hs-identifier">ExitCode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitWith"><span class="hs-identifier">exitWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#%3C.%3E"><span class="hs-operator">(&lt;.&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier">Handle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Text.html#hPutStrLn"><span class="hs-identifier">hPutStrLn</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.html#hSetBinaryMode"><span class="hs-identifier">hSetBinaryMode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier">stderr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-type">showCmd</span></a></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-66"></span><span id="showCmd"><span class="annot"><span class="annottext">showCmd :: GraphvizCommand -&gt; String
+</span><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var hs-var">showCmd</span></a></span></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dot&quot;</span></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Neato"><span class="hs-identifier hs-var">Neato</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;neato&quot;</span></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#TwoPi"><span class="hs-identifier hs-var">TwoPi</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;twopi&quot;</span></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Circo"><span class="hs-identifier hs-var">Circo</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;circo&quot;</span></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Fdp"><span class="hs-identifier hs-var">Fdp</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fdp&quot;</span></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Sfdp"><span class="hs-identifier hs-var">Sfdp</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;sfdp&quot;</span></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Osage"><span class="hs-identifier hs-var">Osage</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;osage&quot;</span></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Patchwork"><span class="hs-identifier hs-var">Patchwork</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;patchwork&quot;</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><span class="hs-comment">-- | The default command for directed graphs.</span></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Data.GraphViz.Commands.html#dirCommand"><span class="hs-identifier hs-type">dirCommand</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span>
+</span><span id="line-77"></span><span id="dirCommand"><span class="annot"><span class="annottext">dirCommand :: GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#dirCommand"><span class="hs-identifier hs-var hs-var">dirCommand</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | The default command for undirected graphs.</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Data.GraphViz.Commands.html#undirCommand"><span class="hs-identifier hs-type">undirCommand</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span>
+</span><span id="line-81"></span><span id="undirCommand"><span class="annot"><span class="annottext">undirCommand :: GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#undirCommand"><span class="hs-identifier hs-var hs-var">undirCommand</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Neato"><span class="hs-identifier hs-var">Neato</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | The appropriate (default) Graphviz command for the given graph.</span></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679225193"><span id="local-6989586621679225194"><span class="annot"><a href="Data.GraphViz.Commands.html#commandFor"><span class="hs-identifier hs-type">commandFor</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#DotRepr"><span class="hs-identifier hs-type">DotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225193"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225194"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225193"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225194"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span></span></span><span>
+</span><span id="line-85"></span><span id="commandFor"><span class="annot"><span class="annottext">commandFor :: forall (dg :: * -&gt; *) n. DotRepr dg n =&gt; dg n -&gt; GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#commandFor"><span class="hs-identifier hs-var hs-var">commandFor</span></a></span></span><span> </span><span id="local-6989586621679225333"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225333"><span class="hs-identifier hs-var">dg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">dg n -&gt; Bool
+forall (dg :: * -&gt; *) n. DotRepr dg n =&gt; dg n -&gt; Bool
+</span><a href="Data.GraphViz.Types.html#graphIsDirected"><span class="hs-identifier hs-var">graphIsDirected</span></a></span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225333"><span class="hs-identifier hs-var">dg</span></a></span><span>
+</span><span id="line-86"></span><span>                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#dirCommand"><span class="hs-identifier hs-var">dirCommand</span></a></span><span>
+</span><span id="line-87"></span><span>                </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#undirCommand"><span class="hs-identifier hs-var">undirCommand</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><span class="hs-comment">{- $outputs
+
+   The list of output types supported by Graphviz is dependent upon
+   how it is built on your system.  To determine which actual formats
+   are available on your system, run @dot -T?@.  Trying to use an
+   output type that is not supported by your installation of Graphviz
+   will result in an error.
+
+   The outputs defined here in 'GraphvizOutput' and 'GraphvizCanvas'
+   are those from the default list of available outputs.  For more
+   information, see:
+     &lt;http://graphviz.org/doc/info/output.html&gt;
+
+-}</span></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- | This class is for those data types that are valid options for the</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--   Graphviz tools to use with the @-T@ argument.</span><span>
+</span><span id="line-108"></span><span class="hs-keyword">class</span><span> </span><span id="GraphvizResult"><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizResult"><span class="hs-identifier hs-var">GraphvizResult</span></a></span></span><span> </span><span id="local-6989586621679225214"><span class="annot"><a href="#local-6989586621679225214"><span class="hs-identifier hs-type">o</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="outputCall"><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-type">outputCall</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679225214"><span class="hs-identifier hs-type">o</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- | The possible Graphviz output formats (that is, those that</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--   actually produce a file).</span><span>
+</span><span id="line-113"></span><span class="hs-keyword">data</span><span> </span><span id="GraphvizOutput"><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-var">GraphvizOutput</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Bmp"><span class="annot"><a href="Data.GraphViz.Commands.html#Bmp"><span class="hs-identifier hs-var">Bmp</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Windows Bitmap Format.</span></span><span>
+</span><span id="line-114"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Canon"><span class="annot"><a href="Data.GraphViz.Commands.html#Canon"><span class="hs-identifier hs-var">Canon</span></a></span></span><span>     </span><span class="hs-comment">-- ^ Pretty-printed Dot output with no</span><span>
+</span><span id="line-115"></span><span>                                </span><span class="hs-comment">--   layout performed.</span><span>
+</span><span id="line-116"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="DotOutput"><span class="annot"><a href="Data.GraphViz.Commands.html#DotOutput"><span class="hs-identifier hs-var">DotOutput</span></a></span></span><span> </span><span class="hs-comment">-- ^ Reproduces the input along with</span><span>
+</span><span id="line-117"></span><span>                                </span><span class="hs-comment">--   layout information.</span><span>
+</span><span id="line-118"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="XDot"><span class="annot"><a href="Data.GraphViz.Commands.html#XDot"><span class="hs-identifier hs-var">XDot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>                      </span><span class="hs-comment">-- ^ As with 'DotOutput', but provides even more</span><span>
+</span><span id="line-120"></span><span>                      </span><span class="hs-comment">--   information on how the graph is drawn.  The</span><span>
+</span><span id="line-121"></span><span>                      </span><span class="hs-comment">--   optional 'Version' is the same as</span><span>
+</span><span id="line-122"></span><span>                      </span><span class="hs-comment">--   specifying the @XDotVersion@ attribute.</span><span>
+</span><span id="line-123"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Eps"><span class="annot"><a href="Data.GraphViz.Commands.html#Eps"><span class="hs-identifier hs-var">Eps</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Encapsulated PostScript.</span></span><span>
+</span><span id="line-124"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Fig"><span class="annot"><a href="Data.GraphViz.Commands.html#Fig"><span class="hs-identifier hs-var">Fig</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ FIG graphics language.</span></span><span>
+</span><span id="line-125"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Gd"><span class="annot"><a href="Data.GraphViz.Commands.html#Gd"><span class="hs-identifier hs-var">Gd</span></a></span></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ Internal GD library format.</span></span><span>
+</span><span id="line-126"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Gd2"><span class="annot"><a href="Data.GraphViz.Commands.html#Gd2"><span class="hs-identifier hs-var">Gd2</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Compressed version of 'Gd'.</span></span><span>
+</span><span id="line-127"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Gif"><span class="annot"><a href="Data.GraphViz.Commands.html#Gif"><span class="hs-identifier hs-var">Gif</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Graphics Interchange Format.</span></span><span>
+</span><span id="line-128"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Ico"><span class="annot"><a href="Data.GraphViz.Commands.html#Ico"><span class="hs-identifier hs-var">Ico</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Icon image file format.</span></span><span>
+</span><span id="line-129"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Imap"><span class="annot"><a href="Data.GraphViz.Commands.html#Imap"><span class="hs-identifier hs-var">Imap</span></a></span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Server-side imagemap.</span></span><span>
+</span><span id="line-130"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Cmapx"><span class="annot"><a href="Data.GraphViz.Commands.html#Cmapx"><span class="hs-identifier hs-var">Cmapx</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Client-side imagemap.</span></span><span>
+</span><span id="line-131"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="ImapNP"><span class="annot"><a href="Data.GraphViz.Commands.html#ImapNP"><span class="hs-identifier hs-var">ImapNP</span></a></span></span><span>    </span><span class="hs-comment">-- ^ As for 'Imap', except only</span><span>
+</span><span id="line-132"></span><span>                                </span><span class="hs-comment">--   rectangles are used as active</span><span>
+</span><span id="line-133"></span><span>                                </span><span class="hs-comment">--   areas.</span><span>
+</span><span id="line-134"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="CmapxNP"><span class="annot"><a href="Data.GraphViz.Commands.html#CmapxNP"><span class="hs-identifier hs-var">CmapxNP</span></a></span></span><span>   </span><span class="hs-comment">-- ^ As for 'Cmapx', except only</span><span>
+</span><span id="line-135"></span><span>                                </span><span class="hs-comment">--   rectangles are used as active</span><span>
+</span><span id="line-136"></span><span>                                </span><span class="hs-comment">--   areas.</span><span>
+</span><span id="line-137"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Jpeg"><span class="annot"><a href="Data.GraphViz.Commands.html#Jpeg"><span class="hs-identifier hs-var">Jpeg</span></a></span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The JPEG image format.</span></span><span>
+</span><span id="line-138"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Pdf"><span class="annot"><a href="Data.GraphViz.Commands.html#Pdf"><span class="hs-identifier hs-var">Pdf</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Portable Document Format.</span></span><span>
+</span><span id="line-139"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Plain"><span class="annot"><a href="Data.GraphViz.Commands.html#Plain"><span class="hs-identifier hs-var">Plain</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Simple text format.</span></span><span>
+</span><span id="line-140"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="PlainExt"><span class="annot"><a href="Data.GraphViz.Commands.html#PlainExt"><span class="hs-identifier hs-var">PlainExt</span></a></span></span><span>  </span><span class="hs-comment">-- ^ As for 'Plain', but provides port</span><span>
+</span><span id="line-141"></span><span>                                </span><span class="hs-comment">--   names on head and tail nodes when</span><span>
+</span><span id="line-142"></span><span>                                </span><span class="hs-comment">--   applicable.</span><span>
+</span><span id="line-143"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Png"><span class="annot"><a href="Data.GraphViz.Commands.html#Png"><span class="hs-identifier hs-var">Png</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Portable Network Graphics format.</span></span><span>
+</span><span id="line-144"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Ps"><span class="annot"><a href="Data.GraphViz.Commands.html#Ps"><span class="hs-identifier hs-var">Ps</span></a></span></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ PostScript.</span></span><span>
+</span><span id="line-145"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Ps2"><span class="annot"><a href="Data.GraphViz.Commands.html#Ps2"><span class="hs-identifier hs-var">Ps2</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ PostScript for PDF.</span></span><span>
+</span><span id="line-146"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Svg"><span class="annot"><a href="Data.GraphViz.Commands.html#Svg"><span class="hs-identifier hs-var">Svg</span></a></span></span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Scalable Vector Graphics format.</span></span><span>
+</span><span id="line-147"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="SvgZ"><span class="annot"><a href="Data.GraphViz.Commands.html#SvgZ"><span class="hs-identifier hs-var">SvgZ</span></a></span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Compressed SVG format.</span></span><span>
+</span><span id="line-148"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Tiff"><span class="annot"><a href="Data.GraphViz.Commands.html#Tiff"><span class="hs-identifier hs-var">Tiff</span></a></span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Tagged Image File Format.</span></span><span>
+</span><span id="line-149"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Vml"><span class="annot"><a href="Data.GraphViz.Commands.html#Vml"><span class="hs-identifier hs-var">Vml</span></a></span></span><span>       </span><span class="hs-comment">-- ^ Vector Markup Language; 'Svg' is</span><span>
+</span><span id="line-150"></span><span>                                </span><span class="hs-comment">--   usually preferred.</span><span>
+</span><span id="line-151"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="VmlZ"><span class="annot"><a href="Data.GraphViz.Commands.html#VmlZ"><span class="hs-identifier hs-var">VmlZ</span></a></span></span><span>      </span><span class="hs-comment">-- ^ Compressed VML format; 'SvgZ' is</span><span>
+</span><span id="line-152"></span><span>                                </span><span class="hs-comment">--   usually preferred.</span><span>
+</span><span id="line-153"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="Vrml"><span class="annot"><a href="Data.GraphViz.Commands.html#Vrml"><span class="hs-identifier hs-var">Vrml</span></a></span></span><span>      </span><span class="hs-comment">-- ^ Virtual Reality Modeling Language</span><span>
+</span><span id="line-154"></span><span>                                </span><span class="hs-comment">--   format; requires nodes to have a</span><span>
+</span><span id="line-155"></span><span>                                </span><span class="hs-comment">--   third dimension set via the @Pos@</span><span>
+</span><span id="line-156"></span><span>                                </span><span class="hs-comment">--   attribute (and with a @Dim@ value</span><span>
+</span><span id="line-157"></span><span>                                </span><span class="hs-comment">--   of at least @3@).</span><span>
+</span><span id="line-158"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="WBmp"><span class="annot"><a href="Data.GraphViz.Commands.html#WBmp"><span class="hs-identifier hs-var">WBmp</span></a></span></span><span>      </span><span class="hs-comment">-- ^ Wireless BitMap format;</span><span>
+</span><span id="line-159"></span><span>                                </span><span class="hs-comment">--   monochrome format usually used</span><span>
+</span><span id="line-160"></span><span>                                </span><span class="hs-comment">--   for mobile computing devices.</span><span>
+</span><span id="line-161"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span id="WebP"><span class="annot"><a href="Data.GraphViz.Commands.html#WebP"><span class="hs-identifier hs-var">WebP</span></a></span></span><span>      </span><span class="hs-comment">-- ^ Google's WebP format; requires</span><span>
+</span><span id="line-162"></span><span>                                </span><span class="hs-comment">--   Graphviz &gt;= 2.29.0.</span><span>
+</span><span id="line-163"></span><span>                    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679225367"><span id="local-6989586621679225372"><span class="annot"><span class="annottext">GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+(GraphvizOutput -&gt; GraphvizOutput -&gt; Bool)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; Bool) -&gt; Eq GraphvizOutput
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+== :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+$c/= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+/= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225380"><span id="local-6989586621679225385"><span id="local-6989586621679225389"><span id="local-6989586621679225392"><span id="local-6989586621679225395"><span id="local-6989586621679225398"><span id="local-6989586621679225401"><span class="annot"><span class="annottext">Eq GraphvizOutput
+Eq GraphvizOutput =&gt;
+(GraphvizOutput -&gt; GraphvizOutput -&gt; Ordering)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; Bool)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; Bool)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; Bool)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; Bool)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput)
+-&gt; (GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput)
+-&gt; Ord GraphvizOutput
+GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+GraphvizOutput -&gt; GraphvizOutput -&gt; Ordering
+GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: GraphvizOutput -&gt; GraphvizOutput -&gt; Ordering
+compare :: GraphvizOutput -&gt; GraphvizOutput -&gt; Ordering
+$c&lt; :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+&lt; :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+$c&lt;= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+&lt;= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+$c&gt; :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+&gt; :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+$c&gt;= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+&gt;= :: GraphvizOutput -&gt; GraphvizOutput -&gt; Bool
+$cmax :: GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput
+max :: GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput
+$cmin :: GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput
+min :: GraphvizOutput -&gt; GraphvizOutput -&gt; GraphvizOutput
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225406"><span id="local-6989586621679225413"><span id="local-6989586621679225417"><span class="annot"><span class="annottext">Int -&gt; GraphvizOutput -&gt; ShowS
+[GraphvizOutput] -&gt; ShowS
+GraphvizOutput -&gt; String
+(Int -&gt; GraphvizOutput -&gt; ShowS)
+-&gt; (GraphvizOutput -&gt; String)
+-&gt; ([GraphvizOutput] -&gt; ShowS)
+-&gt; Show GraphvizOutput
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GraphvizOutput -&gt; ShowS
+showsPrec :: Int -&gt; GraphvizOutput -&gt; ShowS
+$cshow :: GraphvizOutput -&gt; String
+show :: GraphvizOutput -&gt; String
+$cshowList :: [GraphvizOutput] -&gt; ShowS
+showList :: [GraphvizOutput] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225422"><span id="local-6989586621679225426"><span id="local-6989586621679225429"><span id="local-6989586621679225466"><span class="annot"><span class="annottext">ReadPrec [GraphvizOutput]
+ReadPrec GraphvizOutput
+Int -&gt; ReadS GraphvizOutput
+ReadS [GraphvizOutput]
+(Int -&gt; ReadS GraphvizOutput)
+-&gt; ReadS [GraphvizOutput]
+-&gt; ReadPrec GraphvizOutput
+-&gt; ReadPrec [GraphvizOutput]
+-&gt; Read GraphvizOutput
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS GraphvizOutput
+readsPrec :: Int -&gt; ReadS GraphvizOutput
+$creadList :: ReadS [GraphvizOutput]
+readList :: ReadS [GraphvizOutput]
+$creadPrec :: ReadPrec GraphvizOutput
+readPrec :: ReadPrec GraphvizOutput
+$creadListPrec :: ReadPrec [GraphvizOutput]
+readListPrec :: ReadPrec [GraphvizOutput]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizResult"><span class="hs-identifier hs-type">GraphvizResult</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621679225477"><span class="annot"><span class="annottext">outputCall :: GraphvizOutput -&gt; String
+</span><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var hs-var hs-var hs-var">outputCall</span></a></span></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Bmp"><span class="hs-identifier hs-var">Bmp</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bmp&quot;</span></span><span>
+</span><span id="line-167"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Canon"><span class="hs-identifier hs-var">Canon</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;canon&quot;</span></span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#DotOutput"><span class="hs-identifier hs-var">DotOutput</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dot&quot;</span></span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Commands.html#XDot"><span class="hs-identifier hs-type">XDot</span></a></span><span> </span><span id="local-6989586621679225478"><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679225478"><span class="hs-identifier hs-var">mv</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xdot&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; (Version -&gt; String) -&gt; Maybe Version -&gt; String
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Version.html#showVersion"><span class="hs-identifier hs-var">showVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Version
+</span><a href="#local-6989586621679225478"><span class="hs-identifier hs-var">mv</span></a></span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Eps"><span class="hs-identifier hs-var">Eps</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;eps&quot;</span></span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Fig"><span class="hs-identifier hs-var">Fig</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fig&quot;</span></span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gd"><span class="hs-identifier hs-var">Gd</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gd&quot;</span></span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gd2"><span class="hs-identifier hs-var">Gd2</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gd2&quot;</span></span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gif"><span class="hs-identifier hs-var">Gif</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gif&quot;</span></span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ico"><span class="hs-identifier hs-var">Ico</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ico&quot;</span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Imap"><span class="hs-identifier hs-var">Imap</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;imap&quot;</span></span><span>
+</span><span id="line-177"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Cmapx"><span class="hs-identifier hs-var">Cmapx</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cmapx&quot;</span></span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#ImapNP"><span class="hs-identifier hs-var">ImapNP</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;imap_np&quot;</span></span><span>
+</span><span id="line-179"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#CmapxNP"><span class="hs-identifier hs-var">CmapxNP</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cmapx_np&quot;</span></span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Jpeg"><span class="hs-identifier hs-var">Jpeg</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;jpeg&quot;</span></span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Pdf"><span class="hs-identifier hs-var">Pdf</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pdf&quot;</span></span><span>
+</span><span id="line-182"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Plain"><span class="hs-identifier hs-var">Plain</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plain&quot;</span></span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#PlainExt"><span class="hs-identifier hs-var">PlainExt</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plain-ext&quot;</span></span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Png"><span class="hs-identifier hs-var">Png</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;png&quot;</span></span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ps"><span class="hs-identifier hs-var">Ps</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ps&quot;</span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ps2"><span class="hs-identifier hs-var">Ps2</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ps2&quot;</span></span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Svg"><span class="hs-identifier hs-var">Svg</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;svg&quot;</span></span><span>
+</span><span id="line-188"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#SvgZ"><span class="hs-identifier hs-var">SvgZ</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;svgz&quot;</span></span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Tiff"><span class="hs-identifier hs-var">Tiff</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;tiff&quot;</span></span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Vml"><span class="hs-identifier hs-var">Vml</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vml&quot;</span></span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#VmlZ"><span class="hs-identifier hs-var">VmlZ</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vmlz&quot;</span></span><span>
+</span><span id="line-192"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Vrml"><span class="hs-identifier hs-var">Vrml</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vrml&quot;</span></span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#WBmp"><span class="hs-identifier hs-var">WBmp</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;wbmp&quot;</span></span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#WebP"><span class="hs-identifier hs-var">WebP</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;webp&quot;</span></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><span class="hs-comment">-- | A default file extension for each 'GraphvizOutput'.</span></span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-type">defaultExtension</span></a></span><span>           </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-198"></span><span id="defaultExtension"><span class="annot"><span class="annottext">defaultExtension :: GraphvizOutput -&gt; String
+</span><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var hs-var">defaultExtension</span></a></span></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Bmp"><span class="hs-identifier hs-var">Bmp</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bmp&quot;</span></span><span>
+</span><span id="line-199"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Canon"><span class="hs-identifier hs-var">Canon</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gv&quot;</span></span><span>
+</span><span id="line-200"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#DotOutput"><span class="hs-identifier hs-var">DotOutput</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gv&quot;</span></span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#XDot"><span class="hs-identifier hs-type">XDot</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gv&quot;</span></span><span>
+</span><span id="line-202"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Eps"><span class="hs-identifier hs-var">Eps</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;eps&quot;</span></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Fig"><span class="hs-identifier hs-var">Fig</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fig&quot;</span></span><span>
+</span><span id="line-204"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gd"><span class="hs-identifier hs-var">Gd</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gd&quot;</span></span><span>
+</span><span id="line-205"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gd2"><span class="hs-identifier hs-var">Gd2</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gd2&quot;</span></span><span>
+</span><span id="line-206"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Gif"><span class="hs-identifier hs-var">Gif</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gif&quot;</span></span><span>
+</span><span id="line-207"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ico"><span class="hs-identifier hs-var">Ico</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ico&quot;</span></span><span>
+</span><span id="line-208"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Imap"><span class="hs-identifier hs-var">Imap</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;map&quot;</span></span><span>
+</span><span id="line-209"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Cmapx"><span class="hs-identifier hs-var">Cmapx</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;map&quot;</span></span><span>
+</span><span id="line-210"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#ImapNP"><span class="hs-identifier hs-var">ImapNP</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;map&quot;</span></span><span>
+</span><span id="line-211"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#CmapxNP"><span class="hs-identifier hs-var">CmapxNP</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;map&quot;</span></span><span>
+</span><span id="line-212"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Jpeg"><span class="hs-identifier hs-var">Jpeg</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;jpg&quot;</span></span><span>
+</span><span id="line-213"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Pdf"><span class="hs-identifier hs-var">Pdf</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pdf&quot;</span></span><span>
+</span><span id="line-214"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Plain"><span class="hs-identifier hs-var">Plain</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;txt&quot;</span></span><span>
+</span><span id="line-215"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#PlainExt"><span class="hs-identifier hs-var">PlainExt</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;txt&quot;</span></span><span>
+</span><span id="line-216"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Png"><span class="hs-identifier hs-var">Png</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;png&quot;</span></span><span>
+</span><span id="line-217"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ps"><span class="hs-identifier hs-var">Ps</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ps&quot;</span></span><span>
+</span><span id="line-218"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Ps2"><span class="hs-identifier hs-var">Ps2</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ps&quot;</span></span><span>
+</span><span id="line-219"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Svg"><span class="hs-identifier hs-var">Svg</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;svg&quot;</span></span><span>
+</span><span id="line-220"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#SvgZ"><span class="hs-identifier hs-var">SvgZ</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;svgz&quot;</span></span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Tiff"><span class="hs-identifier hs-var">Tiff</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;tif&quot;</span></span><span>
+</span><span id="line-222"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Vml"><span class="hs-identifier hs-var">Vml</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vml&quot;</span></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#VmlZ"><span class="hs-identifier hs-var">VmlZ</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vmlz&quot;</span></span><span>
+</span><span id="line-224"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#Vrml"><span class="hs-identifier hs-var">Vrml</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vrml&quot;</span></span><span>
+</span><span id="line-225"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#WBmp"><span class="hs-identifier hs-var">WBmp</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;wbmp&quot;</span></span><span>
+</span><span id="line-226"></span><span class="annot"><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="Data.GraphViz.Commands.html#WebP"><span class="hs-identifier hs-var">WebP</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;webp&quot;</span></span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- | Unlike 'GraphvizOutput', these items do not produce an output</span><span>
+</span><span id="line-229"></span><span class="hs-comment">--   file; instead, they directly draw a canvas (i.e. a window) with</span><span>
+</span><span id="line-230"></span><span class="hs-comment">--   the resulting image.</span><span>
+</span><span id="line-231"></span><span class="hs-keyword">data</span><span> </span><span id="GraphvizCanvas"><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizCanvas"><span class="hs-identifier hs-var">GraphvizCanvas</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Gtk"><span class="annot"><a href="Data.GraphViz.Commands.html#Gtk"><span class="hs-identifier hs-var">Gtk</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Xlib"><span class="annot"><a href="Data.GraphViz.Commands.html#Xlib"><span class="hs-identifier hs-var">Xlib</span></a></span></span><span>
+</span><span id="line-232"></span><span>                    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679225484"><span id="local-6989586621679225486"><span class="annot"><span class="annottext">GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+(GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool) -&gt; Eq GraphvizCanvas
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+== :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+$c/= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+/= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225492"><span id="local-6989586621679225494"><span id="local-6989586621679225496"><span id="local-6989586621679225500"><span id="local-6989586621679225503"><span id="local-6989586621679225506"><span id="local-6989586621679225509"><span class="annot"><span class="annottext">Eq GraphvizCanvas
+Eq GraphvizCanvas =&gt;
+(GraphvizCanvas -&gt; GraphvizCanvas -&gt; Ordering)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas)
+-&gt; Ord GraphvizCanvas
+GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+GraphvizCanvas -&gt; GraphvizCanvas -&gt; Ordering
+GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Ordering
+compare :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Ordering
+$c&lt; :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+&lt; :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+$c&lt;= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+&lt;= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+$c&gt; :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+&gt; :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+$c&gt;= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+&gt;= :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bool
+$cmax :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas
+max :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas
+$cmin :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas
+min :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; GraphvizCanvas
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225512"><span id="local-6989586621679225514"><span class="annot"><span class="annottext">GraphvizCanvas
+GraphvizCanvas -&gt; GraphvizCanvas -&gt; Bounded GraphvizCanvas
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: GraphvizCanvas
+minBound :: GraphvizCanvas
+$cmaxBound :: GraphvizCanvas
+maxBound :: GraphvizCanvas
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225518"><span id="local-6989586621679225526"><span id="local-6989586621679225532"><span id="local-6989586621679225544"><span id="local-6989586621679225546"><span id="local-6989586621679225550"><span id="local-6989586621679225554"><span id="local-6989586621679225558"><span class="annot"><span class="annottext">Int -&gt; GraphvizCanvas
+GraphvizCanvas -&gt; Int
+GraphvizCanvas -&gt; [GraphvizCanvas]
+GraphvizCanvas -&gt; GraphvizCanvas
+GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+GraphvizCanvas
+-&gt; GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+(GraphvizCanvas -&gt; GraphvizCanvas)
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas)
+-&gt; (Int -&gt; GraphvizCanvas)
+-&gt; (GraphvizCanvas -&gt; Int)
+-&gt; (GraphvizCanvas -&gt; [GraphvizCanvas])
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas])
+-&gt; (GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas])
+-&gt; (GraphvizCanvas
+    -&gt; GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas])
+-&gt; Enum GraphvizCanvas
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: GraphvizCanvas -&gt; GraphvizCanvas
+succ :: GraphvizCanvas -&gt; GraphvizCanvas
+$cpred :: GraphvizCanvas -&gt; GraphvizCanvas
+pred :: GraphvizCanvas -&gt; GraphvizCanvas
+$ctoEnum :: Int -&gt; GraphvizCanvas
+toEnum :: Int -&gt; GraphvizCanvas
+$cfromEnum :: GraphvizCanvas -&gt; Int
+fromEnum :: GraphvizCanvas -&gt; Int
+$cenumFrom :: GraphvizCanvas -&gt; [GraphvizCanvas]
+enumFrom :: GraphvizCanvas -&gt; [GraphvizCanvas]
+$cenumFromThen :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+enumFromThen :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+$cenumFromTo :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+enumFromTo :: GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+$cenumFromThenTo :: GraphvizCanvas
+-&gt; GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+enumFromThenTo :: GraphvizCanvas
+-&gt; GraphvizCanvas -&gt; GraphvizCanvas -&gt; [GraphvizCanvas]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225562"><span id="local-6989586621679225566"><span id="local-6989586621679225569"><span id="local-6989586621679225573"><span class="annot"><span class="annottext">ReadPrec [GraphvizCanvas]
+ReadPrec GraphvizCanvas
+Int -&gt; ReadS GraphvizCanvas
+ReadS [GraphvizCanvas]
+(Int -&gt; ReadS GraphvizCanvas)
+-&gt; ReadS [GraphvizCanvas]
+-&gt; ReadPrec GraphvizCanvas
+-&gt; ReadPrec [GraphvizCanvas]
+-&gt; Read GraphvizCanvas
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS GraphvizCanvas
+readsPrec :: Int -&gt; ReadS GraphvizCanvas
+$creadList :: ReadS [GraphvizCanvas]
+readList :: ReadS [GraphvizCanvas]
+$creadPrec :: ReadPrec GraphvizCanvas
+readPrec :: ReadPrec GraphvizCanvas
+$creadListPrec :: ReadPrec [GraphvizCanvas]
+readListPrec :: ReadPrec [GraphvizCanvas]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225576"><span id="local-6989586621679225578"><span id="local-6989586621679225582"><span class="annot"><span class="annottext">Int -&gt; GraphvizCanvas -&gt; ShowS
+[GraphvizCanvas] -&gt; ShowS
+GraphvizCanvas -&gt; String
+(Int -&gt; GraphvizCanvas -&gt; ShowS)
+-&gt; (GraphvizCanvas -&gt; String)
+-&gt; ([GraphvizCanvas] -&gt; ShowS)
+-&gt; Show GraphvizCanvas
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GraphvizCanvas -&gt; ShowS
+showsPrec :: Int -&gt; GraphvizCanvas -&gt; ShowS
+$cshow :: GraphvizCanvas -&gt; String
+show :: GraphvizCanvas -&gt; String
+$cshowList :: [GraphvizCanvas] -&gt; ShowS
+showList :: [GraphvizCanvas] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span>
+</span><span id="line-234"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizResult"><span class="hs-identifier hs-type">GraphvizResult</span></a></span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizCanvas"><span class="hs-identifier hs-type">GraphvizCanvas</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-235"></span><span>  </span><span id="local-6989586621679225586"><span class="annot"><span class="annottext">outputCall :: GraphvizCanvas -&gt; String
+</span><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var hs-var hs-var hs-var">outputCall</span></a></span></span><span> </span><span class="annot"><span class="annottext">GraphvizCanvas
+</span><a href="Data.GraphViz.Commands.html#Gtk"><span class="hs-identifier hs-var">Gtk</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;gtk&quot;</span></span><span>
+</span><span id="line-236"></span><span>  </span><span class="annot"><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCanvas
+</span><a href="Data.GraphViz.Commands.html#Xlib"><span class="hs-identifier hs-var">Xlib</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xlib&quot;</span></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- | Run the recommended Graphviz command on this graph, saving the result</span><span>
+</span><span id="line-241"></span><span class="hs-comment">--   to the file provided (note: file extensions are /not/ checked).</span><span>
+</span><span id="line-242"></span><span id="local-6989586621679225225"><span id="local-6989586621679225226"><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphviz"><span class="hs-identifier hs-type">runGraphviz</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225225"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225226"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225225"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225226"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-243"></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span></span></span><span>
+</span><span id="line-244"></span><span id="runGraphviz"><span class="annot"><span class="annottext">runGraphviz :: forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+dg n -&gt; GraphvizOutput -&gt; String -&gt; IO String
+</span><a href="Data.GraphViz.Commands.html#runGraphviz"><span class="hs-identifier hs-var hs-var">runGraphviz</span></a></span></span><span> </span><span id="local-6989586621679225593"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225593"><span class="hs-identifier hs-var">gr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand -&gt; dg n -&gt; GraphvizOutput -&gt; String -&gt; IO String
+forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+GraphvizCommand -&gt; dg n -&gt; GraphvizOutput -&gt; String -&gt; IO String
+</span><a href="Data.GraphViz.Commands.html#runGraphvizCommand"><span class="hs-identifier hs-var">runGraphvizCommand</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dg n -&gt; GraphvizCommand
+forall (dg :: * -&gt; *) n. DotRepr dg n =&gt; dg n -&gt; GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#commandFor"><span class="hs-identifier hs-var">commandFor</span></a></span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225593"><span class="hs-identifier hs-var">gr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225593"><span class="hs-identifier hs-var">gr</span></a></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- | Run the chosen Graphviz command on this graph, saving the result</span><span>
+</span><span id="line-247"></span><span class="hs-comment">--   to the file provided (note: file extensions are /not/ checked).</span><span>
+</span><span id="line-248"></span><span id="local-6989586621679225232"><span id="local-6989586621679225233"><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCommand"><span class="hs-identifier hs-type">runGraphvizCommand</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225232"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225233"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225232"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225233"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-249"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-250"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span></span></span><span>
+</span><span id="line-251"></span><span id="runGraphvizCommand"><span class="annot"><span class="annottext">runGraphvizCommand :: forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+GraphvizCommand -&gt; dg n -&gt; GraphvizOutput -&gt; String -&gt; IO String
+</span><a href="Data.GraphViz.Commands.html#runGraphvizCommand"><span class="hs-identifier hs-var hs-var">runGraphvizCommand</span></a></span></span><span> </span><span id="local-6989586621679225599"><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225599"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span id="local-6989586621679225600"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225600"><span class="hs-identifier hs-var">gr</span></a></span></span><span> </span><span id="local-6989586621679225601"><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="#local-6989586621679225601"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679225602"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225602"><span class="hs-identifier hs-var">fp</span></a></span></span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GraphvizException -&gt; IO String) -&gt; IO String -&gt; IO String
+forall e a. Exception e =&gt; (e -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#handle"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GraphvizException -&gt; IO String
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">(GraphvizException -&gt; IO String)
+-&gt; (GraphvizException -&gt; GraphvizException)
+-&gt; GraphvizException
+-&gt; IO String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizException -&gt; GraphvizException
+</span><a href="#local-6989586621679225606"><span class="hs-identifier hs-var">addExc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO String -&gt; IO String) -&gt; IO String -&gt; IO String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+-&gt; dg n -&gt; GraphvizOutput -&gt; (Handle -&gt; IO String) -&gt; IO String
+forall (dg :: * -&gt; *) n a.
+PrintDotRepr dg n =&gt;
+GraphvizCommand
+-&gt; dg n -&gt; GraphvizOutput -&gt; (Handle -&gt; IO a) -&gt; IO a
+</span><a href="Data.GraphViz.Commands.html#graphvizWithHandle"><span class="hs-identifier hs-var">graphvizWithHandle</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225599"><span class="hs-identifier hs-var">cmd</span></a></span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225600"><span class="hs-identifier hs-var">gr</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="#local-6989586621679225601"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO String
+</span><a href="#local-6989586621679225607"><span class="hs-identifier hs-var">toFile</span></a></span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-254"></span><span>    </span><span id="local-6989586621679225611"><span class="annot"><span class="annottext">addFl :: ShowS
+</span><a href="#local-6989586621679225611"><span class="hs-identifier hs-var hs-var">addFl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">(++)</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unable to create &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225602"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>    </span><span id="local-6989586621679225607"><span class="annot"><span class="annottext">toFile :: Handle -&gt; IO String
+</span><a href="#local-6989586621679225607"><span class="hs-identifier hs-var hs-var">toFile</span></a></span></span><span> </span><span id="local-6989586621679225615"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679225615"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#hGetContents"><span class="hs-identifier hs-var">SB.hGetContents</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679225615"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (ByteString -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ByteString -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#writeFile"><span class="hs-identifier hs-var">SB.writeFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225602"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO String -&gt; IO String
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO String
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225602"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span>    </span><span id="local-6989586621679225606"><span class="annot"><span class="annottext">addExc :: GraphvizException -&gt; GraphvizException
+</span><a href="#local-6989586621679225606"><span class="hs-identifier hs-var hs-var">addExc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Exception.html#GVProgramExc"><span class="hs-identifier hs-type">GVProgramExc</span></a></span><span> </span><span id="local-6989586621679225619"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225619"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; GraphvizException
+</span><a href="Data.GraphViz.Exception.html#GVProgramExc"><span class="hs-identifier hs-var">GVProgramExc</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; GraphvizException) -&gt; String -&gt; GraphvizException
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="#local-6989586621679225611"><span class="hs-identifier hs-var">addFl</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225619"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-258"></span><span>    </span><span class="annot"><a href="#local-6989586621679225606"><span class="hs-identifier hs-var">addExc</span></a></span><span> </span><span id="local-6989586621679225620"><span class="annot"><span class="annottext">GraphvizException
+</span><a href="#local-6989586621679225620"><span class="hs-identifier hs-var">e</span></a></span></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizException
+</span><a href="#local-6989586621679225620"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- | Append the default extension for the provided 'GraphvizOutput' to</span><span>
+</span><span id="line-261"></span><span class="hs-comment">--   the provided 'FilePath' for the output file.</span><span>
+</span><span id="line-262"></span><span id="local-6989586621679225259"><span class="annot"><a href="Data.GraphViz.Commands.html#addExtension"><span class="hs-identifier hs-type">addExtension</span></a></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225259"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225259"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-264"></span><span id="addExtension"><span class="annot"><span class="annottext">addExtension :: forall a.
+(GraphvizOutput -&gt; String -&gt; a) -&gt; GraphvizOutput -&gt; String -&gt; a
+</span><a href="Data.GraphViz.Commands.html#addExtension"><span class="hs-identifier hs-var hs-var">addExtension</span></a></span></span><span> </span><span id="local-6989586621679225621"><span class="annot"><span class="annottext">GraphvizOutput -&gt; String -&gt; a
+</span><a href="#local-6989586621679225621"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span id="local-6989586621679225622"><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="#local-6989586621679225622"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679225623"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225623"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizOutput -&gt; String -&gt; a
+</span><a href="#local-6989586621679225621"><span class="hs-identifier hs-var">cmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="#local-6989586621679225622"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225624"><span class="hs-identifier hs-var">fp'</span></a></span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-266"></span><span>    </span><span id="local-6989586621679225624"><span class="annot"><span class="annottext">fp' :: String
+</span><a href="#local-6989586621679225624"><span class="hs-identifier hs-var hs-var">fp'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225623"><span class="hs-identifier hs-var">fp</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/filepath-1.4.301.0/src/System.FilePath.Posix.html#%3C.%3E"><span class="hs-operator hs-var">&lt;.&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput -&gt; String
+</span><a href="Data.GraphViz.Commands.html#defaultExtension"><span class="hs-identifier hs-var">defaultExtension</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizOutput
+</span><a href="#local-6989586621679225622"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-267"></span><span>
+</span><span id="line-268"></span><span class="hs-comment">-- | Run the chosen Graphviz command on this graph, but send the</span><span>
+</span><span id="line-269"></span><span class="hs-comment">--   result to the given handle rather than to a file.</span><span>
+</span><span id="line-270"></span><span class="hs-comment">--</span><span>
+</span><span id="line-271"></span><span class="hs-comment">--   Note that the @'Handle' -&gt; 'IO' a@ function /must/ fully consume</span><span>
+</span><span id="line-272"></span><span class="hs-comment">--   the input from the 'Handle'; e.g. use strict @ByteStrings@ rather</span><span>
+</span><span id="line-273"></span><span class="hs-comment">--   than lazy ones.</span><span>
+</span><span id="line-274"></span><span class="hs-comment">--</span><span>
+</span><span id="line-275"></span><span class="hs-comment">--   If the command was unsuccessful, then a 'GraphvizException' is</span><span>
+</span><span id="line-276"></span><span class="hs-comment">--   thrown.</span><span>
+</span><span id="line-277"></span><span id="local-6989586621679225249"><span id="local-6989586621679225250"><span id="local-6989586621679225251"><span class="annot"><a href="Data.GraphViz.Commands.html#graphvizWithHandle"><span class="hs-identifier hs-type">graphvizWithHandle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225249"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225250"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-278"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Which command to run</span></span><span>
+</span><span id="line-279"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225249"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225250"><span class="hs-identifier hs-type">n</span></a></span><span>             </span><span class="annot"><span class="hs-comment">-- ^ The 'DotRepr' to use</span></span><span>
+</span><span id="line-280"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizOutput"><span class="hs-identifier hs-type">GraphvizOutput</span></a></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ The 'GraphvizOutput' type</span></span><span>
+</span><span id="line-281"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225251"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Extract the output</span></span><span>
+</span><span id="line-282"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225251"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>             </span><span class="annot"><span class="hs-comment">-- ^ The error or the result.</span></span><span>
+</span><span id="line-283"></span><span id="graphvizWithHandle"><span class="annot"><span class="annottext">graphvizWithHandle :: forall (dg :: * -&gt; *) n a.
+PrintDotRepr dg n =&gt;
+GraphvizCommand
+-&gt; dg n -&gt; GraphvizOutput -&gt; (Handle -&gt; IO a) -&gt; IO a
+</span><a href="Data.GraphViz.Commands.html#graphvizWithHandle"><span class="hs-identifier hs-var hs-var">graphvizWithHandle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+-&gt; dg n -&gt; GraphvizOutput -&gt; (Handle -&gt; IO a) -&gt; IO a
+forall (dg :: * -&gt; *) n o a.
+(PrintDotRepr dg n, GraphvizResult o) =&gt;
+GraphvizCommand -&gt; dg n -&gt; o -&gt; (Handle -&gt; IO a) -&gt; IO a
+</span><a href="Data.GraphViz.Commands.html#graphvizWithHandle%27"><span class="hs-identifier hs-var">graphvizWithHandle'</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span class="hs-comment">-- This version is not exported as we don't want to let arbitrary</span><span>
+</span><span id="line-286"></span><span class="hs-comment">-- @Handle -&gt; IO a@ functions to be used for GraphvizCanvas outputs.</span><span>
+</span><span id="line-287"></span><span id="local-6989586621679225264"><span id="local-6989586621679225265"><span id="local-6989586621679225266"><span id="local-6989586621679225267"><span class="annot"><a href="Data.GraphViz.Commands.html#graphvizWithHandle%27"><span class="hs-identifier hs-type">graphvizWithHandle'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225264"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225265"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizResult"><span class="hs-identifier hs-type">GraphvizResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225266"><span class="hs-identifier hs-type">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-288"></span><span>                       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225264"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225265"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225266"><span class="hs-identifier hs-type">o</span></a></span><span>
+</span><span id="line-289"></span><span>                       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225267"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225267"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span><span>
+</span><span id="line-290"></span><span id="graphvizWithHandle%27"><span class="annot"><span class="annottext">graphvizWithHandle' :: forall (dg :: * -&gt; *) n o a.
+(PrintDotRepr dg n, GraphvizResult o) =&gt;
+GraphvizCommand -&gt; dg n -&gt; o -&gt; (Handle -&gt; IO a) -&gt; IO a
+</span><a href="Data.GraphViz.Commands.html#graphvizWithHandle%27"><span class="hs-identifier hs-var hs-var">graphvizWithHandle'</span></a></span></span><span> </span><span id="local-6989586621679225635"><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225635"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span id="local-6989586621679225636"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225636"><span class="hs-identifier hs-var">dg</span></a></span></span><span> </span><span id="local-6989586621679225637"><span class="annot"><span class="annottext">o
+</span><a href="#local-6989586621679225637"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679225638"><span class="annot"><span class="annottext">Handle -&gt; IO a
+</span><a href="#local-6989586621679225638"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; (Handle -&gt; IO a) -&gt; dg n -&gt; IO a
+forall (dg :: * -&gt; *) n a.
+PrintDotRepr dg n =&gt;
+String -&gt; [String] -&gt; (Handle -&gt; IO a) -&gt; dg n -&gt; IO a
+</span><a href="Data.GraphViz.Commands.IO.html#runCommand"><span class="hs-identifier hs-var">runCommand</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GraphvizCommand -&gt; String
+</span><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225635"><span class="hs-identifier hs-var">cmd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>                                            </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;-T&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">o -&gt; String
+forall o. GraphvizResult o =&gt; o -&gt; String
+</span><a href="Data.GraphViz.Commands.html#outputCall"><span class="hs-identifier hs-var">outputCall</span></a></span><span> </span><span class="annot"><span class="annottext">o
+</span><a href="#local-6989586621679225637"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-292"></span><span>                                            </span><span class="annot"><span class="annottext">Handle -&gt; IO a
+</span><a href="#local-6989586621679225639"><span class="hs-identifier hs-var">f'</span></a></span><span>
+</span><span id="line-293"></span><span>                                            </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225636"><span class="hs-identifier hs-var">dg</span></a></span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-295"></span><span>    </span><span id="local-6989586621679225639"><span class="annot"><span class="annottext">f' :: Handle -&gt; IO a
+</span><a href="#local-6989586621679225639"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679225641"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679225641"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; Bool -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.html#hSetBinaryMode"><span class="hs-identifier hs-var">hSetBinaryMode</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679225641"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO a -&gt; IO a
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO a
+</span><a href="#local-6989586621679225638"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679225641"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span class="hs-comment">-- | Run the chosen Graphviz command on this graph and render it using</span><span>
+</span><span id="line-298"></span><span class="hs-comment">--   the given canvas type.</span><span>
+</span><span id="line-299"></span><span id="local-6989586621679225275"><span id="local-6989586621679225276"><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCanvas"><span class="hs-identifier hs-type">runGraphvizCanvas</span></a></span><span>          </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225275"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225276"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.Available.html#GraphvizCommand"><span class="hs-identifier hs-type">GraphvizCommand</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225275"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225276"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-300"></span><span>                              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizCanvas"><span class="hs-identifier hs-type">GraphvizCanvas</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-301"></span><span id="runGraphvizCanvas"><span class="annot"><span class="annottext">runGraphvizCanvas :: forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+GraphvizCommand -&gt; dg n -&gt; GraphvizCanvas -&gt; IO ()
+</span><a href="Data.GraphViz.Commands.html#runGraphvizCanvas"><span class="hs-identifier hs-var hs-var">runGraphvizCanvas</span></a></span></span><span> </span><span id="local-6989586621679225646"><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225646"><span class="hs-identifier hs-var">cmd</span></a></span></span><span> </span><span id="local-6989586621679225647"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225647"><span class="hs-identifier hs-var">gr</span></a></span></span><span> </span><span id="local-6989586621679225648"><span class="annot"><span class="annottext">GraphvizCanvas
+</span><a href="#local-6989586621679225648"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+-&gt; dg n -&gt; GraphvizCanvas -&gt; (Handle -&gt; IO ()) -&gt; IO ()
+forall (dg :: * -&gt; *) n o a.
+(PrintDotRepr dg n, GraphvizResult o) =&gt;
+GraphvizCommand -&gt; dg n -&gt; o -&gt; (Handle -&gt; IO a) -&gt; IO a
+</span><a href="Data.GraphViz.Commands.html#graphvizWithHandle%27"><span class="hs-identifier hs-var">graphvizWithHandle'</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="#local-6989586621679225646"><span class="hs-identifier hs-var">cmd</span></a></span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225647"><span class="hs-identifier hs-var">gr</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCanvas
+</span><a href="#local-6989586621679225648"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="#local-6989586621679225649"><span class="hs-identifier hs-var">nullHandle</span></a></span><span>
+</span><span id="line-302"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-303"></span><span>    </span><span class="annot"><a href="#local-6989586621679225649"><span class="hs-identifier hs-type">nullHandle</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-304"></span><span>    </span><span id="local-6989586621679225649"><span class="annot"><span class="annottext">nullHandle :: Handle -&gt; IO ()
+</span><a href="#local-6989586621679225649"><span class="hs-identifier hs-var hs-var">nullHandle</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ()) -&gt; IO ByteString -&gt; IO ()
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; ByteString -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO ByteString -&gt; IO ())
+-&gt; (Handle -&gt; IO ByteString) -&gt; Handle -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#hGetContents"><span class="hs-identifier hs-var">SB.hGetContents</span></a></span><span>
+</span><span id="line-305"></span><span>
+</span><span id="line-306"></span><span class="hs-comment">-- | Run the recommended Graphviz command on this graph and render it</span><span>
+</span><span id="line-307"></span><span class="hs-comment">--   using the given canvas type.</span><span>
+</span><span id="line-308"></span><span id="local-6989586621679225284"><span id="local-6989586621679225285"><span class="annot"><a href="Data.GraphViz.Commands.html#runGraphvizCanvas%27"><span class="hs-identifier hs-type">runGraphvizCanvas'</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.GraphViz.Types.html#PrintDotRepr"><span class="hs-identifier hs-type">PrintDotRepr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225284"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225285"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679225284"><span class="hs-identifier hs-type">dg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679225285"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.GraphViz.Commands.html#GraphvizCanvas"><span class="hs-identifier hs-type">GraphvizCanvas</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-309"></span><span id="runGraphvizCanvas%27"><span class="annot"><span class="annottext">runGraphvizCanvas' :: forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+dg n -&gt; GraphvizCanvas -&gt; IO ()
+</span><a href="Data.GraphViz.Commands.html#runGraphvizCanvas%27"><span class="hs-identifier hs-var hs-var">runGraphvizCanvas'</span></a></span></span><span> </span><span id="local-6989586621679225655"><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225655"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GraphvizCommand -&gt; dg n -&gt; GraphvizCanvas -&gt; IO ()
+forall (dg :: * -&gt; *) n.
+PrintDotRepr dg n =&gt;
+GraphvizCommand -&gt; dg n -&gt; GraphvizCanvas -&gt; IO ()
+</span><a href="Data.GraphViz.Commands.html#runGraphvizCanvas"><span class="hs-identifier hs-var">runGraphvizCanvas</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">dg n -&gt; GraphvizCommand
+forall (dg :: * -&gt; *) n. DotRepr dg n =&gt; dg n -&gt; GraphvizCommand
+</span><a href="Data.GraphViz.Commands.html#commandFor"><span class="hs-identifier hs-var">commandFor</span></a></span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225655"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">dg n
+</span><a href="#local-6989586621679225655"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-310"></span><span>
+</span><span id="line-311"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-312"></span><span>
+</span><span id="line-313"></span><span class="hs-comment">-- | Is the Graphviz suite of tools installed?  This is determined by</span><span>
+</span><span id="line-314"></span><span class="hs-comment">--   whether @dot@ is available in the @PATH@.</span><span>
+</span><span id="line-315"></span><span class="annot"><a href="Data.GraphViz.Commands.html#isGraphvizInstalled"><span class="hs-identifier hs-type">isGraphvizInstalled</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-316"></span><span id="isGraphvizInstalled"><span class="annot"><span class="annottext">isGraphvizInstalled :: IO Bool
+</span><a href="Data.GraphViz.Commands.html#isGraphvizInstalled"><span class="hs-identifier hs-var hs-var">isGraphvizInstalled</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe String -&gt; Bool) -&gt; IO (Maybe String) -&gt; IO Bool
+forall (m :: * -&gt; *) a1 r. Monad m =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftM"><span class="hs-identifier hs-var">liftM</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isJust"><span class="hs-identifier hs-var">isJust</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe String) -&gt; IO Bool)
+-&gt; (String -&gt; IO (Maybe String)) -&gt; String -&gt; IO Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Maybe String)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/directory-1.3.8.5/src/System.Directory.html#findExecutable"><span class="hs-identifier hs-var">findExecutable</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO Bool) -&gt; String -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand -&gt; String
+</span><a href="Data.GraphViz.Commands.html#showCmd"><span class="hs-identifier hs-var">showCmd</span></a></span><span> </span><span class="annot"><span class="annottext">GraphvizCommand
+</span><a href="Data.GraphViz.Commands.Available.html#Dot"><span class="hs-identifier hs-var">Dot</span></a></span><span>
+</span><span id="line-317"></span><span>
+</span><span id="line-318"></span><span class="hs-comment">-- | If Graphviz does not seem to be available, print the provided</span><span>
+</span><span id="line-319"></span><span class="hs-comment">--   error message and then exit fatally.</span><span>
+</span><span id="line-320"></span><span class="annot"><a href="Data.GraphViz.Commands.html#quitWithoutGraphviz"><span class="hs-identifier hs-type">quitWithoutGraphviz</span></a></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-321"></span><span id="quitWithoutGraphviz"><span class="annot"><span class="annottext">quitWithoutGraphviz :: String -&gt; IO ()
+</span><a href="Data.GraphViz.Commands.html#quitWithoutGraphviz"><span class="hs-identifier hs-var hs-var">quitWithoutGraphviz</span></a></span></span><span> </span><span id="local-6989586621679225656"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225656"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679225657"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679225657"><span class="hs-identifier hs-var">hasGraphviz</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Data.GraphViz.Commands.html#isGraphvizInstalled"><span class="hs-identifier hs-var">isGraphvizInstalled</span></a></span><span>
+</span><span id="line-322"></span><span>                             </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679225657"><span class="hs-identifier hs-var">hasGraphviz</span></a></span><span>
+</span><span id="line-323"></span><span>                               </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; String -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Handle.Text.html#hPutStrLn"><span class="hs-identifier hs-var">hPutStrLn</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.StdHandles.html#stderr"><span class="hs-identifier hs-var">stderr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679225656"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ExitCode -&gt; IO ()
+forall a. ExitCode -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.Exit.html#exitWith"><span class="hs-identifier hs-var">exitWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ExitCode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#ExitFailure"><span class="hs-identifier hs-var">ExitFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-324"></span></pre></body></html>

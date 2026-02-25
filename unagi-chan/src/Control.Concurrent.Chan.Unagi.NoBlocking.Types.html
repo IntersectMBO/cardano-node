@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Chan.Unagi.NoBlocking.Types</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html"><span class="hs-identifier">Control.Monad.Fix</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span class="hs-cpp">
+
+#if __GLASGOW_HASKELL__ &gt;= 800
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html"><span class="hs-identifier">Control.Monad.Fail</span></a></span><span class="hs-cpp">
+#endif
+</span><span class="hs-comment">-- Mostly here to avoid unfortunate name clash with our internal Stream type</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | An infinite stream of elements. 'tryReadNext' can be called any number of</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- times from multiple threads, and returns a value which moves monotonically</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- from 'Pending' to 'Next' if and when a head element becomes available. </span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- @isActive@ can be used to determine if the stream has expired.</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">newtype</span><span> </span><span id="Stream"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span></span><span> </span><span id="local-6989586621679051540"><span class="annot"><a href="#local-6989586621679051540"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Stream"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="tryReadNext"><span class="annot"><span class="annottext">forall a. Stream a -&gt; IO (Next a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryReadNext"><span class="hs-identifier hs-var hs-var">tryReadNext</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051540"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">data</span><span> </span><span id="Next"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Next"><span class="hs-identifier hs-var">Next</span></a></span></span><span> </span><span id="local-6989586621679051615"><span class="annot"><a href="#local-6989586621679051615"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Next"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Next"><span class="hs-identifier hs-var">Next</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679051615"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051615"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ The next head element along with the tail @Stream@.</span></span><span>
+</span><span id="line-22"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span id="Pending"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Pending"><span class="hs-identifier hs-var">Pending</span></a></span></span><span>           </span><span class="annot"><span class="hs-comment">-- ^ The next element is not yet in the queue; you can retry 'tryReadNext' until a @Next@ is returned.</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | An @IO@ action that returns a particular enqueued element when and if it</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- becomes available. </span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Each @Element@ corresponds to a particular enqueued element, i.e. a returned</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- @Element@ always offers the only means to access one particular enqueued</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- item. The value returned by @tryRead@ moves monotonically from @Nothing@</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- to @Just a@ when and if an element becomes available, and is idempotent at</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- that point.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- So for instance:</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--    (in, out) &lt;- newChan</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--    (el, _) &lt;- tryReadChan out  -- READ FROM EMPTY CHAN</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--    writeChan in &quot;msg1&quot;</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--    writeChan in &quot;msg2&quot;</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--    readChan out        -- RETURNS &quot;msg2&quot;</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--    tryRead el          -- RETURNS &quot;msg1&quot; (which would otherwise be lost)</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">newtype</span><span> </span><span id="Element"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span></span><span> </span><span id="local-6989586621679051544"><span class="annot"><a href="#local-6989586621679051544"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Element"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="tryRead"><span class="annot"><span class="annottext">forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var hs-var">tryRead</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051544"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- Instances cribbed from MaybeT, from transformers v0.4.2.0</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679051620"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621679051628"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Element a -&gt; Element b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679051629"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679051629"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe b) -&gt; Element b
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe b) -&gt; Element b)
+-&gt; (Element a -&gt; IO (Maybe b)) -&gt; Element a -&gt; Element b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; Maybe b) -&gt; IO (Maybe a) -&gt; IO (Maybe b)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679051629"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; IO (Maybe b))
+-&gt; (Element a -&gt; IO (Maybe a)) -&gt; Element a -&gt; IO (Maybe b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Element a -&gt; IO (Maybe a)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span>  </span><span id="local-6989586621679051636"><span id="local-6989586621679051640"><span id="local-6989586621679051643"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679051648"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var hs-var hs-var hs-var">pure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Element a
+forall a. a -&gt; Element a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679051650"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. Element (a -&gt; b) -&gt; Element a -&gt; Element b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;*&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element (a -&gt; b) -&gt; Element a -&gt; Element b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#ap"><span class="hs-identifier hs-var">ap</span></a></span><span>
+</span><span id="line-53"></span><span> </span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679051657"><span id="local-6989586621679051661"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Alternative"><span class="hs-identifier hs-type">Alternative</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679051666"><span class="annot"><span class="annottext">empty :: forall a. Element a
+</span><a href="#local-6989586621679051666"><span class="hs-identifier hs-var hs-var hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element a
+forall a. Element a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mzero"><span class="hs-identifier hs-var">mzero</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679051670"><span class="annot"><span class="annottext">&lt;|&gt; :: forall a. Element a -&gt; Element a -&gt; Element a
+</span><a href="#local-6989586621679051670"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;|&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Element a -&gt; Element a -&gt; Element a
+forall a. Element a -&gt; Element a -&gt; Element a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a -&gt; m a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mplus"><span class="hs-identifier hs-var">mplus</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679051677"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621679051685"><span class="annot"><span class="annottext">return :: forall a. a -&gt; Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var hs-var hs-var hs-var">return</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; Element a)
+-&gt; (a -&gt; IO (Maybe a)) -&gt; a -&gt; Element a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; IO (Maybe a)) -&gt; (a -&gt; Maybe a) -&gt; a -&gt; IO (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679051688"><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051688"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679051689"><span class="annot"><span class="annottext">&gt;&gt;= :: forall a b. Element a -&gt; (a -&gt; Element b) -&gt; Element b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">&gt;&gt;=</span></a></span></span><span> </span><span id="local-6989586621679051690"><span class="annot"><span class="annottext">a -&gt; Element b
+</span><a href="#local-6989586621679051690"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe b) -&gt; Element b
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe b) -&gt; Element b) -&gt; IO (Maybe b) -&gt; Element b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>        </span><span id="local-6989586621679051691"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679051691"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Element a -&gt; IO (Maybe a)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span> </span><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051688"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679051691"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-63"></span><span>            </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe b -&gt; IO (Maybe b)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe b
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679051692"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679051692"><span class="hs-identifier hs-var">y</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Element b -&gt; IO (Maybe b)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Element b
+</span><a href="#local-6989586621679051690"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679051692"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 800
+</span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#MonadFail"><span class="hs-identifier hs-type">MonadFail</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span id="local-6989586621679051699"><span class="annot"><span class="annottext">fail :: forall a. String -&gt; Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var hs-var hs-var hs-var">fail</span></a></span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#MonadPlus"><span class="hs-identifier hs-type">MonadPlus</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679051708"><span class="annot"><span class="annottext">mzero :: forall a. Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mzero"><span class="hs-identifier hs-var hs-var hs-var hs-var">mzero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679051711"><span class="annot"><span class="annottext">mplus :: forall a. Element a -&gt; Element a -&gt; Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mplus"><span class="hs-identifier hs-var hs-var hs-var hs-var">mplus</span></a></span></span><span> </span><span id="local-6989586621679051712"><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051712"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679051713"><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051713"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; Element a) -&gt; IO (Maybe a) -&gt; Element a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-73"></span><span>        </span><span id="local-6989586621679051714"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679051714"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Element a -&gt; IO (Maybe a)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span> </span><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051712"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679051714"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>            </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Element a -&gt; IO (Maybe a)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span> </span><span class="annot"><span class="annottext">Element a
+</span><a href="#local-6989586621679051713"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-76"></span><span>            </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679051714"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#MonadFix"><span class="hs-identifier hs-type">MonadFix</span></a></span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>    </span><span id="local-6989586621679051722"><span class="annot"><span class="annottext">mfix :: forall a. (a -&gt; Element a) -&gt; Element a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier hs-var hs-var hs-var hs-var">mfix</span></a></span></span><span> </span><span id="local-6989586621679051723"><span class="annot"><span class="annottext">a -&gt; Element a
+</span><a href="#local-6989586621679051723"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">Element</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Maybe a -&gt; IO (Maybe a)) -&gt; IO (Maybe a)
+forall a. (a -&gt; IO a) -&gt; IO a
+forall (m :: * -&gt; *) a. MonadFix m =&gt; (a -&gt; m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.Fix.html#mfix"><span class="hs-identifier hs-var">mfix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Element a -&gt; IO (Maybe a)
+forall a. Element a -&gt; IO (Maybe a)
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#tryRead"><span class="hs-identifier hs-var">tryRead</span></a></span><span> </span><span class="annot"><span class="annottext">(Element a -&gt; IO (Maybe a))
+-&gt; (Maybe a -&gt; Element a) -&gt; Maybe a -&gt; IO (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Element a
+</span><a href="#local-6989586621679051723"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Element a) -&gt; (Maybe a -&gt; a) -&gt; Maybe a -&gt; Element a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a -&gt; a
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall {a}. a
+</span><a href="#local-6989586621679051725"><span class="hs-identifier hs-var">bomb</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679051725"><span class="annot"><span class="annottext">bomb :: a
+</span><a href="#local-6989586621679051725"><span class="hs-identifier hs-var hs-var">bomb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; a
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mfix (Element): inner computation returned Nothing&quot;</span></span><span>
+</span><span id="line-81"></span></pre></body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}</span><span>
+</span><span id="line-2"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Cardano.TxGenerator.Internal.Fifo
+Description : FIFO/queue data structure.
+
+This is a moderately simple implementation, discussed by e.g. Okasaki
+in &lt;https://www.cambridge.org/core/journals/journal-of-functional-programming/article/simple-and-efficient-purely-functional-queues-and-deques/7B3036772616B39E87BF7FBD119015AB&gt;
+in very close to identical form save for being in SML vs. Haskell in
+section 2, and, somewhat earlier, by Hood and Melville (1981),
+Gries (1981) and Burton (1982), albeit in other languages. This may
+not become large enough for it to ever matter in the tx-generator,
+but Tarjan's structure at &lt;https://dl.acm.org/doi/10.1145/324133.324139&gt;
+might be worthwhile in that case, most likely to happen if someone
+notices this existing and wants to use it somewhere where it might be
+significantly more stressed.
+-}</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span>  </span><span class="hs-identifier">Cardano.TxGenerator.Internal.Fifo</span><span>
+</span><span id="line-18"></span><span>        </span><span class="hs-special">(</span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html"><span class="hs-identifier">Cardano.TxGenerator.Internal.Fifo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- This is to be used single threaded behind an MVar.</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- | This implements the section 2 __Queues as Paired Lists__</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- structure described by Okasaki.</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="Fifo"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span></span><span> </span><span id="local-6989586621679908785"><span class="annot"><a href="#local-6989586621679908785"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Fifo"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679908785"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">-- ^ the front, from where removals are taken</span></span><span>
+</span><span id="line-26"></span><span>                   </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679908785"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="hs-comment">-- ^ the rear, where insertions are put</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | The empty queue has no contents to sit in either the front or rear.</span></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679908782"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#emptyFifo"><span class="hs-identifier hs-type">emptyFifo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908782"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-31"></span><span id="emptyFifo"><span class="annot"><span class="annottext">emptyFifo :: forall a. Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#emptyFifo"><span class="hs-identifier hs-var hs-var">emptyFifo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Fifo a
+forall a. [a] -&gt; [a] -&gt; Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | The arrivals inserted at the rear remain in reverse order until</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- there is a need to dequeue that can't be satisfied from the front.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- Warning : bad complexity when used as a persistent data structure.</span><span>
+</span><span id="line-36"></span><span id="local-6989586621679908787"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#toList"><span class="hs-identifier hs-type">toList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908787"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679908787"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-37"></span><span id="toList"><span class="annot"><span class="annottext">toList :: forall a. Fifo a -&gt; [a]
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#toList"><span class="hs-identifier hs-var hs-var">toList</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span id="local-6989586621679908806"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908806"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679908807"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908807"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908806"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908807"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | The rear's reverse ordering allows this to be a simple cons.</span></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679908791"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#insert"><span class="hs-identifier hs-type">insert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908791"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679908791"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908791"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-41"></span><span id="insert"><span class="annot"><span class="annottext">insert :: forall a. Fifo a -&gt; a -&gt; Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#insert"><span class="hs-identifier hs-var hs-var">insert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span id="local-6989586621679908810"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908810"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679908811"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908811"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679908812"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908812"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Fifo a
+forall a. [a] -&gt; [a] -&gt; Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908810"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Fifo a) -&gt; [a] -&gt; Fifo a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908812"><span class="hs-identifier hs-var">e</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908811"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Potential failure demands the use of `Maybe`. Empty front</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- lists trigger reversals of the rear list and the Fifo part of</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- the result becomes a pure front list, namely the tail of that</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- reversal.</span><span>
+</span><span id="line-47"></span><span id="local-6989586621679908796"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#remove"><span class="hs-identifier hs-type">remove</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908796"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908796"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679908796"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-48"></span><span id="remove"><span class="annot"><span class="annottext">remove :: forall a. Fifo a -&gt; Maybe (Fifo a, a)
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#remove"><span class="hs-identifier hs-var hs-var">remove</span></a></span></span><span> </span><span id="local-6989586621679908814"><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908814"><span class="hs-identifier hs-var">fifo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908814"><span class="hs-identifier hs-var">fifo</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Fifo a, a)
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679908815"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908815"><span class="hs-identifier hs-var">h</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679908816"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908816"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679908817"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908817"><span class="hs-identifier hs-var">y</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Fifo a, a) -&gt; Maybe (Fifo a, a)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Fifo a
+forall a. [a] -&gt; [a] -&gt; Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908816"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908817"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908815"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679908818"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908818"><span class="hs-identifier hs-var">y</span></a></span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679908819"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908819"><span class="hs-identifier hs-var">h</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679908820"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908820"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [a]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908818"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(Fifo a, a) -&gt; Maybe (Fifo a, a)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; Fifo a
+forall a. [a] -&gt; [a] -&gt; Fifo a
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-var">Fifo</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908820"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908819"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Dequeueing /n/ items just iterates calling remove within the</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- `Maybe` monad. Removing n from a Fifo of length k when k &lt; n is</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- regarded as a failure.</span><span>
+</span><span id="line-56"></span><span id="local-6989586621679908798"><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#removeN"><span class="hs-identifier hs-type">removeN</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908798"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#Fifo"><span class="hs-identifier hs-type">Fifo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679908798"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679908798"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span>
+</span><span id="line-57"></span><span id="removeN"><span class="annot"><span class="annottext">removeN :: forall a. Int -&gt; Fifo a -&gt; Maybe (Fifo a, [a])
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#removeN"><span class="hs-identifier hs-var hs-var">removeN</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679908833"><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908833"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Fifo a, [a]) -&gt; Maybe (Fifo a, [a])
+forall a. a -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908833"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.TxGenerator.Internal.Fifo.html#removeN"><span class="hs-identifier hs-var">removeN</span></a></span><span> </span><span id="local-6989586621679908834"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679908834"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679908835"><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908835"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679908836"><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908836"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679908837"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908837"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Fifo a -&gt; Maybe (Fifo a, a)
+forall a. Fifo a -&gt; Maybe (Fifo a, a)
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#remove"><span class="hs-identifier hs-var">remove</span></a></span><span> </span><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908835"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679908838"><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908838"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679908839"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908839"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Fifo a -&gt; Maybe (Fifo a, [a])
+forall a. Int -&gt; Fifo a -&gt; Maybe (Fifo a, [a])
+</span><a href="Cardano.TxGenerator.Internal.Fifo.html#removeN"><span class="hs-identifier hs-var">removeN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a. Enum a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#pred"><span class="hs-identifier hs-var">pred</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679908834"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908836"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">(Fifo a, [a]) -&gt; Maybe (Fifo a, [a])
+forall a. a -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fifo a
+</span><a href="#local-6989586621679908838"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679908837"><span class="hs-identifier hs-var">h</span></a></span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679908839"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span></pre></body></html>

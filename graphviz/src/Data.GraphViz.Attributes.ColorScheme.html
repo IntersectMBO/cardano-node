@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679195829"><span id="local-6989586621679195830"></span></span><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{- |
+   Module      : Data.GraphViz.Attributes.ColorScheme
+   Description : Specification of color schemes.
+   Copyright   : (c) Ivan Lazar Miljenovic
+   License     : 3-Clause BSD-style
+   Maintainer  : Ivan.Miljenovic@gmail.com
+
+   This is an internal module designed so that the state can record
+   the current color scheme.
+-}</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.GraphViz.Attributes.ColorScheme</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- -----------------------------------------------------------------------------</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><span class="hs-comment">-- | This represents the color schemes that Graphviz accepts.</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="ColorScheme"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#ColorScheme"><span class="hs-identifier hs-var">ColorScheme</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="X11"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#X11"><span class="hs-identifier hs-var">X11</span></a></span></span><span>
+</span><span id="line-21"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="SVG"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#SVG"><span class="hs-identifier hs-var">SVG</span></a></span></span><span>
+</span><span id="line-22"></span><span>                 </span><span class="hs-glyph">|</span><span> </span><span id="Brewer"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Brewer"><span class="hs-identifier hs-var">Brewer</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerScheme"><span class="hs-identifier hs-type">BrewerScheme</span></a></span><span>
+</span><span id="line-23"></span><span>                 </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679195835"><span id="local-6989586621679195839"><span class="annot"><span class="annottext">ColorScheme -&gt; ColorScheme -&gt; Bool
+(ColorScheme -&gt; ColorScheme -&gt; Bool)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; Bool) -&gt; Eq ColorScheme
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ColorScheme -&gt; ColorScheme -&gt; Bool
+== :: ColorScheme -&gt; ColorScheme -&gt; Bool
+$c/= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+/= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195846"><span id="local-6989586621679195850"><span id="local-6989586621679195853"><span id="local-6989586621679195857"><span id="local-6989586621679195860"><span id="local-6989586621679195863"><span id="local-6989586621679195866"><span class="annot"><span class="annottext">Eq ColorScheme
+Eq ColorScheme =&gt;
+(ColorScheme -&gt; ColorScheme -&gt; Ordering)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; Bool)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; Bool)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; Bool)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; Bool)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; ColorScheme)
+-&gt; (ColorScheme -&gt; ColorScheme -&gt; ColorScheme)
+-&gt; Ord ColorScheme
+ColorScheme -&gt; ColorScheme -&gt; Bool
+ColorScheme -&gt; ColorScheme -&gt; Ordering
+ColorScheme -&gt; ColorScheme -&gt; ColorScheme
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ColorScheme -&gt; ColorScheme -&gt; Ordering
+compare :: ColorScheme -&gt; ColorScheme -&gt; Ordering
+$c&lt; :: ColorScheme -&gt; ColorScheme -&gt; Bool
+&lt; :: ColorScheme -&gt; ColorScheme -&gt; Bool
+$c&lt;= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+&lt;= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+$c&gt; :: ColorScheme -&gt; ColorScheme -&gt; Bool
+&gt; :: ColorScheme -&gt; ColorScheme -&gt; Bool
+$c&gt;= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+&gt;= :: ColorScheme -&gt; ColorScheme -&gt; Bool
+$cmax :: ColorScheme -&gt; ColorScheme -&gt; ColorScheme
+max :: ColorScheme -&gt; ColorScheme -&gt; ColorScheme
+$cmin :: ColorScheme -&gt; ColorScheme -&gt; ColorScheme
+min :: ColorScheme -&gt; ColorScheme -&gt; ColorScheme
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195870"><span id="local-6989586621679195876"><span id="local-6989586621679195880"><span class="annot"><span class="annottext">Int -&gt; ColorScheme -&gt; ShowS
+[ColorScheme] -&gt; ShowS
+ColorScheme -&gt; String
+(Int -&gt; ColorScheme -&gt; ShowS)
+-&gt; (ColorScheme -&gt; String)
+-&gt; ([ColorScheme] -&gt; ShowS)
+-&gt; Show ColorScheme
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ColorScheme -&gt; ShowS
+showsPrec :: Int -&gt; ColorScheme -&gt; ShowS
+$cshow :: ColorScheme -&gt; String
+show :: ColorScheme -&gt; String
+$cshowList :: [ColorScheme] -&gt; ShowS
+showList :: [ColorScheme] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195884"><span id="local-6989586621679195888"><span id="local-6989586621679195891"><span id="local-6989586621679195901"><span class="annot"><span class="annottext">ReadPrec [ColorScheme]
+ReadPrec ColorScheme
+Int -&gt; ReadS ColorScheme
+ReadS [ColorScheme]
+(Int -&gt; ReadS ColorScheme)
+-&gt; ReadS [ColorScheme]
+-&gt; ReadPrec ColorScheme
+-&gt; ReadPrec [ColorScheme]
+-&gt; Read ColorScheme
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS ColorScheme
+readsPrec :: Int -&gt; ReadS ColorScheme
+$creadList :: ReadS [ColorScheme]
+readList :: ReadS [ColorScheme]
+$creadPrec :: ReadPrec ColorScheme
+readPrec :: ReadPrec ColorScheme
+$creadListPrec :: ReadPrec [ColorScheme]
+readListPrec :: ReadPrec [ColorScheme]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | Specify which colour palette and how many colours it has.  Note</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--   the allowed values for the different 'BrewerName's.</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="BrewerScheme"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerScheme"><span class="hs-identifier hs-var">BrewerScheme</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BScheme"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BScheme"><span class="hs-identifier hs-var">BScheme</span></a></span></span><span> </span><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerName"><span class="hs-identifier hs-type">BrewerName</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>
+</span><span id="line-28"></span><span>                  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679195906"><span id="local-6989586621679195912"><span class="annot"><span class="annottext">BrewerScheme -&gt; BrewerScheme -&gt; Bool
+(BrewerScheme -&gt; BrewerScheme -&gt; Bool)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; Bool) -&gt; Eq BrewerScheme
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+== :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+$c/= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+/= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195917"><span id="local-6989586621679195923"><span id="local-6989586621679195927"><span id="local-6989586621679195930"><span id="local-6989586621679195933"><span id="local-6989586621679195936"><span id="local-6989586621679195939"><span class="annot"><span class="annottext">Eq BrewerScheme
+Eq BrewerScheme =&gt;
+(BrewerScheme -&gt; BrewerScheme -&gt; Ordering)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; Bool)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; Bool)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; Bool)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; Bool)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme)
+-&gt; (BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme)
+-&gt; Ord BrewerScheme
+BrewerScheme -&gt; BrewerScheme -&gt; Bool
+BrewerScheme -&gt; BrewerScheme -&gt; Ordering
+BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BrewerScheme -&gt; BrewerScheme -&gt; Ordering
+compare :: BrewerScheme -&gt; BrewerScheme -&gt; Ordering
+$c&lt; :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+&lt; :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+$c&lt;= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+&lt;= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+$c&gt; :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+&gt; :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+$c&gt;= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+&gt;= :: BrewerScheme -&gt; BrewerScheme -&gt; Bool
+$cmax :: BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme
+max :: BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme
+$cmin :: BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme
+min :: BrewerScheme -&gt; BrewerScheme -&gt; BrewerScheme
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195942"><span id="local-6989586621679195949"><span id="local-6989586621679195952"><span class="annot"><span class="annottext">Int -&gt; BrewerScheme -&gt; ShowS
+[BrewerScheme] -&gt; ShowS
+BrewerScheme -&gt; String
+(Int -&gt; BrewerScheme -&gt; ShowS)
+-&gt; (BrewerScheme -&gt; String)
+-&gt; ([BrewerScheme] -&gt; ShowS)
+-&gt; Show BrewerScheme
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BrewerScheme -&gt; ShowS
+showsPrec :: Int -&gt; BrewerScheme -&gt; ShowS
+$cshow :: BrewerScheme -&gt; String
+show :: BrewerScheme -&gt; String
+$cshowList :: [BrewerScheme] -&gt; ShowS
+showList :: [BrewerScheme] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195955"><span id="local-6989586621679195958"><span id="local-6989586621679195961"><span id="local-6989586621679195971"><span class="annot"><span class="annottext">ReadPrec [BrewerScheme]
+ReadPrec BrewerScheme
+Int -&gt; ReadS BrewerScheme
+ReadS [BrewerScheme]
+(Int -&gt; ReadS BrewerScheme)
+-&gt; ReadS [BrewerScheme]
+-&gt; ReadPrec BrewerScheme
+-&gt; ReadPrec [BrewerScheme]
+-&gt; Read BrewerScheme
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BrewerScheme
+readsPrec :: Int -&gt; ReadS BrewerScheme
+$creadList :: ReadS [BrewerScheme]
+readList :: ReadS [BrewerScheme]
+$creadPrec :: ReadPrec BrewerScheme
+readPrec :: ReadPrec BrewerScheme
+$creadListPrec :: ReadPrec [BrewerScheme]
+readListPrec :: ReadPrec [BrewerScheme]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | All of these have a minimum level value of @3@, with a maximum</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--   of @9@ unless otherwise specified.</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="BrewerName"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#BrewerName"><span class="hs-identifier hs-var">BrewerName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Accent"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Accent"><span class="hs-identifier hs-var">Accent</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @8@.</span></span><span>
+</span><span id="line-33"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Blues"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Blues"><span class="hs-identifier hs-var">Blues</span></a></span></span><span>
+</span><span id="line-34"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Brbg"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Brbg"><span class="hs-identifier hs-var">Brbg</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-35"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Bugn"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Bugn"><span class="hs-identifier hs-var">Bugn</span></a></span></span><span>
+</span><span id="line-36"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Bupu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Bupu"><span class="hs-identifier hs-var">Bupu</span></a></span></span><span>
+</span><span id="line-37"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Dark2"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Dark2"><span class="hs-identifier hs-var">Dark2</span></a></span></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @8@.</span></span><span>
+</span><span id="line-38"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Gnbu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Gnbu"><span class="hs-identifier hs-var">Gnbu</span></a></span></span><span>
+</span><span id="line-39"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Greens"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Greens"><span class="hs-identifier hs-var">Greens</span></a></span></span><span>
+</span><span id="line-40"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Greys"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Greys"><span class="hs-identifier hs-var">Greys</span></a></span></span><span>
+</span><span id="line-41"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Oranges"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Oranges"><span class="hs-identifier hs-var">Oranges</span></a></span></span><span>
+</span><span id="line-42"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Orrd"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Orrd"><span class="hs-identifier hs-var">Orrd</span></a></span></span><span>
+</span><span id="line-43"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Paired"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Paired"><span class="hs-identifier hs-var">Paired</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @12@.</span></span><span>
+</span><span id="line-44"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Pastel1"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Pastel1"><span class="hs-identifier hs-var">Pastel1</span></a></span></span><span>
+</span><span id="line-45"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Pastel2"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Pastel2"><span class="hs-identifier hs-var">Pastel2</span></a></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @8@.</span></span><span>
+</span><span id="line-46"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Piyg"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Piyg"><span class="hs-identifier hs-var">Piyg</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-47"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Prgn"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Prgn"><span class="hs-identifier hs-var">Prgn</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-48"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Pubu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Pubu"><span class="hs-identifier hs-var">Pubu</span></a></span></span><span>
+</span><span id="line-49"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Pubugn"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Pubugn"><span class="hs-identifier hs-var">Pubugn</span></a></span></span><span>
+</span><span id="line-50"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Puor"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Puor"><span class="hs-identifier hs-var">Puor</span></a></span></span><span>     </span><span class="hs-comment">-- ^ Maximum of @11@; note that the last two are listed</span><span>
+</span><span id="line-51"></span><span>                           </span><span class="hs-comment">--   after the @'Purd'@ values in the</span><span>
+</span><span id="line-52"></span><span>                           </span><span class="hs-comment">--   documentation.</span><span>
+</span><span id="line-53"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Purd"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Purd"><span class="hs-identifier hs-var">Purd</span></a></span></span><span>
+</span><span id="line-54"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Purples"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Purples"><span class="hs-identifier hs-var">Purples</span></a></span></span><span>
+</span><span id="line-55"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Rdbu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Rdbu"><span class="hs-identifier hs-var">Rdbu</span></a></span></span><span>     </span><span class="hs-comment">-- ^ Maximum of @11@; note that the last two are listed</span><span>
+</span><span id="line-56"></span><span>                           </span><span class="hs-comment">--   first.</span><span>
+</span><span id="line-57"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Rdgy"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Rdgy"><span class="hs-identifier hs-var">Rdgy</span></a></span></span><span>     </span><span class="hs-comment">-- ^ Maximum of @11@; note that the last two are listed</span><span>
+</span><span id="line-58"></span><span>                           </span><span class="hs-comment">--   after the @'Rdpu'@ values in the</span><span>
+</span><span id="line-59"></span><span>                           </span><span class="hs-comment">--   documentation.</span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Rdpu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Rdpu"><span class="hs-identifier hs-var">Rdpu</span></a></span></span><span>
+</span><span id="line-61"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Rdylbu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Rdylbu"><span class="hs-identifier hs-var">Rdylbu</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-62"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Rdylgn"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Rdylgn"><span class="hs-identifier hs-var">Rdylgn</span></a></span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-63"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Reds"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Reds"><span class="hs-identifier hs-var">Reds</span></a></span></span><span>
+</span><span id="line-64"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Set1"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Set1"><span class="hs-identifier hs-var">Set1</span></a></span></span><span>
+</span><span id="line-65"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Set2"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Set2"><span class="hs-identifier hs-var">Set2</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @8@.</span></span><span>
+</span><span id="line-66"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Set3"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Set3"><span class="hs-identifier hs-var">Set3</span></a></span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @12@.</span></span><span>
+</span><span id="line-67"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Spectral"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Spectral"><span class="hs-identifier hs-var">Spectral</span></a></span></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Maximum of @11@.</span></span><span>
+</span><span id="line-68"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Ylgn"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Ylgn"><span class="hs-identifier hs-var">Ylgn</span></a></span></span><span>
+</span><span id="line-69"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Ylgnbu"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Ylgnbu"><span class="hs-identifier hs-var">Ylgnbu</span></a></span></span><span>
+</span><span id="line-70"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Ylorbr"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Ylorbr"><span class="hs-identifier hs-var">Ylorbr</span></a></span></span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span id="Ylorrd"><span class="annot"><a href="Data.GraphViz.Attributes.ColorScheme.html#Ylorrd"><span class="hs-identifier hs-var">Ylorrd</span></a></span></span><span>
+</span><span id="line-72"></span><span>                </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679196009"><span id="local-6989586621679196011"><span class="annot"><span class="annottext">BrewerName -&gt; BrewerName -&gt; Bool
+(BrewerName -&gt; BrewerName -&gt; Bool)
+-&gt; (BrewerName -&gt; BrewerName -&gt; Bool) -&gt; Eq BrewerName
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BrewerName -&gt; BrewerName -&gt; Bool
+== :: BrewerName -&gt; BrewerName -&gt; Bool
+$c/= :: BrewerName -&gt; BrewerName -&gt; Bool
+/= :: BrewerName -&gt; BrewerName -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196016"><span id="local-6989586621679196018"><span id="local-6989586621679196020"><span id="local-6989586621679196023"><span id="local-6989586621679196026"><span id="local-6989586621679196029"><span id="local-6989586621679196032"><span class="annot"><span class="annottext">Eq BrewerName
+Eq BrewerName =&gt;
+(BrewerName -&gt; BrewerName -&gt; Ordering)
+-&gt; (BrewerName -&gt; BrewerName -&gt; Bool)
+-&gt; (BrewerName -&gt; BrewerName -&gt; Bool)
+-&gt; (BrewerName -&gt; BrewerName -&gt; Bool)
+-&gt; (BrewerName -&gt; BrewerName -&gt; Bool)
+-&gt; (BrewerName -&gt; BrewerName -&gt; BrewerName)
+-&gt; (BrewerName -&gt; BrewerName -&gt; BrewerName)
+-&gt; Ord BrewerName
+BrewerName -&gt; BrewerName -&gt; Bool
+BrewerName -&gt; BrewerName -&gt; Ordering
+BrewerName -&gt; BrewerName -&gt; BrewerName
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BrewerName -&gt; BrewerName -&gt; Ordering
+compare :: BrewerName -&gt; BrewerName -&gt; Ordering
+$c&lt; :: BrewerName -&gt; BrewerName -&gt; Bool
+&lt; :: BrewerName -&gt; BrewerName -&gt; Bool
+$c&lt;= :: BrewerName -&gt; BrewerName -&gt; Bool
+&lt;= :: BrewerName -&gt; BrewerName -&gt; Bool
+$c&gt; :: BrewerName -&gt; BrewerName -&gt; Bool
+&gt; :: BrewerName -&gt; BrewerName -&gt; Bool
+$c&gt;= :: BrewerName -&gt; BrewerName -&gt; Bool
+&gt;= :: BrewerName -&gt; BrewerName -&gt; Bool
+$cmax :: BrewerName -&gt; BrewerName -&gt; BrewerName
+max :: BrewerName -&gt; BrewerName -&gt; BrewerName
+$cmin :: BrewerName -&gt; BrewerName -&gt; BrewerName
+min :: BrewerName -&gt; BrewerName -&gt; BrewerName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196035"><span id="local-6989586621679196037"><span class="annot"><span class="annottext">BrewerName
+BrewerName -&gt; BrewerName -&gt; Bounded BrewerName
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: BrewerName
+minBound :: BrewerName
+$cmaxBound :: BrewerName
+maxBound :: BrewerName
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196041"><span id="local-6989586621679196049"><span id="local-6989586621679196055"><span id="local-6989586621679196064"><span id="local-6989586621679196066"><span id="local-6989586621679196070"><span id="local-6989586621679196074"><span id="local-6989586621679196078"><span class="annot"><span class="annottext">Int -&gt; BrewerName
+BrewerName -&gt; Int
+BrewerName -&gt; [BrewerName]
+BrewerName -&gt; BrewerName
+BrewerName -&gt; BrewerName -&gt; [BrewerName]
+BrewerName -&gt; BrewerName -&gt; BrewerName -&gt; [BrewerName]
+(BrewerName -&gt; BrewerName)
+-&gt; (BrewerName -&gt; BrewerName)
+-&gt; (Int -&gt; BrewerName)
+-&gt; (BrewerName -&gt; Int)
+-&gt; (BrewerName -&gt; [BrewerName])
+-&gt; (BrewerName -&gt; BrewerName -&gt; [BrewerName])
+-&gt; (BrewerName -&gt; BrewerName -&gt; [BrewerName])
+-&gt; (BrewerName -&gt; BrewerName -&gt; BrewerName -&gt; [BrewerName])
+-&gt; Enum BrewerName
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: BrewerName -&gt; BrewerName
+succ :: BrewerName -&gt; BrewerName
+$cpred :: BrewerName -&gt; BrewerName
+pred :: BrewerName -&gt; BrewerName
+$ctoEnum :: Int -&gt; BrewerName
+toEnum :: Int -&gt; BrewerName
+$cfromEnum :: BrewerName -&gt; Int
+fromEnum :: BrewerName -&gt; Int
+$cenumFrom :: BrewerName -&gt; [BrewerName]
+enumFrom :: BrewerName -&gt; [BrewerName]
+$cenumFromThen :: BrewerName -&gt; BrewerName -&gt; [BrewerName]
+enumFromThen :: BrewerName -&gt; BrewerName -&gt; [BrewerName]
+$cenumFromTo :: BrewerName -&gt; BrewerName -&gt; [BrewerName]
+enumFromTo :: BrewerName -&gt; BrewerName -&gt; [BrewerName]
+$cenumFromThenTo :: BrewerName -&gt; BrewerName -&gt; BrewerName -&gt; [BrewerName]
+enumFromThenTo :: BrewerName -&gt; BrewerName -&gt; BrewerName -&gt; [BrewerName]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196082"><span id="local-6989586621679196084"><span id="local-6989586621679196087"><span class="annot"><span class="annottext">Int -&gt; BrewerName -&gt; ShowS
+[BrewerName] -&gt; ShowS
+BrewerName -&gt; String
+(Int -&gt; BrewerName -&gt; ShowS)
+-&gt; (BrewerName -&gt; String)
+-&gt; ([BrewerName] -&gt; ShowS)
+-&gt; Show BrewerName
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BrewerName -&gt; ShowS
+showsPrec :: Int -&gt; BrewerName -&gt; ShowS
+$cshow :: BrewerName -&gt; String
+show :: BrewerName -&gt; String
+$cshowList :: [BrewerName] -&gt; ShowS
+showList :: [BrewerName] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196090"><span id="local-6989586621679196093"><span id="local-6989586621679196096"><span id="local-6989586621679196133"><span class="annot"><span class="annottext">ReadPrec [BrewerName]
+ReadPrec BrewerName
+Int -&gt; ReadS BrewerName
+ReadS [BrewerName]
+(Int -&gt; ReadS BrewerName)
+-&gt; ReadS [BrewerName]
+-&gt; ReadPrec BrewerName
+-&gt; ReadPrec [BrewerName]
+-&gt; Read BrewerName
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BrewerName
+readsPrec :: Int -&gt; ReadS BrewerName
+$creadList :: ReadS [BrewerName]
+readList :: ReadS [BrewerName]
+$creadPrec :: ReadPrec BrewerName
+readPrec :: ReadPrec BrewerName
+$creadListPrec :: ReadPrec [BrewerName]
+readListPrec :: ReadPrec [BrewerName]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span></pre></body></html>

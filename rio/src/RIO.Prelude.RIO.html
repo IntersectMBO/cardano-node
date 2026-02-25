@@ -1,0 +1,616 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FunctionalDependencies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">RIO.Prelude.RIO</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier">RIO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier">runRIO</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#liftRIO"><span class="hs-identifier">liftRIO</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#mapRIO"><span class="hs-identifier">mapRIO</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-comment">-- SomeRef for Writer/State interfaces</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier">SomeRef</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#HasStateRef"><span class="hs-identifier">HasStateRef</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#HasWriteRef"><span class="hs-identifier">HasWriteRef</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#newSomeRef"><span class="hs-identifier">newSomeRef</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#newUnboxedSomeRef"><span class="hs-identifier">newUnboxedSomeRef</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier">readSomeRef</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#writeSomeRef"><span class="hs-identifier">writeSomeRef</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#modifySomeRef"><span class="hs-identifier">modifySomeRef</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld"><span class="hs-identifier">RealWorld</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Lens.html"><span class="hs-identifier">RIO.Prelude.Lens</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.URef.html"><span class="hs-identifier">RIO.Prelude.URef</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Reexports.html"><span class="hs-identifier">RIO.Prelude.Reexports</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.html"><span class="hs-identifier">Control.Monad.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#MonadState"><span class="hs-identifier">MonadState</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Writer.html"><span class="hs-identifier">Control.Monad.Writer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Writer.Class.html#MonadWriter"><span class="hs-identifier">MonadWriter</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | The Reader+IO monad. This is different from a 'ReaderT' because:</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- * It's not a transformer, it hardcodes IO for simpler usage and</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- error messages.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- * Instances of typeclasses like 'MonadLogger' are implemented using</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- classes defined on the environment, instead of using an</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- underlying monad.</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">newtype</span><span> </span><span id="RIO"><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-var">RIO</span></a></span></span><span> </span><span id="local-6989586621679100294"><span class="annot"><a href="#local-6989586621679100294"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679100295"><span class="annot"><a href="#local-6989586621679100295"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="RIO"><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-var">RIO</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="unRIO"><span class="annot"><span class="annottext">forall env a. RIO env a -&gt; ReaderT env IO a
+</span><a href="RIO.Prelude.RIO.html#unRIO"><span class="hs-identifier hs-var hs-var">unRIO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100294"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100295"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679100542"><span id="local-6989586621679100548"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; RIO env a -&gt; RIO env b)
+-&gt; (forall a b. a -&gt; RIO env b -&gt; RIO env a) -&gt; Functor (RIO env)
+forall a b. a -&gt; RIO env b -&gt; RIO env a
+forall a b. (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+forall env a b. a -&gt; RIO env b -&gt; RIO env a
+forall env a b. (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall env a b. (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+fmap :: forall a b. (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+$c&lt;$ :: forall env a b. a -&gt; RIO env b -&gt; RIO env a
+&lt;$ :: forall a b. a -&gt; RIO env b -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span id="local-6989586621679100558"><span id="local-6989586621679100564"><span id="local-6989586621679100569"><span id="local-6989586621679100574"><span id="local-6989586621679100579"><span class="annot"><span class="annottext">Functor (RIO env)
+Functor (RIO env) =&gt;
+(forall a. a -&gt; RIO env a)
+-&gt; (forall a b. RIO env (a -&gt; b) -&gt; RIO env a -&gt; RIO env b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c)
+-&gt; (forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b)
+-&gt; (forall a b. RIO env a -&gt; RIO env b -&gt; RIO env a)
+-&gt; Applicative (RIO env)
+forall env. Functor (RIO env)
+forall a. a -&gt; RIO env a
+forall env a. a -&gt; RIO env a
+forall a b. RIO env a -&gt; RIO env b -&gt; RIO env a
+forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+forall a b. RIO env (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env a
+forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+forall env a b. RIO env (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+forall a b c. (a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+forall env a b c.
+(a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+$cpure :: forall env a. a -&gt; RIO env a
+pure :: forall a. a -&gt; RIO env a
+$c&lt;*&gt; :: forall env a b. RIO env (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+&lt;*&gt; :: forall a b. RIO env (a -&gt; b) -&gt; RIO env a -&gt; RIO env b
+$cliftA2 :: forall env a b c.
+(a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+liftA2 :: forall a b c. (a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+$c*&gt; :: forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+*&gt; :: forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+$c&lt;* :: forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env a
+&lt;* :: forall a b. RIO env a -&gt; RIO env b -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679100589"><span id="local-6989586621679100595"><span id="local-6989586621679100600"><span class="annot"><span class="annottext">Applicative (RIO env)
+Applicative (RIO env) =&gt;
+(forall a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b)
+-&gt; (forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b)
+-&gt; (forall a. a -&gt; RIO env a)
+-&gt; Monad (RIO env)
+forall env. Applicative (RIO env)
+forall a. a -&gt; RIO env a
+forall env a. a -&gt; RIO env a
+forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+forall a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+forall env a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall env a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+&gt;&gt;= :: forall a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+$c&gt;&gt; :: forall env a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+&gt;&gt; :: forall a b. RIO env a -&gt; RIO env b -&gt; RIO env b
+$creturn :: forall env a. a -&gt; RIO env a
+return :: forall a. a -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679100610"><span class="annot"><span class="annottext">Monad (RIO env)
+Monad (RIO env) =&gt;
+(forall a. IO a -&gt; RIO env a) -&gt; MonadIO (RIO env)
+forall env. Monad (RIO env)
+forall a. IO a -&gt; RIO env a
+forall env a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. IO a -&gt; m a) -&gt; MonadIO m
+$cliftIO :: forall env a. IO a -&gt; RIO env a
+liftIO :: forall a. IO a -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679100621"><span id="local-6989586621679100627"><span id="local-6989586621679100632"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100294"><span class="hs-identifier hs-type">env</span></a></span></span></span></span><span class="hs-special">,</span><span id="local-6989586621679100646"><span class="annot"><span class="annottext">Monad (RIO env)
+Monad (RIO env) =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; RIO env a)
+-&gt; MonadThrow (RIO env)
+forall env. Monad (RIO env)
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; RIO env a
+forall env e a. (HasCallStack, Exception e) =&gt; e -&gt; RIO env a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; m a)
+-&gt; MonadThrow m
+$cthrowM :: forall env e a. (HasCallStack, Exception e) =&gt; e -&gt; RIO env a
+throwM :: forall e a. (HasCallStack, Exception e) =&gt; e -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadThrow</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100393"><span id="local-6989586621679100394"><span id="local-6989586621679100662"><span id="local-6989586621679100666"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100393"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-type">Semigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100394"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100393"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679100673"><span class="annot"><span class="annottext">&lt;&gt; :: RIO env a -&gt; RIO env a -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; RIO env a -&gt; RIO env a -&gt; RIO env a
+forall a b c. (a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">(&lt;&gt;)</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100398"><span id="local-6989586621679100399"><span id="local-6989586621679100682"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100398"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100399"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100398"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679100689"><span class="annot"><span class="annottext">mempty :: RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; RIO env a
+forall a. a -&gt; RIO env a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679100692"><span class="annot"><span class="annottext">mappend :: RIO env a -&gt; RIO env a -&gt; RIO env a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var hs-var hs-var hs-var">mappend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; RIO env a -&gt; RIO env a -&gt; RIO env a
+forall a b c. (a -&gt; b -&gt; c) -&gt; RIO env a -&gt; RIO env b -&gt; RIO env c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-identifier hs-var">mappend</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | Using the environment run in IO the action that requires that environment.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- @since 0.0.1.0</span><span>
+</span><span id="line-50"></span><span id="local-6989586621679100400"><span id="local-6989586621679100401"><span id="local-6989586621679100402"><span class="annot"><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-type">runRIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100400"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100401"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100401"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100402"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100400"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100402"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-51"></span><span id="runRIO"><span class="annot"><span class="annottext">runRIO :: forall (m :: * -&gt; *) env a. MonadIO m =&gt; env -&gt; RIO env a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-var hs-var">runRIO</span></a></span></span><span> </span><span id="local-6989586621679100695"><span class="annot"><span class="annottext">env
+</span><a href="#local-6989586621679100695"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span id="local-6989586621679100696"><span class="annot"><span class="annottext">env -&gt; IO a
+</span><a href="#local-6989586621679100696"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">env -&gt; IO a
+</span><a href="#local-6989586621679100696"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">env
+</span><a href="#local-6989586621679100695"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Abstract `RIO` to an arbitrary `MonadReader` instance, which can handle IO.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- @since 0.0.1.0</span><span>
+</span><span id="line-56"></span><span id="local-6989586621679100406"><span id="local-6989586621679100407"><span id="local-6989586621679100408"><span class="annot"><a href="RIO.Prelude.RIO.html#liftRIO"><span class="hs-identifier hs-type">liftRIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100406"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100407"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100406"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100407"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100408"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100406"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100408"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-57"></span><span id="liftRIO"><span class="annot"><span class="annottext">liftRIO :: forall (m :: * -&gt; *) env a.
+(MonadIO m, MonadReader env m) =&gt;
+RIO env a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#liftRIO"><span class="hs-identifier hs-var hs-var">liftRIO</span></a></span></span><span> </span><span id="local-6989586621679100705"><span class="annot"><span class="annottext">RIO env a
+</span><a href="#local-6989586621679100705"><span class="hs-identifier hs-var">rio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679100706"><span class="annot"><span class="annottext">env
+</span><a href="#local-6989586621679100706"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m env
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><span class="annottext">env -&gt; RIO env a -&gt; m a
+forall (m :: * -&gt; *) env a. MonadIO m =&gt; env -&gt; RIO env a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-var">runRIO</span></a></span><span> </span><span class="annot"><span class="annottext">env
+</span><a href="#local-6989586621679100706"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">RIO env a
+</span><a href="#local-6989586621679100705"><span class="hs-identifier hs-var">rio</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Lift one RIO env to another.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- @since 0.1.13.0</span><span>
+</span><span id="line-64"></span><span id="local-6989586621679100412"><span id="local-6989586621679100413"><span id="local-6989586621679100414"><span class="annot"><a href="RIO.Prelude.RIO.html#mapRIO"><span class="hs-identifier hs-type">mapRIO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679100412"><span class="hs-identifier hs-type">outer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100413"><span class="hs-identifier hs-type">inner</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100413"><span class="hs-identifier hs-type">inner</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100414"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100412"><span class="hs-identifier hs-type">outer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100414"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-65"></span><span id="mapRIO"><span class="annot"><span class="annottext">mapRIO :: forall outer inner a.
+(outer -&gt; inner) -&gt; RIO inner a -&gt; RIO outer a
+</span><a href="RIO.Prelude.RIO.html#mapRIO"><span class="hs-identifier hs-var hs-var">mapRIO</span></a></span></span><span> </span><span id="local-6989586621679100711"><span class="annot"><span class="annottext">outer -&gt; inner
+</span><a href="#local-6989586621679100711"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679100712"><span class="annot"><span class="annottext">RIO inner a
+</span><a href="#local-6989586621679100712"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679100713"><span class="annot"><span class="annottext">outer
+</span><a href="#local-6989586621679100713"><span class="hs-identifier hs-var">outer</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RIO outer outer
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.Class.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">inner -&gt; RIO inner a -&gt; RIO outer a
+forall (m :: * -&gt; *) env a. MonadIO m =&gt; env -&gt; RIO env a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier hs-var">runRIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">outer -&gt; inner
+</span><a href="#local-6989586621679100711"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">outer
+</span><a href="#local-6989586621679100713"><span class="hs-identifier hs-var">outer</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">RIO inner a
+</span><a href="#local-6989586621679100712"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100423"><span class="annot"><span class="hs-identifier hs-type">MonadUnliftIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100423"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679100723"><span class="annot"><span class="annottext">withRunInIO :: forall b. ((forall a. RIO env a -&gt; IO a) -&gt; IO b) -&gt; RIO env b
+</span><a href="#local-6989586621679100723"><span class="hs-identifier hs-var hs-var hs-var hs-var">withRunInIO</span></a></span></span><span> </span><span id="local-6989586621679100725"><span class="annot"><span class="annottext">(forall a. RIO env a -&gt; IO a) -&gt; IO b
+</span><a href="#local-6989586621679100725"><span class="hs-identifier hs-var">inner</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT env IO b -&gt; RIO env b
+forall env a. ReaderT env IO a -&gt; RIO env a
+</span><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-var">RIO</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT env IO b -&gt; RIO env b) -&gt; ReaderT env IO b -&gt; RIO env b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((forall a. ReaderT env IO a -&gt; IO a) -&gt; IO b) -&gt; ReaderT env IO b
+forall b.
+((forall a. ReaderT env IO a -&gt; IO a) -&gt; IO b) -&gt; ReaderT env IO b
+forall (m :: * -&gt; *) b.
+MonadUnliftIO m =&gt;
+((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b
+</span><span class="hs-identifier hs-var">withRunInIO</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. ReaderT env IO a -&gt; IO a) -&gt; IO b)
+ -&gt; ReaderT env IO b)
+-&gt; ((forall a. ReaderT env IO a -&gt; IO a) -&gt; IO b)
+-&gt; ReaderT env IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679100726"><span class="annot"><span class="annottext">forall a. ReaderT env IO a -&gt; IO a
+</span><a href="#local-6989586621679100726"><span class="hs-identifier hs-var">run</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(forall a. RIO env a -&gt; IO a) -&gt; IO b
+</span><a href="#local-6989586621679100725"><span class="hs-identifier hs-var">inner</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT env IO a -&gt; IO a
+forall a. ReaderT env IO a -&gt; IO a
+</span><a href="#local-6989586621679100726"><span class="hs-identifier hs-var">run</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT env IO a -&gt; IO a)
+-&gt; (RIO env a -&gt; ReaderT env IO a) -&gt; RIO env a -&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">RIO env a -&gt; ReaderT env IO a
+forall env a. RIO env a -&gt; ReaderT env IO a
+</span><a href="RIO.Prelude.RIO.html#unRIO"><span class="hs-identifier hs-var">unRIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">withRunInIO</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100439"><span class="annot"><span class="hs-identifier hs-type">PrimMonad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100439"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-keyword">type</span><span> </span><span id="PrimState"><span class="annot"><span class="hs-identifier hs-var">PrimState</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100439"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">PrimState</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679100735"><span class="annot"><span class="annottext">primitive :: forall a.
+(State# (PrimState (RIO env))
+ -&gt; (# State# (PrimState (RIO env)), a #))
+-&gt; RIO env a
+</span><a href="#local-6989586621679100735"><span class="hs-identifier hs-var hs-var hs-var hs-var">primitive</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT env IO a -&gt; RIO env a
+forall env a. ReaderT env IO a -&gt; RIO env a
+</span><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-var">RIO</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT env IO a -&gt; RIO env a)
+-&gt; ((State# RealWorld -&gt; (# State# RealWorld, a #))
+    -&gt; ReaderT env IO a)
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, a #))
+-&gt; RIO env a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(env -&gt; IO a) -&gt; ReaderT env IO a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((env -&gt; IO a) -&gt; ReaderT env IO a)
+-&gt; ((State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; env -&gt; IO a)
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, a #))
+-&gt; ReaderT env IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; env -&gt; IO a
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; env -&gt; IO a)
+-&gt; ((State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a)
+-&gt; (State# RealWorld -&gt; (# State# RealWorld, a #))
+-&gt; env
+-&gt; IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(State# RealWorld -&gt; (# State# RealWorld, a #)) -&gt; IO a
+(State# (PrimState IO) -&gt; (# State# (PrimState IO), a #)) -&gt; IO a
+forall a.
+(State# (PrimState IO) -&gt; (# State# (PrimState IO), a #)) -&gt; IO a
+forall (m :: * -&gt; *) a.
+PrimMonad m =&gt;
+(State# (PrimState m) -&gt; (# State# (PrimState m), a #)) -&gt; m a
+</span><span class="hs-identifier hs-var">primitive</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Abstraction over how to read from and write to a mutable reference</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="SomeRef"><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-var">SomeRef</span></a></span></span><span> </span><span id="local-6989586621679100462"><span class="annot"><a href="#local-6989586621679100462"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SomeRef"><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-var">SomeRef</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100462"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679100462"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Read from a SomeRef</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-86"></span><span id="local-6989586621679100446"><span id="local-6989586621679100447"><span class="annot"><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier hs-type">readSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100446"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100447"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100446"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100447"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-87"></span><span id="readSomeRef"><span class="annot"><span class="annottext">readSomeRef :: forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier hs-var hs-var">readSomeRef</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span id="local-6989586621679100741"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679100741"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; m a
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679100741"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- | Write to a SomeRef</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-92"></span><span id="local-6989586621679100451"><span id="local-6989586621679100452"><span class="annot"><a href="RIO.Prelude.RIO.html#writeSomeRef"><span class="hs-identifier hs-type">writeSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100451"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100452"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100452"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100451"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-93"></span><span id="writeSomeRef"><span class="annot"><span class="annottext">writeSomeRef :: forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; a -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#writeSomeRef"><span class="hs-identifier hs-var hs-var">writeSomeRef</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679100744"><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679100744"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; (a -&gt; IO ()) -&gt; a -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679100744"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- | Modify a SomeRef</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- This function is subject to change due to the lack of atomic operations</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-99"></span><span id="local-6989586621679100455"><span id="local-6989586621679100456"><span class="annot"><a href="RIO.Prelude.RIO.html#modifySomeRef"><span class="hs-identifier hs-type">modifySomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100455"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100456"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679100456"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100456"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100455"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-100"></span><span id="modifySomeRef"><span class="annot"><span class="annottext">modifySomeRef :: forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; (a -&gt; a) -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#modifySomeRef"><span class="hs-identifier hs-var hs-var">modifySomeRef</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span id="local-6989586621679100748"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679100748"><span class="hs-identifier hs-var">read'</span></a></span></span><span> </span><span id="local-6989586621679100749"><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679100749"><span class="hs-identifier hs-var">write</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679100750"><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621679100750"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679100748"><span class="hs-identifier hs-var">read'</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; (a -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679100749"><span class="hs-identifier hs-var">write</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO ()) -&gt; (a -&gt; a) -&gt; a -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+</span><a href="#local-6989586621679100750"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679100459"><span class="annot"><a href="RIO.Prelude.RIO.html#ioRefToSomeRef"><span class="hs-identifier hs-type">ioRefToSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100459"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100459"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-104"></span><span id="ioRefToSomeRef"><span class="annot"><span class="annottext">ioRefToSomeRef :: forall a. IORef a -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#ioRefToSomeRef"><span class="hs-identifier hs-var hs-var">ioRefToSomeRef</span></a></span></span><span> </span><span id="local-6989586621679100754"><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679100754"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><span class="annottext">IO a -&gt; (a -&gt; IO ()) -&gt; SomeRef a
+forall a. IO a -&gt; (a -&gt; IO ()) -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-var">SomeRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IORef a -&gt; IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IORef a -&gt; m a
+</span><span class="hs-identifier hs-var">readIORef</span></span><span> </span><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679100754"><span class="hs-identifier hs-var">ref</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IORef a -&gt; (a -&gt; a) -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IORef a -&gt; (a -&gt; a) -&gt; m ()
+</span><span class="hs-identifier hs-var">modifyIORef'</span></span><span> </span><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679100754"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; a) -&gt; IO ()) -&gt; (a -&gt; a -&gt; a) -&gt; a -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679100467"><span class="annot"><a href="RIO.Prelude.RIO.html#uRefToSomeRef"><span class="hs-identifier hs-type">uRefToSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Unbox</span></span><span> </span><span class="annot"><a href="#local-6989586621679100467"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.URef.html#URef"><span class="hs-identifier hs-type">URef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100467"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100467"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-109"></span><span id="uRefToSomeRef"><span class="annot"><span class="annottext">uRefToSomeRef :: forall a. Unbox a =&gt; URef RealWorld a -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#uRefToSomeRef"><span class="hs-identifier hs-var hs-var">uRefToSomeRef</span></a></span></span><span> </span><span id="local-6989586621679100763"><span class="annot"><span class="annottext">URef RealWorld a
+</span><a href="#local-6989586621679100763"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">IO a -&gt; (a -&gt; IO ()) -&gt; SomeRef a
+forall a. IO a -&gt; (a -&gt; IO ()) -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-var">SomeRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">URef (PrimState IO) a -&gt; IO a
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+URef (PrimState m) a -&gt; m a
+</span><a href="RIO.Prelude.URef.html#readURef"><span class="hs-identifier hs-var">readURef</span></a></span><span> </span><span class="annot"><span class="annottext">URef RealWorld a
+URef (PrimState IO) a
+</span><a href="#local-6989586621679100763"><span class="hs-identifier hs-var">ref</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">URef (PrimState IO) a -&gt; a -&gt; IO ()
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+URef (PrimState m) a -&gt; a -&gt; m ()
+</span><a href="RIO.Prelude.URef.html#writeURef"><span class="hs-identifier hs-var">writeURef</span></a></span><span> </span><span class="annot"><span class="annottext">URef RealWorld a
+URef (PrimState IO) a
+</span><a href="#local-6989586621679100763"><span class="hs-identifier hs-var">ref</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Environment values with stateful capabilities to SomeRef</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-115"></span><span class="hs-keyword">class</span><span> </span><span id="HasStateRef"><span class="annot"><a href="RIO.Prelude.RIO.html#HasStateRef"><span class="hs-identifier hs-var">HasStateRef</span></a></span></span><span> </span><span id="local-6989586621679100479"><span class="annot"><a href="#local-6989586621679100479"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span id="local-6989586621679100478"><span class="annot"><a href="#local-6989586621679100478"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621679100478"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100479"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>  </span><span id="stateRefL"><span class="annot"><a href="RIO.Prelude.RIO.html#stateRefL"><span class="hs-identifier hs-type">stateRefL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Lens'</span></span><span> </span><span class="annot"><a href="#local-6989586621679100478"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100479"><span class="hs-identifier hs-type">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Identity state reference where the SomeRef is the env</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100480"><span class="annot"><a href="RIO.Prelude.RIO.html#HasStateRef"><span class="hs-identifier hs-type">HasStateRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100480"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100480"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679100771"><span class="annot"><span class="annottext">stateRefL :: Lens' (SomeRef a) (SomeRef a)
+</span><a href="RIO.Prelude.RIO.html#stateRefL"><span class="hs-identifier hs-var hs-var hs-var hs-var">stateRefL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SomeRef a -&gt; f (SomeRef a)) -&gt; SomeRef a -&gt; f (SomeRef a)
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- | Environment values with writing capabilities to SomeRef</span><span>
+</span><span id="line-125"></span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">class</span><span> </span><span id="HasWriteRef"><span class="annot"><a href="RIO.Prelude.RIO.html#HasWriteRef"><span class="hs-identifier hs-var">HasWriteRef</span></a></span></span><span> </span><span id="local-6989586621679100486"><span class="annot"><a href="#local-6989586621679100486"><span class="hs-identifier hs-type">w</span></a></span></span><span> </span><span id="local-6989586621679100485"><span class="annot"><a href="#local-6989586621679100485"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621679100485"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100486"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>  </span><span id="writeRefL"><span class="annot"><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-type">writeRefL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Lens'</span></span><span> </span><span class="annot"><a href="#local-6989586621679100485"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100486"><span class="hs-identifier hs-type">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- | Identity write reference where the SomeRef is the env</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100487"><span class="annot"><a href="RIO.Prelude.RIO.html#HasWriteRef"><span class="hs-identifier hs-type">HasWriteRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100487"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100487"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679100778"><span class="annot"><span class="annottext">writeRefL :: Lens' (SomeRef a) (SomeRef a)
+</span><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-var hs-var hs-var hs-var">writeRefL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SomeRef a -&gt; f (SomeRef a)) -&gt; SomeRef a -&gt; f (SomeRef a)
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100495"><span id="local-6989586621679100496"><span id="local-6989586621679100785"><span class="annot"><a href="RIO.Prelude.RIO.html#HasStateRef"><span class="hs-identifier hs-type">HasStateRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100495"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100496"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.State.Class.html#MonadState"><span class="hs-identifier hs-type">MonadState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100495"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100496"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679100796"><span class="annot"><span class="annottext">get :: RIO env s
+</span><a href="#local-6989586621679100796"><span class="hs-identifier hs-var hs-var hs-var hs-var">get</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679100798"><span class="annot"><span class="annottext">SomeRef s
+</span><a href="#local-6989586621679100798"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef s) env (SomeRef s) -&gt; RIO env (SomeRef s)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef s) env (SomeRef s)
+forall s env. HasStateRef s env =&gt; Lens' env (SomeRef s)
+Lens' env (SomeRef s)
+</span><a href="RIO.Prelude.RIO.html#stateRefL"><span class="hs-identifier hs-var">stateRefL</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">IO s -&gt; RIO env s
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO s -&gt; RIO env s) -&gt; IO s -&gt; RIO env s
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef s -&gt; IO s
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier hs-var">readSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef s
+</span><a href="#local-6989586621679100798"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621679100806"><span class="annot"><span class="annottext">put :: s -&gt; RIO env ()
+</span><a href="#local-6989586621679100806"><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></a></span></span><span> </span><span id="local-6989586621679100808"><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679100808"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679100809"><span class="annot"><span class="annottext">SomeRef s
+</span><a href="#local-6989586621679100809"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef s) env (SomeRef s) -&gt; RIO env (SomeRef s)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef s) env (SomeRef s)
+forall s env. HasStateRef s env =&gt; Lens' env (SomeRef s)
+Lens' env (SomeRef s)
+</span><a href="RIO.Prelude.RIO.html#stateRefL"><span class="hs-identifier hs-var">stateRefL</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; RIO env ()
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; RIO env ()) -&gt; IO () -&gt; RIO env ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef s -&gt; s -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; a -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#writeSomeRef"><span class="hs-identifier hs-var">writeSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef s
+</span><a href="#local-6989586621679100809"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">s
+</span><a href="#local-6989586621679100808"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679100511"><span id="local-6989586621679100512"><span id="local-6989586621679100817"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-type">Monoid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100511"><span class="hs-identifier hs-type">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#HasWriteRef"><span class="hs-identifier hs-type">HasWriteRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100511"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100512"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/mtl-2.3.1/src/Control.Monad.Writer.Class.html#MonadWriter"><span class="hs-identifier hs-type">MonadWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100511"><span class="hs-identifier hs-type">w</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier hs-type">RIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100512"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span id="local-6989586621679100831"><span class="annot"><span class="annottext">tell :: w -&gt; RIO env ()
+</span><a href="#local-6989586621679100831"><span class="hs-identifier hs-var hs-var hs-var hs-var">tell</span></a></span></span><span> </span><span id="local-6989586621679100833"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100833"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679100834"><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100834"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w) -&gt; RIO env (SomeRef w)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w)
+forall w env. HasWriteRef w env =&gt; Lens' env (SomeRef w)
+Lens' env (SomeRef w)
+</span><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-var">writeRefL</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; RIO env ()
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; RIO env ()) -&gt; IO () -&gt; RIO env ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w -&gt; (w -&gt; w) -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; (a -&gt; a) -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#modifySomeRef"><span class="hs-identifier hs-var">modifySomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100834"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">w -&gt; w -&gt; w
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100833"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621679100856"><span class="annot"><span class="annottext">listen :: forall a. RIO env a -&gt; RIO env (a, w)
+</span><a href="#local-6989586621679100856"><span class="hs-identifier hs-var hs-var hs-var hs-var">listen</span></a></span></span><span> </span><span id="local-6989586621679100858"><span class="annot"><span class="annottext">RIO env a
+</span><a href="#local-6989586621679100858"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621679100859"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100859"><span class="hs-identifier hs-var">w1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w) -&gt; RIO env (SomeRef w)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w)
+forall w env. HasWriteRef w env =&gt; Lens' env (SomeRef w)
+Lens' env (SomeRef w)
+</span><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-var">writeRefL</span></a></span><span> </span><span class="annot"><span class="annottext">RIO env (SomeRef w) -&gt; (SomeRef w -&gt; RIO env w) -&gt; RIO env w
+forall a b. RIO env a -&gt; (a -&gt; RIO env b) -&gt; RIO env b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">IO w -&gt; RIO env w
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO w -&gt; RIO env w)
+-&gt; (SomeRef w -&gt; IO w) -&gt; SomeRef w -&gt; RIO env w
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w -&gt; IO w
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier hs-var">readSomeRef</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span id="local-6989586621679100860"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100860"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RIO env a
+</span><a href="#local-6989586621679100858"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679100861"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100861"><span class="hs-identifier hs-var">w2</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-153"></span><span>      </span><span id="local-6989586621679100862"><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100862"><span class="hs-identifier hs-var">refEnv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w) -&gt; RIO env (SomeRef w)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w)
+forall w env. HasWriteRef w env =&gt; Lens' env (SomeRef w)
+Lens' env (SomeRef w)
+</span><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-var">writeRefL</span></a></span><span>
+</span><span id="line-154"></span><span>      </span><span id="local-6989586621679100863"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100863"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO w -&gt; RIO env w
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO w -&gt; RIO env w) -&gt; IO w -&gt; RIO env w
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w -&gt; IO w
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; m a
+</span><a href="RIO.Prelude.RIO.html#readSomeRef"><span class="hs-identifier hs-var">readSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100862"><span class="hs-identifier hs-var">refEnv</span></a></span><span>
+</span><span id="line-155"></span><span>      </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; RIO env ()
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; RIO env ()) -&gt; IO () -&gt; RIO env ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w -&gt; w -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; a -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#writeSomeRef"><span class="hs-identifier hs-var">writeSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100862"><span class="hs-identifier hs-var">refEnv</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100859"><span class="hs-identifier hs-var">w1</span></a></span><span>
+</span><span id="line-156"></span><span>      </span><span class="annot"><span class="annottext">w -&gt; RIO env w
+forall a. a -&gt; RIO env a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100863"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">(a, w) -&gt; RIO env (a, w)
+forall a. a -&gt; RIO env a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100860"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679100861"><span class="hs-identifier hs-var">w2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679100873"><span class="annot"><span class="annottext">pass :: forall a. RIO env (a, w -&gt; w) -&gt; RIO env a
+</span><a href="#local-6989586621679100873"><span class="hs-identifier hs-var hs-var hs-var hs-var">pass</span></a></span></span><span> </span><span id="local-6989586621679100875"><span class="annot"><span class="annottext">RIO env (a, w -&gt; w)
+</span><a href="#local-6989586621679100875"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679100876"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100876"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679100877"><span class="annot"><span class="annottext">w -&gt; w
+</span><a href="#local-6989586621679100877"><span class="hs-identifier hs-var">transF</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RIO env (a, w -&gt; w)
+</span><a href="#local-6989586621679100875"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span id="local-6989586621679100878"><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100878"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w) -&gt; RIO env (SomeRef w)
+forall s (m :: * -&gt; *) a. MonadReader s m =&gt; Getting a s a -&gt; m a
+</span><span class="hs-identifier hs-var">view</span></span><span> </span><span class="annot"><span class="annottext">Getting (SomeRef w) env (SomeRef w)
+forall w env. HasWriteRef w env =&gt; Lens' env (SomeRef w)
+Lens' env (SomeRef w)
+</span><a href="RIO.Prelude.RIO.html#writeRefL"><span class="hs-identifier hs-var">writeRefL</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; RIO env ()
+forall a. IO a -&gt; RIO env a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; RIO env ()) -&gt; IO () -&gt; RIO env ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w -&gt; (w -&gt; w) -&gt; IO ()
+forall (m :: * -&gt; *) a. MonadIO m =&gt; SomeRef a -&gt; (a -&gt; a) -&gt; m ()
+</span><a href="RIO.Prelude.RIO.html#modifySomeRef"><span class="hs-identifier hs-var">modifySomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">SomeRef w
+</span><a href="#local-6989586621679100878"><span class="hs-identifier hs-var">ref</span></a></span><span> </span><span class="annot"><span class="annottext">w -&gt; w
+</span><a href="#local-6989586621679100877"><span class="hs-identifier hs-var">transF</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; RIO env a
+forall a. a -&gt; RIO env a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100876"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | create a new boxed SomeRef</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-168"></span><span id="local-6989586621679100515"><span id="local-6989586621679100516"><span class="annot"><a href="RIO.Prelude.RIO.html#newSomeRef"><span class="hs-identifier hs-type">newSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100515"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100516"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100515"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100516"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-169"></span><span id="newSomeRef"><span class="annot"><span class="annottext">newSomeRef :: forall (m :: * -&gt; *) a. MonadIO m =&gt; a -&gt; m (SomeRef a)
+</span><a href="RIO.Prelude.RIO.html#newSomeRef"><span class="hs-identifier hs-var hs-var">newSomeRef</span></a></span></span><span> </span><span id="local-6989586621679100887"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100887"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="annottext">IORef a -&gt; SomeRef a
+forall a. IORef a -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#ioRefToSomeRef"><span class="hs-identifier hs-var">ioRefToSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">(IORef a -&gt; SomeRef a) -&gt; m (IORef a) -&gt; m (SomeRef a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m (IORef a)
+forall (m :: * -&gt; *) a. MonadIO m =&gt; a -&gt; m (IORef a)
+</span><span class="hs-identifier hs-var">newIORef</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100887"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- | create a new unboxed SomeRef</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- @since 0.1.4.0</span><span>
+</span><span id="line-175"></span><span id="local-6989586621679100524"><span id="local-6989586621679100525"><span class="annot"><a href="RIO.Prelude.RIO.html#newUnboxedSomeRef"><span class="hs-identifier hs-type">newUnboxedSomeRef</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100524"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Unbox</span></span><span> </span><span class="annot"><a href="#local-6989586621679100525"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100525"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679100524"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#SomeRef"><span class="hs-identifier hs-type">SomeRef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679100525"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-176"></span><span id="newUnboxedSomeRef"><span class="annot"><span class="annottext">newUnboxedSomeRef :: forall (m :: * -&gt; *) a. (MonadIO m, Unbox a) =&gt; a -&gt; m (SomeRef a)
+</span><a href="RIO.Prelude.RIO.html#newUnboxedSomeRef"><span class="hs-identifier hs-var hs-var">newUnboxedSomeRef</span></a></span></span><span> </span><span id="local-6989586621679100900"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100900"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-177"></span><span>  </span><span class="annot"><span class="annottext">URef RealWorld a -&gt; SomeRef a
+forall a. Unbox a =&gt; URef RealWorld a -&gt; SomeRef a
+</span><a href="RIO.Prelude.RIO.html#uRefToSomeRef"><span class="hs-identifier hs-var">uRefToSomeRef</span></a></span><span> </span><span class="annot"><span class="annottext">(URef RealWorld a -&gt; SomeRef a)
+-&gt; m (URef RealWorld a) -&gt; m (SomeRef a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>   </span><span class="annot"><span class="annottext">IO (URef RealWorld a) -&gt; m (URef RealWorld a)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; IO (URef (PrimState IO) a)
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+a -&gt; m (URef (PrimState m) a)
+</span><a href="RIO.Prelude.URef.html#newURef"><span class="hs-identifier hs-var">newURef</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679100900"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span></pre></body></html>

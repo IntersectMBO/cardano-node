@@ -1,0 +1,731 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      : Data.Text.Format.Types.Internal</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright   : (c) 2011 MailRank, Inc.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- License     : BSD-style</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Maintainer  : bos@serpentine.com</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Portability : GHC</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Types for text mangling.</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Text.Format.Types</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.Text.Format.Types.html#Shown"><span class="hs-identifier">Shown</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Integer format control</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Text.Format.Types.html#Hex"><span class="hs-identifier">Hex</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><span class="hs-comment">-- | Render an integral type in hexadecimal.</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="Hex"><span class="annot"><a href="Data.Text.Format.Types.html#Hex"><span class="hs-identifier hs-var">Hex</span></a></span></span><span> </span><span id="local-6989586621679076444"><span class="annot"><a href="#local-6989586621679076444"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Hex"><span class="annot"><a href="Data.Text.Format.Types.html#Hex"><span class="hs-identifier hs-var">Hex</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679076444"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076448"><span id="local-6989586621679076452"><span class="annot"><span class="annottext">Hex a -&gt; Hex a -&gt; Bool
+(Hex a -&gt; Hex a -&gt; Bool) -&gt; (Hex a -&gt; Hex a -&gt; Bool) -&gt; Eq (Hex a)
+forall a. Eq a =&gt; Hex a -&gt; Hex a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Hex a -&gt; Hex a -&gt; Bool
+== :: Hex a -&gt; Hex a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Hex a -&gt; Hex a -&gt; Bool
+/= :: Hex a -&gt; Hex a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076462"><span id="local-6989586621679076466"><span id="local-6989586621679076470"><span id="local-6989586621679076474"><span id="local-6989586621679076478"><span id="local-6989586621679076482"><span id="local-6989586621679076486"><span class="annot"><span class="annottext">Eq (Hex a)
+Eq (Hex a) =&gt;
+(Hex a -&gt; Hex a -&gt; Ordering)
+-&gt; (Hex a -&gt; Hex a -&gt; Bool)
+-&gt; (Hex a -&gt; Hex a -&gt; Bool)
+-&gt; (Hex a -&gt; Hex a -&gt; Bool)
+-&gt; (Hex a -&gt; Hex a -&gt; Bool)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; Ord (Hex a)
+Hex a -&gt; Hex a -&gt; Bool
+Hex a -&gt; Hex a -&gt; Ordering
+Hex a -&gt; Hex a -&gt; Hex a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Hex a)
+forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Bool
+forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Ordering
+forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+$ccompare :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Ordering
+compare :: Hex a -&gt; Hex a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Bool
+&lt; :: Hex a -&gt; Hex a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Bool
+&lt;= :: Hex a -&gt; Hex a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Bool
+&gt; :: Hex a -&gt; Hex a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Bool
+&gt;= :: Hex a -&gt; Hex a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+max :: Hex a -&gt; Hex a -&gt; Hex a
+$cmin :: forall a. Ord a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+min :: Hex a -&gt; Hex a -&gt; Hex a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076494"><span id="local-6989586621679076498"><span id="local-6989586621679076501"><span id="local-6989586621679076508"><span class="annot"><span class="annottext">ReadPrec [Hex a]
+ReadPrec (Hex a)
+Int -&gt; ReadS (Hex a)
+ReadS [Hex a]
+(Int -&gt; ReadS (Hex a))
+-&gt; ReadS [Hex a]
+-&gt; ReadPrec (Hex a)
+-&gt; ReadPrec [Hex a]
+-&gt; Read (Hex a)
+forall a. Read a =&gt; ReadPrec [Hex a]
+forall a. Read a =&gt; ReadPrec (Hex a)
+forall a. Read a =&gt; Int -&gt; ReadS (Hex a)
+forall a. Read a =&gt; ReadS [Hex a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (Hex a)
+readsPrec :: Int -&gt; ReadS (Hex a)
+$creadList :: forall a. Read a =&gt; ReadS [Hex a]
+readList :: ReadS [Hex a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (Hex a)
+readPrec :: ReadPrec (Hex a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [Hex a]
+readListPrec :: ReadPrec [Hex a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076513"><span id="local-6989586621679076518"><span id="local-6989586621679076522"><span class="annot"><span class="annottext">Int -&gt; Hex a -&gt; ShowS
+[Hex a] -&gt; ShowS
+Hex a -&gt; String
+(Int -&gt; Hex a -&gt; ShowS)
+-&gt; (Hex a -&gt; String) -&gt; ([Hex a] -&gt; ShowS) -&gt; Show (Hex a)
+forall a. Show a =&gt; Int -&gt; Hex a -&gt; ShowS
+forall a. Show a =&gt; [Hex a] -&gt; ShowS
+forall a. Show a =&gt; Hex a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Hex a -&gt; ShowS
+showsPrec :: Int -&gt; Hex a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Hex a -&gt; String
+show :: Hex a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Hex a] -&gt; ShowS
+showList :: [Hex a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076527"><span id="local-6989586621679076531"><span id="local-6989586621679076535"><span id="local-6989586621679076539"><span id="local-6989586621679076543"><span id="local-6989586621679076547"><span id="local-6989586621679076551"><span class="annot"><span class="annottext">Integer -&gt; Hex a
+Hex a -&gt; Hex a
+Hex a -&gt; Hex a -&gt; Hex a
+(Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a)
+-&gt; (Integer -&gt; Hex a)
+-&gt; Num (Hex a)
+forall a. Num a =&gt; Integer -&gt; Hex a
+forall a. Num a =&gt; Hex a -&gt; Hex a
+forall a. Num a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: forall a. Num a =&gt; Hex a -&gt; Hex a -&gt; Hex a
++ :: Hex a -&gt; Hex a -&gt; Hex a
+$c- :: forall a. Num a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+- :: Hex a -&gt; Hex a -&gt; Hex a
+$c* :: forall a. Num a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+* :: Hex a -&gt; Hex a -&gt; Hex a
+$cnegate :: forall a. Num a =&gt; Hex a -&gt; Hex a
+negate :: Hex a -&gt; Hex a
+$cabs :: forall a. Num a =&gt; Hex a -&gt; Hex a
+abs :: Hex a -&gt; Hex a
+$csignum :: forall a. Num a =&gt; Hex a -&gt; Hex a
+signum :: Hex a -&gt; Hex a
+$cfromInteger :: forall a. Num a =&gt; Integer -&gt; Hex a
+fromInteger :: Integer -&gt; Hex a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076564"><span class="annot"><span class="annottext">Num (Hex a)
+Ord (Hex a)
+(Num (Hex a), Ord (Hex a)) =&gt; (Hex a -&gt; Rational) -&gt; Real (Hex a)
+Hex a -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+forall a. Real a =&gt; Num (Hex a)
+forall a. Real a =&gt; Ord (Hex a)
+forall a. Real a =&gt; Hex a -&gt; Rational
+$ctoRational :: forall a. Real a =&gt; Hex a -&gt; Rational
+toRational :: Hex a -&gt; Rational
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076573"><span id="local-6989586621679076577"><span id="local-6989586621679076581"><span id="local-6989586621679076585"><span id="local-6989586621679076589"><span id="local-6989586621679076593"><span id="local-6989586621679076597"><span id="local-6989586621679076601"><span class="annot"><span class="annottext">Int -&gt; Hex a
+Hex a -&gt; Int
+Hex a -&gt; [Hex a]
+Hex a -&gt; Hex a
+Hex a -&gt; Hex a -&gt; [Hex a]
+Hex a -&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+(Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a)
+-&gt; (Int -&gt; Hex a)
+-&gt; (Hex a -&gt; Int)
+-&gt; (Hex a -&gt; [Hex a])
+-&gt; (Hex a -&gt; Hex a -&gt; [Hex a])
+-&gt; (Hex a -&gt; Hex a -&gt; [Hex a])
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a -&gt; [Hex a])
+-&gt; Enum (Hex a)
+forall a. Enum a =&gt; Int -&gt; Hex a
+forall a. Enum a =&gt; Hex a -&gt; Int
+forall a. Enum a =&gt; Hex a -&gt; [Hex a]
+forall a. Enum a =&gt; Hex a -&gt; Hex a
+forall a. Enum a =&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+forall a. Enum a =&gt; Hex a -&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: forall a. Enum a =&gt; Hex a -&gt; Hex a
+succ :: Hex a -&gt; Hex a
+$cpred :: forall a. Enum a =&gt; Hex a -&gt; Hex a
+pred :: Hex a -&gt; Hex a
+$ctoEnum :: forall a. Enum a =&gt; Int -&gt; Hex a
+toEnum :: Int -&gt; Hex a
+$cfromEnum :: forall a. Enum a =&gt; Hex a -&gt; Int
+fromEnum :: Hex a -&gt; Int
+$cenumFrom :: forall a. Enum a =&gt; Hex a -&gt; [Hex a]
+enumFrom :: Hex a -&gt; [Hex a]
+$cenumFromThen :: forall a. Enum a =&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+enumFromThen :: Hex a -&gt; Hex a -&gt; [Hex a]
+$cenumFromTo :: forall a. Enum a =&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+enumFromTo :: Hex a -&gt; Hex a -&gt; [Hex a]
+$cenumFromThenTo :: forall a. Enum a =&gt; Hex a -&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+enumFromThenTo :: Hex a -&gt; Hex a -&gt; Hex a -&gt; [Hex a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076614"><span id="local-6989586621679076618"><span id="local-6989586621679076622"><span id="local-6989586621679076626"><span id="local-6989586621679076630"><span id="local-6989586621679076634"><span id="local-6989586621679076638"><span class="annot"><span class="annottext">Enum (Hex a)
+Real (Hex a)
+(Real (Hex a), Enum (Hex a)) =&gt;
+(Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; Hex a)
+-&gt; (Hex a -&gt; Hex a -&gt; (Hex a, Hex a))
+-&gt; (Hex a -&gt; Hex a -&gt; (Hex a, Hex a))
+-&gt; (Hex a -&gt; Integer)
+-&gt; Integral (Hex a)
+Hex a -&gt; Integer
+Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+Hex a -&gt; Hex a -&gt; Hex a
+forall a. Integral a =&gt; Enum (Hex a)
+forall a. Integral a =&gt; Real (Hex a)
+forall a. Integral a =&gt; Hex a -&gt; Integer
+forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+quot :: Hex a -&gt; Hex a -&gt; Hex a
+$crem :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+rem :: Hex a -&gt; Hex a -&gt; Hex a
+$cdiv :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+div :: Hex a -&gt; Hex a -&gt; Hex a
+$cmod :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; Hex a
+mod :: Hex a -&gt; Hex a -&gt; Hex a
+$cquotRem :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+quotRem :: Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+$cdivMod :: forall a. Integral a =&gt; Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+divMod :: Hex a -&gt; Hex a -&gt; (Hex a, Hex a)
+$ctoInteger :: forall a. Integral a =&gt; Hex a -&gt; Integer
+toInteger :: Hex a -&gt; Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><span class="hs-comment">-- | Render a value using its 'Show' instance.</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">newtype</span><span> </span><span id="Shown"><span class="annot"><a href="Data.Text.Format.Types.html#Shown"><span class="hs-identifier hs-var">Shown</span></a></span></span><span> </span><span id="local-6989586621679076398"><span class="annot"><a href="#local-6989586621679076398"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Shown"><span class="annot"><a href="Data.Text.Format.Types.html#Shown"><span class="hs-identifier hs-var">Shown</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-26"></span><span>      </span><span id="shown"><span class="annot"><span class="annottext">forall a. Shown a -&gt; a
+</span><a href="Data.Text.Format.Types.html#shown"><span class="hs-identifier hs-var hs-var">shown</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679076398"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679076649"><span id="local-6989586621679076653"><span class="annot"><span class="annottext">Shown a -&gt; Shown a -&gt; Bool
+(Shown a -&gt; Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Bool) -&gt; Eq (Shown a)
+forall a. Eq a =&gt; Shown a -&gt; Shown a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; Shown a -&gt; Shown a -&gt; Bool
+== :: Shown a -&gt; Shown a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; Shown a -&gt; Shown a -&gt; Bool
+/= :: Shown a -&gt; Shown a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076659"><span id="local-6989586621679076663"><span id="local-6989586621679076667"><span class="annot"><span class="annottext">Int -&gt; Shown a -&gt; ShowS
+[Shown a] -&gt; ShowS
+Shown a -&gt; String
+(Int -&gt; Shown a -&gt; ShowS)
+-&gt; (Shown a -&gt; String) -&gt; ([Shown a] -&gt; ShowS) -&gt; Show (Shown a)
+forall a. Show a =&gt; Int -&gt; Shown a -&gt; ShowS
+forall a. Show a =&gt; [Shown a] -&gt; ShowS
+forall a. Show a =&gt; Shown a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; Shown a -&gt; ShowS
+showsPrec :: Int -&gt; Shown a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; Shown a -&gt; String
+show :: Shown a -&gt; String
+$cshowList :: forall a. Show a =&gt; [Shown a] -&gt; ShowS
+showList :: [Shown a] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076671"><span id="local-6989586621679076675"><span id="local-6989586621679076678"><span id="local-6989586621679076686"><span class="annot"><span class="annottext">ReadPrec [Shown a]
+ReadPrec (Shown a)
+Int -&gt; ReadS (Shown a)
+ReadS [Shown a]
+(Int -&gt; ReadS (Shown a))
+-&gt; ReadS [Shown a]
+-&gt; ReadPrec (Shown a)
+-&gt; ReadPrec [Shown a]
+-&gt; Read (Shown a)
+forall a. Read a =&gt; ReadPrec [Shown a]
+forall a. Read a =&gt; ReadPrec (Shown a)
+forall a. Read a =&gt; Int -&gt; ReadS (Shown a)
+forall a. Read a =&gt; ReadS [Shown a]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: forall a. Read a =&gt; Int -&gt; ReadS (Shown a)
+readsPrec :: Int -&gt; ReadS (Shown a)
+$creadList :: forall a. Read a =&gt; ReadS [Shown a]
+readList :: ReadS [Shown a]
+$creadPrec :: forall a. Read a =&gt; ReadPrec (Shown a)
+readPrec :: ReadPrec (Shown a)
+$creadListPrec :: forall a. Read a =&gt; ReadPrec [Shown a]
+readListPrec :: ReadPrec [Shown a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076693"><span id="local-6989586621679076697"><span id="local-6989586621679076701"><span id="local-6989586621679076705"><span id="local-6989586621679076709"><span id="local-6989586621679076713"><span id="local-6989586621679076717"><span class="annot"><span class="annottext">Eq (Shown a)
+Eq (Shown a) =&gt;
+(Shown a -&gt; Shown a -&gt; Ordering)
+-&gt; (Shown a -&gt; Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; Ord (Shown a)
+Shown a -&gt; Shown a -&gt; Bool
+Shown a -&gt; Shown a -&gt; Ordering
+Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (Shown a)
+forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Bool
+forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Ordering
+forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+$ccompare :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Ordering
+compare :: Shown a -&gt; Shown a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Bool
+&lt; :: Shown a -&gt; Shown a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Bool
+&lt;= :: Shown a -&gt; Shown a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Bool
+&gt; :: Shown a -&gt; Shown a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Bool
+&gt;= :: Shown a -&gt; Shown a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+max :: Shown a -&gt; Shown a -&gt; Shown a
+$cmin :: forall a. Ord a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+min :: Shown a -&gt; Shown a -&gt; Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076723"><span id="local-6989586621679076727"><span id="local-6989586621679076731"><span id="local-6989586621679076735"><span id="local-6989586621679076739"><span id="local-6989586621679076743"><span id="local-6989586621679076747"><span class="annot"><span class="annottext">Integer -&gt; Shown a
+Shown a -&gt; Shown a
+Shown a -&gt; Shown a -&gt; Shown a
+(Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Integer -&gt; Shown a)
+-&gt; Num (Shown a)
+forall a. Num a =&gt; Integer -&gt; Shown a
+forall a. Num a =&gt; Shown a -&gt; Shown a
+forall a. Num a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: forall a. Num a =&gt; Shown a -&gt; Shown a -&gt; Shown a
++ :: Shown a -&gt; Shown a -&gt; Shown a
+$c- :: forall a. Num a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+- :: Shown a -&gt; Shown a -&gt; Shown a
+$c* :: forall a. Num a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+* :: Shown a -&gt; Shown a -&gt; Shown a
+$cnegate :: forall a. Num a =&gt; Shown a -&gt; Shown a
+negate :: Shown a -&gt; Shown a
+$cabs :: forall a. Num a =&gt; Shown a -&gt; Shown a
+abs :: Shown a -&gt; Shown a
+$csignum :: forall a. Num a =&gt; Shown a -&gt; Shown a
+signum :: Shown a -&gt; Shown a
+$cfromInteger :: forall a. Num a =&gt; Integer -&gt; Shown a
+fromInteger :: Integer -&gt; Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076756"><span id="local-6989586621679076760"><span id="local-6989586621679076764"><span class="annot"><span class="annottext">Num (Shown a)
+Num (Shown a) =&gt;
+(Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Rational -&gt; Shown a)
+-&gt; Fractional (Shown a)
+Rational -&gt; Shown a
+Shown a -&gt; Shown a
+Shown a -&gt; Shown a -&gt; Shown a
+forall a. Fractional a =&gt; Num (Shown a)
+forall a. Fractional a =&gt; Rational -&gt; Shown a
+forall a. Fractional a =&gt; Shown a -&gt; Shown a
+forall a. Fractional a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+Num a =&gt;
+(a -&gt; a -&gt; a) -&gt; (a -&gt; a) -&gt; (Rational -&gt; a) -&gt; Fractional a
+$c/ :: forall a. Fractional a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+/ :: Shown a -&gt; Shown a -&gt; Shown a
+$crecip :: forall a. Fractional a =&gt; Shown a -&gt; Shown a
+recip :: Shown a -&gt; Shown a
+$cfromRational :: forall a. Fractional a =&gt; Rational -&gt; Shown a
+fromRational :: Rational -&gt; Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Fractional"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Fractional</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076778"><span class="annot"><span class="annottext">Num (Shown a)
+Ord (Shown a)
+(Num (Shown a), Ord (Shown a)) =&gt;
+(Shown a -&gt; Rational) -&gt; Real (Shown a)
+Shown a -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+forall a. Real a =&gt; Num (Shown a)
+forall a. Real a =&gt; Ord (Shown a)
+forall a. Real a =&gt; Shown a -&gt; Rational
+$ctoRational :: forall a. Real a =&gt; Shown a -&gt; Rational
+toRational :: Shown a -&gt; Rational
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076792"><span id="local-6989586621679076800"><span id="local-6989586621679076808"><span id="local-6989586621679076816"><span id="local-6989586621679076824"><span class="annot"><span class="annottext">Fractional (Shown a)
+Real (Shown a)
+(Real (Shown a), Fractional (Shown a)) =&gt;
+(forall b. Integral b =&gt; Shown a -&gt; (b, Shown a))
+-&gt; (forall b. Integral b =&gt; Shown a -&gt; b)
+-&gt; (forall b. Integral b =&gt; Shown a -&gt; b)
+-&gt; (forall b. Integral b =&gt; Shown a -&gt; b)
+-&gt; (forall b. Integral b =&gt; Shown a -&gt; b)
+-&gt; RealFrac (Shown a)
+forall b. Integral b =&gt; Shown a -&gt; b
+forall b. Integral b =&gt; Shown a -&gt; (b, Shown a)
+forall a.
+(Real a, Fractional a) =&gt;
+(forall b. Integral b =&gt; a -&gt; (b, a))
+-&gt; (forall b. Integral b =&gt; a -&gt; b)
+-&gt; (forall b. Integral b =&gt; a -&gt; b)
+-&gt; (forall b. Integral b =&gt; a -&gt; b)
+-&gt; (forall b. Integral b =&gt; a -&gt; b)
+-&gt; RealFrac a
+forall a. RealFrac a =&gt; Fractional (Shown a)
+forall a. RealFrac a =&gt; Real (Shown a)
+forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; (b, Shown a)
+$cproperFraction :: forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; (b, Shown a)
+properFraction :: forall b. Integral b =&gt; Shown a -&gt; (b, Shown a)
+$ctruncate :: forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; b
+truncate :: forall b. Integral b =&gt; Shown a -&gt; b
+$cround :: forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; b
+round :: forall b. Integral b =&gt; Shown a -&gt; b
+$cceiling :: forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; b
+ceiling :: forall b. Integral b =&gt; Shown a -&gt; b
+$cfloor :: forall a b. (RealFrac a, Integral b) =&gt; Shown a -&gt; b
+floor :: forall b. Integral b =&gt; Shown a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#RealFrac"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">RealFrac</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>                </span><span id="local-6989586621679076838"><span id="local-6989586621679076842"><span id="local-6989586621679076846"><span id="local-6989586621679076850"><span id="local-6989586621679076854"><span id="local-6989586621679076858"><span id="local-6989586621679076862"><span id="local-6989586621679076866"><span id="local-6989586621679076870"><span id="local-6989586621679076874"><span id="local-6989586621679076878"><span id="local-6989586621679076882"><span id="local-6989586621679076886"><span id="local-6989586621679076890"><span id="local-6989586621679076894"><span id="local-6989586621679076898"><span id="local-6989586621679076902"><span id="local-6989586621679076906"><span id="local-6989586621679076910"><span id="local-6989586621679076914"><span id="local-6989586621679076918"><span id="local-6989586621679076922"><span class="annot"><span class="annottext">Fractional (Shown a)
+Shown a
+Fractional (Shown a) =&gt;
+Shown a
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; Floating (Shown a)
+Shown a -&gt; Shown a
+Shown a -&gt; Shown a -&gt; Shown a
+forall a. Floating a =&gt; Fractional (Shown a)
+forall a. Floating a =&gt; Shown a
+forall a. Floating a =&gt; Shown a -&gt; Shown a
+forall a. Floating a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+Fractional a =&gt;
+a
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; Floating a
+$cpi :: forall a. Floating a =&gt; Shown a
+pi :: Shown a
+$cexp :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+exp :: Shown a -&gt; Shown a
+$clog :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+log :: Shown a -&gt; Shown a
+$csqrt :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+sqrt :: Shown a -&gt; Shown a
+$c** :: forall a. Floating a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+** :: Shown a -&gt; Shown a -&gt; Shown a
+$clogBase :: forall a. Floating a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+logBase :: Shown a -&gt; Shown a -&gt; Shown a
+$csin :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+sin :: Shown a -&gt; Shown a
+$ccos :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+cos :: Shown a -&gt; Shown a
+$ctan :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+tan :: Shown a -&gt; Shown a
+$casin :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+asin :: Shown a -&gt; Shown a
+$cacos :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+acos :: Shown a -&gt; Shown a
+$catan :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+atan :: Shown a -&gt; Shown a
+$csinh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+sinh :: Shown a -&gt; Shown a
+$ccosh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+cosh :: Shown a -&gt; Shown a
+$ctanh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+tanh :: Shown a -&gt; Shown a
+$casinh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+asinh :: Shown a -&gt; Shown a
+$cacosh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+acosh :: Shown a -&gt; Shown a
+$catanh :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+atanh :: Shown a -&gt; Shown a
+$clog1p :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+log1p :: Shown a -&gt; Shown a
+$cexpm1 :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+expm1 :: Shown a -&gt; Shown a
+$clog1pexp :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+log1pexp :: Shown a -&gt; Shown a
+$clog1mexp :: forall a. Floating a =&gt; Shown a -&gt; Shown a
+log1mexp :: Shown a -&gt; Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#Floating"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Floating</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076936"><span id="local-6989586621679076940"><span id="local-6989586621679076944"><span id="local-6989586621679076948"><span id="local-6989586621679076952"><span id="local-6989586621679076956"><span id="local-6989586621679076960"><span id="local-6989586621679076964"><span id="local-6989586621679076968"><span id="local-6989586621679076972"><span id="local-6989586621679076976"><span id="local-6989586621679076980"><span id="local-6989586621679076984"><span id="local-6989586621679076988"><span class="annot"><span class="annottext">Floating (Shown a)
+RealFrac (Shown a)
+(RealFrac (Shown a), Floating (Shown a)) =&gt;
+(Shown a -&gt; Integer)
+-&gt; (Shown a -&gt; Int)
+-&gt; (Shown a -&gt; (Int, Int))
+-&gt; (Shown a -&gt; (Integer, Int))
+-&gt; (Integer -&gt; Int -&gt; Shown a)
+-&gt; (Shown a -&gt; Int)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Int -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Bool)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; RealFloat (Shown a)
+Int -&gt; Shown a -&gt; Shown a
+Integer -&gt; Int -&gt; Shown a
+Shown a -&gt; Bool
+Shown a -&gt; Int
+Shown a -&gt; Integer
+Shown a -&gt; (Int, Int)
+Shown a -&gt; (Integer, Int)
+Shown a -&gt; Shown a
+Shown a -&gt; Shown a -&gt; Shown a
+forall a. RealFloat a =&gt; Floating (Shown a)
+forall a. RealFloat a =&gt; RealFrac (Shown a)
+forall a. RealFloat a =&gt; Int -&gt; Shown a -&gt; Shown a
+forall a. RealFloat a =&gt; Integer -&gt; Int -&gt; Shown a
+forall a. RealFloat a =&gt; Shown a -&gt; Bool
+forall a. RealFloat a =&gt; Shown a -&gt; Int
+forall a. RealFloat a =&gt; Shown a -&gt; Integer
+forall a. RealFloat a =&gt; Shown a -&gt; (Int, Int)
+forall a. RealFloat a =&gt; Shown a -&gt; (Integer, Int)
+forall a. RealFloat a =&gt; Shown a -&gt; Shown a
+forall a. RealFloat a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+(RealFrac a, Floating a) =&gt;
+(a -&gt; Integer)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; (Int, Int))
+-&gt; (a -&gt; (Integer, Int))
+-&gt; (Integer -&gt; Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a -&gt; a)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; RealFloat a
+$cfloatRadix :: forall a. RealFloat a =&gt; Shown a -&gt; Integer
+floatRadix :: Shown a -&gt; Integer
+$cfloatDigits :: forall a. RealFloat a =&gt; Shown a -&gt; Int
+floatDigits :: Shown a -&gt; Int
+$cfloatRange :: forall a. RealFloat a =&gt; Shown a -&gt; (Int, Int)
+floatRange :: Shown a -&gt; (Int, Int)
+$cdecodeFloat :: forall a. RealFloat a =&gt; Shown a -&gt; (Integer, Int)
+decodeFloat :: Shown a -&gt; (Integer, Int)
+$cencodeFloat :: forall a. RealFloat a =&gt; Integer -&gt; Int -&gt; Shown a
+encodeFloat :: Integer -&gt; Int -&gt; Shown a
+$cexponent :: forall a. RealFloat a =&gt; Shown a -&gt; Int
+exponent :: Shown a -&gt; Int
+$csignificand :: forall a. RealFloat a =&gt; Shown a -&gt; Shown a
+significand :: Shown a -&gt; Shown a
+$cscaleFloat :: forall a. RealFloat a =&gt; Int -&gt; Shown a -&gt; Shown a
+scaleFloat :: Int -&gt; Shown a -&gt; Shown a
+$cisNaN :: forall a. RealFloat a =&gt; Shown a -&gt; Bool
+isNaN :: Shown a -&gt; Bool
+$cisInfinite :: forall a. RealFloat a =&gt; Shown a -&gt; Bool
+isInfinite :: Shown a -&gt; Bool
+$cisDenormalized :: forall a. RealFloat a =&gt; Shown a -&gt; Bool
+isDenormalized :: Shown a -&gt; Bool
+$cisNegativeZero :: forall a. RealFloat a =&gt; Shown a -&gt; Bool
+isNegativeZero :: Shown a -&gt; Bool
+$cisIEEE :: forall a. RealFloat a =&gt; Shown a -&gt; Bool
+isIEEE :: Shown a -&gt; Bool
+$catan2 :: forall a. RealFloat a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+atan2 :: Shown a -&gt; Shown a -&gt; Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#RealFloat"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">RealFloat</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679076997"><span id="local-6989586621679077001"><span id="local-6989586621679077005"><span id="local-6989586621679077009"><span id="local-6989586621679077013"><span id="local-6989586621679077017"><span id="local-6989586621679077021"><span id="local-6989586621679077025"><span class="annot"><span class="annottext">Int -&gt; Shown a
+Shown a -&gt; Int
+Shown a -&gt; [Shown a]
+Shown a -&gt; Shown a
+Shown a -&gt; Shown a -&gt; [Shown a]
+Shown a -&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+(Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a)
+-&gt; (Int -&gt; Shown a)
+-&gt; (Shown a -&gt; Int)
+-&gt; (Shown a -&gt; [Shown a])
+-&gt; (Shown a -&gt; Shown a -&gt; [Shown a])
+-&gt; (Shown a -&gt; Shown a -&gt; [Shown a])
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a -&gt; [Shown a])
+-&gt; Enum (Shown a)
+forall a. Enum a =&gt; Int -&gt; Shown a
+forall a. Enum a =&gt; Shown a -&gt; Int
+forall a. Enum a =&gt; Shown a -&gt; [Shown a]
+forall a. Enum a =&gt; Shown a -&gt; Shown a
+forall a. Enum a =&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+forall a. Enum a =&gt; Shown a -&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: forall a. Enum a =&gt; Shown a -&gt; Shown a
+succ :: Shown a -&gt; Shown a
+$cpred :: forall a. Enum a =&gt; Shown a -&gt; Shown a
+pred :: Shown a -&gt; Shown a
+$ctoEnum :: forall a. Enum a =&gt; Int -&gt; Shown a
+toEnum :: Int -&gt; Shown a
+$cfromEnum :: forall a. Enum a =&gt; Shown a -&gt; Int
+fromEnum :: Shown a -&gt; Int
+$cenumFrom :: forall a. Enum a =&gt; Shown a -&gt; [Shown a]
+enumFrom :: Shown a -&gt; [Shown a]
+$cenumFromThen :: forall a. Enum a =&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+enumFromThen :: Shown a -&gt; Shown a -&gt; [Shown a]
+$cenumFromTo :: forall a. Enum a =&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+enumFromTo :: Shown a -&gt; Shown a -&gt; [Shown a]
+$cenumFromThenTo :: forall a. Enum a =&gt; Shown a -&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+enumFromThenTo :: Shown a -&gt; Shown a -&gt; Shown a -&gt; [Shown a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077037"><span id="local-6989586621679077041"><span id="local-6989586621679077045"><span id="local-6989586621679077049"><span id="local-6989586621679077053"><span id="local-6989586621679077057"><span id="local-6989586621679077061"><span class="annot"><span class="annottext">Enum (Shown a)
+Real (Shown a)
+(Real (Shown a), Enum (Shown a)) =&gt;
+(Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; Shown a)
+-&gt; (Shown a -&gt; Shown a -&gt; (Shown a, Shown a))
+-&gt; (Shown a -&gt; Shown a -&gt; (Shown a, Shown a))
+-&gt; (Shown a -&gt; Integer)
+-&gt; Integral (Shown a)
+Shown a -&gt; Integer
+Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+Shown a -&gt; Shown a -&gt; Shown a
+forall a. Integral a =&gt; Enum (Shown a)
+forall a. Integral a =&gt; Real (Shown a)
+forall a. Integral a =&gt; Shown a -&gt; Integer
+forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+quot :: Shown a -&gt; Shown a -&gt; Shown a
+$crem :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+rem :: Shown a -&gt; Shown a -&gt; Shown a
+$cdiv :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+div :: Shown a -&gt; Shown a -&gt; Shown a
+$cmod :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; Shown a
+mod :: Shown a -&gt; Shown a -&gt; Shown a
+$cquotRem :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+quotRem :: Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+$cdivMod :: forall a. Integral a =&gt; Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+divMod :: Shown a -&gt; Shown a -&gt; (Shown a, Shown a)
+$ctoInteger :: forall a. Integral a =&gt; Shown a -&gt; Integer
+toInteger :: Shown a -&gt; Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077067"><span id="local-6989586621679077071"><span class="annot"><span class="annottext">Shown a
+Shown a -&gt; Shown a -&gt; Bounded (Shown a)
+forall a. a -&gt; a -&gt; Bounded a
+forall a. Bounded a =&gt; Shown a
+$cminBound :: forall a. Bounded a =&gt; Shown a
+minBound :: Shown a
+$cmaxBound :: forall a. Bounded a =&gt; Shown a
+maxBound :: Shown a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span></pre></body></html>

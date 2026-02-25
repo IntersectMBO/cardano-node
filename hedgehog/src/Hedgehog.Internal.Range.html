@@ -1,0 +1,1147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK not-home #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Internal.Range</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Size</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier">Size</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Range</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier">Range</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#origin"><span class="hs-identifier">origin</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#bounds"><span class="hs-identifier">bounds</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#lowerBound"><span class="hs-identifier">lowerBound</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#upperBound"><span class="hs-identifier">upperBound</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Constant</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#singleton"><span class="hs-identifier">singleton</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#constant"><span class="hs-identifier">constant</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#constantFrom"><span class="hs-identifier">constantFrom</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#constantBounded"><span class="hs-identifier">constantBounded</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Linear</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#linear"><span class="hs-identifier">linear</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFrom"><span class="hs-identifier">linearFrom</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFrac"><span class="hs-identifier">linearFrac</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFracFrom"><span class="hs-identifier">linearFracFrom</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#linearBounded"><span class="hs-identifier">linearBounded</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Exponential</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#exponential"><span class="hs-identifier">exponential</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFrom"><span class="hs-identifier">exponentialFrom</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialBounded"><span class="hs-identifier">exponentialBounded</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFloat"><span class="hs-identifier">exponentialFloat</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFloatFrom"><span class="hs-identifier">exponentialFloatFrom</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Internal</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="hs-comment">-- $internal</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier">clamp</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleLinear"><span class="hs-identifier">scaleLinear</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleLinearFrac"><span class="hs-identifier">scaleLinearFrac</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleExponential"><span class="hs-identifier">scaleExponential</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier">scaleExponentialFloat</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#bimap"><span class="hs-identifier">bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#minimum"><span class="hs-identifier">minimum</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#maximum"><span class="hs-identifier">maximum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- &gt;&gt;&gt; import Data.Int (Int8)</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- &gt;&gt;&gt; let x = 3</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | Tests are parameterized by the size of the randomly-generated data. The</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--   meaning of a 'Size' value depends on the particular generator used, but</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--   it must always be a number between 0 and 99 inclusive.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">newtype</span><span> </span><span id="Size"><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-var">Size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span id="Size"><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-var">Size</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-57"></span><span>      </span><span id="unSize"><span class="annot"><span class="annottext">Size -&gt; Int
+</span><a href="Hedgehog.Internal.Range.html#unSize"><span class="hs-identifier hs-var hs-var">unSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679474179"><span id="local-6989586621679474184"><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Bool
+(Size -&gt; Size -&gt; Bool) -&gt; (Size -&gt; Size -&gt; Bool) -&gt; Eq Size
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Size -&gt; Size -&gt; Bool
+== :: Size -&gt; Size -&gt; Bool
+$c/= :: Size -&gt; Size -&gt; Bool
+/= :: Size -&gt; Size -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474192"><span id="local-6989586621679474197"><span id="local-6989586621679474201"><span id="local-6989586621679474205"><span id="local-6989586621679474209"><span id="local-6989586621679474213"><span id="local-6989586621679474217"><span class="annot"><span class="annottext">Eq Size
+Eq Size =&gt;
+(Size -&gt; Size -&gt; Ordering)
+-&gt; (Size -&gt; Size -&gt; Bool)
+-&gt; (Size -&gt; Size -&gt; Bool)
+-&gt; (Size -&gt; Size -&gt; Bool)
+-&gt; (Size -&gt; Size -&gt; Bool)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; Ord Size
+Size -&gt; Size -&gt; Bool
+Size -&gt; Size -&gt; Ordering
+Size -&gt; Size -&gt; Size
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Size -&gt; Size -&gt; Ordering
+compare :: Size -&gt; Size -&gt; Ordering
+$c&lt; :: Size -&gt; Size -&gt; Bool
+&lt; :: Size -&gt; Size -&gt; Bool
+$c&lt;= :: Size -&gt; Size -&gt; Bool
+&lt;= :: Size -&gt; Size -&gt; Bool
+$c&gt; :: Size -&gt; Size -&gt; Bool
+&gt; :: Size -&gt; Size -&gt; Bool
+$c&gt;= :: Size -&gt; Size -&gt; Bool
+&gt;= :: Size -&gt; Size -&gt; Bool
+$cmax :: Size -&gt; Size -&gt; Size
+max :: Size -&gt; Size -&gt; Size
+$cmin :: Size -&gt; Size -&gt; Size
+min :: Size -&gt; Size -&gt; Size
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474223"><span id="local-6989586621679474228"><span id="local-6989586621679474232"><span id="local-6989586621679474236"><span id="local-6989586621679474240"><span id="local-6989586621679474244"><span id="local-6989586621679474248"><span class="annot"><span class="annottext">Integer -&gt; Size
+Size -&gt; Size
+Size -&gt; Size -&gt; Size
+(Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size)
+-&gt; (Size -&gt; Size)
+-&gt; (Size -&gt; Size)
+-&gt; (Integer -&gt; Size)
+-&gt; Num Size
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Size -&gt; Size -&gt; Size
++ :: Size -&gt; Size -&gt; Size
+$c- :: Size -&gt; Size -&gt; Size
+- :: Size -&gt; Size -&gt; Size
+$c* :: Size -&gt; Size -&gt; Size
+* :: Size -&gt; Size -&gt; Size
+$cnegate :: Size -&gt; Size
+negate :: Size -&gt; Size
+$cabs :: Size -&gt; Size
+abs :: Size -&gt; Size
+$csignum :: Size -&gt; Size
+signum :: Size -&gt; Size
+$cfromInteger :: Integer -&gt; Size
+fromInteger :: Integer -&gt; Size
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474258"><span class="annot"><span class="annottext">Num Size
+Ord Size
+(Num Size, Ord Size) =&gt; (Size -&gt; Rational) -&gt; Real Size
+Size -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Size -&gt; Rational
+toRational :: Size -&gt; Rational
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Real"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474265"><span id="local-6989586621679474270"><span id="local-6989586621679474274"><span id="local-6989586621679474278"><span id="local-6989586621679474282"><span id="local-6989586621679474286"><span id="local-6989586621679474290"><span id="local-6989586621679474294"><span class="annot"><span class="annottext">Int -&gt; Size
+Size -&gt; Int
+Size -&gt; [Size]
+Size -&gt; Size
+Size -&gt; Size -&gt; [Size]
+Size -&gt; Size -&gt; Size -&gt; [Size]
+(Size -&gt; Size)
+-&gt; (Size -&gt; Size)
+-&gt; (Int -&gt; Size)
+-&gt; (Size -&gt; Int)
+-&gt; (Size -&gt; [Size])
+-&gt; (Size -&gt; Size -&gt; [Size])
+-&gt; (Size -&gt; Size -&gt; [Size])
+-&gt; (Size -&gt; Size -&gt; Size -&gt; [Size])
+-&gt; Enum Size
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Size -&gt; Size
+succ :: Size -&gt; Size
+$cpred :: Size -&gt; Size
+pred :: Size -&gt; Size
+$ctoEnum :: Int -&gt; Size
+toEnum :: Int -&gt; Size
+$cfromEnum :: Size -&gt; Int
+fromEnum :: Size -&gt; Int
+$cenumFrom :: Size -&gt; [Size]
+enumFrom :: Size -&gt; [Size]
+$cenumFromThen :: Size -&gt; Size -&gt; [Size]
+enumFromThen :: Size -&gt; Size -&gt; [Size]
+$cenumFromTo :: Size -&gt; Size -&gt; [Size]
+enumFromTo :: Size -&gt; Size -&gt; [Size]
+$cenumFromThenTo :: Size -&gt; Size -&gt; Size -&gt; [Size]
+enumFromThenTo :: Size -&gt; Size -&gt; Size -&gt; [Size]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474304"><span id="local-6989586621679474309"><span id="local-6989586621679474313"><span id="local-6989586621679474317"><span id="local-6989586621679474321"><span id="local-6989586621679474325"><span id="local-6989586621679474329"><span class="annot"><span class="annottext">Enum Size
+Real Size
+(Real Size, Enum Size) =&gt;
+(Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; Size)
+-&gt; (Size -&gt; Size -&gt; (Size, Size))
+-&gt; (Size -&gt; Size -&gt; (Size, Size))
+-&gt; (Size -&gt; Integer)
+-&gt; Integral Size
+Size -&gt; Integer
+Size -&gt; Size -&gt; (Size, Size)
+Size -&gt; Size -&gt; Size
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Size -&gt; Size -&gt; Size
+quot :: Size -&gt; Size -&gt; Size
+$crem :: Size -&gt; Size -&gt; Size
+rem :: Size -&gt; Size -&gt; Size
+$cdiv :: Size -&gt; Size -&gt; Size
+div :: Size -&gt; Size -&gt; Size
+$cmod :: Size -&gt; Size -&gt; Size
+mod :: Size -&gt; Size -&gt; Size
+$cquotRem :: Size -&gt; Size -&gt; (Size, Size)
+quotRem :: Size -&gt; Size -&gt; (Size, Size)
+$cdivMod :: Size -&gt; Size -&gt; (Size, Size)
+divMod :: Size -&gt; Size -&gt; (Size, Size)
+$ctoInteger :: Size -&gt; Integer
+toInteger :: Size -&gt; Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474336"><span id="local-6989586621679474340"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679474347"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Size -&gt; ShowS
+</span><a href="#local-6989586621679474347"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span id="local-6989586621679474349"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474349"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span id="local-6989586621679474350"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474350"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; ShowS -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showParen"><span class="hs-identifier hs-var">showParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474349"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; ShowS) -&gt; ShowS -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Size &quot;</span></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">11</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474350"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474357"><span id="local-6989586621679474361"><span id="local-6989586621679474364"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-type">Read</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679474378"><span class="annot"><span class="annottext">readsPrec :: Int -&gt; ReadS Size
+</span><a href="#local-6989586621679474378"><span class="hs-identifier hs-var hs-var hs-var hs-var">readsPrec</span></a></span></span><span> </span><span id="local-6989586621679474380"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474380"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; ReadS Size -&gt; ReadS Size
+forall a. Bool -&gt; ReadS a -&gt; ReadS a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#readParen"><span class="hs-identifier hs-var">readParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474380"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ReadS Size -&gt; ReadS Size) -&gt; ReadS Size -&gt; ReadS Size
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474382"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474382"><span class="hs-identifier hs-var">r0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Size&quot;</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474383"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474383"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadS String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#lex"><span class="hs-identifier hs-var">lex</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474382"><span class="hs-identifier hs-var">r0</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679474385"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474385"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474386"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474386"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ReadS Int
+forall a. Read a =&gt; Int -&gt; ReadS a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#readsPrec"><span class="hs-identifier hs-var">readsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">11</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474383"><span class="hs-identifier hs-var">r1</span></a></span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">(Size, String) -&gt; [(Size, String)]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Size
+</span><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-var">Size</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679474385"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679474386"><span class="hs-identifier hs-var">r2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | A range describes the bounds of a number to generate, which may or may not</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--   be dependent on a 'Size'.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   The constructor takes an origin between the lower and upper bound, and a</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--   function from 'Size' to bounds.  As the size goes towards @0@, the values</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   go towards the origin.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="Range"><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span></span><span> </span><span id="local-6989586621679474094"><span class="annot"><a href="#local-6989586621679474094"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span id="Range"><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679474094"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679474094"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679474094"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474390"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679474396"><span class="annot"><span class="annottext">fmap :: forall a b. (a -&gt; b) -&gt; Range a -&gt; Range b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var hs-var hs-var hs-var">fmap</span></a></span></span><span> </span><span id="local-6989586621679474397"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679474397"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span id="local-6989586621679474398"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474398"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474399"><span class="annot"><span class="annottext">Size -&gt; (a, a)
+</span><a href="#local-6989586621679474399"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">b -&gt; (Size -&gt; (b, b)) -&gt; Range b
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679474397"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474398"><span class="hs-identifier hs-var">z</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (b, b)) -&gt; Range b) -&gt; (Size -&gt; (b, b)) -&gt; Range b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474400"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474400"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; (a -&gt; b) -&gt; (a, a) -&gt; (b, b)
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; (a, c) -&gt; (b, d)
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bifunctor.html#bimap"><span class="hs-identifier hs-var">bimap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679474397"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679474397"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; (a, a)
+</span><a href="#local-6989586621679474399"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474400"><span class="hs-identifier hs-var">sz</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Get the origin of a range. This might be the mid-point or the lower bound,</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   depending on what the range represents.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   The 'bounds' of a range are scaled around this value when using the</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   'linear' family of combinators.</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--   When using a 'Range' to generate numbers, the shrinking function will</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--   shrink towards the origin.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span id="local-6989586621679474100"><span class="annot"><a href="Hedgehog.Internal.Range.html#origin"><span class="hs-identifier hs-type">origin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474100"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474100"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-98"></span><span id="origin"><span class="annot"><span class="annottext">origin :: forall a. Range a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#origin"><span class="hs-identifier hs-var hs-var">origin</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span id="local-6989586621679474401"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474401"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="annot"><span class="annottext">Size -&gt; (a, a)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474401"><span class="hs-identifier hs-var">z</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- | Get the extents of a range, for a given size.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span id="local-6989586621679474102"><span class="annot"><a href="Hedgehog.Internal.Range.html#bounds"><span class="hs-identifier hs-type">bounds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474102"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679474102"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679474102"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-104"></span><span id="bounds"><span class="annot"><span class="annottext">bounds :: forall a. Size -&gt; Range a -&gt; (a, a)
+</span><a href="Hedgehog.Internal.Range.html#bounds"><span class="hs-identifier hs-var hs-var">bounds</span></a></span></span><span> </span><span id="local-6989586621679474402"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474402"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679474403"><span class="annot"><span class="annottext">Size -&gt; (a, a)
+</span><a href="#local-6989586621679474403"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><span class="annottext">Size -&gt; (a, a)
+</span><a href="#local-6989586621679474403"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474402"><span class="hs-identifier hs-var">sz</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Get the lower bound of a range for the given size.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span id="local-6989586621679474104"><span class="annot"><a href="Hedgehog.Internal.Range.html#lowerBound"><span class="hs-identifier hs-type">lowerBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474104"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474104"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474104"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-110"></span><span id="lowerBound"><span class="annot"><span class="annottext">lowerBound :: forall a. Ord a =&gt; Size -&gt; Range a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#lowerBound"><span class="hs-identifier hs-var hs-var">lowerBound</span></a></span></span><span> </span><span id="local-6989586621679474406"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474406"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span id="local-6989586621679474407"><span class="annot"><span class="annottext">Range a
+</span><a href="#local-6989586621679474407"><span class="hs-identifier hs-var">range</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679474408"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474408"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474409"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474409"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Range a -&gt; (a, a)
+forall a. Size -&gt; Range a -&gt; (a, a)
+</span><a href="Hedgehog.Internal.Range.html#bounds"><span class="hs-identifier hs-var">bounds</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474406"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Range a
+</span><a href="#local-6989586621679474407"><span class="hs-identifier hs-var">range</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474408"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474409"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | Get the upper bound of a range for the given size.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span id="local-6989586621679474411"><span class="annot"><a href="Hedgehog.Internal.Range.html#upperBound"><span class="hs-identifier hs-type">upperBound</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474411"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474411"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474411"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-120"></span><span id="upperBound"><span class="annot"><span class="annottext">upperBound :: forall a. Ord a =&gt; Size -&gt; Range a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#upperBound"><span class="hs-identifier hs-var hs-var">upperBound</span></a></span></span><span> </span><span id="local-6989586621679474414"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474414"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span id="local-6989586621679474415"><span class="annot"><span class="annottext">Range a
+</span><a href="#local-6989586621679474415"><span class="hs-identifier hs-var">range</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679474416"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474416"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474417"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474417"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Range a -&gt; (a, a)
+forall a. Size -&gt; Range a -&gt; (a, a)
+</span><a href="Hedgehog.Internal.Range.html#bounds"><span class="hs-identifier hs-var">bounds</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474414"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Range a
+</span><a href="#local-6989586621679474415"><span class="hs-identifier hs-var">range</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474416"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474417"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | Construct a range which represents a constant single value.</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds x $ singleton 5</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--   (5,5)</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span class="hs-comment">--   &gt;&gt;&gt; origin $ singleton 5</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--   5</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span id="local-6989586621679474107"><span class="annot"><a href="Hedgehog.Internal.Range.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679474107"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474107"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-136"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: forall a. a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span id="local-6989586621679474419"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474419"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474419"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474419"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474419"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- | Construct a range which is unaffected by the size parameter.</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">--   A range from @0@ to @10@, with the origin at @0@:</span><span>
+</span><span id="line-142"></span><span class="hs-comment">--</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds x $ constant 0 10</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--   (0,10)</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--   &gt;&gt;&gt; origin $ constant 0 10</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--   0</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679474109"><span class="annot"><a href="Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-type">constant</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679474109"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474109"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474109"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-150"></span><span id="constant"><span class="annot"><span class="annottext">constant :: forall a. a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-var hs-var">constant</span></a></span></span><span> </span><span id="local-6989586621679474420"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474420"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474421"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474421"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#constantFrom"><span class="hs-identifier hs-var">constantFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474420"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474420"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474421"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- | Construct a range which is unaffected by the size parameter with a origin</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--   point which may differ from the bounds.</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--</span><span>
+</span><span id="line-156"></span><span class="hs-comment">--   A range from @-10@ to @10@, with the origin at @0@:</span><span>
+</span><span id="line-157"></span><span class="hs-comment">--</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds x $ constantFrom 0 (-10) 10</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--   (-10,10)</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--   &gt;&gt;&gt; origin $ constantFrom 0 (-10) 10</span><span>
+</span><span id="line-162"></span><span class="hs-comment">--   0</span><span>
+</span><span id="line-163"></span><span class="hs-comment">--</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--   A range from @1970@ to @2100@, with the origin at @2000@:</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds x $ constantFrom 2000 1970 2100</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--   (1970,2100)</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--   &gt;&gt;&gt; origin $ constantFrom 2000 1970 2100</span><span>
+</span><span id="line-170"></span><span class="hs-comment">--   2000</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span id="local-6989586621679474111"><span class="annot"><a href="Hedgehog.Internal.Range.html#constantFrom"><span class="hs-identifier hs-type">constantFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-173"></span><span>     </span><span class="annot"><a href="#local-6989586621679474111"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Origin (the value produced when the size parameter is 0).</span></span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474111"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Lower bound (the bottom of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474111"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Upper bound (the top of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474111"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-177"></span><span id="constantFrom"><span class="annot"><span class="annottext">constantFrom :: forall a. a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#constantFrom"><span class="hs-identifier hs-var hs-var">constantFrom</span></a></span></span><span> </span><span id="local-6989586621679474422"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474422"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474423"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474423"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474424"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474424"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474422"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474423"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474424"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- | Construct a range which is unaffected by the size parameter using the full</span><span>
+</span><span id="line-181"></span><span class="hs-comment">--   range of a data type.</span><span>
+</span><span id="line-182"></span><span class="hs-comment">--</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--   A range from @-128@ to @127@, with the origin at @0@:</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds x (constantBounded :: Range Int8)</span><span>
+</span><span id="line-186"></span><span class="hs-comment">--   (-128,127)</span><span>
+</span><span id="line-187"></span><span class="hs-comment">--</span><span>
+</span><span id="line-188"></span><span class="hs-comment">--   &gt;&gt;&gt; origin (constantBounded :: Range Int8)</span><span>
+</span><span id="line-189"></span><span class="hs-comment">--   0</span><span>
+</span><span id="line-190"></span><span class="hs-comment">--</span><span>
+</span><span id="line-191"></span><span id="local-6989586621679474113"><span class="annot"><a href="Hedgehog.Internal.Range.html#constantBounded"><span class="hs-identifier hs-type">constantBounded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474113"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#Num"><span class="hs-identifier hs-type">Num</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474113"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474113"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-192"></span><span id="constantBounded"><span class="annot"><span class="annottext">constantBounded :: forall a. (Bounded a, Num a) =&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#constantBounded"><span class="hs-identifier hs-var hs-var">constantBounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#constantFrom"><span class="hs-identifier hs-var">constantFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- | Construct a range which scales the second bound relative to the size</span><span>
+</span><span id="line-196"></span><span class="hs-comment">--   parameter.</span><span>
+</span><span id="line-197"></span><span class="hs-comment">--</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ linear 0 10</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--   (0,0)</span><span>
+</span><span id="line-200"></span><span class="hs-comment">--</span><span>
+</span><span id="line-201"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 $ linear 0 10</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--   (0,5)</span><span>
+</span><span id="line-203"></span><span class="hs-comment">--</span><span>
+</span><span id="line-204"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ linear 0 10</span><span>
+</span><span id="line-205"></span><span class="hs-comment">--   (0,10)</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span id="local-6989586621679474116"><span class="annot"><a href="Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-type">linear</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474116"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474116"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474116"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474116"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-208"></span><span id="linear"><span class="annot"><span class="annottext">linear :: forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var hs-var">linear</span></a></span></span><span> </span><span id="local-6989586621679474434"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474434"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474435"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474435"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFrom"><span class="hs-identifier hs-var">linearFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474434"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474434"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474435"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- | Construct a range which scales the bounds relative to the size parameter.</span><span>
+</span><span id="line-212"></span><span class="hs-comment">--</span><span>
+</span><span id="line-213"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ linearFrom 0 (-10) 10</span><span>
+</span><span id="line-214"></span><span class="hs-comment">--   (0,0)</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 $ linearFrom 0 (-10) 20</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--   (-5,10)</span><span>
+</span><span id="line-218"></span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ linearFrom 0 (-10) 20</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--   (-10,20)</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--</span><span>
+</span><span id="line-222"></span><span id="local-6989586621679474118"><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFrom"><span class="hs-identifier hs-type">linearFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Origin (the value produced when the size parameter is 0).</span></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Lower bound (the bottom of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Upper bound (the top of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-227"></span><span id="linearFrom"><span class="annot"><span class="annottext">linearFrom :: forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFrom"><span class="hs-identifier hs-var hs-var">linearFrom</span></a></span></span><span> </span><span id="local-6989586621679474447"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474447"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474448"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474448"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474449"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474449"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-228"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474447"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474450"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474450"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-230"></span><span>      </span><span id="local-6989586621679474459"><span class="annot"><span class="annottext">x_sized :: a
+</span><a href="#local-6989586621679474459"><span class="hs-identifier hs-var hs-var">x_sized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-231"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474448"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474449"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinear"><span class="hs-identifier hs-var">scaleLinear</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474450"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474447"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474448"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>      </span><span id="local-6989586621679474468"><span class="annot"><span class="annottext">y_sized :: a
+</span><a href="#local-6989586621679474468"><span class="hs-identifier hs-var hs-var">y_sized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-234"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474448"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474449"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinear"><span class="hs-identifier hs-var">scaleLinear</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474450"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474447"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474449"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-keyword">in</span><span>
+</span><span id="line-236"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474459"><span class="hs-identifier hs-var">x_sized</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474468"><span class="hs-identifier hs-var">y_sized</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- | Construct a range which is scaled relative to the size parameter and uses</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--   the full range of a data type.</span><span>
+</span><span id="line-240"></span><span class="hs-comment">--</span><span>
+</span><span id="line-241"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 (linearBounded :: Range Int8)</span><span>
+</span><span id="line-242"></span><span class="hs-comment">--   (0,0)</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 (linearBounded :: Range Int8)</span><span>
+</span><span id="line-245"></span><span class="hs-comment">--   (-64,64)</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--</span><span>
+</span><span id="line-247"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 (linearBounded :: Range Int8)</span><span>
+</span><span id="line-248"></span><span class="hs-comment">--   (-128,127)</span><span>
+</span><span id="line-249"></span><span class="hs-comment">--</span><span>
+</span><span id="line-250"></span><span id="local-6989586621679474122"><span class="annot"><a href="Hedgehog.Internal.Range.html#linearBounded"><span class="hs-identifier hs-type">linearBounded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474122"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474122"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474122"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-251"></span><span id="linearBounded"><span class="annot"><span class="annottext">linearBounded :: forall a. (Bounded a, Integral a) =&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearBounded"><span class="hs-identifier hs-var hs-var">linearBounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFrom"><span class="hs-identifier hs-var">linearFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- | Construct a range which scales the second bound relative to the size</span><span>
+</span><span id="line-255"></span><span class="hs-comment">--   parameter.</span><span>
+</span><span id="line-256"></span><span class="hs-comment">--</span><span>
+</span><span id="line-257"></span><span class="hs-comment">--   /This works the same as 'linear', but for fractional values./</span><span>
+</span><span id="line-258"></span><span class="hs-comment">--</span><span>
+</span><span id="line-259"></span><span id="local-6989586621679474124"><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFrac"><span class="hs-identifier hs-type">linearFrac</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Fractional"><span class="hs-identifier hs-type">Fractional</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474124"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474124"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474124"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474124"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474124"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-260"></span><span id="linearFrac"><span class="annot"><span class="annottext">linearFrac :: forall a. (Fractional a, Ord a) =&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFrac"><span class="hs-identifier hs-var hs-var">linearFrac</span></a></span></span><span> </span><span id="local-6989586621679474481"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474481"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474482"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474482"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-261"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. (Fractional a, Ord a) =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFracFrom"><span class="hs-identifier hs-var">linearFracFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474481"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474481"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474482"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- | Construct a range which scales the bounds relative to the size parameter.</span><span>
+</span><span id="line-264"></span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span class="hs-comment">--   /This works the same as 'linearFrom', but for fractional values./</span><span>
+</span><span id="line-266"></span><span class="hs-comment">--</span><span>
+</span><span id="line-267"></span><span id="local-6989586621679474126"><span class="annot"><a href="Hedgehog.Internal.Range.html#linearFracFrom"><span class="hs-identifier hs-type">linearFracFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Fractional"><span class="hs-identifier hs-type">Fractional</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474126"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-268"></span><span id="linearFracFrom"><span class="annot"><span class="annottext">linearFracFrom :: forall a. (Fractional a, Ord a) =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#linearFracFrom"><span class="hs-identifier hs-var hs-var">linearFracFrom</span></a></span></span><span> </span><span id="local-6989586621679474488"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474488"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474489"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474489"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474490"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474490"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-269"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474488"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474491"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474491"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-270"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-271"></span><span>      </span><span id="local-6989586621679474496"><span class="annot"><span class="annottext">x_sized :: a
+</span><a href="#local-6989586621679474496"><span class="hs-identifier hs-var hs-var">x_sized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-272"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474489"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474490"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Fractional a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinearFrac"><span class="hs-identifier hs-var">scaleLinearFrac</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474491"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474488"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474489"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-273"></span><span>
+</span><span id="line-274"></span><span>      </span><span id="local-6989586621679474501"><span class="annot"><span class="annottext">y_sized :: a
+</span><a href="#local-6989586621679474501"><span class="hs-identifier hs-var hs-var">y_sized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-275"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474489"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474490"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Fractional a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinearFrac"><span class="hs-identifier hs-var">scaleLinearFrac</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474491"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474488"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474490"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-276"></span><span>    </span><span class="hs-keyword">in</span><span>
+</span><span id="line-277"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474496"><span class="hs-identifier hs-var">x_sized</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474501"><span class="hs-identifier hs-var">y_sized</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-278"></span><span>
+</span><span id="line-279"></span><span class="hs-comment">-- | Truncate a value so it stays within some range.</span><span>
+</span><span id="line-280"></span><span class="hs-comment">--</span><span>
+</span><span id="line-281"></span><span class="hs-comment">--   &gt;&gt;&gt; clamp 5 10 15</span><span>
+</span><span id="line-282"></span><span class="hs-comment">--   10</span><span>
+</span><span id="line-283"></span><span class="hs-comment">--</span><span>
+</span><span id="line-284"></span><span class="hs-comment">--   &gt;&gt;&gt; clamp 5 10 0</span><span>
+</span><span id="line-285"></span><span class="hs-comment">--   5</span><span>
+</span><span id="line-286"></span><span class="hs-comment">--</span><span>
+</span><span id="line-287"></span><span id="local-6989586621679474120"><span class="annot"><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-type">clamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-288"></span><span id="clamp"><span class="annot"><span class="annottext">clamp :: forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var hs-var">clamp</span></a></span></span><span> </span><span id="local-6989586621679474508"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474508"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474509"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474509"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span id="local-6989586621679474510"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474510"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-289"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474508"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474509"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">then</span><span>
+</span><span id="line-290"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474508"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474509"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474510"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-keyword">else</span><span>
+</span><span id="line-292"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474509"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474508"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474510"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>
+</span><span id="line-294"></span><span class="hs-comment">-- | Scale an integral linearly with the size parameter.</span><span>
+</span><span id="line-295"></span><span class="hs-comment">--</span><span>
+</span><span id="line-296"></span><span id="local-6989586621679474121"><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleLinear"><span class="hs-identifier hs-type">scaleLinear</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474121"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474121"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474121"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474121"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-297"></span><span id="scaleLinear"><span class="annot"><span class="annottext">scaleLinear :: forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinear"><span class="hs-identifier hs-var hs-var">scaleLinear</span></a></span></span><span> </span><span id="local-6989586621679474520"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474520"><span class="hs-identifier hs-var">sz0</span></a></span></span><span> </span><span id="local-6989586621679474521"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474521"><span class="hs-identifier hs-var">z0</span></a></span></span><span> </span><span id="local-6989586621679474522"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474522"><span class="hs-identifier hs-var">n0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-298"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-299"></span><span>    </span><span id="local-6989586621679474527"><span class="annot"><span class="annottext">sz :: Size
+</span><a href="#local-6989586621679474527"><span class="hs-identifier hs-var hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-300"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">99</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474520"><span class="hs-identifier hs-var">sz0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-301"></span><span>
+</span><span id="line-302"></span><span>    </span><span id="local-6989586621679474534"><span class="annot"><span class="annottext">z :: Integer
+</span><a href="#local-6989586621679474534"><span class="hs-identifier hs-var hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-303"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#toInteger"><span class="hs-identifier hs-var">toInteger</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474521"><span class="hs-identifier hs-var">z0</span></a></span><span>
+</span><span id="line-304"></span><span>
+</span><span id="line-305"></span><span>    </span><span id="local-6989586621679474541"><span class="annot"><span class="annottext">n :: Integer
+</span><a href="#local-6989586621679474541"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-306"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#toInteger"><span class="hs-identifier hs-var">toInteger</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474522"><span class="hs-identifier hs-var">n0</span></a></span><span>
+</span><span id="line-307"></span><span>
+</span><span id="line-308"></span><span>    </span><span class="hs-comment">-- @rng@ has magnitude 1 bigger than the biggest diff</span><span>
+</span><span id="line-309"></span><span>    </span><span class="hs-comment">-- i.e. it specifies the range the diff can be in [0,rng)</span><span>
+</span><span id="line-310"></span><span>    </span><span class="hs-comment">-- with the upper bound being exclusive.</span><span>
+</span><span id="line-311"></span><span>    </span><span id="local-6989586621679474546"><span class="annot"><span class="annottext">rng :: Integer
+</span><a href="#local-6989586621679474546"><span class="hs-identifier hs-var hs-var">rng</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-312"></span><span>      </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474541"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474534"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#signum"><span class="hs-identifier hs-var">signum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474541"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474534"><span class="hs-identifier hs-var">z</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-313"></span><span>
+</span><span id="line-314"></span><span>    </span><span id="local-6989586621679474555"><span class="annot"><span class="annottext">diff :: Integer
+</span><a href="#local-6989586621679474555"><span class="hs-identifier hs-var hs-var">diff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-315"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474546"><span class="hs-identifier hs-var">rng</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474527"><span class="hs-identifier hs-var">sz</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#quot"><span class="hs-operator hs-var">`quot`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-316"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-317"></span><span>    </span><span class="annot"><span class="annottext">Integer -&gt; a
+forall a. Num a =&gt; Integer -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#fromInteger"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; a) -&gt; Integer -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474534"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679474555"><span class="hs-identifier hs-var">diff</span></a></span><span>
+</span><span id="line-318"></span><span>
+</span><span id="line-319"></span><span class="hs-comment">-- | Scale a fractional number linearly with the size parameter.</span><span>
+</span><span id="line-320"></span><span class="hs-comment">--</span><span>
+</span><span id="line-321"></span><span id="local-6989586621679474129"><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleLinearFrac"><span class="hs-identifier hs-type">scaleLinearFrac</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Fractional"><span class="hs-identifier hs-type">Fractional</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474129"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474129"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474129"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474129"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-322"></span><span id="scaleLinearFrac"><span class="annot"><span class="annottext">scaleLinearFrac :: forall a. Fractional a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleLinearFrac"><span class="hs-identifier hs-var hs-var">scaleLinearFrac</span></a></span></span><span> </span><span id="local-6989586621679474561"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474561"><span class="hs-identifier hs-var">sz0</span></a></span></span><span> </span><span id="local-6989586621679474562"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474562"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474563"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474563"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-323"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-324"></span><span>    </span><span id="local-6989586621679474568"><span class="annot"><span class="annottext">sz :: Size
+</span><a href="#local-6989586621679474568"><span class="hs-identifier hs-var hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-325"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#max"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#min"><span class="hs-identifier hs-var">min</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">99</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474561"><span class="hs-identifier hs-var">sz0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-326"></span><span>
+</span><span id="line-327"></span><span>    </span><span id="local-6989586621679474576"><span class="annot"><span class="annottext">diff :: a
+</span><a href="#local-6989586621679474576"><span class="hs-identifier hs-var hs-var">diff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-328"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474563"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474562"><span class="hs-identifier hs-var">z</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; a
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474568"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span>
+</span><span id="line-329"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-330"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474562"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474576"><span class="hs-identifier hs-var">diff</span></a></span><span>
+</span><span id="line-331"></span><span>
+</span><span id="line-332"></span><span class="hs-comment">-- | Construct a range which scales the second bound exponentially relative to</span><span>
+</span><span id="line-333"></span><span class="hs-comment">--   the size parameter.</span><span>
+</span><span id="line-334"></span><span class="hs-comment">--</span><span>
+</span><span id="line-335"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ exponential 1 512</span><span>
+</span><span id="line-336"></span><span class="hs-comment">--   (1,1)</span><span>
+</span><span id="line-337"></span><span class="hs-comment">--</span><span>
+</span><span id="line-338"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 11 $ exponential 1 512</span><span>
+</span><span id="line-339"></span><span class="hs-comment">--   (1,2)</span><span>
+</span><span id="line-340"></span><span class="hs-comment">--</span><span>
+</span><span id="line-341"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 22 $ exponential 1 512</span><span>
+</span><span id="line-342"></span><span class="hs-comment">--   (1,4)</span><span>
+</span><span id="line-343"></span><span class="hs-comment">--</span><span>
+</span><span id="line-344"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 77 $ exponential 1 512</span><span>
+</span><span id="line-345"></span><span class="hs-comment">--   (1,128)</span><span>
+</span><span id="line-346"></span><span class="hs-comment">--</span><span>
+</span><span id="line-347"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 88 $ exponential 1 512</span><span>
+</span><span id="line-348"></span><span class="hs-comment">--   (1,256)</span><span>
+</span><span id="line-349"></span><span class="hs-comment">--</span><span>
+</span><span id="line-350"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ exponential 1 512</span><span>
+</span><span id="line-351"></span><span class="hs-comment">--   (1,512)</span><span>
+</span><span id="line-352"></span><span class="hs-comment">--</span><span>
+</span><span id="line-353"></span><span id="local-6989586621679474578"><span class="annot"><a href="Hedgehog.Internal.Range.html#exponential"><span class="hs-identifier hs-type">exponential</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474578"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474578"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474578"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474578"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-354"></span><span id="exponential"><span class="annot"><span class="annottext">exponential :: forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponential"><span class="hs-identifier hs-var hs-var">exponential</span></a></span></span><span> </span><span id="local-6989586621679474581"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474581"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474582"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474582"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-355"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFrom"><span class="hs-identifier hs-var">exponentialFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474581"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474581"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474582"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-356"></span><span>
+</span><span id="line-357"></span><span class="hs-comment">-- | Construct a range which scales the bounds exponentially relative to the</span><span>
+</span><span id="line-358"></span><span class="hs-comment">-- size parameter.</span><span>
+</span><span id="line-359"></span><span class="hs-comment">--</span><span>
+</span><span id="line-360"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ exponentialFrom 0 (-128) 512</span><span>
+</span><span id="line-361"></span><span class="hs-comment">--   (0,0)</span><span>
+</span><span id="line-362"></span><span class="hs-comment">--</span><span>
+</span><span id="line-363"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 25 $ exponentialFrom 0 (-128) 512</span><span>
+</span><span id="line-364"></span><span class="hs-comment">--   (-2,4)</span><span>
+</span><span id="line-365"></span><span class="hs-comment">--</span><span>
+</span><span id="line-366"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 $ exponentialFrom 0 (-128) 512</span><span>
+</span><span id="line-367"></span><span class="hs-comment">--   (-11,22)</span><span>
+</span><span id="line-368"></span><span class="hs-comment">--</span><span>
+</span><span id="line-369"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 75 $ exponentialFrom 0 (-128) 512</span><span>
+</span><span id="line-370"></span><span class="hs-comment">--   (-39,112)</span><span>
+</span><span id="line-371"></span><span class="hs-comment">--</span><span>
+</span><span id="line-372"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ exponentialFrom x (-128) 512</span><span>
+</span><span id="line-373"></span><span class="hs-comment">--   (-128,512)</span><span>
+</span><span id="line-374"></span><span class="hs-comment">--</span><span>
+</span><span id="line-375"></span><span id="local-6989586621679474583"><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFrom"><span class="hs-identifier hs-type">exponentialFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474583"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-376"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474583"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Origin (the value produced when the size parameter is 0).</span></span><span>
+</span><span id="line-377"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474583"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Lower bound (the bottom of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-378"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474583"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Upper bound (the top of the range when the size parameter is 99).</span></span><span>
+</span><span id="line-379"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474583"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-380"></span><span id="exponentialFrom"><span class="annot"><span class="annottext">exponentialFrom :: forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFrom"><span class="hs-identifier hs-var hs-var">exponentialFrom</span></a></span></span><span> </span><span id="local-6989586621679474590"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474590"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474591"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474591"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474592"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474592"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-381"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474590"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474593"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474593"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-382"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-383"></span><span>      </span><span id="local-6989586621679474602"><span class="annot"><span class="annottext">sized_x :: a
+</span><a href="#local-6989586621679474602"><span class="hs-identifier hs-var hs-var">sized_x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-384"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474591"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474592"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponential"><span class="hs-identifier hs-var">scaleExponential</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474593"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474590"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474591"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-385"></span><span>
+</span><span id="line-386"></span><span>      </span><span id="local-6989586621679474611"><span class="annot"><span class="annottext">sized_y :: a
+</span><a href="#local-6989586621679474611"><span class="hs-identifier hs-var hs-var">sized_y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-387"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474591"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474592"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponential"><span class="hs-identifier hs-var">scaleExponential</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474593"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474590"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474592"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-388"></span><span>    </span><span class="hs-keyword">in</span><span>
+</span><span id="line-389"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474602"><span class="hs-identifier hs-var">sized_x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474611"><span class="hs-identifier hs-var">sized_y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-390"></span><span>
+</span><span id="line-391"></span><span class="hs-comment">-- | Construct a range which is scaled exponentially relative to the size</span><span>
+</span><span id="line-392"></span><span class="hs-comment">--   parameter and uses the full range of a data type.</span><span>
+</span><span id="line-393"></span><span class="hs-comment">--</span><span>
+</span><span id="line-394"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 (exponentialBounded :: Range Int8)</span><span>
+</span><span id="line-395"></span><span class="hs-comment">--   (0,0)</span><span>
+</span><span id="line-396"></span><span class="hs-comment">--</span><span>
+</span><span id="line-397"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 (exponentialBounded :: Range Int8)</span><span>
+</span><span id="line-398"></span><span class="hs-comment">--   (-11,11)</span><span>
+</span><span id="line-399"></span><span class="hs-comment">--</span><span>
+</span><span id="line-400"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 (exponentialBounded :: Range Int8)</span><span>
+</span><span id="line-401"></span><span class="hs-comment">--   (-128,127)</span><span>
+</span><span id="line-402"></span><span class="hs-comment">--</span><span>
+</span><span id="line-403"></span><span id="local-6989586621679474612"><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialBounded"><span class="hs-identifier hs-type">exponentialBounded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-type">Bounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474612"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474612"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474612"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-404"></span><span id="exponentialBounded"><span class="annot"><span class="annottext">exponentialBounded :: forall a. (Bounded a, Integral a) =&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialBounded"><span class="hs-identifier hs-var hs-var">exponentialBounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-405"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. Integral a =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFrom"><span class="hs-identifier hs-var">exponentialFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#minBound"><span class="hs-identifier hs-var">minBound</span></a></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#maxBound"><span class="hs-identifier hs-var">maxBound</span></a></span><span>
+</span><span id="line-406"></span><span>
+</span><span id="line-407"></span><span class="hs-comment">-- | Construct a range which scales the second bound exponentially relative to</span><span>
+</span><span id="line-408"></span><span class="hs-comment">--   the size parameter.</span><span>
+</span><span id="line-409"></span><span class="hs-comment">--</span><span>
+</span><span id="line-410"></span><span class="hs-comment">--   /This works the same as 'exponential', but for floating-point values./</span><span>
+</span><span id="line-411"></span><span class="hs-comment">--</span><span>
+</span><span id="line-412"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ exponentialFloat 0 10</span><span>
+</span><span id="line-413"></span><span class="hs-comment">--   (0.0,0.0)</span><span>
+</span><span id="line-414"></span><span class="hs-comment">--</span><span>
+</span><span id="line-415"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 $ exponentialFloat 0 10</span><span>
+</span><span id="line-416"></span><span class="hs-comment">--   (0.0,2.357035250656098)</span><span>
+</span><span id="line-417"></span><span class="hs-comment">--</span><span>
+</span><span id="line-418"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ exponentialFloat 0 10</span><span>
+</span><span id="line-419"></span><span class="hs-comment">--   (0.0,10.0)</span><span>
+</span><span id="line-420"></span><span class="hs-comment">--</span><span>
+</span><span id="line-421"></span><span id="local-6989586621679474138"><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFloat"><span class="hs-identifier hs-type">exponentialFloat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#Floating"><span class="hs-identifier hs-type">Floating</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474138"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474138"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474138"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474138"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474138"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-422"></span><span id="exponentialFloat"><span class="annot"><span class="annottext">exponentialFloat :: forall a. (Floating a, Ord a) =&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFloat"><span class="hs-identifier hs-var hs-var">exponentialFloat</span></a></span></span><span> </span><span id="local-6989586621679474625"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474625"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474626"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474626"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-423"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; Range a
+forall a. (Floating a, Ord a) =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFloatFrom"><span class="hs-identifier hs-var">exponentialFloatFrom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474625"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474625"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474626"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-424"></span><span>
+</span><span id="line-425"></span><span class="hs-comment">-- | Construct a range which scales the bounds exponentially relative to the</span><span>
+</span><span id="line-426"></span><span class="hs-comment">--   size parameter.</span><span>
+</span><span id="line-427"></span><span class="hs-comment">--</span><span>
+</span><span id="line-428"></span><span class="hs-comment">--   /This works the same as 'exponentialFrom', but for floating-point values./</span><span>
+</span><span id="line-429"></span><span class="hs-comment">--</span><span>
+</span><span id="line-430"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 0 $ exponentialFloatFrom 0 (-10) 20</span><span>
+</span><span id="line-431"></span><span class="hs-comment">--   (0.0,0.0)</span><span>
+</span><span id="line-432"></span><span class="hs-comment">--</span><span>
+</span><span id="line-433"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 50 $ exponentialFloatFrom 0 (-10) 20</span><span>
+</span><span id="line-434"></span><span class="hs-comment">--   (-2.357035250656098,3.6535836249197002)</span><span>
+</span><span id="line-435"></span><span class="hs-comment">--</span><span>
+</span><span id="line-436"></span><span class="hs-comment">--   &gt;&gt;&gt; bounds 99 $ exponentialFloatFrom x (-10) 20</span><span>
+</span><span id="line-437"></span><span class="hs-comment">--   (-10.0,20.0)</span><span>
+</span><span id="line-438"></span><span class="hs-comment">--</span><span>
+</span><span id="line-439"></span><span id="local-6989586621679474140"><span class="annot"><a href="Hedgehog.Internal.Range.html#exponentialFloatFrom"><span class="hs-identifier hs-type">exponentialFloatFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#Floating"><span class="hs-identifier hs-type">Floating</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474140"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-440"></span><span id="exponentialFloatFrom"><span class="annot"><span class="annottext">exponentialFloatFrom :: forall a. (Floating a, Ord a) =&gt; a -&gt; a -&gt; a -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#exponentialFloatFrom"><span class="hs-identifier hs-var hs-var">exponentialFloatFrom</span></a></span></span><span> </span><span id="local-6989586621679474633"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474633"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474634"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474634"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679474635"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474635"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-441"></span><span>  </span><span class="annot"><span class="annottext">a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a. a -&gt; (Size -&gt; (a, a)) -&gt; Range a
+</span><a href="Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-var">Range</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474633"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; (a, a)) -&gt; Range a) -&gt; (Size -&gt; (a, a)) -&gt; Range a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679474636"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474636"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-442"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-443"></span><span>      </span><span id="local-6989586621679474642"><span class="annot"><span class="annottext">sized_x :: a
+</span><a href="#local-6989586621679474642"><span class="hs-identifier hs-var hs-var">sized_x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-444"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474634"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474635"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Floating a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier hs-var">scaleExponentialFloat</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474636"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474633"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474634"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-445"></span><span>
+</span><span id="line-446"></span><span>      </span><span id="local-6989586621679474648"><span class="annot"><span class="annottext">sized_y :: a
+</span><a href="#local-6989586621679474648"><span class="hs-identifier hs-var hs-var">sized_y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-447"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a -&gt; a
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474634"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474635"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; a -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; a -&gt; a -&gt; a
+forall a. Floating a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier hs-var">scaleExponentialFloat</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474636"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474633"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474635"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-448"></span><span>    </span><span class="hs-keyword">in</span><span>
+</span><span id="line-449"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474642"><span class="hs-identifier hs-var">sized_x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474648"><span class="hs-identifier hs-var">sized_y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-450"></span><span>
+</span><span id="line-451"></span><span class="hs-comment">-- | Scale an integral exponentially with the size parameter.</span><span>
+</span><span id="line-452"></span><span class="hs-comment">--</span><span>
+</span><span id="line-453"></span><span id="local-6989586621679474649"><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleExponential"><span class="hs-identifier hs-type">scaleExponential</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474649"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474649"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474649"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474649"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-454"></span><span id="scaleExponential"><span class="annot"><span class="annottext">scaleExponential :: forall a. Integral a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponential"><span class="hs-identifier hs-var hs-var">scaleExponential</span></a></span></span><span> </span><span id="local-6989586621679474661"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474661"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span id="local-6989586621679474662"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474662"><span class="hs-identifier hs-var">z0</span></a></span></span><span> </span><span id="local-6989586621679474663"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474663"><span class="hs-identifier hs-var">n0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-455"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-456"></span><span>    </span><span id="local-6989586621679474672"><span class="annot"><span class="annottext">z :: Double
+</span><a href="#local-6989586621679474672"><span class="hs-identifier hs-var hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-457"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474662"><span class="hs-identifier hs-var">z0</span></a></span><span>
+</span><span id="line-458"></span><span>
+</span><span id="line-459"></span><span>    </span><span id="local-6989586621679474680"><span class="annot"><span class="annottext">n :: Double
+</span><a href="#local-6989586621679474680"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-460"></span><span>      </span><span class="annot"><span class="annottext">a -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474663"><span class="hs-identifier hs-var">n0</span></a></span><span>
+</span><span id="line-461"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-462"></span><span>    </span><span class="annot"><span class="annottext">Double -&gt; a
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; Double -&gt; Double -&gt; Double
+forall a. Floating a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier hs-var">scaleExponentialFloat</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474661"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679474672"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679474680"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-463"></span><span>
+</span><span id="line-464"></span><span class="hs-comment">-- | Scale a floating-point number exponentially with the size parameter.</span><span>
+</span><span id="line-465"></span><span class="hs-comment">--</span><span>
+</span><span id="line-466"></span><span id="local-6989586621679474143"><span class="annot"><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier hs-type">scaleExponentialFloat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#Floating"><span class="hs-identifier hs-type">Floating</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474143"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Internal.Range.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474143"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474143"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679474143"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-467"></span><span id="scaleExponentialFloat"><span class="annot"><span class="annottext">scaleExponentialFloat :: forall a. Floating a =&gt; Size -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#scaleExponentialFloat"><span class="hs-identifier hs-var hs-var">scaleExponentialFloat</span></a></span></span><span> </span><span id="local-6989586621679474686"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474686"><span class="hs-identifier hs-var">sz0</span></a></span></span><span> </span><span id="local-6989586621679474687"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474687"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679474688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474688"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-468"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-469"></span><span>    </span><span id="local-6989586621679474692"><span class="annot"><span class="annottext">sz :: Size
+</span><a href="#local-6989586621679474692"><span class="hs-identifier hs-var hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-470"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size -&gt; Size
+forall a. Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+</span><a href="Hedgehog.Internal.Range.html#clamp"><span class="hs-identifier hs-var">clamp</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">99</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474686"><span class="hs-identifier hs-var">sz0</span></a></span><span>
+</span><span id="line-471"></span><span>
+</span><span id="line-472"></span><span>    </span><span id="local-6989586621679474710"><span class="annot"><span class="annottext">diff :: a
+</span><a href="#local-6989586621679474710"><span class="hs-identifier hs-var hs-var">diff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-473"></span><span>      </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474688"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474687"><span class="hs-identifier hs-var">z</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Floating a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#%2A%2A"><span class="hs-operator hs-var">**</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Size -&gt; a
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#realToFrac"><span class="hs-identifier hs-var">realToFrac</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679474692"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#signum"><span class="hs-identifier hs-var">signum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474688"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474687"><span class="hs-identifier hs-var">z</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-474"></span><span>  </span><span class="hs-keyword">in</span><span>
+</span><span id="line-475"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474687"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679474710"><span class="hs-identifier hs-var">diff</span></a></span><span>
+</span><span id="line-476"></span><span>
+</span><span id="line-477"></span><span>
+</span><span id="line-478"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-479"></span><span class="hs-comment">-- Internal</span><span>
+</span><span id="line-480"></span><span>
+</span><span id="line-481"></span><span class="hs-comment">-- $internal</span><span>
+</span><span id="line-482"></span><span class="hs-comment">--</span><span>
+</span><span id="line-483"></span><span class="hs-comment">-- These functions are exported in case you need them in a pinch, but are not</span><span>
+</span><span id="line-484"></span><span class="hs-comment">-- part of the public API and may change at any time, even as part of a minor</span><span>
+</span><span id="line-485"></span><span class="hs-comment">-- update.</span><span>
+</span><span id="line-486"></span></pre></body></html>

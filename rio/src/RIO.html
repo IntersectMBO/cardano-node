@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">RIO</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Custom @Prelude@</span></span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- | One of the core features of @rio@ is that it can be used as a @Prelude@</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- replacement. Therefore it is best to disable the default `Prelude` with:</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- [NoImplicitPrelude](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-NoImplicitPrelude)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- pragma:</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">-- &gt; {-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- &gt; import RIO</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-comment">-- Some functions not exported here can be found in &quot;RIO.Partial&quot;:</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-comment">-- @fromJust@, @read@, @toEnum@, @pred@, @succ@.</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.html"><span class="hs-identifier">RIO.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Types.html"><span class="hs-identifier">RIO.Prelude.Types</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The @RIO@ Monad</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">MonadRIO</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** @SimpleApp@</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- | If all you need is just some default environment that does basic logging and allows</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">-- spawning processes, then you can use `SimpleApp`:</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-comment">-- &gt; {-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-comment">-- &gt; module Main where</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-comment">-- &gt; main :: IO ()</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- &gt; main =</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">-- &gt;   runSimpleApp $ do</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- &gt;     logInfo &quot;Hello World!&quot;</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">-- Note the</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- [OverloadedStrings](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-OverloadedStrings)</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- extension, which is enabled to simplify logging.</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html"><span class="hs-identifier">RIO.Prelude.Simple</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- * @MonadIO@ and @MonadUnliftIO@</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Unlift</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Logger</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-comment">-- $logging-intro</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Logger.html"><span class="hs-identifier">RIO.Prelude.Logger</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Display</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Display.html"><span class="hs-identifier">RIO.Prelude.Display</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Optics</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="hs-comment">-- | @microlens@-based Lenses, Traversals, etc.</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Lens.html"><span class="hs-identifier">RIO.Prelude.Lens</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Concurrency</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#ThreadId"><span class="hs-identifier">UnliftIO.Concurrent.ThreadId</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent.myThreadId</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent.isCurrentThreadBound</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent.threadWaitRead</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent.threadWaitWrite</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent.threadDelay</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.Renames.html#yieldThread"><span class="hs-identifier">RIO.Prelude.Renames.yieldThread</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Async</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Async</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** STM</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.STM</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Chan</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Chan</span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Timeout</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Timeout</span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Exceptions</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Exception</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Re-exported from &quot;Control.Monad.Catch&quot;:</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#throwM"><span class="hs-identifier">Control.Monad.Catch.throwM</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Files and handles</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.IO</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Temporary</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.IO.html"><span class="hs-identifier">RIO.Prelude.IO</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Exit</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Exit.html"><span class="hs-identifier">RIO.Prelude.Exit</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Mutable Variables</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** SomeRef</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">SomeRef</span></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** URef</span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.URef.html"><span class="hs-identifier">RIO.Prelude.URef</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** IORef</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.IORef</span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** MVar</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.MVar</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** QSem</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.QSem</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** QSemN</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.QSemN</span></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Memoize</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Memoize</span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Deque</span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Deque.html"><span class="hs-identifier">RIO.Deque</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Debugging</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="RIO.Prelude.Trace.html"><span class="hs-identifier">RIO.Prelude.Trace</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html"><span class="hs-identifier">Control.Monad.Catch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/exceptions-0.10.7/src/Control.Monad.Catch.html#MonadThrow"><span class="hs-identifier">MonadThrow</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Deque.html"><span class="hs-identifier">RIO.Deque</span></a></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.html"><span class="hs-identifier">RIO.Prelude</span></a></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Display.html"><span class="hs-identifier">RIO.Prelude.Display</span></a></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Exit.html"><span class="hs-identifier">RIO.Prelude.Exit</span></a></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Extra.html"><span class="hs-identifier">RIO.Prelude.Extra</span></a></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.IO.html"><span class="hs-identifier">RIO.Prelude.IO</span></a></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Lens.html"><span class="hs-identifier">RIO.Prelude.Lens</span></a></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Logger.html"><span class="hs-identifier">RIO.Prelude.Logger</span></a></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Renames.html"><span class="hs-identifier">RIO.Prelude.Renames</span></a></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html"><span class="hs-identifier">RIO.Prelude.RIO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MonadRIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier">RIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#liftRIO"><span class="hs-identifier">liftRIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier">runRIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html"><span class="hs-identifier">RIO.Prelude.RIO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SomeRef</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="RIO.Prelude.RIO.html#RIO"><span class="hs-identifier">RIO</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#liftRIO"><span class="hs-identifier">liftRIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="RIO.Prelude.RIO.html#runRIO"><span class="hs-identifier">runRIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Simple.html"><span class="hs-identifier">RIO.Prelude.Simple</span></a></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Text.html"><span class="hs-identifier">RIO.Prelude.Text</span></a></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Trace.html"><span class="hs-identifier">RIO.Prelude.Trace</span></a></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.Types.html"><span class="hs-identifier">RIO.Prelude.Types</span></a></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="RIO.Prelude.URef.html"><span class="hs-identifier">RIO.Prelude.URef</span></a></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Unlift</span></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Async</span></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Chan</span></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Exception</span></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.IO</span></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.IORef</span></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Memoize</span></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.MVar</span></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.QSem</span></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.QSemN</span></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.STM</span></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Temporary</span></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Timeout</span></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">UnliftIO.Concurrent</span></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- $logging-intro</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- The logging system in RIO is built upon &quot;log functions&quot;, which are</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- accessed in RIO's environment via a class like &quot;has log</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- function&quot;. There are two provided:</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- * In the common case: for logging plain text (via 'Utf8Builder')</span><span>
+</span><span id="line-135"></span><span class="hs-comment">--   efficiently, there is 'LogFunc', which can be created via</span><span>
+</span><span id="line-136"></span><span class="hs-comment">--   'withLogFunc', and is accessed via 'HasLogFunc'. This provides</span><span>
+</span><span id="line-137"></span><span class="hs-comment">--   all the classical logging facilities: timestamped text output</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--   with log levels and colors (if terminal-supported) to the</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--   terminal. We log output via 'logInfo', 'logDebug', etc.</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- * In the advanced case: where logging takes on a more semantic</span><span>
+</span><span id="line-142"></span><span class="hs-comment">--   meaning and the logs need to be digested, acted upon, translated</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--   or serialized upstream (to e.g. a JSON logging server), we have</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--   'GLogFunc' (as in &quot;generic log function&quot;), and is accessed via</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--   'HasGLogFunc'. In this case, we log output via 'glog'. See the</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--   Type-generic logger section for more information.</span><span>
+</span><span id="line-147"></span></pre></body></html>
