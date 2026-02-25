@@ -82,7 +82,7 @@ with builtins; let
     // cfg.extraConfig;
 
   prettyConfig =
-    (pkgs.runCommandNoCCLocal "cardano-tracer-config.json" {} ''
+    (pkgs.runCommandLocal "cardano-tracer-config.json" {} ''
       ${getExe pkgs.jq} --sort-keys \
         < ${toFile "cardano-tracer-unpretty-config.json" (toJSON tracerConfig)} \
         > $out
