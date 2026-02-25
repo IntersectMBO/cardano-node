@@ -339,7 +339,8 @@ allocate-run-nomadcloud() {
   # Check if the Nix package was created from a dirty git tree
   if test "$gitrev" = "0000000000000000000000000000000000000000"
   then
-    fatal "Can't run a cluster in the Nomad cloud without a publicly accessible GitHub commit ID"
+    msg $(red "Running cluster in Nomad cloud without a publicly accessible GitHub commit ID")
+    read -p "Using nix store paths for installables. Hit enter to continue ..."
   else
     msg "Checking if GitHub commit \"$gitrev\" is publicly accessible ..."
     local curl_response
@@ -353,27 +354,29 @@ allocate-run-nomadcloud() {
       headers=$(echo "${curl_response}" | jq -s .[1])
       if test "$(echo "${headers}" | jq .http_code)" != 200
       then
-        fatal "GitHub commit \"$gitrev\" is not available online!"
+        msg $(red "GitHub commit \"$gitrev\" is not available online!")
+        read -p "Using nix store paths for installables. Hit enter to continue ..."
+      else
+        # Show returned commit info in `git log` fashion
+        local body author_name author_email author_date message
+        body=$(echo "${curl_response}" | jq -s .[0])
+        author_name=$(echo $body  | jq -r .commit.author.name)
+        author_email=$(echo $body | jq -r .commit.author.email)
+        author_date=$(echo $body  | jq -r .commit.author.date)
+        message=$(echo $body      | jq -r .commit.message)
+        msg $(green "commit ${gitrev}")
+        msg $(green "Author: ${author_name} <${author_email}>")
+        msg $(green "Date: ${author_date}")
+        msg $(green "\n")
+        msg $(green "\t${message}\n")
+        msg $(green "\n")
+        # Will set the flake URIs from ".installable" in container-specs.json
+        backend_nomad allocate-run-nomad-job-patch-nix "${dir}" "${gitrev}"
       fi
-      # Show returned commit info in `git log` fashion
-      local body author_name author_email author_date message
-      body=$(echo "${curl_response}" | jq -s .[0])
-      author_name=$(echo $body  | jq -r .commit.author.name)
-      author_email=$(echo $body | jq -r .commit.author.email)
-      author_date=$(echo $body  | jq -r .commit.author.date)
-      message=$(echo $body      | jq -r .commit.message)
-      msg $(green "commit ${gitrev}")
-      msg $(green "Author: ${author_name} <${author_email}>")
-      msg $(green "Date: ${author_date}")
-      msg $(green "\n")
-      msg $(green "\t${message}\n")
-      msg $(green "\n")
     else
       fatal "Could not fetch commit info from GitHub (\`curl\` error)"
     fi
   fi
-  ### Will set the flake URIs from ".installable" in container-specs.json
-  backend_nomad allocate-run-nomad-job-patch-nix "${dir}" "${gitrev}"
 
   ############################################################################
   # Memory/resources: ########################################################
