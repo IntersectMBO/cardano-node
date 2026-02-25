@@ -114,6 +114,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
+                      , cardano-diffusion ^>= 0.1
                       , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
@@ -121,6 +122,7 @@ library
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-prelude
+                      , cardano-strict-containers >=0.1
                       , contra-tracer
                       , cborg >= 0.2.2 && < 0.3
                       , containers
@@ -140,10 +142,11 @@ library
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-consensus-diffusion >= 0.7.0
-                      , ouroboros-network:{api, framework, ouroboros-network, protocols}
+                      , ouroboros-network:{api, framework, framework-tracing, ouroboros-network, protocols}
                       , plutus-ledger-api
                       , plutus-tx
                       , random
+                      , typed-protocols ^>= 1.2
                       , serialise
                       , streaming
                       , cardano-ledger-shelley
