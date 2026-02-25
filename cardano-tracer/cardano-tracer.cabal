@@ -439,6 +439,30 @@ test-suite cardano-tracer-test-ext
                         -rtsopts
                         -with-rtsopts=-N
 
+test-suite cardano-tracer-restart
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+
+  -- we expect unixy paths
+  if os(windows)
+    buildable:          False
+
+  hs-source-dirs:       test/restart-test
+  main-is:              restart-test.hs
+
+  build-tool-depends:   cardano-tracer:cardano-tracer
+                      , cardano-tracer:demo-forwarder
+
+  -- keep this minimal: what the script actually uses
+  build-depends:        base
+                      , directory
+                      , filepath
+                      , process
+
+  ghc-options:          -threaded
+                        -rtsopts
+                        -with-rtsopts=-N
+
 benchmark cardano-tracer-bench
   import:               project-config
   type:                 exitcode-stdio-1.0
