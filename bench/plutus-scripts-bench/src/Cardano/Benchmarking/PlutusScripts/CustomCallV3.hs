@@ -4,17 +4,16 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- PlutusV2 must be compiled using plc 1.0
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+module Cardano.Benchmarking.PlutusScripts.CustomCallV3 (script) where
 
-module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
-
-import           Cardano.Api (PlutusScriptVersion (PlutusScriptV2))
+import           Cardano.Api (PlutusScriptVersion (PlutusScriptV3))
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 import           Cardano.Benchmarking.ScriptAPI
 import           Language.Haskell.TH.Syntax (Exp (LitE), Lit (StringL), Loc (loc_module), qLocation)
-import qualified PlutusLedgerApi.V2 as PlutusV2
+import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx (compile)
+import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
+                   unsafeDataAsConstr)
 import           PlutusTx.Foldable (sum)
 import           PlutusTx.List (all, length)
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
@@ -23,7 +22,7 @@ import           Prelude as Haskell ((.), (<$>))
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScriptFromCompiled
-           PlutusScriptV2
+           PlutusScriptV3
            $(LitE . StringL . loc_module <$> qLocation)
            $$(PlutusTx.compile [|| mkValidator ||])
 
@@ -36,30 +35,41 @@ instance Plutus.Eq CustomCallData where
   CCConcat s ss     == CCConcat s' ss'  = s == s' && ss == ss'
   _                 == _                = False
 
-{-# INLINEABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator datum_ redeemer_ _txContext =
+{-# INLINABLE mkValidator #-}
+mkValidator :: BuiltinData -> BuiltinUnit
+mkValidator arg =
   let
     result = case cmd of
       EvalSpine       -> length redeemerArg == length datumArg
       EvalValues      -> redeemerArg == datumArg
       EvalAndValidate -> all validateValue redeemerArg && redeemerArg == datumArg
-  in if result then () else error ()
+  in if result then BI.unitval else error ()
   where
-    datum, redeemer :: CustomCallArg
-    datum     = unwrap datum_
-    redeemer  = unwrap redeemer_
+    -- lazily decode script context up to datum and redeemer
+    constrArgs :: BuiltinData -> BI.BuiltinList BuiltinData
+    constrArgs = BI.snd . BI.unsafeDataAsConstr
 
-    datumArg            = snd datum
-    (cmd, redeemerArg)  = redeemer
+    ctxFields :: BI.BuiltinList BuiltinData
+    ctxFields = constrArgs arg
+
+    datum :: BuiltinData
+    datum = BI.head ctxFields
+
+    redeemerFollowedByScriptInfo :: BI.BuiltinList BuiltinData
+    redeemerFollowedByScriptInfo = BI.tail ctxFields
+
+    redeemer :: BuiltinData
+    redeemer = BI.head redeemerFollowedByScriptInfo
+
+    datumArg            = snd (unwrap datum)
+    (cmd, redeemerArg)  = unwrap redeemer
 
     validateValue :: CustomCallData -> Bool
     validateValue (CCSum i is)      = i == sum is
     validateValue (CCConcat s ss)   = s == mconcat ss
     validateValue _                 = True
 
-{-# INLINEABLE unwrap #-}
+{-# INLINABLE unwrap #-}
 unwrap :: BuiltinData -> CustomCallArg
-unwrap  = PlutusV2.unsafeFromBuiltinData
--- Note: type-constraining unsafeFromBuiltinData decreases script's execution units.
+unwrap  = PlutusV3.unsafeFromBuiltinData
 
