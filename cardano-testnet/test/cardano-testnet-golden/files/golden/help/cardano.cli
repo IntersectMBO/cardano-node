@@ -11,6 +11,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--active-slots-coeff DOUBLE]
   [--node-env FILEPATH]
   [--update-time]
+  [--params-file FILEPATH | --params-mainnet]
 
   Start a testnet and keep it running until stopped
 
@@ -52,4 +53,8 @@ Available options:
                            pass it with this argument.
   --update-time            Update the time stamps in genesis files to current
                            date
+  --params-file FILEPATH   File containing custom on-chain parameters in
+                           Blockfrost format:
+                           https://docs.blockfrost.io/#tag/cardano--epochs/GET/epochs/latest/parameters
+  --params-mainnet         Use mainnet on-chain parameters
   -h,--help                Show this help text

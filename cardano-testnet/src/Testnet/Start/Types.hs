@@ -84,6 +84,7 @@ data CardanoTestnetCliOptions = CardanoTestnetCliOptions
   , cliGenesisOptions :: GenesisOptions
   , cliNodeEnvironment :: UserProvidedEnv
   , cliUpdateTimestamps :: UpdateTimestamps
+  , cliOnChainParams :: TestnetOnChainParams
   } deriving (Eq, Show)
 
 instance Default CardanoTestnetCliOptions where
@@ -92,6 +93,7 @@ instance Default CardanoTestnetCliOptions where
     , cliGenesisOptions = def
     , cliNodeEnvironment = def
     , cliUpdateTimestamps = def
+    , cliOnChainParams = def
     }
 
 data UserProvidedEnv
