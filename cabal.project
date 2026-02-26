@@ -13,11 +13,12 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-09-29T13:55:56Z
-  , cardano-haskell-packages 2026-02-09T17:36:58Z
+  , hackage.haskell.org 2026-02-06T20:27:32Z
+  , cardano-haskell-packages 2026-02-19T00:52:30Z
 
 constraints:
-  crypton-x509-system ==1.6.7
+  -- haskell.nix patch does not work for 1.6.8
+  , any.crypton-x509-system < 1.6.8
 
 packages:
   cardano-node
@@ -63,16 +64,57 @@ package plutus-scripts-bench
 
 allow-newer:
   , katip:Win32
+  , cardano-cli:cardano-api
 
-if impl (ghc >= 9.12)
+if impl(ghc >= 9.12)
   allow-newer:
-    -- https://github.com/kapralVV/Unique/issues/11
-    , Unique:hashable
-
-    -- https://github.com/Gabriella439/Haskell-Pipes-Safe-Library/pull/70
-    , pipes-safe:base
+    -- we need newer io-classes: https://github.com/input-output-hk/typed-protocols/tree/coot/io-classes-1.9
+    , io-classes:time
+    , ouroboros-network:time
+    , nothunks:time
+    , network-mux:time
+    , cardano-ping:time
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- unreleased cardano-rpc
+source-repository-package
+    type: git
+    location: https://github.com/intersectmbo/cardano-api
+    -- cardano-api-10.24
+    tag: 21c8a25e35fdeaf100600500c546874d7def77c0
+    --sha256: sha256-4FFBeEtoBsttOJQfvBSTPMeys7xB5QC4rbCYV8+7/xM=
+    subdir: cardano-api
+            cardano-api-gen
+            cardano-rpc
+
+-- unreleased changes from master
+source-repository-package
+    type: git
+    location: https://github.com/intersectmbo/cardano-cli
+    tag: e50737f94d1d70487a00609923eb8352921234a8
+    --sha256: sha256-JMjXw1X8S9yrA+Rwq7wnM3cIwOrInFEXIQiddoN2Fts=
+    subdir: cardano-cli
+
+-- GHC 9.12 support https://github.com/google/proto-lens/pull/519
+source-repository-package
+  type: git
+  location: https://github.com/carbolymer/proto-lens
+  tag: 732ff478957507bdbdaf72606281df3fcb6b0121
+  --sha256: sha256-DR2hxFDNMICcueggBObhi+L5bKeake/Mj4N0078P3SA=
+  subdir:
+    discrimination-ieee754
+    proto-lens-arbitrary
+    proto-lens-benchmarks
+    proto-lens-discrimination
+    proto-lens-optparse
+    proto-lens-protobuf-types
+    proto-lens-protoc
+    proto-lens-runtime
+    proto-lens-setup
+    proto-lens-tests-dep
+    proto-lens-tests
+    proto-lens
 

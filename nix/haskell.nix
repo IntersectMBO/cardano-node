@@ -62,7 +62,7 @@ let
           cabal
           actionlint
           shellcheck
-          scriv
+          # scriv # FIXME
           stylish-haskell
         ];
 
@@ -309,7 +309,11 @@ let
                   # also needs them to be quoted)
                   export WORKDIR=$TMP/testTracerExt
               '';
-            })
+          })
+          ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [ pkgs.protobuf ];
+              packages.cardano-rpc.components.library.build-tools = [ pkgs.protobuf ];
+          })
           ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
             # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
@@ -367,6 +371,52 @@ let
           # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
           # not build for windows on a per package bases (rather than using --disable-tests).
           # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
+
+          # TODO remove this module when removing proto-lens SRP
+          # Override proto-lens source to fetch submodules and fix symlinks
+          ({
+            pkgs,
+            lib,
+            ...
+          }: let
+            protoLensSrc = pkgs.fetchgit {
+              url = "https://github.com/carbolymer/proto-lens";
+              rev = "732ff478957507bdbdaf72606281df3fcb6b0121";
+              sha256 = "sha256-DR2hxFDNMICcueggBObhi+L5bKeake/Mj4N0078P3SA=";
+              fetchSubmodules = true;
+            };
+            # Fix proto-lens source by copying google protobuf files alongside proto-lens subdirectory
+            fixProtoLensSubdir = subdir:
+              pkgs.runCommand "proto-lens-${subdir}-fixed" {} ''
+                mkdir -p $out
+                cp -r ${protoLensSrc}/${subdir}/* $out/
+                chmod -R +w $out
+                # Fix proto-lens-imports symlink in proto-lens
+                if [ -d $out/proto-lens-imports ]; then
+                  rm -f $out/proto-lens-imports/google
+                  cp -r ${protoLensSrc}/google/protobuf/src/google $out/proto-lens-imports/
+                fi
+                # Fix proto-src symlink in proto-lens-protobuf-types
+                if [ -L $out/proto-src ]; then
+                  rm -f $out/proto-src
+                  cp -r ${protoLensSrc}/google/protobuf/src $out/proto-src
+                fi
+                chmod -R -w $out
+              '';
+          in {
+            packages.proto-lens.src = lib.mkForce (fixProtoLensSubdir "proto-lens");
+            packages.proto-lens-arbitrary.src = lib.mkForce (protoLensSrc + "/proto-lens-arbitrary");
+            packages.proto-lens-discrimination.src = lib.mkForce (protoLensSrc + "/proto-lens-discrimination");
+            packages.proto-lens-optparse.src = lib.mkForce (protoLensSrc + "/proto-lens-optparse");
+            packages.proto-lens-protobuf-types.src = lib.mkForce (fixProtoLensSubdir "proto-lens-protobuf-types");
+            packages.proto-lens-protoc.src = lib.mkForce (protoLensSrc + "/proto-lens-protoc");
+            packages.proto-lens-runtime.src = lib.mkForce (protoLensSrc + "/proto-lens-runtime");
+            packages.proto-lens-setup.src = lib.mkForce (protoLensSrc + "/proto-lens-setup");
+            packages.proto-lens-tests-dep.src = lib.mkForce (protoLensSrc + "/proto-lens-tests-dep");
+            packages.proto-lens-tests.src = lib.mkForce (protoLensSrc + "/proto-lens-tests");
+            packages.discrimination-ieee754.src = lib.mkForce (protoLensSrc + "/discrimination-ieee754");
+            packages.proto-lens-benchmarks.src = lib.mkForce (protoLensSrc + "/proto-lens-benchmarks");
+          })
         ];
     });
 in

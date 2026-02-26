@@ -113,6 +113,7 @@ library
                         Cardano.Node.Tracing.Tracers.NodeVersion
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Resources
+                        Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
                         Cardano.Node.Tracing.Tracers.Startup
                         Cardano.Node.Types
@@ -138,7 +139,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.23
+                      , cardano-api ^>= 10.24
                       , cardano-crypto-class ^>=2.2.3.2
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -155,6 +156,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.4
                       , cardano-slotting >= 0.2
+                      , cardano-rpc ^>= 10.0
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -252,6 +254,7 @@ test-suite cardano-node-test
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-api
+                      , cardano-rpc
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting

@@ -41,7 +41,7 @@ library
                       , annotated-exception
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 10.23
+                      , cardano-api ^>= 10.24
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib} ^>= 10.15
                       , cardano-crypto-class ^>=2.2.3.2
                       , cardano-crypto-wrapper
@@ -59,6 +59,7 @@ library
                       , cardano-node
                       , cardano-ping ^>= 0.9
                       , cardano-prelude
+                      , cardano-rpc
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -236,6 +237,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.TreasuryDonation
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.Rpc.Query
+                        Cardano.Testnet.Test.Rpc.Transaction
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.MainnetParams
@@ -254,12 +257,15 @@ test-suite cardano-testnet-test
                       , bytestring
                       , cardano-api
                       , cardano-cli:{cardano-cli, cardano-cli-test-lib}
+                      , cardano-ledger-api
                       , cardano-crypto-class
+                      , cardano-ledger-binary
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-prelude
+                      , cardano-rpc
                       , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
