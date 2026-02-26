@@ -26,7 +26,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints)
 import           Ouroboros.Consensus.Peras.SelectView
-import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr, SelectViewReasonForSwitch, ReasonForSwitch, TiebreakerView)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Network.Block (Serialised)
 
@@ -76,4 +76,6 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (Set (Credential Staking))
     , LogFormatting (NonEmpty.NonEmpty (KeyHash Staking))
+    , LogFormatting (Either (WithEmptyFragmentReasonForSwitch (WeightedSelectView (BlockProtocol blk))) (SelectViewReasonForSwitch (BlockProtocol blk)))
+    , LogFormatting (ReasonForSwitch (TiebreakerView (BlockProtocol blk)))
     )
