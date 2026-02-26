@@ -350,7 +350,7 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
     . listToMaybe
     $ sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
 
--- | Retrieve the largest utxo with a multi-asset 
+-- | Retrieve the largest utxo with a multi-asset
 findLargestMultiAssetUtxoWithAddress
   :: HasCallStack
   => MonadAssertion m
@@ -363,11 +363,11 @@ findLargestMultiAssetUtxoWithAddress
 findLargestMultiAssetUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
   utxos <- toList <$> findUtxosWithAddress epochStateView sbe address
   let sortedUTxOs = sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
-      utxosWithMas = filter (\(_,TxOut _ txOutValue _ _) -> isMultiAssetPresent txOutValue) sortedUTxOs 
+      utxosWithMas = filter (\(_,TxOut _ txOutValue _ _) -> isMultiAssetPresent txOutValue) sortedUTxOs
   pure $ listToMaybe utxosWithMas
 
-isMultiAssetPresent :: TxOutValue era -> Bool 
-isMultiAssetPresent v = 
+isMultiAssetPresent :: TxOutValue era -> Bool
+isMultiAssetPresent v =
   Map.size (valueToPolicyAssets $ txOutValueToValue v) > 0
 
 
@@ -421,7 +421,7 @@ checkDRepState
   => MonadTest m
   => EpochStateView
   -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
-  -> (Map (Credential 'DRepRole)
+  -> (Map (Credential DRepRole)
           DRepState
       -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                   -- and potentially inspects it.
