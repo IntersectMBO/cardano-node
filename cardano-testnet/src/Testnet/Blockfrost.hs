@@ -14,8 +14,7 @@ import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.Alonzo.PParams (CoinPerWord)
 import           Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, Nonce, ProtVer (..),
                    UnitInterval, Version)
-import           Cardano.Ledger.Coin (Coin)
-import           Cardano.Ledger.Compactible (toCompactPartial)
+import           Cardano.Ledger.Coin (Coin, CoinPerByte(..), compactCoinOrError)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
@@ -207,7 +206,8 @@ blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGe
         { prMem = bfgPriceMem
         , prSteps = bfgPriceSteps
         }
-      , agCostModels = CostModels.mkCostModels . Map.mapWithKey trimCostModelToInitial $ CostModels.costModelsValid bfgAlonzoCostModels
+      , agPlutusV1CostModel = undefined -- TODO(10.7)
+        -- CostModels.mkCostModels . Map.mapWithKey trimCostModelToInitial $ CostModels.costModelsValid bfgAlonzoCostModels
       }
 
     -- Conway Params
@@ -244,13 +244,13 @@ blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGe
 
     -- Shelley params
     shelleyParams = PParams $ ShelleyPParams
-      { sppMinFeeA = bfgMinFeeA
-      , sppMinFeeB = bfgMinFeeB
+      { sppTxFeePerByte = CoinPerByte . compactCoinOrError $ bfgMinFeeA
+      , sppTxFeeFixed = compactCoinOrError $ bfgMinFeeB
       , sppMaxBBSize = bfgMaxBlockSize
       , sppMaxTxSize = bfgMaxTxSize
       , sppMaxBHSize = bfgMaxBlockHeaderSize
-      , sppKeyDeposit = bfgKeyDeposit
-      , sppPoolDeposit = toCompactPartial bfgPoolDeposit
+      , sppKeyDeposit = compactCoinOrError $ bfgKeyDeposit
+      , sppPoolDeposit = compactCoinOrError $ bfgPoolDeposit
       , sppEMax = bfgEMax
       , sppNOpt = bfgNOpt
       , sppA0 = bfgA0
@@ -262,8 +262,8 @@ blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGe
         { pvMajor = bfgProtocolMajorVer
         , pvMinor = bfgProtocolMinorVer
         }
-      , sppMinUTxOValue = bfgMinUTxO
-      , sppMinPoolCost = bfgMinPoolCost
+      , sppMinUTxOValue = compactCoinOrError $ bfgMinUTxO
+      , sppMinPoolCost = compactCoinOrError $ bfgMinPoolCost
       }
     shelleyGenesis = shelleyGenesis'{sgProtocolParams=shelleyParams}
 
@@ -279,4 +279,3 @@ trimCostModelToInitial lang cm = do
     . CostModels.mkCostModel lang
     . take paramsCount
     $ CostModels.getCostModelParams cm
-
