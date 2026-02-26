@@ -145,7 +145,7 @@
 
 - Added `PeerSharing` option in the configuration file which enables an
   experimental feature.  By default peer sharing is disabled. Please note that
-  until genesis & eclipse evasion are available this feauture can expose a node
+  until genesis & eclipse evasion are available this feature can expose a node
   to eclipse attacks.
 
 - The `TracePeerSelection` have new trace points which log peer sharing request
@@ -481,7 +481,7 @@ None
   which was allowing arbitrarily distant translation only in the last era. This
   bug has been fixed, but the ledger must preserve the previous behaviour in the
   existing era. (#2785)
-- Translate legacy cost mode parameter names in the JSON deserialiser. The
+- Translate legacy cost model parameter names in the JSON deserialiser. The
   deserialiser now does not care about the names, only about the ordering of the
   parameters. This is consistent with how cost model parameters are treated in
   update proposals. (#2792)
@@ -543,7 +543,7 @@ None
   by default in other deployments. (#3349)
 - Change the default verbosity of the startup tracer - normal verbosity now
   shows only maximal supported note-to-node and node-to-client versions
-  (previously it showed all supported verions). (#3434)
+  (previously it showed all supported versions). (#3434)
 - Enrich the ledger replay tracers to show significantly more information.
   (#3412)
 - Support for using `TxIn` as a key in JSON maps. (#3438)
@@ -677,7 +677,7 @@ None
 - Fix the configuration of the `chainSyncServerHeaderTracer`. This fixes a bug
   which caused logs to be unnecessarily verbose. (#3252)
 - Various documentation updates. (#3191, #3243, #3265, #3284)
-- Various infrastrucutre updates. (#3244, #3223, #3266, #3270, #3277, #3280,
+- Various infrastructure updates. (#3244, #3223, #3266, #3270, #3277, #3280,
   #3283 #3284, #3290, #3298, #3308)
 - Introduce the 'trace-dispatcher' library. This is built to replace the
   existing 'iohk-monitoring-framework'. (#3073)
@@ -714,7 +714,7 @@ None
 - Work around a bug on OS/X calling `accept` on IPv6 sockets. (#3368)
 - Continual gradual merge of p2p functionality. (#3369, #3370, #3371, #3372,
   #3373, #3374, #3377)
-- Miscallaneous documentation changes. (#3383, #3399)
+- Miscellaneous documentation changes. (#3383, #3399)
 - Fix a race condition in the thread tracking set. This could result in a node
   eventually refusing to accept new connections. (#3398)
 - Various internal refactorings. (#3079, #3416, #3432, #3437)
@@ -732,7 +732,7 @@ None
   and isolating it from the ledger. This is done in anticipation of introducing
   a new version of the consensus protocol in the Babbage release. (#2491, #2505,
   #2510, #2516, #2518)
-- Document the minumum value computation for Alonzo. (#2486)
+- Document the minimum value computation for Alonzo. (#2486)
 - Various changes to compactify the in-memory representation of the Cardano
   ledger state:
   - Unpack the TxId in a transaction input. (#2501)
@@ -804,7 +804,7 @@ None
 - Add additional capabilities to the tx generator:
   - Plutus. (#2853)
   - Fees and UTxO. (#2980)
-  - Miscallaneous bugfixes. (#3015)
+  - Miscellaneous bugfixes. (#3015)
 - Update the genesis hash mismatch error for Alonzo. (#3003)
 - Introduce the _trace-forward_ library, which is part of the replacement for
   the logging infrastructure. (#2960)
@@ -813,7 +813,7 @@ None
 
 - Allow the node to modify the maximum capacity of the mempool, in terms of
   various factors (size, execution units). (#3246, #3261, #3266)
-- Enable the Alzono era by default. (#3295)
+- Enable the Alonzo era by default. (#3295)
 - Internal testing improvements. (#3252, #3256)
 - Various internal improvements. (#3268, #3270, #3272, #3275, #3286)
 - Documentation updates. (#3269, #3273)
@@ -1024,7 +1024,7 @@ None
 - Update the iohk-monitoring framework to fix a file descriptor leak. (#2518)
 
 ### ledger changes
-- Fix an unevalutated thunk error in reward computation. (#2183)
+- Fix an unevaluated thunk error in reward computation. (#2183)
 - Additional properties added to the Mary/Allegra formal specification (#2178)
 - Updates to the Alonzo formal specification (#2189, #2194)
 - Work on implementing the upcoming Alonzo era. (#2176, #2185, #2190)
@@ -1055,7 +1055,7 @@ None
 ### consensus changes
 - Add some additional tracing infrastructure (#2874)
 - Add an automated test for forking from Allegra to Mary eras (#2915)
-- Continued work on the technical report of the consensus and storate layer
+- Continued work on the technical report of the consensus and storage layer
   (#2939, #2943)
 - Add the ability to query a node to determine whether it issued a block. This
   supports the "blocks lost due to switching" metric mentioned in the node
@@ -1264,7 +1264,7 @@ None
 ### network changes
 - Preparations for publishing io-sim as a public library (#2775)
 - Internal improvements to the "snockets" API (#2772, #2777)
-- Improved logging of the creation of the node's sockts (#2746)
+- Improved logging of the creation of the node's sockets (#2746)
 
 ## 1.23.0 -- November 2020
 
@@ -1282,7 +1282,7 @@ None
 
 - Fix a space leak in the stake pool performance tracking that caused writing
   ledger state snapshots in consensus to take too long (#1967)
-- Improved ledger state serialisation performance. This involving a change to
+- Improved ledger state serialisation performance. This involved a change to
   the serialisation format which will require the ledger state to be rebuilt
   upon node startup (#1968)
 - Further development for the Allegra era (#1951, #1965, #1984, #1989)
@@ -1744,7 +1744,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 - Extend hard fork tests to include network partitions at interesting times
   around or during the hard fork (#2292, #2337, #2342)
 - Prefer blocks we created, irrespective of the VRF value (#1286, #2348)
-- Allow setting the intial Praos nonce (#2005, #2289)
+- Allow setting the initial Praos nonce (#2005, #2289)
 - Richer support for queries when using multiple protocol eras to allow some
   queries to be answered outside of the era to which they belong (#2349)
 - Optimisation in chain selection for forks (#1223, #2323)
@@ -1885,17 +1885,17 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 
 - Support initial Shelley protocol parameters in the Shelley genesis (#906)
 - New `--shutdown-on-slot-synced` flag for benchmarking and CI tests (#776)
-- systemd socket activiation support (#856, #1022)
+- systemd socket activation support (#856, #1022)
 - systemd support on Linux is now optional (#911)
 - Minor improvement to `FetchDecision` tracing output (#863)
 - Improved suppression of frequent repeated log messages (#842)
 - Trace the node uptime (#892)
 - Trace the number of transactions processed and blocks forged (#937, #943)
 - Trace the current set of node peers for the live view (#1007)
-- Fix structured tracing of txs within adopted blocs for analysis tools (#993)
+- Fix structured tracing of txs within adopted blocks for analysis tools (#993)
 - Log the node's network magic number on startup (#921)
 - Adjust configuration to keep metrics out of the log files (#930)
-- Added OSX (Darwin) support for OS metics in the "live view" (#888)
+- Added OSX (Darwin) support for OS metrics in the "live view" (#888)
 - Various live view fixes (#964, #965, #974)
 
 ### consensus changes
@@ -2035,7 +2035,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 - Performance improvement in validation from improved hash representation (#760)
 
 ### network changes
-- Improved Windows IO mangager exception handling (#1897)
+- Improved Windows IO manager exception handling (#1897)
 - Handle DNS server changes due to switching network connection (#1891)
 - Numerous small memory-use reductions in low level network code (#1902)
 - Label network threads for more useful performance profile output (#1900)
@@ -2344,7 +2344,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 - Remove unused legacy and wallet configuration fields (code and config files)
 - Improve README files
 - Hide tracing options from default `--help` command
-- Fix flakeyness in logging setup & shutdown
+- Fix flakiness in logging setup & shutdown
 - Stop message counter messages from appearing in log files
 - Refactor CLI and config parser code.
 
@@ -2369,7 +2369,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 - Remove dependency on scrypt
 - Add tests for isRedeemAddress, improve address encoding/decoding
 
-### #network changes
+### network changes
 - Added initial peer-to-peer governor with QC tests. Not yet used.
 
 ## 1.1.0 -- December 2019

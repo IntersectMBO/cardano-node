@@ -44,7 +44,7 @@ flowchart BT
 - [ ] Plutus Ledger API is integrated into the Ledger.
 - [ ] Ledger is integrated into the Ouroboros Consensus. 
 - [ ] Ouroboros Network is integrated into the Ouroboros Consensus.
-- [ ] Outroboros Consensus is integrated into the Cardano API.
+- [ ] Ouroboros Consensus is integrated into the Cardano API.
 - [ ] Cardano API is integrated into the Cardano CLI.
 - [ ] Cardano CLI is integrated into the Cardano Node.
 
