@@ -123,6 +123,8 @@ doListenToForwarderLocal
 doListenToForwarderLocal snocket address netMagic timeLimits app = do
   void $ Server.with
       snocket
+      nullTracer
+      Mux.nullTracers
       makeLocalBearer
       mempty -- LocalSocket does not need to be configured
       address
@@ -153,6 +155,8 @@ doListenToForwarderSocket
 doListenToForwarderSocket snocket address netMagic timeLimits app = do
   void $ Server.with
       snocket
+      nullTracer
+      Mux.nullTracers
       makeSocketBearer
       mempty -- LocalSocket does not need to be configured
       address
