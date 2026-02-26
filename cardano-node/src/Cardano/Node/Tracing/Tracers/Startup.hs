@@ -304,6 +304,13 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "commit" .= String biCommit
                , "nodeStartTime" .= biNodeStartTime
                ]
+  forMachine _dtal (RpcConfigUpdate config) =
+      mconcat [ "kind" .= String "RpcConfigUpdate"
+               , "message" .= String "RPC configuration update"
+               , "configuration" .= String config ]
+  forMachine _dtal (RpcConfigUpdateError err) =
+      mconcat [ "kind" .= String "RpcConfigUpdateError"
+               , "error" .= String err ]
   forMachine _dtal (MovedTopLevelOption opt) =
       mconcat [ "kind" .= String "MovedTopLevelOption"
               , "option" .= opt
@@ -373,6 +380,10 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["Byron"]
   namespaceFor BINetwork {}  =
     Namespace [] ["Network"]
+  namespaceFor RpcConfigUpdate {} =
+    Namespace [] ["RpcConfigUpdate"]
+  namespaceFor RpcConfigUpdateError {} =
+    Namespace [] ["RpcConfigUpdateError"]
   namespaceFor MovedTopLevelOption {} =
     Namespace [] ["MovedTopLevelOption"]
 
@@ -385,6 +396,8 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NonP2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
+  severityFor (Namespace _ ["RpcConfigUpdate"]) _ = Just Notice
+  severityFor (Namespace _ ["RpcConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor (Namespace _ ["MovedTopLevelOption"]) _ = Just Warning
@@ -410,6 +423,10 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["BlockForgingUpdateError"]) = Just
     ""
   documentFor (Namespace [] ["BlockForgingBlockTypeMismatch"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcConfigUpdate"]) = Just
+    ""
+  documentFor (Namespace [] ["RpcConfigUpdateError"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdate"]) = Just
     ""
@@ -480,6 +497,8 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["DBValidation"]
     , Namespace [] ["BlockForgingUpdate"]
     , Namespace [] ["BlockForgingBlockTypeMismatch"]
+    , Namespace [] ["RpcConfigUpdate"]
+    , Namespace [] ["RpcConfigUpdateError"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
@@ -618,6 +637,9 @@ ppStartupInfoTrace (LedgerPeerSnapshotError useLedgerAfterSlot snapshotSlotNo (P
       , ".\nPossible fix: update ledger peer snapshot at "
       , showT snapshotFile
       ]
+
+ppStartupInfoTrace (RpcConfigUpdate config) = "Performing RPC configuration update: " <> config
+ppStartupInfoTrace (RpcConfigUpdateError err) = err
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 

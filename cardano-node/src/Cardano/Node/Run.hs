@@ -41,7 +41,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration,
                    parseNodeConfigurationFP, getForkPolicy)
 import           Cardano.Node.Configuration.Socket (LocalSocketOrSocketInfo,
-                   SocketOrSocketInfo, SocketOrSocketInfo' (..),
+                   SocketConfig (..), SocketOrSocketInfo, SocketOrSocketInfo' (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
@@ -136,7 +136,9 @@ import           Control.Monad.Trans.Except.Extra (left, hushM)
 import           Control.Monad.Trans.Maybe (MaybeT(runMaybeT, MaybeT), hoistMaybe)
 import           "contra-tracer" Control.Tracer
 import           Data.Bits
+import           Data.Bifunctor (first)
 import           Data.Either (partitionEithers)
+import           Data.Functor.Identity (Identity (..))
 import           Data.IP (toSockAddr)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -473,6 +475,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
                                             (readTVar ledgerPeerSnapshotPathVar)
                                             (readTVar useLedgerVar)
                                             (const . pure $ ())
+    rpcConfigVar <- newTVarIO (ncRpcConfig nc)
 
     let nodeArgs = RunNodeArgs
           { rnGenesisConfig  = ncGenesisConfig nc
@@ -518,6 +521,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
+            updateRpcConfiguration (startupTracer tracers) nc rpcConfigVar
             traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
           )
           Nothing
@@ -557,7 +561,18 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 
         ProtocolInfo{pInfoConfig} = fst $ Api.protocolInfo @IO runP
         networkMagic :: Api.NetworkMagic = getNetworkMagic $ Consensus.configBlock pInfoConfig
-    withAsync (runRpcServer (rpcTracer tracers) (pure (ncRpcConfig nc, networkMagic)))  $ \_ ->
+    let rpcServerLoop = do
+          config <- readTVarIO rpcConfigVar
+          let RpcConfig{isEnabled = Identity enabled} = config
+          if enabled
+            then
+              race_
+                (runRpcServer (rpcTracer tracers) (pure (config, networkMagic)))
+                (atomically $ readTVar rpcConfigVar >>= \new -> check (new /= config))
+            else
+              atomically $ readTVar rpcConfigVar >>= \new -> check (new /= config)
+          rpcServerLoop
+    withAsync rpcServerLoop $ \_ ->
         Node.run
           nodeArgs {
               rnNodeKernelHook = \registry nodeKernel -> do
@@ -565,6 +580,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
                 installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
                                      localRootsVar publicRootsVar useLedgerVar useBootstrapVar
                                      ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+                                     rpcConfigVar
                 rnNodeKernelHook nodeArgs registry nodeKernel
           }
           StdRunNodeArgs
@@ -665,12 +681,14 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO UseBootstrapPeers
                      -> StrictTVar IO (Maybe PeerSnapshotFile)
                      -> StrictTVar IO (Maybe LedgerPeerSnapshot)
+                     -> StrictTVar IO RpcConfig
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
 installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
-                        useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar =
+                        useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+                        rpcConfigVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
@@ -683,6 +701,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localR
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
+      updateRpcConfiguration startupTracer nc rpcConfigVar
     )
     Nothing
 #endif
@@ -819,6 +838,26 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
               fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
 
   mLedgerPeerSnapshot <$ atomically (writeVar mLedgerPeerSnapshot)
+
+updateRpcConfiguration :: Tracer IO (StartupTrace blk)
+                       -> NodeConfiguration
+                       -> StrictTVar IO RpcConfig
+                       -> IO ()
+#ifndef UNIX
+updateRpcConfiguration _ _ _ = return ()
+#else
+updateRpcConfiguration tracer nc rpcConfigVar = do
+  result <- fmap (join . first Exception.displayException) . try @Exception.SomeException $ do
+    configYamlPc <- parseNodeConfigurationFP (Just (ncConfigFile nc))
+    pure $ makeRpcConfig (pncRpcConfig configYamlPc){nodeSocketPath = ncSocketPath (ncSocketConfig nc)}
+  case result of
+    Left err -> traceWith tracer (RpcConfigUpdateError $ pack err)
+    Right newConfig -> do
+      oldConfig <- readTVarIO rpcConfigVar
+      when (oldConfig /= newConfig) $ do
+        atomically $ writeTVar rpcConfigVar newConfig
+        traceWith tracer (RpcConfigUpdate (pack $ show newConfig))
+#endif
 
 --------------------------------------------------------------------------------
 -- Helper functions

@@ -147,6 +147,12 @@ data StartupTrace blk =
   | LedgerPeerSnapshotIgnored SlotNo SlotNo PeerSnapshotFile
   -- | Like above, but in `GenesisMode` it is an error to have an old snapshot.
   | LedgerPeerSnapshotError SlotNo SlotNo PeerSnapshotFile
+  -- | Log that RPC configuration has been updated
+  | RpcConfigUpdate Text
+
+  -- | Log RPC configuration update error
+  | RpcConfigUpdateError Text
+
   | MovedTopLevelOption String
 
 data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile
