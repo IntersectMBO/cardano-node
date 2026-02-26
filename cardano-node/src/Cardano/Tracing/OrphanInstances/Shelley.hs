@@ -111,9 +111,8 @@ instance ShelleyCompatible protocol era => ToObject (Header (ShelleyBlock protoc
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
+  , ToJSON (ApplyTxError ledgerera) -- provided by cardano-api
   ) => ToObject (ApplyTxError ledgerera) where
-  toObject _verb _err = undefined -- TODO(10.7)
-    -- mconcat $ NonEmpty.toList $ fmap (toObject verb) predicateFailures
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
