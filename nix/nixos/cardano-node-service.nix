@@ -833,7 +833,7 @@ in {
 
       rtsArgs = mkOption {
         type = listOf str;
-        default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
+        default = [ "-N2" "-I0" "-A16m" "-qg1" "-qb1" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != [] || cfg.rts_flags_override != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ cfg.rts_flags_override ++ ["-RTS"]
           else [];
