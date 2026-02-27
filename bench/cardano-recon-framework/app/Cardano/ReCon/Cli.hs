@@ -5,8 +5,10 @@ import           Control.Arrow ((>>>))
 import           Data.Char (toLower)
 import           Options.Applicative
 
--- MKREV: maybe add a comment about what this does / what is meant be retention period
--- I mean, we know internally, but...
+-- | We assume that the events from the the input log might be slightly out of order.
+--   The value stands for the default amount of time (ms) the log ingestor keeps the read events "in the loop",
+--     them subject to reordering by timestamp.
+--   The events withheld longer than this amount, will finally be fed to the formula satisfiability checker.
 retentionDefault :: Word
 retentionDefault = 200
 

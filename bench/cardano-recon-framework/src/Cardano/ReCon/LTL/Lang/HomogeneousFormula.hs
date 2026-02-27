@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use all" #-}
 module Cardano.ReCon.LTL.Lang.HomogeneousFormula (
     HomogeneousFormula(..)
   , toFormula
@@ -102,7 +104,7 @@ eval (PropEq _ (F.Const lhs) rhs) = lhs == rhs
 eval (PropEq _ (F.Var x) _) = error $ "interp: free variable " <> show x        -- MKREV: error in pure code... when and how can this occur? It will crash the whole application.
 -- ⟦∀x. φ⟧ <=> φ[☐/x] ∧ φ[v₁ / x] ∧ ... ∧ φ[vₖ / x] where v₁...vₖ is the set of values in φ which x can take.
 eval (PropForall x phi) = eval (substHomogeneousFormula Placeholder x phi) &&
-  foldl' (&&) True (                                                            -- MKREV: Could you use Prelude.and here?
+  Prelude.and (
     Set.toList (values x phi) <&> \v ->
       eval (substHomogeneousFormula (Val v) x phi)
   )

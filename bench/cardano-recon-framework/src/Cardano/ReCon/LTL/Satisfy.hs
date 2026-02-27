@@ -51,18 +51,15 @@ handleNext :: (Event event ty, Ord event, Ord ty, Show ty)
            -> event
            -> Either (SatisfactionResult event ty) (Int, Formula event ty)
 handleNext (!n, !formula0) m =
-  let formula1 = traceFormula ("(" <> show (1 + n) <> ")\ninitial:") formula0 in
-  let formula2 = traceFormula "next:" $ next formula1 m in
-  let formula3 = traceFormula "rewrite-hom:" (rewriteHomogeneous formula2) in
-  let formula4 = traceFormula "rewrite-frag:" $ rewriteFragment formula3 in
-  let formula5 = traceFormula "rewrite-id:" (rewriteIdentity formula4) in
+  let formula1 = traceFormula ("(" <> show (1 + n) <> ")\ninitial:") formula0
+      formula2 = traceFormula "next:" $ next formula1 m
+      formula3 = traceFormula "rewrite-hom:" (rewriteHomogeneous formula2)
+      formula4 = traceFormula "rewrite-frag:" $ rewriteFragment formula3
+      formula5 = traceFormula "rewrite-id:" (rewriteIdentity formula4) in
   case formula5 of
     Top     -> Left Satisfied
     Bottom  -> Left (Unsatisfied (relevance formula0))
     formula -> Right (n + 1, formula5)
--- MKREV: this really is a style choice again:
--- you could use let block syntax here, or move the formula* helper definitions into a where clause ot the bottom, as they merely
--- enable debug output at various stages of the transformation.
 
 handleEnd :: (Ord event, Ord ty, Show ty) => (Int, Formula event ty) -> SatisfactionResult event ty
 handleEnd (!n, !formula) =
@@ -70,19 +67,15 @@ handleEnd (!n, !formula) =
     then Satisfied
     else Unsatisfied (relevance formula)
 
--- MKREV: small thing really, but this particular function is dearly missing from the base package.
--- Many extra packages provide it, usually called `fromEither` (same type)
--- Maybe rename... as this doesn't actually merge anything?
-merge :: Either a a -> a
-merge = either id id
-
 -- | Check if the formula is satisfied in the given event timeline.
 satisfies :: (Event event ty, Ord event, Ord ty, Show ty, Foldable f)
           => Formula event ty
           -> f event
           -> SatisfactionResult event ty
-satisfies formula xs = merge $ handleEnd <$> foldl' (\acc e -> acc >>= flip handleNext e) (Right (0, formula)) xs
-
+satisfies formula xs = fromEither $ handleEnd <$> foldl' (\acc e -> acc >>= flip handleNext e) (Right (0, formula)) xs
+  where
+    fromEither :: Either a a -> a
+    fromEither = either id id
 
 data SatisfyMetrics event ty = SatisfyMetrics {
   eventsConsumed   :: Word64,

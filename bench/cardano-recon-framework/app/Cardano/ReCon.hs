@@ -145,6 +145,6 @@ main = do
         options.traces
         formulas'
   where
-    dieOnYamlException :: forall a. Either Exception a -> IO a
+    dieOnYamlException :: forall a. Either YamlReadError a -> IO a
     dieOnYamlException (Left exc) = die (Text.unpack exc)
     dieOnYamlException (Right ok) = pure ok

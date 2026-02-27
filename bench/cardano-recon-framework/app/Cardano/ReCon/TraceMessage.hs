@@ -56,11 +56,9 @@ prettyTraceMessage Envelop.TraceMessage{..} =
           Map.insert "thread" (TextValue tmsgThread) $
             extractProps tmsgData
 
--- MKREV: never leave undefined values in production code.
--- replace the fallback string which whatever provides most information
 prettyTemporalEvent :: TemporalEvent -> Text -> Text
 prettyTemporalEvent (TemporalEvent _ msgs) ns =
-  maybe "<<undefined>>" prettyTraceMessage (find (\ x -> x.tmsgNS == ns) msgs)
+  maybe ("<<Unexpected namespace " <> ns <> ">>") prettyTraceMessage (find (\ x -> x.tmsgNS == ns) msgs)
 
 prettySatisfactionResult :: Formula TemporalEvent Text -> SatisfactionResult TemporalEvent Text -> Text
 prettySatisfactionResult initial Satisfied = prettyFormula initial Prec.Universe <> " " <> green "(✔)"

@@ -49,4 +49,4 @@ checkFormula bound (UntilN _ phi psi) = checkFormula bound phi ++ checkFormula b
 checkFormula bound (PropForall x phi) = checkFormula (insert x bound) phi
 checkFormula bound (PropForallN x _ phi) = checkFormula (insert x bound) phi
 checkFormula bound (PropEq _ t _) = checkParamTerm bound t
-checkFormula bound (Atom _ cs) = foldl' (++) [] (fmap (checkParamConstraint bound) (Set.toList cs))  -- MKREV: why not use Set.foldl' directly... because you need a Functor here?
+checkFormula bound (Atom _ cs) = foldl' (++) [] (fmap (checkParamConstraint bound) (Set.toList cs))
