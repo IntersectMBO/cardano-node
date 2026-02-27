@@ -1,0 +1,153 @@
+cabal-version:      3.4
+name:               cardano-recon-framework
+description:        Cardano Re(altime) Con(formance) Framework based on Linear Temporal Logic (LTL).
+category:           Cardano
+                    Testing
+copyright:          2026 Intersect.
+version:            1.0.0
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             Ruslan Feizerakhmanov, Juergen Nicklisch, Michael Karg
+maintainer:         ruslan.feizerakhmanov@iohk.io
+
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+                    README.md
+                    recon-language-overview.md
+                    docs/*.txt
+
+flag debug
+  description:          Enable some pure verbose debug traces.
+  default:              False
+  manual:               True
+
+flag crash-on-missing-key
+  description:          If enabled throw an exception when a formula atom expects a missing key, otherwise evaluate the atom to ⊥.
+  default:              False
+  manual:               True
+
+
+common common
+    ghc-options:      -Wall
+
+    if impl(ghc >= 9.8)
+      ghc-options:
+        -Wno-x-partial
+
+    default-language: Haskell2010
+
+    default-extensions:
+      BangPatterns
+      FunctionalDependencies
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      NumericUnderscores
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+
+      Strict
+
+    if flag(debug)
+      CPP-Options:        -DTRACE
+
+    if flag(crash-on-missing-key)
+      CPP-Options:        -DCRASH_ON_MISSING_KEY
+
+library
+    import:           common
+    exposed-modules:
+                      Cardano.ReCon.LTL.Check
+                    , Cardano.ReCon.LTL.Lang.Formula
+                    , Cardano.ReCon.LTL.Lang.Formula.Parser
+                    , Cardano.ReCon.LTL.Lang.Formula.Prec
+                    , Cardano.ReCon.LTL.Lang.Formula.Yaml
+                    , Cardano.ReCon.LTL.Lang.Fragment
+                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment0
+                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment1
+                    , Cardano.ReCon.LTL.Lang.Fragment.Fragment2
+                    , Cardano.ReCon.LTL.Lang.HomogeneousFormula
+                    , Cardano.ReCon.LTL.Occurs
+                    , Cardano.ReCon.LTL.Pretty
+                    , Cardano.ReCon.LTL.Progress
+                    , Cardano.ReCon.LTL.Rewrite
+                    , Cardano.ReCon.LTL.Satisfy
+                    , Cardano.ReCon.LTL.Subst
+
+                    , Cardano.ReCon.Trace.Feed
+                    , Cardano.ReCon.Trace.Ingest
+
+    other-modules:
+    other-extensions:
+
+    build-depends:    base
+                    , containers
+                    , text
+                    , directory
+                    , trace-dispatcher ^>= 2.11
+                    , serialise
+                    , bytestring
+                    , time
+                    , stm
+                    , aeson
+                    , streaming
+                    , megaparsec
+                    , unagi-chan
+                    , yaml
+
+    hs-source-dirs:   src
+
+    ghc-options:      -O2
+
+
+executable cardano-recon
+    import:           common
+    main-is:          Cardano/ReCon.hs
+
+    ghc-options:      -O2
+                      -threaded
+                      -rtsopts
+                      -- limit to 2 cores for now
+                      "-with-rtsopts=-N2"
+
+    other-modules:
+        Cardano.ReCon.TraceMessage
+      , Cardano.ReCon.Cli
+      , Cardano.ReCon.Common
+    other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+      , text
+      , containers
+      , cardano-recon-framework
+      , trace-dispatcher ^>= 2.11
+      , aeson
+      , streaming
+      , async
+      , optparse-applicative
+      , aeson-pretty
+
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+test-suite cardano-recon-test
+  import: common
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Cardano/ReCon/Unit.hs
+  build-depends:
+      base
+    , cardano-recon-framework
+    , containers
+    , tasty
+    , tasty-hunit
+    , text
+    , megaparsec
