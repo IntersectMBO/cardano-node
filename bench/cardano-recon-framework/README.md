@@ -14,6 +14,29 @@ The application CLI takes as input:
 The application traverses the events from the given log files and checks if each given formula is satisfied by them.
 If negative, reports as such and lists the events that have been relevant to the formula.
 
+## CLI Syntax
+
+```
+Usage: cardano-recon FILE --mode <offline|online> --duration INT FILES 
+                     [--retention INT] [--trace-dispatcher-cfg FILE] 
+                     [--context FILE] [--dump-metrics BOOL] [--seek-to-end BOOL]
+
+  Check formula satisfiability against a log of trace messages
+
+Available options:
+  --mode <offline|online>  mode
+  --duration INT           temporal event duration (μs)
+  --retention INT          temporal event retention period (ms) (default: 200)
+  --trace-dispatcher-cfg FILE
+                           trace dispatcher configuration file
+  --context FILE           context variables
+  --dump-metrics BOOL      enable periodic metric dumps to stdout
+                           (default: False)
+  --seek-to-end BOOL       seek to the end of the trace file before ingesting it
+                           (default: True)
+  -h,--help                Show this help text
+```
+
 ## Build flags
   - _debug_ for enabling verbose tracing of formulas as they evolve (multiple traces per each temporal event).
   - _crash_on_missing_key_ for making the application crash if a formula atom is evaluated on an event which is missing

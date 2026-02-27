@@ -58,7 +58,7 @@ prettyTraceMessage Envelop.TraceMessage{..} =
 
 prettyTemporalEvent :: TemporalEvent -> Text -> Text
 prettyTemporalEvent (TemporalEvent _ msgs) ns =
-  maybe undefined prettyTraceMessage (find (\ x -> x.tmsgNS == ns) msgs)
+  maybe ("<<Unexpected namespace " <> ns <> ">>") prettyTraceMessage (find (\ x -> x.tmsgNS == ns) msgs)
 
 prettySatisfactionResult :: Formula TemporalEvent Text -> SatisfactionResult TemporalEvent Text -> Text
 prettySatisfactionResult initial Satisfied = prettyFormula initial Prec.Universe <> " " <> green "(✔)"

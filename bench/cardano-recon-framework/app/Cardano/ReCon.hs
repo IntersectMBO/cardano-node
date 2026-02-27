@@ -6,13 +6,16 @@ import           Cardano.Logging
 import           Cardano.Logging.Types.TraceMessage (TraceMessage (..))
 import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts)
 import           Cardano.ReCon.Common (extractProps)
+import           Cardano.ReCon.LTL.Check (checkFormula, prettyError)
 import           Cardano.ReCon.LTL.Lang.Formula
 import           Cardano.ReCon.LTL.Lang.Formula.Parser (Context (..))
 import qualified Cardano.ReCon.LTL.Lang.Formula.Parser as Parser
 import           Cardano.ReCon.LTL.Lang.Formula.Yaml
+import           Cardano.ReCon.LTL.Pretty (prettyFormula)
+import qualified Cardano.ReCon.LTL.Pretty as Prec
 import           Cardano.ReCon.LTL.Satisfy
-import           Cardano.ReCon.Trace.Feed (TemporalEvent (..),
-                   TemporalEventDurationMicrosec, read, readS)
+import           Cardano.ReCon.Trace.Feed (TemporalEvent (..), TemporalEventDurationMicrosec, read,
+                   readS)
 import           Cardano.ReCon.Trace.Ingest
 import           Cardano.ReCon.TraceMessage (TraceMessage (..), formulaOutcome)
 import qualified Cardano.ReCon.TraceMessage as App
@@ -126,6 +129,14 @@ main = do
   putStrLn "Context:"
   print ctx
   formulas <- readFormulas options.formulas (Context ctx) Parser.text >>= dieOnYamlException
+  for_ (fmap (\phi -> (phi, checkFormula mempty phi)) formulas) $ \case
+    (phi, e : es) -> die $
+      Text.unpack $
+           "Formula "
+        <> prettyFormula phi Prec.Universe
+        <> " is syntactically invalid:\n"
+        <> Text.unlines (fmap (("— " <>) . prettyError) (e : es))
+    (_, []) -> pure ()
   let formulas' = fmap (interpTimeunit (\u -> unitToMicrosecond u `div` fromIntegral options.duration)) formulas
   tr <- setupTraceDispatcher options.traceDispatcherCfg
   case options.mode of
@@ -145,6 +156,6 @@ main = do
         options.traces
         formulas'
   where
-    dieOnYamlException :: forall a. Either Exception a -> IO a
+    dieOnYamlException :: forall a. Either YamlReadError a -> IO a
     dieOnYamlException (Left exc) = die (Text.unpack exc)
     dieOnYamlException (Right ok) = pure ok
