@@ -1,4 +1,4 @@
-module Cardano.ReCon.LTL.Lang.Formula.Yaml(Exception, readPropValues, readFormulas) where
+module Cardano.ReCon.LTL.Lang.Formula.Yaml(YamlReadError, readPropValues, readFormulas) where
 
 import           Cardano.ReCon.LTL.Lang.Formula (Formula, PropValue (..))
 import           Cardano.ReCon.LTL.Lang.Formula.Parser (Context, Parser)
@@ -17,9 +17,9 @@ type FormulasEncodedType = [Text]
 
 type PropValuesEncodedType = Map Text [Text]
 
-type Exception = Text
+type YamlReadError = Text
 
-readPropValues :: FilePath -> IO (Either Exception (Map Text (Set PropValue)))
+readPropValues :: FilePath -> IO (Either YamlReadError (Map Text (Set PropValue)))
 readPropValues path = decodeFileEither @PropValuesEncodedType path >>= \case
   Left err -> pure (Left (Text.pack $ prettyPrintParseException err))
   Right propValues -> pure $ Right $ fmap (Set.fromList . fmap parsePropValue) propValues
@@ -28,7 +28,7 @@ readPropValues path = decodeFileEither @PropValuesEncodedType path >>= \case
     parsePropValue :: Text -> PropValue
     parsePropValue txt = either (const (TextValue txt)) IntValue (parse Parser.int "input" txt)
 
-readFormulas :: FilePath -> Context -> Parser ty -> IO (Either Exception [Formula event ty])
+readFormulas :: FilePath -> Context -> Parser ty -> IO (Either YamlReadError [Formula event ty])
 readFormulas path ctx ty = decodeFileEither @FormulasEncodedType path >>= \case
   Left err -> pure (Left (Text.pack $ prettyPrintParseException err))
   Right formulas ->

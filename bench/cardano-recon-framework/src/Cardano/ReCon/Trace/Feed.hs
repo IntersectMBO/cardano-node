@@ -10,7 +10,7 @@ import           Prelude hiding (read)
 import           Data.Aeson (throwDecodeStrict)
 import qualified Data.ByteString.Char8 as BChar8
 import qualified Data.Foldable as Foldable
-import           Data.List (sortBy)
+import           Data.List (sortOn)
 import           Data.Sequence (Seq, (|>))
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -52,7 +52,7 @@ slice duration msg_@(x : _) = go (utcToMicroseconds (tmsgAt x)) msg_ where
 
 -- | We assume its possible for the trace messages to come out of order. Remedy that here.
 sortByTimestamp :: [TraceMessage] -> [TraceMessage]
-sortByTimestamp = sortBy (\x y -> tmsgAt x `compare` tmsgAt y)
+sortByTimestamp = sortOn tmsgAt
 
 -- | Read a text file where every line is a json object representation of a `TraceMessage`.
 --   Trace messages lying within the specified `TemporalEventDurationMicrosec` are grouped in `TemporalEvent`.

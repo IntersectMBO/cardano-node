@@ -4,6 +4,7 @@ module Cardano.ReCon.LTL.Check(
   , checkParamConstraint
   , checkFormula
   , Error(..)
+  , prettyError
   ) where
 
 import           Cardano.ReCon.LTL.Lang.Formula
@@ -16,6 +17,9 @@ import           Data.Text (Text)
 -- The file concerns checking syntactic correctness of formulas.
 
 data Error = UnboundPropVarIdentifier PropVarIdentifier deriving (Show, Eq)
+
+prettyError :: Error -> Text
+prettyError (UnboundPropVarIdentifier x) = "Unbound property variable: " <> x
 
 -- | Verify the given parameter variable is bound in the current context.
 checkParamVar :: Set PropVarIdentifier -> Text -> [Error]

@@ -7,7 +7,6 @@ import           Cardano.ReCon.LTL.Lang.Formula
 
 import           Prelude hiding (head)
 
-import           Control.Monad (guard)
 import           Data.Char (isAlpha, isAlphaNum)
 import           Data.Foldable (asum)
 import           Data.Functor (void, (<&>))
@@ -26,9 +25,6 @@ type Parser = Parsec Void Text
 data Context = Context {
   interpDomain :: [(Text, Set PropValue)]
 }
-
-keywords :: [Text]
-keywords = []
 
 unescapedVariableIdentifierNextChar :: Parser Char
 unescapedVariableIdentifierNextChar = satisfy (\x -> isAlphaNum x || x == '_')
@@ -82,10 +78,7 @@ int :: Parser Int
 int = signed (pure ()) decimal
 
 variableIdentifier :: Parser Text
-variableIdentifier = do
-  x <- unescapedVariableIdentifier
-  guard (x `notElem` keywords)
-  pure x
+variableIdentifier = unescapedVariableIdentifier
 
 text :: Parser Text
 text = Text.pack <$> (char '\"' *> many one) <* char '\"' where
