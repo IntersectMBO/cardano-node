@@ -1,5 +1,4 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use all" #-}
+{- HLINT ignore "Use all" -}
 module Cardano.ReCon.LTL.Lang.HomogeneousFormula (
     HomogeneousFormula(..)
   , toFormula
@@ -17,7 +16,6 @@ import qualified Cardano.ReCon.LTL.Lang.Formula as F
 
 import           Data.Function (on)
 import           Data.Functor ((<&>))
-import           Data.List (foldl')
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -110,7 +108,7 @@ eval (PropForall x phi) = eval (substHomogeneousFormula Placeholder x phi) &&
   )
 -- ⟦∀(x ∈ v₁...vₖ). φ⟧ <=> φ[v₁ / x] ∧ ... ∧ φ[vₖ / x]
 eval (PropForallN x dom phi) =
-  foldl' (&&) True (
+  Prelude.and (
     Set.toList dom <&> \v ->
       eval (substHomogeneousFormula (Val v) x phi)
   )

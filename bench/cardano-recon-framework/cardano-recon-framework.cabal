@@ -3,12 +3,12 @@ name:               cardano-recon-framework
 description:        Cardano Re(altime) Con(formance) Framework based on Linear Temporal Logic (LTL).
 category:           Cardano
                     Testing
-copyright:          2019-2023 Input Output Global Inc (IOG), 2023-2026 Intersect.
+copyright:          2026 Intersect.
 version:            1.0.0
 license:            Apache-2.0
 license-files:      LICENSE
                     NOTICE
-author:             russoul, jutaro, mgmeier
+author:             Ruslan Feizerakhmanov, Juergen Nicklisch, Michael Karg
 maintainer:         ruslan.feizerakhmanov@iohk.io
 
 build-type:         Simple
