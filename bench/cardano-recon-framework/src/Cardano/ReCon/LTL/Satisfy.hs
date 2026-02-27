@@ -60,6 +60,9 @@ handleNext (!n, !formula0) m =
     Top     -> Left Satisfied
     Bottom  -> Left (Unsatisfied (relevance formula0))
     formula -> Right (n + 1, formula5)
+-- MKREV: this really is a style choice again:
+-- you could use let block syntax here, or move the formula* helper definitions into a where clause ot the bottom, as they merely
+-- enable debug output at various stages of the transformation.
 
 handleEnd :: (Ord event, Ord ty, Show ty) => (Int, Formula event ty) -> SatisfactionResult event ty
 handleEnd (!n, !formula) =
@@ -67,6 +70,9 @@ handleEnd (!n, !formula) =
     then Satisfied
     else Unsatisfied (relevance formula)
 
+-- MKREV: small thing really, but this particular function is dearly missing from the base package.
+-- Many extra packages provide it, usually called `fromEither` (same type)
+-- Maybe rename... as this doesn't actually merge anything?
 merge :: Either a a -> a
 merge = either id id
 

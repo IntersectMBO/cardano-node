@@ -53,6 +53,7 @@ slice duration msg_@(x : _) = go (utcToMicroseconds (tmsgAt x)) msg_ where
 -- | We assume its possible for the trace messages to come out of order. Remedy that here.
 sortByTimestamp :: [TraceMessage] -> [TraceMessage]
 sortByTimestamp = sortBy (\x y -> tmsgAt x `compare` tmsgAt y)
+-- MKREV: why not use 'Data.List.sortOn tsmgAt'?
 
 -- | Read a text file where every line is a json object representation of a `TraceMessage`.
 --   Trace messages lying within the specified `TemporalEventDurationMicrosec` are grouped in `TemporalEvent`.

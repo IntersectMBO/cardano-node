@@ -1,10 +1,12 @@
 module Cardano.ReCon.Cli(Mode(..), CliOptions(..), opts) where
 
 
+import           Control.Arrow ((>>>))
+import           Data.Char (toLower)
 import           Options.Applicative
-import Control.Arrow ((>>>))
-import Data.Char (toLower)
 
+-- MKREV: maybe add a comment about what this does / what is meant be retention period
+-- I mean, we know internally, but...
 retentionDefault :: Word
 retentionDefault = 200
 

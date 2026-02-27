@@ -27,6 +27,7 @@ data Context = Context {
   interpDomain :: [(Text, Set PropValue)]
 }
 
+-- MKREV: is this a placeholder for some future language change? Seems unused.
 keywords :: [Text]
 keywords = []
 
