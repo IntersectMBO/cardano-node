@@ -272,6 +272,8 @@ doListenToAcceptor TestSetup{..}
   withAsync (traceObjectsWriter sink) $ \_ ->
     void $ Server.with
       snocket
+      nullTracer
+      Mux.nullTracers
       muxBearer
       mempty
       address

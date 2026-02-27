@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -35,11 +37,11 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
 import           Control.Exception
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
-
 
 ------------------------------------------------------------------------------
 -- Byron protocol
@@ -167,7 +169,7 @@ data ByronProtocolInstantiationError =
   | SigningKeyFilepathNotSpecified
   deriving Show
 
-instance Exception ByronProtocolInstantiationError where 
+instance Exception ByronProtocolInstantiationError where
   displayException = docToString . prettyError
 
 instance Error ByronProtocolInstantiationError where

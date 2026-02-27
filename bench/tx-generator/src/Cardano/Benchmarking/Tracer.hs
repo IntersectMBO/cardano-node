@@ -37,6 +37,8 @@ import qualified Cardano.Logging.Types as Net
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.NodeInfo ()
 import           Ouroboros.Network.IOManager (IOManager)
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission
+import           Ouroboros.Network.Tracing ()
 
 import           Control.Exception (SomeException (..))
 import           Control.Monad (forM, guard)
@@ -49,6 +51,8 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
 import           Data.Time.Clock
 import           GHC.Generics
+import           Network.Mux.Tracing ()
+import qualified Network.TypedProtocol.Codec as TypedProtocol
 
 import           Trace.Forward.Forwarding (InitForwardingConfig (..), initForwardingDelayed)
 import           Trace.Forward.Utils.TraceObject
@@ -395,30 +399,18 @@ instance MetaTrace NodeToNodeSubmissionTrace where
         , Namespace [] ["TxList"]
         ]
 
-instance LogFormatting SendRecvConnect where
+-- TODO(10.7): tracing team, check this makes sense
+instance (Show txid, Show tx) => LogFormatting (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 txid tx)) where
   forHuman = Text.pack . show
-  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvConnect" ]
+  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "TxSubmission2" ]
 
-instance MetaTrace SendRecvConnect where
-    namespaceFor _ = Namespace [] ["ReqIdsBlocking"]
+-- TODO(10.7): tracing team, check this makes sense
+instance MetaTrace (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 tx a)) where
+    namespaceFor _ = Namespace [] ["TxSubmission2"]
     severityFor _ _ = Just Info
 
     documentFor _ = Just ""
 
     allNamespaces = [
-          Namespace [] ["SendRecvConnect"]
-        ]
-
-instance LogFormatting SendRecvTxSubmission2 where
-  forHuman = Text.pack . show
-  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvTxSubmission2" ]
-
-instance MetaTrace SendRecvTxSubmission2 where
-    namespaceFor _ = Namespace [] ["SendRecvTxSubmission2"]
-    severityFor _ _ = Just Info
-
-    documentFor _ = Just ""
-
-    allNamespaces = [
-          Namespace [] ["SendRecvTxSubmission2"]
+          Namespace [] ["TxSubmission2"]
         ]

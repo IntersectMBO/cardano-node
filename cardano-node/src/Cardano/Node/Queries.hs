@@ -71,8 +71,8 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
+import           Cardano.Network.NodeToClient (LocalConnectionId)
+import           Cardano.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 
 import           Control.Monad.STM (atomically)
 import           Data.ByteString (ByteString)

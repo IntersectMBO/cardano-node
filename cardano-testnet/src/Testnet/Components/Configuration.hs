@@ -267,9 +267,9 @@ resolveOnChainParams onChainParams geneses = case onChainParams of
   OnChainParamsFile file -> do
     eParams <- eitherDecode <$> liftIOAnnotated (LBS.readFile file)
     case eParams of
-      Right params -> pure $ blockfrostToGenesis geneses params
+      Right params -> blockfrostToGenesis geneses params
       Left err -> throwM $ BlockfrostParamsDecodeError file err
 
   OnChainParamsMainnet -> do
     mainnetParams <- liftIOAnnotated $ HTTP.getResponseBody <$> HTTP.httpJSON mainnetParamsRequest
-    pure $ blockfrostToGenesis geneses mainnetParams
+    blockfrostToGenesis geneses mainnetParams

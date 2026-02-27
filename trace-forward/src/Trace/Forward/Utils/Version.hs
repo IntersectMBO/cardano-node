@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Trace.Forward.Utils.Version
@@ -13,13 +17,16 @@ import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acce
                    Queryable (..))
 
 import qualified Codec.CBOR.Term as CBOR
+import           Control.DeepSeq (NFData)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           GHC.Generics (Generic)
 
 data ForwardingVersion
   = ForwardingV_1
   | ForwardingV_2
-  deriving (Eq, Ord, Enum, Bounded, Show)
+  deriving stock (Eq, Ord, Enum, Bounded, Show, Generic)
+  deriving anyclass (NFData)
 
 forwardingVersionCodec :: CodecCBORTerm (Text, Maybe Int) ForwardingVersion
 forwardingVersionCodec = CodecCBORTerm { encodeTerm, decodeTerm }
@@ -38,7 +45,8 @@ forwardingVersionCodec = CodecCBORTerm { encodeTerm, decodeTerm }
 
 newtype ForwardingVersionData = ForwardingVersionData
   { networkMagic :: NetworkMagic
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
+    deriving newtype (NFData)
 
 instance Acceptable ForwardingVersionData where
   acceptableVersion local remote

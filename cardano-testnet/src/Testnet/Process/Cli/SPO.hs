@@ -172,7 +172,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
       accountState ^. L.balanceAccountStateL . to L.fromCompact
 
 
-toApiStakeAddress :: L.Network -> L.Credential 'L.Staking -> StakeAddress
+toApiStakeAddress :: L.Network -> L.Credential L.Staking -> StakeAddress
 toApiStakeAddress = StakeAddress
 
 

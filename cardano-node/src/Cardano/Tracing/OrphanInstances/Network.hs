@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -21,12 +22,13 @@ module Cardano.Tracing.OrphanInstances.Network
   , FetchDecisionToJSON (..)
   ) where
 
+
+import qualified Cardano.Network.PeerSelection as Cardano
+import Cardano.Network.PeerSelection.PublicRootPeers (PublicRootPeers(..))
 import           Cardano.Network.Diffusion (CardanoDebugPeerSelection, CardanoPeerSelectionCounters,
-                   CardanoTraceLocalRootPeers, CardanoTracePeerSelection, TraceChurnMode (..))
+                   CardanoTraceLocalRootPeers, TraceChurnMode (..))
 import           Cardano.Network.OrphanInstances ()
 import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicRootPeers
-import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
@@ -55,11 +57,10 @@ import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import qualified Ouroboros.Network.InboundGovernor.State as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion (..), RemoteAddress,
+import qualified Cardano.Network.NodeToClient as NtC
+import           Cardano.Network.NodeToNode (RemoteAddress,
                    TraceSendRecv (..))
-import qualified Ouroboros.Network.NodeToNode as NtN
+import qualified Cardano.Network.NodeToNode as NtN
 import           Ouroboros.Network.OrphanInstances ()
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionState (..),
@@ -89,13 +90,14 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
-                   TraceTxSubmissionInbound (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2 (ProcessedTxCount (..),
+                   TraceTxSubmissionInbound (..), TraceTxLogic(..), TxSubmissionCounters(..),
+                   TxDecision(..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import           Control.Exception (Exception (..))
 import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), ToJSONKey(..))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import           Data.Bifunctor (Bifunctor (first))
@@ -123,16 +125,6 @@ instance HasSeverityAnnotation (Diffusion.DiffusionTracer ntnAddr ntcAddr) where
   getSeverityAnnotation Diffusion.UnsupportedLocalSystemdSocket {} = Warning
   getSeverityAnnotation Diffusion.DiffusionErrored {} = Critical
   getSeverityAnnotation _ = Info
-
-instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
-instance HasSeverityAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
-  getSeverityAnnotation _ = Info
-
-
-instance HasPrivacyAnnotation (NtN.HandshakeTr RemoteAddress NodeToNodeVersion)
-instance HasSeverityAnnotation (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
-  getSeverityAnnotation _ = Info
-
 
 instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
 instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
@@ -205,6 +197,10 @@ instance HasSeverityAnnotation (TraceTxSubmissionInbound txid tx) where
   getSeverityAnnotation TraceTxInboundTerminated = Notice
   getSeverityAnnotation TraceTxInboundCannotRequestMoreTxs {} = Debug
   getSeverityAnnotation TraceTxInboundCanRequestMoreTxs {} = Debug
+  getSeverityAnnotation TraceTxInboundAddedToMempool {} = Debug
+  getSeverityAnnotation TraceTxInboundRejectedFromMempool {} = Debug
+  getSeverityAnnotation TraceTxInboundError {} = Debug
+  getSeverityAnnotation TraceTxInboundDecision {} = Debug
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionOutbound txid tx)
@@ -252,6 +248,8 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.Trace) where
     Mux.TraceTerminating {} -> Debug
     Mux.TraceStopping -> Debug
     Mux.TraceStopped -> Debug
+    Mux.TraceNewMux{} -> Info
+    Mux.TraceStarting{} -> Info
 
 instance HasPrivacyAnnotation (Mux.WithBearer peer Mux.ChannelTrace)
 instance HasSeverityAnnotation (Mux.WithBearer peer Mux.ChannelTrace) where
@@ -278,6 +276,8 @@ instance HasSeverityAnnotation (Mux.WithBearer peer Mux.BearerTrace) where
     Mux.TraceSDUWriteTimeoutException -> Notice
     Mux.TraceTCPInfo {} -> Debug
 
+instance HasPrivacyAnnotation (Mux.WithBearer peer (TraceSendRecv a))
+instance HasSeverityAnnotation (Mux.WithBearer peer (TraceSendRecv a))
 
 instance HasPrivacyAnnotation CardanoTraceLocalRootPeers
 instance HasSeverityAnnotation CardanoTraceLocalRootPeers where
@@ -287,8 +287,8 @@ instance HasPrivacyAnnotation TracePublicRootPeers
 instance HasSeverityAnnotation TracePublicRootPeers where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation CardanoTracePeerSelection
-instance HasSeverityAnnotation CardanoTracePeerSelection where
+instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers extraTrace ntnAddr) where
+instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers extraTrace ntnAddr) where
   getSeverityAnnotation ev =
     case ev of
       TraceLocalRootPeersChanged {} -> Notice
@@ -321,7 +321,6 @@ instance HasSeverityAnnotation CardanoTracePeerSelection where
       TraceDemoteLocalAsynchronous {} -> Warning
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
-      -- TraceChurnMode             {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -348,10 +347,8 @@ instance HasSeverityAnnotation CardanoTracePeerSelection where
 
       TraceDemoteBigLedgerPeersAsynchronous {} -> Warning
 
-      TraceUseBootstrapPeersChanged {} -> Info
       TraceBootstrapPeersFlagChangedWhilstInSensitiveState -> Info
 
-      TraceLedgerStateJudgementChanged {} -> Notice
       TraceOnlyBootstrapPeers {}          -> Notice
 
       TraceOutboundGovernorCriticalFailure {} -> Error
@@ -363,6 +360,8 @@ instance HasSeverityAnnotation CardanoTracePeerSelection where
 
       TraceVerifyPeerSnapshot True  -> Info
       TraceVerifyPeerSnapshot False -> Error
+
+      ExtraTrace {} -> Info
 
 instance HasPrivacyAnnotation CardanoDebugPeerSelection
 instance HasSeverityAnnotation CardanoDebugPeerSelection where
@@ -416,6 +415,7 @@ instance HasSeverityAnnotation (ConnMgr.Trace addr (ConnectionHandlerTrace versi
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
+      TrInboundConnectionNotFound {}          -> Info
 
 instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
 instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
@@ -477,8 +477,7 @@ instance Transformable Text IO NtN.AcceptConnectionsPolicyTrace where
 instance HasTextFormatter NtN.AcceptConnectionsPolicyTrace where
   formatText a _ = pack (show a)
 
-
-instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header)
+instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header, ToJSON (HeaderHash header))
       => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer = trStructuredText
 instance (StandardHash header, Show peer)
@@ -492,7 +491,7 @@ instance (Show header, StandardHash header, Show peer)
      => HasTextFormatter (TraceLabelPeer peer (TraceFetchClientState header)) where
   formatText a _ = pack (show a)
 
-instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header)
+instance (StandardHash header, Show peer, ToJSON peer, ConvertRawHash header, ToJSON (HeaderHash header))
       => Transformable Text IO (BlockFetch.TraceDecisionEvent peer header) where
   trTransformer = trStructuredText
 instance (StandardHash header, Show peer)
@@ -510,8 +509,8 @@ instance (ToObject peer, ToObject (AnyMessage (TraceTxSubmissionInbound (GenTxId
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
-instance ToObject peer
-     => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk))) where
+instance (ToObject peer, ToJSON txid, ToObject (TxDecision txid tx))
+     => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionInbound txid tx)) where
   trTransformer = trStructured
 
 instance (ToObject peer, ConvertTxId blk, RunNode blk, HasTxs blk)
@@ -557,9 +556,9 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
-instance Transformable Text IO (TraceTxSubmissionInbound txid tx) where
+instance (Show tx, Show txid, ToJSON txid, ToObject (TxDecision txid tx)) => Transformable Text IO (TraceTxSubmissionInbound txid tx) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TraceTxSubmissionInbound txid tx) where
+instance (Show tx, Show txid) => HasTextFormatter (TraceTxSubmissionInbound txid tx) where
   formatText a _ = pack (show a)
 
 
@@ -609,9 +608,21 @@ instance Transformable Text IO TracePublicRootPeers where
 instance HasTextFormatter TracePublicRootPeers where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO CardanoTracePeerSelection where
+instance
+    ( ( ToJSON
+            ( PublicRootPeers
+                (Cardano.PublicRootPeers.ExtraPeers SockAddr)
+                addr
+            )
+      )
+    , ToJSON addr
+    , ToJSONKey addr
+    , Ord addr
+    , Show addr
+    ) =>
+    Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
   trTransformer = trStructuredText
-instance HasTextFormatter CardanoTracePeerSelection where
+instance (Ord addr, Show addr) => HasTextFormatter (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO CardanoDebugPeerSelection where
@@ -671,6 +682,26 @@ instance (Show addr, ToJSON addr)
 instance Show addr
       => HasTextFormatter (Server.RemoteTransitionTrace addr) where
   formatText a _ = pack (show a)
+
+instance (Show txid, Show tx, Show addr)
+      => Transformable Text IO (TraceTxLogic txid tx addr) where
+  trTransformer = trStructuredText
+instance (Show txid, Show tx, Show addr)
+      => HasTextFormatter (TraceTxLogic txid tx addr) where
+  formatText a _ = pack (show a)
+
+instance Transformable Text IO TxSubmissionCounters where
+  trTransformer = trStructuredText
+instance HasTextFormatter TxSubmissionCounters where
+  formatText a _ = pack (show a)
+
+instance (Show txid, Show tx, Show addr, Show peer, ToObject peer)
+      => Transformable Text IO (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
+  trTransformer = trStructuredText
+instance (Show txid, Show tx, Show addr, Show peer)
+      => HasTextFormatter (TraceLabelPeer peer (TraceTxLogic txid tx addr)) where
+  formatText a _ = pack (show a)
+
 
 --
 -- | instances of @ToObject@
@@ -1056,20 +1087,6 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
              , "numberOfConnection" .= show numOfConnections
              ]
 
-
-instance ConvertRawHash header
-      => ToJSON (Point header) where
-  toJSON GenesisPoint = String "GenesisPoint"
-  toJSON (BlockPoint (SlotNo slotNo) hash) =
-    -- it is unlikely that there will be two short hashes in the same slot
-    String $ renderHeaderHashForVerbosity
-               (Proxy @header)
-                MinimalVerbosity
-                hash
-          <> "@"
-          <> pack (show slotNo)
-
-
 newtype Verbose a = Verbose a
 
 instance ConvertRawHash header
@@ -1085,7 +1102,7 @@ instance ConvertRawHash header
           <> pack (show slotNo)
 
 
-instance ConvertRawHash blk
+instance (ConvertRawHash blk, ToJSON (HeaderHash blk))
       => ToObject (Point blk) where
   toObject _verb GenesisPoint =
     mconcat [ "point" .= String "GenesisPoint" ]
@@ -1114,7 +1131,7 @@ instance (ConvertRawHash blk) => ToObject (AF.Anchor blk) where
       , "blockNo" .= toJSON (unBlockNo bno)
       ]
 
-instance (ConvertRawHash blk, HasHeader blk) => ToObject (AF.AnchoredFragment blk) where
+instance (ConvertRawHash blk, HasHeader blk, ToJSON (HeaderHash blk)) => ToObject (AF.AnchoredFragment blk) where
   toObject verb frag = mconcat
     [ "kind" .= String "AnchoredFragment"
     , "anchor" .= toObject verb (AF.anchor frag)
@@ -1165,7 +1182,7 @@ instance (HasHeader header, ConvertRawHash header)
              , "outstanding" .= outstanding
              ]
 
-instance (ToJSON peer, ConvertRawHash header)
+instance (ToJSON peer, ConvertRawHash header, ToJSON (HeaderHash header))
       => ToObject [TraceLabelPeer peer (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = mempty
   toObject _ [] = mempty
@@ -1196,7 +1213,7 @@ instance ToJSON point
   toJSON (FetchDecisionToJSON (Right points)) =
     toJSON points
 
-instance (ToJSON peer, ConvertRawHash header)
+instance (ToJSON peer, ConvertRawHash header, ToJSON (HeaderHash header))
       => ToObject (BlockFetch.TraceDecisionEvent peer header) where
   toObject  verb (BlockFetch.PeersFetch as) = toObject verb as
   toObject _verb (BlockFetch.PeerStarvedUs peer) = mconcat
@@ -1220,11 +1237,11 @@ instance ToObject (Stateful.AnyMessage ps f)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 
-instance ToObject (TraceTxSubmissionInbound txid tx) where
-  toObject _verb (TraceTxSubmissionCollected count) =
+instance (ToJSON txid, ToObject (TxDecision txid tx)) => ToObject (TraceTxSubmissionInbound txid tx) where
+  toObject _verb (TraceTxSubmissionCollected txids) =
     mconcat
       [ "kind" .= String "TxSubmissionCollected"
-      , "count" .= toJSON count
+      , "count" .= toJSON (length txids)
       ]
   toObject _verb (TraceTxSubmissionProcessed processed) =
     mconcat
@@ -1245,6 +1262,26 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
     mconcat
       [ "kind" .= String "TxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
+      ]
+  toObject _verb (TraceTxInboundAddedToMempool txids duration) =
+    mconcat
+      [ "kind" .= String "TraceTxInboundAddedToMempool"
+      , "count" .= toJSON (length txids)
+      , "duration" .= toJSON duration
+      ]
+  toObject _verb (TraceTxInboundRejectedFromMempool txids duration) =
+    mconcat
+      [ "kind" .= String "TraceTxInboundRejectedFromMempool"
+      , "count" .= toJSON (length txids)
+      , "duration" .= toJSON duration
+      ]
+  toObject _verb (TraceTxInboundError err) = mconcat
+      [ "kind" .= String "TraceTxInboundError"
+      , "reason" .= displayException err
+      ]
+  toObject verb (TraceTxInboundDecision decision) = mconcat
+      [ "kind" .= String "TraceTxInboundDecision"
+      , "reason" .= toObject verb decision
       ]
 
 -- TODO: use the json encoding of transactions
@@ -1432,17 +1469,25 @@ instance ToObject TracePublicRootPeers where
              , "domainAddresses" .= Aeson.toJSONList domains
              ]
 
-
-instance ToObject CardanoTracePeerSelection where
+instance
+    ( ToJSON
+        ( PublicRootPeers
+            (Cardano.PublicRootPeers.ExtraPeers SockAddr)
+            addr
+        )
+    , Ord addr
+    , ToJSON addr
+    , ToJSONKey addr
+    ) =>
+    ToObject (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
              , "current" .= toJSON lrp'
              ]
-  toObject _verb (TraceTargetsChanged pst pst') =
+  toObject _verb (TraceTargetsChanged pst) =
     mconcat [ "kind" .= String "TargetsChanged"
-             , "previous" .= toJSON pst
-             , "current" .= toJSON pst'
+             , "current" .= toJSON pst
              ]
   toObject _verb (TracePublicRootsRequest tRootPeers nRootPeers) =
     mconcat [ "kind" .= String "PublicRootsRequest"
@@ -1517,13 +1562,14 @@ instance ToObject CardanoTracePeerSelection where
              , "targetLocalEstablished" .= tLocalEst
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePromoteColdFailed tEst aEst p d err) =
+  toObject _verb (TracePromoteColdFailed tEst aEst p d err forgotten) =
     mconcat [ "kind" .= String "PromoteColdFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "reason" .= show forgotten
              ]
   toObject _verb (TracePromoteColdDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdDone"
@@ -1537,13 +1583,14 @@ instance ToObject CardanoTracePeerSelection where
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err) =
+  toObject _verb (TracePromoteColdBigLedgerPeerFailed tEst aEst p d err forgotten) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "delay" .= toJSON d
              , "reason" .= show err
+             , "forgotten" .= show forgotten
              ]
   toObject _verb (TracePromoteColdBigLedgerPeerDone tEst aEst p) =
     mconcat [ "kind" .= String "PromoteColdBigLedgerPeerDone"
@@ -1706,9 +1753,6 @@ instance ToObject CardanoTracePeerSelection where
     mconcat [ "kind" .= String "ChurnWait"
              , "diffTime" .= toJSON dt
              ]
-  -- toObject _verb (TraceChurnMode c) =
-  --   mconcat [ "kind" .= String "ChurnMode"
-  --            , "event" .= show c ]
   toObject _verb (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
     mconcat [ "kind" .= String "PickInboundPeers"
             , "targetKnown" .= targetNumberOfKnownPeers
@@ -1716,14 +1760,8 @@ instance ToObject CardanoTracePeerSelection where
             , "selected" .= selected
             , "available" .= available
             ]
-  toObject _verb (TraceLedgerStateJudgementChanged new) =
-    mconcat [ "kind" .= String "LedgerStateJudgementChanged"
-             , "new" .= show new ]
   toObject _verb TraceOnlyBootstrapPeers =
     mconcat [ "kind" .= String "OnlyBootstrapPeers" ]
-  toObject _verb (TraceUseBootstrapPeersChanged ubp) =
-    mconcat [ "kind" .= String "UseBootstrapPeersChanged"
-             , "bootstrapPeers" .= show ubp ]
   toObject _verb TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
     mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
             ]
@@ -1771,6 +1809,13 @@ instance ToObject CardanoTracePeerSelection where
             , "ledgerStateJudgement" .= Cardano.debugLedgerStateJudgement (dpssExtraState ds)
             , "associationMode" .= dpssAssociationMode ds
             ]
+  toObject _verb (ExtraTrace (Cardano.TraceLedgerStateJudgementChanged new)) =
+    mconcat [ "kind" .= String "LedgerStateJudgementChanged"
+             , "new" .= show new ]
+  toObject _verb (ExtraTrace (Cardano.TraceUseBootstrapPeersChanged ubp)) =
+    mconcat [ "kind" .= String "UseBootstrapPeersChanged"
+             , "bootstrapPeers" .= show ubp ]
+
 
 peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
 peerSelectionTargetsToObject
@@ -2068,6 +2113,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+      TrInboundConnectionNotFound peerAddr ->
+        mconcat $ reverse
+          [ "kind" .= String "InboundConnectionNotFound"
+          , "remoteAddress" .= toJSON peerAddr
+          ]
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ConnMgr.AbstractTransitionTrace addr) where
@@ -2117,9 +2167,6 @@ instance ToObject NtN.RemoteAddress where
                  ]
     toObject _verb (SockAddrUnix path) =
         mconcat [ "path" .= show path ]
-
-instance ToJSON Time where
-  toJSON = String . pack . show
 
 instance ToObject NtN.RemoteConnectionId where
     toObject verb (NtN.ConnectionId l r) =
@@ -2294,3 +2341,23 @@ instance ToObject DNSTrace where
             , "peerKind" .= String (pack . show $ peerKind)
             , "domain" .= String (pack . show $ domain)
             ]
+
+instance HasPrivacyAnnotation (TraceTxLogic txid tx addr) where
+instance HasSeverityAnnotation (TraceTxLogic txid tx addr) where
+  getSeverityAnnotation _ = Debug
+instance (Show txid, Show tx, Show addr) => ToObject (TraceTxLogic txid tx addr) where
+
+instance HasPrivacyAnnotation TxSubmissionCounters where
+instance HasSeverityAnnotation TxSubmissionCounters where
+  getSeverityAnnotation _ = Debug
+instance ToObject TxSubmissionCounters where
+  toObject _ TxSubmissionCounters {..} =
+    mconcat [ "kind" .= String "TxSubmissionCounters"
+            , "numOfOutstandingTxIds" .= numOfOutstandingTxIds
+            , "numOfBufferedTxs" .= numOfBufferedTxs
+            , "numOfInSubmissionToMempoolTxs" .= numOfInSubmissionToMempoolTxs
+            , "numOfTxIdsInflight" .= numOfTxIdsInflight
+            ]
+
+instance ToObject (TxDecision txid tx) where
+  toObject _ _ = undefined -- TODO(10.7)
