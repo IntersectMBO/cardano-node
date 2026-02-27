@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Werror=missing-fields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Testnet.Blockfrost
   ( BlockfrostParams
@@ -14,7 +15,7 @@ import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.Alonzo.PParams (CoinPerWord)
 import           Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, Nonce, ProtVer (..),
                    UnitInterval, Version)
-import           Cardano.Ledger.Coin (Coin, CoinPerByte(..), compactCoinOrError)
+import           Cardano.Ledger.Coin (Coin, CoinPerByte (..), compactCoinOrError)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
@@ -27,25 +28,27 @@ import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 
 import           Control.Applicative ((<|>))
+import           Control.Exception.Safe (MonadThrow)
 import           Data.Aeson (FromJSON (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Map.Strict as Map
 import           Data.Scientific (Scientific)
 import           Data.Word (Word16, Word32)
+import           GHC.Stack
 import           Numeric.Natural (Natural)
 import           Text.Read (readMaybe)
 
 data BlockfrostParams = BlockfrostParams
   { -- Alonzo parameters
     bfgCoinsPerUTxOWord     :: CoinPerWord
-  , bfgCollateralPercent    :: Natural
+  , bfgCollateralPercent    :: Word16
   , bfgMaxBlockExMem        :: Natural
   , bfgMaxBlockExSteps      :: Natural
-  , bfgMaxCollateralInputs  :: Natural
+  , bfgMaxCollateralInputs  :: Word16
   , bfgMaxTxExMem           :: Natural
   , bfgMaxTxExSteps         :: Natural
-  , bfgMaxValueSize         :: Natural
+  , bfgMaxValueSize         :: Word32
   , bfgPriceMem             :: NonNegativeInterval
   , bfgPriceSteps           :: NonNegativeInterval
     -- PlutusV1 and PlutusV2
@@ -181,76 +184,87 @@ instance FromJSON BlockfrostParams where
           Nothing -> Aeson.parseFail $ "Bogus value at key " ++ show k ++ " is neither Number nor String"
 
 -- Edit a set of Genesis files with data from Blockfrost parameters
-blockfrostToGenesis :: ()
+blockfrostToGenesis
+  :: HasCallStack
+  => MonadThrow m
   => (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
   -> BlockfrostParams
-  -> (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
+  -> m (ShelleyGenesis, AlonzoGenesis, ConwayGenesis, DijkstraGenesis)
 blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGenesis') BlockfrostParams{..} =
-  (shelleyGenesis, alonzoGenesis, conwayGenesis, dijkstraGenesis)
+  (,,,)
+    <$> shelleyGenesis
+    <*> alonzoGenesis
+    <*> conwayGenesis
+    <*> dijkstraGenesis
   where
     -- Alonzo params
-    alonzoGenesis = alonzoGenesis'
-      { agCoinsPerUTxOWord = bfgCoinsPerUTxOWord
-      , agCollateralPercentage = bfgCollateralPercent
-      , agMaxBlockExUnits = ExUnits
-        { exUnitsMem = bfgMaxBlockExMem
-        , exUnitsSteps = bfgMaxBlockExSteps
-        }
-      , agMaxCollateralInputs = bfgMaxCollateralInputs
-      , agMaxTxExUnits = ExUnits
-        { exUnitsMem = bfgMaxTxExMem
-        , exUnitsSteps = bfgMaxTxExSteps
-        }
-      , agMaxValSize = bfgMaxValueSize
-      , agPrices = Prices
-        { prMem = bfgPriceMem
-        , prSteps = bfgPriceSteps
-        }
-      , agPlutusV1CostModel = undefined -- TODO(10.7)
-        -- CostModels.mkCostModels . Map.mapWithKey trimCostModelToInitial $ CostModels.costModelsValid bfgAlonzoCostModels
-      }
+    alonzoGenesis = do
+      v1CostModel <- maybe (error "Testnet.Blockfrost: no PlutusV1 valid cost model in response") (trimCostModelToInitial PlutusV1)
+        . Map.lookup PlutusV1 $ CostModels.costModelsValid bfgAlonzoCostModels
 
-    -- Conway Params
-    conwayParams = UpgradeConwayPParams
-      { ucppPoolVotingThresholds = PoolVotingThresholds
-        { pvtMotionNoConfidence = bfgPVTMotionNoConfidence
-        , pvtCommitteeNormal = bfgPVTCommitteeNormal
-        , pvtCommitteeNoConfidence = bfgPVTCommitteeNoConfidence
-        , pvtHardForkInitiation = bfgPVTHardForkInitiation
-        , pvtPPSecurityGroup = bfgPVTPPSecurityGroup
+      pure $ alonzoGenesis'
+        { agCoinsPerUTxOWord = bfgCoinsPerUTxOWord
+        , agCollateralPercentage = bfgCollateralPercent
+        , agMaxBlockExUnits = ExUnits
+          { exUnitsMem = bfgMaxBlockExMem
+          , exUnitsSteps = bfgMaxBlockExSteps
+          }
+        , agMaxCollateralInputs = bfgMaxCollateralInputs
+        , agMaxTxExUnits = ExUnits
+          { exUnitsMem = bfgMaxTxExMem
+          , exUnitsSteps = bfgMaxTxExSteps
+          }
+        , agMaxValSize = bfgMaxValueSize
+        , agPrices = Prices
+          { prMem = bfgPriceMem
+          , prSteps = bfgPriceSteps
+          }
+        , agPlutusV1CostModel = v1CostModel
+          -- CostModels.mkCostModels . Map.mapWithKey trimCostModelToInitial . $ CostModels.costModelsValid bfgAlonzoCostModels
         }
-      , ucppDRepVotingThresholds = DRepVotingThresholds
-        { dvtMotionNoConfidence = bfgDVTMotionNoConfidence
-        , dvtCommitteeNormal = bfgDVTCommitteeNormal
-        , dvtCommitteeNoConfidence = bfgDVTCommitteeNoConfidence
-        , dvtUpdateToConstitution = bfgDVTUpdateToConstitution
-        , dvtHardForkInitiation = bfgDVTHardForkInitiation
-        , dvtPPNetworkGroup = bfgDVTPPNetworkGroup
-        , dvtPPEconomicGroup = bfgDVTPPEconomicGroup
-        , dvtPPTechnicalGroup = bfgDVTPPTechnicalGroup
-        , dvtPPGovGroup = bfgDVTPPGovGroup
-        , dvtTreasuryWithdrawal = bfgDVTTreasuryWithdrawal
-        }
-      , ucppCommitteeMinSize = bfgCommitteeMinSize
-      , ucppCommitteeMaxTermLength = bfgCommitteeMaxTermLength
-      , ucppGovActionLifetime = bfgGovActionLifetime
-      , ucppGovActionDeposit = bfgGovActionDeposit
-      , ucppDRepDeposit = bfgDRepDeposit
-      , ucppDRepActivity = bfgDRepActivity
-      , ucppMinFeeRefScriptCostPerByte = bfgMinFeeRevScriptCostPerByte
-      , ucppPlutusV3CostModel = trimCostModelToInitial PlutusV3 bfgConwayCostModel
-      }
-    conwayGenesis = conwayGenesis'{cgUpgradePParams=conwayParams}
+
+    conwayGenesis = do
+      ucppPlutusV3CostModel <- trimCostModelToInitial PlutusV3 bfgConwayCostModel
+      let conwayParams = UpgradeConwayPParams
+            { ucppPoolVotingThresholds = PoolVotingThresholds
+              { pvtMotionNoConfidence = bfgPVTMotionNoConfidence
+              , pvtCommitteeNormal = bfgPVTCommitteeNormal
+              , pvtCommitteeNoConfidence = bfgPVTCommitteeNoConfidence
+              , pvtHardForkInitiation = bfgPVTHardForkInitiation
+              , pvtPPSecurityGroup = bfgPVTPPSecurityGroup
+              }
+            , ucppDRepVotingThresholds = DRepVotingThresholds
+              { dvtMotionNoConfidence = bfgDVTMotionNoConfidence
+              , dvtCommitteeNormal = bfgDVTCommitteeNormal
+              , dvtCommitteeNoConfidence = bfgDVTCommitteeNoConfidence
+              , dvtUpdateToConstitution = bfgDVTUpdateToConstitution
+              , dvtHardForkInitiation = bfgDVTHardForkInitiation
+              , dvtPPNetworkGroup = bfgDVTPPNetworkGroup
+              , dvtPPEconomicGroup = bfgDVTPPEconomicGroup
+              , dvtPPTechnicalGroup = bfgDVTPPTechnicalGroup
+              , dvtPPGovGroup = bfgDVTPPGovGroup
+              , dvtTreasuryWithdrawal = bfgDVTTreasuryWithdrawal
+              }
+            , ucppCommitteeMinSize = bfgCommitteeMinSize
+            , ucppCommitteeMaxTermLength = bfgCommitteeMaxTermLength
+            , ucppGovActionLifetime = bfgGovActionLifetime
+            , ucppGovActionDeposit = bfgGovActionDeposit
+            , ucppDRepDeposit = bfgDRepDeposit
+            , ucppDRepActivity = bfgDRepActivity
+            , ucppMinFeeRefScriptCostPerByte = bfgMinFeeRevScriptCostPerByte
+            , ucppPlutusV3CostModel
+            }
+      pure conwayGenesis'{cgUpgradePParams=conwayParams}
 
     -- Shelley params
     shelleyParams = PParams $ ShelleyPParams
-      { sppTxFeePerByte = CoinPerByte . compactCoinOrError $ bfgMinFeeA
-      , sppTxFeeFixed = compactCoinOrError $ bfgMinFeeB
+      { sppTxFeePerByte = CoinPerByte $ compactCoinOrError bfgMinFeeA
+      , sppTxFeeFixed = compactCoinOrError bfgMinFeeB
       , sppMaxBBSize = bfgMaxBlockSize
       , sppMaxTxSize = bfgMaxTxSize
       , sppMaxBHSize = bfgMaxBlockHeaderSize
-      , sppKeyDeposit = compactCoinOrError $ bfgKeyDeposit
-      , sppPoolDeposit = compactCoinOrError $ bfgPoolDeposit
+      , sppKeyDeposit = compactCoinOrError bfgKeyDeposit
+      , sppPoolDeposit = compactCoinOrError bfgPoolDeposit
       , sppEMax = bfgEMax
       , sppNOpt = bfgNOpt
       , sppA0 = bfgA0
@@ -262,20 +276,20 @@ blockfrostToGenesis (shelleyGenesis', alonzoGenesis', conwayGenesis', dijkstraGe
         { pvMajor = bfgProtocolMajorVer
         , pvMinor = bfgProtocolMinorVer
         }
-      , sppMinUTxOValue = compactCoinOrError $ bfgMinUTxO
-      , sppMinPoolCost = compactCoinOrError $ bfgMinPoolCost
+      , sppMinUTxOValue = compactCoinOrError bfgMinUTxO
+      , sppMinPoolCost = compactCoinOrError bfgMinPoolCost
       }
-    shelleyGenesis = shelleyGenesis'{sgProtocolParams=shelleyParams}
+    shelleyGenesis = pure shelleyGenesis'{sgProtocolParams=shelleyParams}
 
     -- TODO dijkstra: there are no dijkstra params on blockfrost
-    dijkstraGenesis = dijkstraGenesis'
+    dijkstraGenesis = pure dijkstraGenesis'
 
 -- | Trims cost model to the initial number of parameters. The cost models in geneses can't
 -- have more parameters than the initial number.
-trimCostModelToInitial :: Language -> CostModel -> CostModel
+trimCostModelToInitial :: HasCallStack => MonadThrow m => Language -> CostModel -> m CostModel
 trimCostModelToInitial lang cm = do
   let paramsCount = CostModels.costModelInitParamCount lang
-  either (error . ("Testnet.Blockfrost: Cost model trimming failure: " <>) . show) id
+  either (error . ("Testnet.Blockfrost: Cost model trimming failure: " <>) . show) pure
     . CostModels.mkCostModel lang
     . take paramsCount
     $ CostModels.getCostModelParams cm
