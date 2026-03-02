@@ -36,7 +36,7 @@ import           Data.Function (on)
 -- use of lenses.
 data FundInEra era = FundInEra {
     _fundTxIn       :: !TxIn
-  , _fundWitness    :: Witness WitCtxTxIn era
+  , _fundWitness    :: !(Witness WitCtxTxIn era)
   , _fundVal        :: !(TxOutValue era)
   , _fundSigningKey :: !(Maybe (SigningKey PaymentKey))
   }
