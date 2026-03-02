@@ -18,6 +18,7 @@ import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
 
+import           Data.List (foldl')
 import           Prelude
 
 import           Control.Concurrent.MVar
@@ -64,13 +65,13 @@ askWalletRef r f = do
 
 -- | This does an insertion into the `MVar` contents.
 walletRefInsertFund :: WalletRef -> Fund -> IO ()
-walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundQueue.insertFund w fund
+walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $! FundQueue.insertFund w fund
 
 -- | 'mkWalletFundStoreList' hides its second argument in
 -- 'FundToStoreList'. This is not used anywhere.
 mkWalletFundStoreList :: WalletRef -> FundToStoreList IO
 mkWalletFundStoreList walletRef funds = modifyMVar_  walletRef
-  $ \wallet -> return (foldl FundQueue.insertFund wallet funds)
+  $ \wallet -> return $! foldl' FundQueue.insertFund wallet funds
 
 -- | 'mkWalletFundStore' hides its second argument in 'FundToStore'.
 -- This is only ever called in tandem with 'createAndStore' in
@@ -79,16 +80,16 @@ mkWalletFundStoreList walletRef funds = modifyMVar_  walletRef
 -- 'WalletRef' 'MVar' by side effect.
 mkWalletFundStore :: WalletRef -> FundToStore IO
 mkWalletFundStore walletRef fund = modifyMVar_  walletRef
-  $ \wallet -> return $ FundQueue.insertFund wallet fund
+  $ \wallet -> return $! FundQueue.insertFund wallet fund
 
 -- | 'walletSource' is only ever used in
 -- 'Cardano.Benchmarking.Script.Core.evalGenerator' to pass
 -- to 'Cardano.TxGenerator.Tx.sourceToStoreTransaction' and
 -- its associated functions.
 walletSource :: WalletRef -> Int -> FundSource IO
-walletSource ref munch = modifyMVar ref $ \fifo -> return $ case removeFunds munch fifo of
-  Nothing -> (fifo, Left $ TxGenError "WalletSource: out of funds")
-  Just (newFifo, funds) -> (newFifo, Right funds)
+walletSource ref munch = modifyMVar ref $ \fifo -> case removeFunds munch fifo of
+  Nothing -> return (fifo, Left $ TxGenError "WalletSource: out of funds")
+  Just (newFifo, funds) -> return (newFifo, Right funds)
 
 -- | Just a preview of the wallet's funds; wallet remains unmodified.
 walletPreview :: WalletRef -> Int -> IO [Fund]
