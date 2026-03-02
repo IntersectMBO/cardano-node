@@ -133,6 +133,9 @@ executable cardano-recon
       , async
       , optparse-applicative
       , aeson-pretty
+      , ekg-core
+      , network
+      , hostname
 
 
     -- Directories containing source files.

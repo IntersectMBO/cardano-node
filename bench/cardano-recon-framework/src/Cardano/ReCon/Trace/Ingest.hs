@@ -10,6 +10,8 @@ module Cardano.ReCon.Trace.Ingest
        , ingestFileThreaded
        ) where
 
+import           Prelude hiding (Foldable (..))
+
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Unagi as Unagi
 import           Control.Concurrent.STM.TVar
@@ -20,7 +22,7 @@ import           Data.Aeson (FromJSON (..), decodeStrict', withObject, (.:))
 import           Data.Bits (shiftL, xor)
 import           Data.ByteString.Char8 as ByteString (ByteString, hGetLine)
 import           Data.Char (ord)
-import           Data.List (foldl')
+import           Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)

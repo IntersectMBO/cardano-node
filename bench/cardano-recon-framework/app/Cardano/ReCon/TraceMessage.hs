@@ -21,25 +21,34 @@ import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (toLazyText)
 
 
-data TraceMessage = FormulaStartCheck {formula :: Formula TemporalEvent Text}
+data TraceMessage = FormulaStartCheck {
+                      formula :: Formula TemporalEvent Text
+                      -- | For the info about this field, see the doc entry of `FormulaProgressDump`.
+                    , index :: Word
+                    }
                   | FormulaProgressDump {
                       eventsPerSecond :: Word,
                       catchupRatio    :: Double,
-                      formula         :: Formula TemporalEvent Text
+                      formula         :: Formula TemporalEvent Text,
+                      -- | As we may have multiple formulas evolving over time concurrently,
+                      --   we assign a unique index to each for disambiguation.
+                      --   catchup_ratio_$INDEX is thus a set of metrics indexed over the finite set of indices.
+                      index           :: Word
                     }
                   -- | Formula outcomes are split into (+) and (-) as we'd like to print them at distinct severity levels,
                   --   but severity level is indexed by namespace (= constructor name), hence
                   --   we can't store both outcomes in one constructor.
-                  | FormulaPositiveOutcome { formula :: Formula TemporalEvent Text }
+                  | FormulaPositiveOutcome { formula :: Formula TemporalEvent Text, index :: Word }
                   | FormulaNegativeOutcome {
                       formula   :: Formula TemporalEvent Text,
-                      relevance :: Relevance TemporalEvent Text
+                      relevance :: Relevance TemporalEvent Text,
+                      index :: Word
                   }
 
 -- | Smart constructor.
-formulaOutcome :: Formula TemporalEvent Text -> SatisfactionResult TemporalEvent Text -> TraceMessage
-formulaOutcome formula Satisfied         = FormulaPositiveOutcome formula
-formulaOutcome formula (Unsatisfied rel) = FormulaNegativeOutcome formula rel
+formulaOutcome :: Formula TemporalEvent Text -> SatisfactionResult TemporalEvent Text -> Word -> TraceMessage
+formulaOutcome formula Satisfied         idx = FormulaPositiveOutcome formula idx
+formulaOutcome formula (Unsatisfied rel) idx = FormulaNegativeOutcome formula rel idx
 
 green :: Text -> Text
 green text = "\x001b[32m" <> text <> "\x001b[0m"
@@ -71,40 +80,46 @@ prettySatisfactionResult initial (Unsatisfied rel) =
 instance LogFormatting TraceMessage where
   forMachine _ FormulaStartCheck{..} = mconcat
     [
-      "formula" .= String (prettyFormula formula Prec.Universe)
+      "formula" .= String (prettyFormula formula Prec.Universe),
+      "index" .= index
     ]
   forMachine _ FormulaProgressDump{..} = mconcat
     [
       "events_per_second" .= Number (fromIntegral eventsPerSecond),
-      "catch_up_ratio" .= Number (realToFrac catchupRatio)
+      "catch_up_ratio" .= Number (realToFrac catchupRatio),
+      "index" .= index
     ]
   forMachine _ FormulaPositiveOutcome{..} = mconcat
     [
-      "formula" .= String (prettyFormula formula Prec.Universe)
+      "formula" .= String (prettyFormula formula Prec.Universe),
+      "index" .= index
     ]
   forMachine _ FormulaNegativeOutcome{..} = mconcat
     [
       "formula" .= String (prettyFormula formula Prec.Universe)
     ,
       "relevance" .= String (showT relevance)
+    ,
+      "index" .= index
     ]
 
   forHuman FormulaStartCheck{..} =
-    "Starting satisfiability check on: " <> prettyFormula formula Prec.Universe
+    "Starting satisfiability check on formula #" <> showT index <> ": " <> prettyFormula formula Prec.Universe
   forHuman FormulaProgressDump{..} =
          "\nevent/s: " <> showT eventsPerSecond <> "\n"
       <> "catch-up ratio: "
             <> showT catchupRatio
             <> "  // values above 1.0 <=> realtime"
             <> "\n"
-      <> "formula: " <> prettyFormula formula Prec.Universe
+      <> "formula: " <> prettyFormula formula Prec.Universe <> "\n"
+      <> "index: " <> showT index
   forHuman FormulaPositiveOutcome{..} =
     prettySatisfactionResult formula Satisfied
   forHuman FormulaNegativeOutcome{..} =
     prettySatisfactionResult formula (Unsatisfied relevance)
 
   asMetrics FormulaStartCheck{} = []
-  asMetrics (FormulaProgressDump {catchupRatio}) = [DoubleM "catchup_ratio" catchupRatio]
+  asMetrics (FormulaProgressDump {catchupRatio, index}) = [DoubleM ("catchup_ratio_" <> showT index) catchupRatio]
   asMetrics FormulaPositiveOutcome{} = []
   asMetrics FormulaNegativeOutcome{} = []
 

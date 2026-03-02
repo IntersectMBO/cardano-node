@@ -9,7 +9,9 @@ module Cardano.ReCon.LTL.Check(
 
 import           Cardano.ReCon.LTL.Lang.Formula
 
-import           Data.List (foldl')
+import           Prelude hiding (Foldable (..))
+
+import           Data.Foldable (foldl')
 import           Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import           Data.Text (Text)

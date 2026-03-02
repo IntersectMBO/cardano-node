@@ -3,6 +3,7 @@
 module Main(main) where
 
 import           Cardano.Logging
+import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
 import           Cardano.Logging.Types.TraceMessage (TraceMessage (..))
 import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts)
 import           Cardano.ReCon.Common (extractProps)
@@ -23,20 +24,24 @@ import qualified Cardano.ReCon.TraceMessage as App
 import           Prelude hiding (read)
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (cancel, forConcurrently_, withAsync)
+import           Control.Concurrent.Async (cancel, forConcurrently_, link, withAsync)
 import           Control.Monad (forever, when, (>=>))
 import           Data.Foldable (for_)
 import           Data.IORef (IORef, newIORef, readIORef)
 import           Data.List (find)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe, isJust)
+import           Data.Maybe (fromMaybe, isJust, listToMaybe)
 import           Data.Text (Text, unpack)
 import qualified Data.Text as Text
 import           Data.Traversable (for)
+import           Network.HostName (HostName)
+import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (Success)
 import           System.Exit (die)
+import qualified System.Metrics as EKG
 
 import           Streaming
+
 
 instance Event TemporalEvent Text where
   ofTy (TemporalEvent _ msgs) c = isJust $ find (\msg -> msg.tmsgNS == c) msgs
@@ -48,18 +53,18 @@ instance Event TemporalEvent Text where
       Nothing -> error ("Not an event of type " <> unpack c)
   beg (TemporalEvent t _) = t
 
-check :: Trace IO App.TraceMessage -> Formula TemporalEvent Text -> [TemporalEvent] -> IO ()
-check tr phi events =
+check :: Word -> Trace IO App.TraceMessage -> Formula TemporalEvent Text -> [TemporalEvent] -> IO ()
+check idx {- Formula index -} tr phi events =
   let result = satisfies phi events in
-  traceWith tr $ formulaOutcome phi result
+  traceWith tr $ formulaOutcome phi result idx
 
-checkS' :: Bool -> Trace IO App.TraceMessage -> Formula TemporalEvent Text -> Stream (Of TemporalEvent) IO () -> IO ()
-checkS' enableProgressDumps tr phi events = do
+checkS' :: Bool -> Word -> Trace IO App.TraceMessage -> Formula TemporalEvent Text -> Stream (Of TemporalEvent) IO () -> IO ()
+checkS' enableProgressDumps idx {- Formula index -} tr phi events = do
   let initial = SatisfyMetrics 0 phi 0
   metrics <- newIORef initial
   withAsync (when enableProgressDumps $ runDisplayProgressDump initial metrics) $ \counterDisplayThread -> do
     r <- satisfiesS phi events metrics
-    traceWith tr $ formulaOutcome phi r
+    traceWith tr $ formulaOutcome phi r idx
     cancel counterDisplayThread
   where
     runDisplayProgressDump :: SatisfyMetrics TemporalEvent Text -> IORef (SatisfyMetrics TemporalEvent Text) -> IO ()
@@ -67,7 +72,7 @@ checkS' enableProgressDumps tr phi events = do
       next <- readIORef counter
       let eventPerSecond = next.eventsConsumed - prev.eventsConsumed
       let catchupRatio = (fromIntegral (next.currentTimestamp - prev.currentTimestamp) :: Double) / 1_000_000
-      traceWith tr $ FormulaProgressDump (fromIntegral eventPerSecond) catchupRatio next.currentFormula
+      traceWith tr $ FormulaProgressDump (fromIntegral eventPerSecond) catchupRatio next.currentFormula idx
       threadDelay 1_000_000 -- 1s
       runDisplayProgressDump next counter
 
@@ -83,9 +88,9 @@ checkOnline :: Bool
 checkOnline enableProgressDumps tr eventDuration retentionMs failureMode ingestMode files phis = do
   ing <- mkIngestor (fromIntegral retentionMs)
   for_ files (ingestFileThreaded ing failureMode ingestMode)
-  forConcurrently_ phis $ \phi -> mkIngestorReader ing >>= \reader -> forever $ do
-    traceWith tr $ FormulaStartCheck phi
-    checkS' enableProgressDumps tr phi (readS reader eventDuration)
+  forConcurrently_ (zip [0..] phis) $ \(idx, phi) -> mkIngestorReader ing >>= \reader -> forever $ do
+    traceWith tr $ FormulaStartCheck phi idx
+    checkS' enableProgressDumps idx tr phi (readS reader eventDuration)
 
 checkOffline :: Trace IO App.TraceMessage
              -> TemporalEventDurationMicrosec
@@ -94,8 +99,8 @@ checkOffline :: Trace IO App.TraceMessage
              -> IO ()
 checkOffline tr eventDuration file phis = do
   events <- read file eventDuration
-  forConcurrently_ phis $ \phi ->
-    check tr phi events
+  forConcurrently_ (zip [0..] phis) $ \(idx, phi) ->
+    check idx tr phi events
   threadDelay 200_000 -- Give the tracer a grace period to output the logs to whatever backend
 
 -- | Convert time unit used in the yaml (currently second) input to μs.
@@ -107,8 +112,12 @@ setupTraceDispatcher optTraceDispatcherConfigFile = do
   stdTr <- standardTracer
   configReflection <- emptyConfigReflection
   cfg <- fromMaybe defaultTraceConfig <$> traverse (`readConfigurationWithDefault` defaultTraceConfig) optTraceDispatcherConfigFile
-  tr <- mkCardanoTracer @App.TraceMessage stdTr mempty Nothing ["ReCon"]
+  ekgStore <- EKG.newStore
+  ekgTrace <- ekgTracer cfg ekgStore
+  tr <- mkCardanoTracer @App.TraceMessage stdTr mempty (Just ekgTrace) ["ReCon"]
   configureTracers configReflection cfg [tr]
+  for_ (prometheusSimple cfg) $ \ps -> do
+    runPrometheusSimple mempty ekgStore ps >>= link
   pure tr
   where
     defaultTraceConfig :: TraceConfig
@@ -119,6 +128,17 @@ setupTraceDispatcher optTraceDispatcherConfigFile = do
                   , ConfBackend [Stdout HumanFormatColoured]])
             ]
         }
+
+    -- This backend can only be used globally, i.e. will always apply to the namespace root.
+    -- Multiple definitions, especially with differing ports, are considered a *misconfiguration*.
+    prometheusSimple :: TraceConfig -> Maybe (Bool, Maybe HostName, PortNumber)
+    prometheusSimple cfg =
+      listToMaybe [ (noSuff, mHost, portNo)
+                    | options                              <- Map.elems cfg.tcOptions
+                    , ConfBackend backends'                <- options
+                    , PrometheusSimple noSuff mHost portNo <- backends'
+                    ]
+
 
 
 

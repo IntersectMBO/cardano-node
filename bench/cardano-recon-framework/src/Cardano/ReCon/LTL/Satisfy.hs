@@ -14,10 +14,10 @@ import           Cardano.ReCon.LTL.Lang.HomogeneousFormula (eval)
 import           Cardano.ReCon.LTL.Progress
 import           Cardano.ReCon.LTL.Rewrite
 
-import           Prelude hiding (lookup)
+import           Prelude hiding (Foldable (..), lookup)
 
+import           Data.Foldable (Foldable(..))
 import           Data.IORef (IORef, modifyIORef')
-import           Data.List (foldl')
 import           Data.Word (Word64)
 
 import           Streaming

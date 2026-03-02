@@ -1,7 +1,9 @@
 module Cardano.ReCon.LTL.Lang.Fragment.Fragment0(Fragment0(..), andList, orList) where
 import           Cardano.ReCon.LTL.Lang.Formula (Relevance)
 
-import           Data.List (foldl')
+import           Prelude hiding (Foldable (..))
+
+import           Data.Foldable (foldl')
 
 -- | t ::= ☐ | ¬ t | t ∧ t | t ∨ t | t ⇒ t | ⊤ | ⊥
 --   NOTE: "☐" here stands for "atom".
