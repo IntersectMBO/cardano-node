@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE PackageImports #-}
 
 module Main(main) where
 
 import           Cardano.Logging
-import           Cardano.Logging.Prometheus.TCPServer (runPrometheusSimple)
+import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..),
+                   runPrometheusSimple)
 import           Cardano.Logging.Types.TraceMessage (TraceMessage (..))
 import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts)
 import           Cardano.ReCon.Common (extractProps)
@@ -26,6 +28,7 @@ import           Prelude hiding (read)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (cancel, forConcurrently_, link, withAsync)
 import           Control.Monad (forever, when, (>=>))
+import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.Foldable (for_)
 import           Data.IORef (IORef, newIORef, readIORef)
 import           Data.List (find)
@@ -115,9 +118,11 @@ setupTraceDispatcher optTraceDispatcherConfigFile = do
   ekgStore <- EKG.newStore
   ekgTrace <- ekgTracer cfg ekgStore
   tr <- mkCardanoTracer @App.TraceMessage stdTr mempty (Just ekgTrace) ["ReCon"]
+  prometheusSimpleTr <- mkCardanoTracer @TracePrometheusSimple stdTr mempty Nothing ["ReCon"]
   configureTracers configReflection cfg [tr]
+  configureTracers configReflection cfg [prometheusSimpleTr]
   for_ (prometheusSimple cfg) $ \ps -> do
-    runPrometheusSimple mempty ekgStore ps >>= link
+    runPrometheusSimple (Tracer (traceWith prometheusSimpleTr)) ekgStore ps >>= link
   pure tr
   where
     defaultTraceConfig :: TraceConfig

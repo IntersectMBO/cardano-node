@@ -1,7 +1,9 @@
 {- HLINT ignore "Use newtype instead of data" -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.ReCon.TraceMessage where
 
 import           Cardano.Logging
+import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..))
 import qualified Cardano.Logging.Types.TraceMessage as Envelop
 import           Cardano.ReCon.Common (extractProps)
 import           Cardano.ReCon.LTL.Lang.Formula (Formula, PropValue (..), Relevance)
@@ -161,3 +163,11 @@ instance MetaTrace TraceMessage where
     [("catch_up_ratio", "The rate of event consumption by the verifier (s⁻¹).")]
   metricsDocFor _ = []
 
+instance MetaTrace TracePrometheusSimple where
+  namespaceFor TracePrometheusSimpleStart{} = Namespace [] ["TracePrometheusSimpleStart"]
+  namespaceFor TracePrometheusSimpleStop{} = Namespace [] ["TracePrometheusSimpleStop"]
+  severityFor _ _ = Nothing
+  documentFor (Namespace _ ["TracePrometheusSimpleStart"]) = Just "Signifies the event of the prometheus simple server starting"
+  documentFor (Namespace _ ["TracePrometheusSimpleStop"]) = Just "Signifies the event of the prometheus simple server stopping"
+  documentFor _ = Nothing
+  allNamespaces = [Namespace [] ["TracePrometheusSimpleStart"], Namespace [] ["TracePrometheusSimpleStop"]]
