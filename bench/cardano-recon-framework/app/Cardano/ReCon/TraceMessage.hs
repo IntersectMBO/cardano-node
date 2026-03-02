@@ -127,37 +127,37 @@ instance LogFormatting TraceMessage where
 instance MetaTrace TraceMessage where
   allNamespaces =
     [
-      Namespace [] ["ReCon", "FormulaStartCheck"]
+      Namespace [] ["FormulaStartCheck"]
     ,
-      Namespace [] ["ReCon", "FormulaProgressDump"]
+      Namespace [] ["FormulaProgressDump"]
     ,
-      Namespace [] ["ReCon", "FormulaOutcome"]
+      Namespace [] ["FormulaOutcome"]
     ]
 
-  namespaceFor FormulaStartCheck{} = Namespace [] ["ReCon", "FormulaStartCheck"]
-  namespaceFor FormulaProgressDump{} = Namespace [] ["ReCon", "FormulaProgressDump"]
-  namespaceFor FormulaPositiveOutcome{} = Namespace [] ["ReCon", "FormulaPositiveOutcome"]
-  namespaceFor FormulaNegativeOutcome{} = Namespace [] ["ReCon", "FormulaNegativeOutcome"]
+  namespaceFor FormulaStartCheck{}      = Namespace [] ["FormulaStartCheck"]
+  namespaceFor FormulaProgressDump{}    = Namespace [] ["FormulaProgressDump"]
+  namespaceFor FormulaPositiveOutcome{} = Namespace [] ["FormulaPositiveOutcome"]
+  namespaceFor FormulaNegativeOutcome{} = Namespace [] ["FormulaNegativeOutcome"]
 
-  severityFor (Namespace [] ["ReCon", "FormulaStartCheck"])       _ = Just Info
-  severityFor (Namespace [] ["ReCon", "FormulaProgressDump"])     _ = Just Debug
-  severityFor (Namespace [] ["ReCon", "FormulaPositiveOutcome"])  _ = Just Info
-  severityFor (Namespace [] ["ReCon", "FormulaNegativeOutcome"])  _ = Just Notice
-  severityFor _                                                   _ = Nothing
+  severityFor (Namespace [] ["FormulaStartCheck"])       _ = Just Info
+  severityFor (Namespace [] ["FormulaProgressDump"])     _ = Just Debug
+  severityFor (Namespace [] ["FormulaPositiveOutcome"])  _ = Just Info
+  severityFor (Namespace [] ["FormulaNegativeOutcome"])  _ = Just Notice
+  severityFor _                                          _ = Nothing
 
   detailsFor _ _ =  Just DNormal
 
-  documentFor (Namespace [] ["ReCon", "FormulaStartCheck"]) =
+  documentFor (Namespace [] ["FormulaStartCheck"]) =
     Just "Formula satisfiability check has started."
-  documentFor (Namespace [] ["ReCon", "FormulaProgressDump"]) =
+  documentFor (Namespace [] ["FormulaProgressDump"]) =
     Just "Dump of formula satisfiability check progress."
-  documentFor (Namespace [] ["ReCon", "FormulaPositiveOutcome"]) =
+  documentFor (Namespace [] ["FormulaPositiveOutcome"]) =
     Just "Formula evaluates to `true` against the given timeline of events."
-  documentFor (Namespace [] ["ReCon", "FormulaNegativeOutcome"]) =
+  documentFor (Namespace [] ["FormulaNegativeOutcome"]) =
     Just "Formula evaluates to `false` against the given timeline of events."
   documentFor _ = Nothing
 
-  metricsDocFor (Namespace [] ["ReCon", "FormulaProgressDump"]) =
+  metricsDocFor (Namespace [] ["FormulaProgressDump"]) =
     [("catch_up_ratio", "The rate of event consumption by the verifier (s⁻¹).")]
   metricsDocFor _ = []
 
