@@ -495,6 +495,7 @@
           cardano-cli
           cardano-node
           cardano-submit-api
+          cardano-testnet
           cardano-tracer
           db-analyser
           db-synthesizer
