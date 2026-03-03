@@ -111,6 +111,9 @@ let
                   ChainSyncIdleTimeout         = 0;
                   PeerSharing                  = false;
 
+                  # Lower bound, 2 * maxEBClosure (12.5MB)
+                  MempoolCapacityBytesOverride = 25000000;
+
                   ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                   ## NB. the following inequality must hold: known >= established >= active >= 0
                   SyncTargetNumberOfActivePeers      = max 15 valency;     # set to same value as TargetNumberOfActivePeers
