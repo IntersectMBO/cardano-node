@@ -112,6 +112,16 @@ let
                   ChainSyncIdleTimeout         = 0;
                   PeerSharing                  = false;
 
+                  # Lower bound, 2 * maxEBClosure (12.5MB)
+                  MempoolCapacityBytesOverride = 25000000;
+                  # Aggregate. Mempool-wide capacity dimension.
+                  MempoolTimeoutCapacity = 20.0; # (default: 5.0s).
+                  # Mempool timeouts must be either all set or all unset.
+                  # Per-tx. Silently rejects the tx, keeps the peer.
+                  MempoolTimeoutSoft     =  1.0; # (default: 1.0s).
+                  # Per-tx. Kills the peer connection.
+                  MempoolTimeoutHard     =  1.5; # (default: 1.5s).
+
                   ## defaults taken from: ouroboros-network/src/Ouroboros/Network/Diffusion/Configuration.hs
                   ## NB. the following inequality must hold: known >= established >= active >= 0
                   SyncTargetNumberOfActivePeers      = max 15 valency;     # set to same value as TargetNumberOfActivePeers
