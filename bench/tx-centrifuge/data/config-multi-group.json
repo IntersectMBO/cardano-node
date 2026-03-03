@@ -1,0 +1,817 @@
+{
+  "initial_inputs": {
+    "type": "genesis_utxo_keys",
+    "params": {
+      "network_magic": 0,
+      "signing_keys_file": "/dev/null"
+    }
+  },
+  "builder": {
+    "type": "value",
+    "params": {
+      "fee": 200000
+    }
+  },
+  "workloads": {
+    "group-01": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-01": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-02": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-02": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-03": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-03": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-04": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-04": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-05": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-05": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-06": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-06": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-07": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-07": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-08": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-08": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-09": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-09": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-10": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-10": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-11": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-11": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-12": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-12": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-13": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-13": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-14": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-14": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-15": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-15": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-16": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-16": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-17": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-17": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-18": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-18": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-19": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-19": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-20": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-20": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-21": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-21": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-22": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-22": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-23": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-23": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-24": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-24": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-25": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-25": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-26": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-26": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-27": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-27": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-28": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-28": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-29": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-29": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-30": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-30": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-31": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-31": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-32": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-32": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-33": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-33": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-34": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-34": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-35": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-35": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-36": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-36": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-37": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-37": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-38": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-38": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-39": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-39": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-40": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-40": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-41": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-41": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-42": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-42": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-43": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-43": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-44": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-44": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-45": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-45": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-46": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-46": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-47": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-47": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-48": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-48": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-49": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-49": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    },
+    "group-50": {
+      "rate_limit": {
+        "type": "token_bucket",
+        "scope": "per_target",
+        "params": {
+          "tps": 1
+        }
+      },
+      "max_batch_size": 500,
+      "targets": {
+        "group-50": {
+          "addr": "127.0.0.1",
+          "port": 3001
+        }
+      }
+    }
+  }
+}
