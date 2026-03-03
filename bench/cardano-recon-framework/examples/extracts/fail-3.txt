@@ -1,0 +1,6 @@
+{"at":"2025-12-01T07:06:48.001779Z","ns":"Forge.Loop.StartLeadershipCheck","data":{"kind":"TraceStartLeadershipCheck","slot":3},"sev":"Info","thread":"50","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:06:48.001792Z","ns":"Forge.Loop.BlockContext","data":{"current slot":3,"kind":"TraceBlockContext","tip":"genesis (origin)","tipBlockNo":0},"sev":"Debug","thread":"50","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:06:48.001963Z","ns":"Forge.Loop.NodeNotLeader","data":{"kind":"TraceNodeNotLeader","slot":3},"sev":"Info","thread":"50","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:06:48.173865Z","ns":"LedgerMetrics","data":{"chainDensity":0,"delegMapSize":100000,"kind":"LedgerMetrics","slot":2,"utxoSize":600003},"sev":"Info","thread":"17","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:06:49.001712Z","ns":"Forge.Loop.NodeNotLeader","data":{"kind":"TraceNodeNotLeader","slot":4},"sev":"Info","thread":"50","host":"russoul-mac.local"}
+{"at":"2025-12-01T07:06:53.0Z","ns":"Placeholder","data":{},"sev":"Info","thread":"50","host":"russoul-mac.local"}
