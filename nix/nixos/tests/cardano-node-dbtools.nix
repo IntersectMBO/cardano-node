@@ -26,9 +26,7 @@ in {
           db-analyser
           db-synthesizer
           db-truncater
-        ] ++ (with pkgs; [
-          gnugrep
-        ]);
+        ];
 
         variables = {
           CARDANO_CLI = getExe cardanoNodePackages.cardano-cli;
@@ -38,10 +36,6 @@ in {
           VRF_KEY = "${testDir}/pools-keys/pool1/vrf.skey";
         };
       };
-
-      # The default disk size of 1024 MB is insufficient for the binary artifact
-      # and tar gzip expansion.
-      virtualisation.diskSize = 2048;
     };
   };
 
