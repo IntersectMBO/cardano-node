@@ -227,7 +227,7 @@ executable cardano-node
   if arch(arm)
     ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
   else
-    ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
+    ghc-options:        "-with-rtsopts=-T -I0 -A16m -qg1 -qb1 -N2 --disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
