@@ -63,7 +63,7 @@ fastDuration =
 
 ciTestDuration :: Types.Profile -> Types.Profile
 ciTestDuration =
-    V.timescaleCompressed . P.shutdownOnBlock 8
+    V.timescaleCompressed . P.shutdownOnBlock 180
   -- TODO: dummy "generator.epochs" ignored in favor of "--shutdown-on".
   --       Create a "time.epochs" or "time.blocks" or similar, IDK!
   -- This applies to all profiles!

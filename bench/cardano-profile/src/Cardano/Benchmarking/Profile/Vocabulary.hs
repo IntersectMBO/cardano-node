@@ -116,7 +116,7 @@ genesisVariantVoltaire = genesisVariantLatest
 
 -- Defined in the "genesis" property and it's for the tx-generator.
 fundsDefault :: Types.Profile -> Types.Profile
-fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys 1
+fundsDefault = P.poolBalance 1000000000000000 . P.funds 10000000000000 . P.utxoKeys (6*500*3)
 
 -- Some profiles have a higher `funds_balance` in `Genesis`. Needed? Fix it?
 fundsDouble :: Types.Profile -> Types.Profile
