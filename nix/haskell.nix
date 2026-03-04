@@ -140,6 +140,9 @@ let
             packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
             packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
+            # TODO TMP: ouroboros-network SRP has a redundant HasCallStack constraint that becomes
+            # a -Werror failure; downgrade it to a warning for this external package.
+            packages.ouroboros-network.components.library.ghcOptions = [ "-Wwarn=redundant-constraints" ];
             packages.plutus-ledger-api.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
