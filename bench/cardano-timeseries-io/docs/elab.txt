@@ -1,0 +1,142 @@
+The set of elaboration rules written out here is incomplete.
+The rules here can be seen as an introduction to the haskell implementation.
+The judgement forms presented here are complete and in 1-to-1 correspondence with the implementation.
+
+let x = t in t
+\x -> t
+t t
+fst t
+snd t
+(t, t)
+t == t (~)
+t != t (~)
+t < t (~)
+t <= t (~)
+t > t (~)
+t >= t (~)
+t + t (~)
+t - t (~)
+t * t (~)
+t / t (~)
+true
+false
+!t
+t && t
+t || t
+<int>ms
+<int>s
+<int>min
+<int>h
+epoch
+now
+to_scalar t
+t[t; t]
+t[t; t : t]
+filter_by_label {s = s, ..., s = s} t
+max t
+min t
+avg t
+filter t t
+join t t
+map t t
+abs t
+increase t
+rate t
+avg_over_time t
+sum_over_time t
+quantile_over_time t t
+unless t t
+quantile_by (s, ..., s) t t
+x
+
+
+// General elaboration jugdement
+<context> ⊦ <surface> ~> <semantic> : <type>
+
+// Binary relation elaboration jugdement
+<context> ⊦ (<semantic> : <type>) <bin-rel> (<semantic> : <type>) ~> <semantic> : <type>
+
+// Binary arithmetic operator elaboration jugdement
+<context> ⊦ (<semantic> : <type>) <bin-arith-op> (<semantic> : <type>) ~> <semantic> : <type>
+
+// "to_scalar" elaboration judgement
+<context> ⊦ to_scalar (<semantic> : <type>) ~> <semantic>
+
+
+Γ ⊦ t ~> ?x : A
+Γ (x : A) ⊦ e ~> ?y : B
+===========================================
+Γ ⊦ let x = t in e ~> let x = ?x in ?y : B
+
+
+Γ (x : A) ⊦ t ~> ?z : B
+=================================
+Γ ⊦ \x -> t ~> \x -> ?z : A -> B
+
+
+Γ = Γ₀ (x : C) Γ₁
+Γ ⊦ ?x := x : C
+=================
+Γ ⊦ x ~> ?x : C
+
+
+x ∉ Γ
+Γ ⊦ ?x ≔ x : Timestamp -> Scalar // Assumes existence of x in the metric store
+==================================
+Γ ⊦ x ~> ?x : Timestamp -> Scalar
+
+
+Γ ⊦ t ~> ?z : (A, B)
+========================
+Γ ⊦ fst t ~> fst ?z : A
+
+
+Γ ⊦ t ~> ?z : (A, B)
+========================
+Γ ⊦ snd t ~> snd ?z : B
+
+
+Γ ⊦ a ~> ?x : A
+Γ ⊦ b ~> ?y : B
+================================
+Γ ⊦ (a, b) ~> (?x, ?y) : (A, B)
+
+
+Γ ⊦ ?a : ?A
+Γ ⊦ ?b : ?B
+Γ ⊦ a ~> ?a : ?A
+Γ ⊦ b ~> ?b : ?B
+Γ ⊦ (?a : ?A) rel (?b : ?B) ~> ?r : C
+=====================================
+Γ ⊦ a rel b ~> ?r : C
+
+
+Γ ⊦ ?r := ⟦rel⟧ a b : Bool
+============================================
+Γ ⊦ ?r : Bool
+Γ ⊦ (a : Scalar) rel (b : Scalar) ~> ?r : Bool
+
+
+Γ ⊦ ?r ≔ lte_instant_vector a b : InstantVector Scalar
+========================================================================
+Γ ⊦ a : InstantVector Scalar <= b : Scalar ~> ?r : InstantVector Scalar
+
+
+Γ ⊦ ?a : ?A
+Γ ⊦ ?b : ?B
+Γ ⊦ a ~> ?a : ?A
+Γ ⊦ b ~> ?b : ?B
+Γ ⊦ (?a : ?A) op (?b : ?B) ~> ?r : C
+====================================
+Γ ⊦ a op b ~> ?r : C
+
+
+Γ ⊦ ?r ≔ ⟦rel⟧ a b : Scalar
+==============================================
+Γ ⊦ (a : Scalar) rel (b : Scalar) ~> ?r : Scalar
+
+
+Γ ⊦ s ~> ?s : ?A
+Γ ⊦ to_scalar (?s : ?A) ~> ?r
+=============================
+Γ ⊦ to_scalar s ~> ?r : Scalar
