@@ -151,7 +151,7 @@ project.shellFor {
   ++ (with project.hsPkgs; [
       # A `notGitRev` version, faster to enter a workbench after a new commit.
       cardano-cli.components.exes.cardano-cli
-      ouroboros-consensus-cardano.components.exes.db-analyser
+      ouroboros-consensus.components.exes.db-analyser
      ])
   ++ (with workbench-runner; [
        workbench-interactive-start

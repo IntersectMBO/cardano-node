@@ -126,7 +126,7 @@ library
                       , fingertree == 0.1.5.0
                       , hashable
                       , optparse-applicative
-                      , ouroboros-consensus
+                      , ouroboros-consensus:ouroboros-consensus
                       , ouroboros-network:api ^>= 0.24
                       , sop-core
                       , split

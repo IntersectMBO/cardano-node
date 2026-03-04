@@ -49,7 +49,7 @@ library
                       , mtl
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus:cardano
                       , ouroboros-network:{protocols}
                       , prometheus >= 2.2.4
                       , ekg-prometheus-adapter
