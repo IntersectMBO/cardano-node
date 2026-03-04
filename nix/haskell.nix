@@ -137,7 +137,6 @@ let
             packages.cardano-ledger-conway.components.library.doHaddock = false;
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
-            packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
             packages.ouroboros-consensus.components.library.doHaddock = false;
             packages.ouroboros-network.components.library.doHaddock = false; # Currently broken
             # TODO TMP: ouroboros-network SRP has a redundant HasCallStack constraint that becomes
@@ -393,7 +392,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
         modules = [{
           packages = lib.genAttrs [
             "ouroboros-consensus"
-            "ouroboros-consensus-cardano"
             "ouroboros-network"
             "network-mux"
           ]
