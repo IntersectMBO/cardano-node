@@ -25,6 +25,9 @@ in {
   # Tests the linux release binary envs with pre-bundled config.
   cardanoNodeArtifact = callTest ./cardano-node-artifact.nix {inherit cardano-node-linux;};
 
+  # Tests db-tools (synthesizer, analyser, truncater) against a cardano-testnet create-env environment.
+  cardanoNodeDbtools = callTest ./cardano-node-dbtools.nix {};
+
   # Tests a mainnet edge node with submit-api using nixos service config.
   cardanoNodeEdge = callTest ./cardano-node-edge.nix {};
 }
