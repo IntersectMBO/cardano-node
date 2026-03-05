@@ -123,8 +123,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: a7d37a65887fa444be08f60f22025f2a426c4d5b
-  --sha256: sha256-2tpIYo4EE2WlV4q7hdlcge9v9Q1PP/b3LXQLadrVXys=
+  tag: de335e62dada498566ae511c802f7dd8847a46c1
+  --sha256: sha256-pjk2W97Xg6wTp+zb8jWvzE61Yn1JeiPMj8UTyZCyG8s=
   subdir:
     ouroboros-network
     cardano-diffusion
