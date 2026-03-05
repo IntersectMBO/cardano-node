@@ -328,8 +328,8 @@ instance
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
-  toObject _verb (ShelleyWithdrawalsMissingAccounts _withdrawals) = undefined -- TODO(geo2a)
-  toObject _verb (ShelleyIncompleteWithdrawals _payload) = undefined -- TODO(geo2a)
+  toObject _verb (ShelleyWithdrawalsMissingAccounts _withdrawals) = undefined -- TODO(10.7)
+  toObject _verb (ShelleyIncompleteWithdrawals _payload) = undefined -- TODO(10.7)
 
 
 instance
@@ -344,7 +344,7 @@ instance
             ]
   toObject _ (Conway.ConwayIncompleteWithdrawals _incompleteWithdrawals) =
     mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
-            -- , "withdrawals" .= undefined -- TODO(geo2a)
+            -- , "withdrawals" .= undefined -- TODO(10.7)
             ]
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
@@ -466,32 +466,32 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   ) => ToObject (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraGovPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   ) => ToObject (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(geo2a)
+  toObject _verb = undefined -- TODO(10.7)
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera

@@ -353,8 +353,8 @@ instance
   forMachine dtal = \case
     UtxowFailure f -> forMachine dtal f
     DelegsFailure f -> forMachine dtal f
-    (ShelleyWithdrawalsMissingAccounts _withdrawals) -> undefined -- TODO(geo2a)
-    (ShelleyIncompleteWithdrawals _payload) -> undefined -- TODO(geo2a)
+    (ShelleyWithdrawalsMissingAccounts _withdrawals) -> undefined -- TODO(10.7)
+    (ShelleyIncompleteWithdrawals _payload) -> undefined -- TODO(10.7)
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
@@ -1083,7 +1083,7 @@ instance
             ]
   forMachine _ (Conway.ConwayIncompleteWithdrawals _incompleteWithdrawals) =
     mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
-            -- , "withdrawals" .= unWithdrawals incompleteWithdrawals -- TODO(geo2a)
+            -- , "withdrawals" .= unWithdrawals incompleteWithdrawals -- TODO(10.7)
             ]
   forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
@@ -1207,32 +1207,32 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraGovPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(geo2a)
+  forMachine _ = undefined -- TODO(10.7)
 
 instance
   ( Ledger.Crypto crypto
