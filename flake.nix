@@ -87,6 +87,13 @@
       (import ./nix/custom-config.nix customConfig)
       input.customConfig;
 
+    abseilOverlay = final: prev:
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isWindows {
+        abseil-cpp = prev.abseil-cpp.overrideAttrs (finalAttrs: previousAttrs: {
+          buildInputs = previousAttrs.buildInputs ++ [prev.pkgs.windows.mingw_w64_pthreads];
+        });
+      };
+
     overlays = [
       # Crypto needs to come before haskell.nix.
       # FIXME: _THIS_IS_BAD_
@@ -98,7 +105,7 @@
       iohkNix.overlays.utils
       (final: prev: {
         inherit customConfig;
-        bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
+        bench-data-publish = cardano-automation.outputs.packages.${final.stdenv.hostPlatform.system}."bench-data-publish:exe:bench-data-publish";
         gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
         commonLib =
           lib
@@ -107,6 +114,7 @@
           // import ./nix/svclib.nix {inherit (final) pkgs;};
       })
       (import ./nix/pkgs.nix)
+      abseilOverlay
       self.overlay
     ];
 
@@ -157,7 +165,7 @@
       };
 
     mkFlakeAttrs = pkgs: rec {
-      inherit (pkgs) system;
+      system = pkgs.stdenv.hostPlatform.system;
       inherit (pkgs.haskell-nix) haskellLib;
       inherit (haskellLib) collectChecks' collectComponents';
       inherit (pkgs.commonLib) eachEnv environments mkSupervisordCluster;
@@ -510,7 +518,7 @@
           ...
         }: {
           imports = [./nix/nixos/cardano-node-service.nix];
-          services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+          services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
         };
         cardano-submit-api = {
           pkgs,
@@ -518,7 +526,7 @@
           ...
         }: {
           imports = [./nix/nixos/cardano-submit-api-service.nix];
-          services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+          services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
         };
         cardano-tracer = {
           pkgs,
@@ -526,7 +534,7 @@
           ...
         }: {
           imports = [./nix/nixos/cardano-tracer-service.nix];
-          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+          services.cardano-tracer.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.stdenv.hostPlatform.system});
         };
       };
     };
