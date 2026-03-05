@@ -132,11 +132,14 @@ pMainnetParams = OA.flag' OnChainParamsMainnet
   )
 
 pUpdateTimestamps :: Parser UpdateTimestamps
-pUpdateTimestamps = OA.flag DontUpdateTimestamps UpdateTimestamps
-  (  OA.long "update-time"
-  <> OA.help "Update the time stamps in genesis files to current date"
-  <> OA.showDefault
-  )
+pUpdateTimestamps =
+  -- Default to UpdateTimestamps, because when using the two-step flow
+  -- (cardano-testnet create-env → cardano-testnet cardano --node-env),
+  -- genesis timestamps can become stale.
+  -- See https://github.com/IntersectMBO/cardano-node/issues/6455
+  OA.flag' UpdateTimestamps (OA.long "update-time" <> OA.help "Update the time stamps in genesis files to current date (default, kept for backward compatibility)")
+  <|> OA.flag' DontUpdateTimestamps (OA.long "no-update-time" <> OA.help "Do not update the time stamps in genesis files to current date.")
+  <|> pure UpdateTimestamps
 
 pEnvOutputDir :: Parser FilePath
 pEnvOutputDir = OA.strOption
