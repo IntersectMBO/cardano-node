@@ -127,6 +127,8 @@
       // (with project.hsPkgs; {
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
+        # TODO-SRE
+        # inherit (dmq-node.components.exes) dmq-node;
         inherit (ouroboros-consensus.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
         inherit (kes-agent.components.exes) kes-agent kes-agent-control;
         # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
@@ -307,6 +309,8 @@
           "db-analyser"
           "db-synthesizer"
           "db-truncater"
+          # TODO-SRE
+          # "dmq-node"
           "kes-agent"
           "kes-agent-control"
           "snapshot-converter"
@@ -514,6 +518,8 @@
           db-analyser
           db-synthesizer
           db-truncater
+          # TODO-SRE:
+          # dmq-node
           locli
           snapshot-converter
           tx-generator;
