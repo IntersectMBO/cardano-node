@@ -151,8 +151,8 @@ source-repository-package
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/cardano-cli
-   tag: e6f322937f869398bed4181a3ab8796ff02e8b29
-   --sha256: sha256-E5CJrwyidQgdIgUMoil+BId+FzwYeVS/gHg+bEoryu8=
+   tag: e3b406fffc98265479ec532cfbe82cef5622bbae
+   --sha256: sha256-1FzrgdnjBRwMVVxf+jCk6NxFg++WgYDr2SfNOQDdrqE=
    subdir:
      cardano-cli
 
