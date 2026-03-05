@@ -748,10 +748,6 @@ instance Ledger.Era era => ToObject (ShelleyPpupPredFailure era) where
 instance
   ( ToObject (PredicateFailure (Core.EraRule "DELPL" ledgerera))
   ) => ToObject (ShelleyDelegsPredFailure ledgerera) where
-  -- toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
-  --   mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
-  --            , "targetPool" .= targetPool
-  --            ]
   toObject verb (DelplFailure f) = toObject verb f
 
 

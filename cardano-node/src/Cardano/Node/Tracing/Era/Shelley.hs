@@ -697,7 +697,10 @@ instance LogFormatting (ShelleyDelegPredFailure era) where
                                   TreasuryMIR -> "Treasury")
              , "coin" .= coin
              ]
-  forMachine _dtal (DelegateeNotRegisteredDELEG _) = undefined -- TODO(10.7)
+  forMachine _dtal (DelegateeNotRegisteredDELEG targetPool) =
+    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
+             , "targetPool" .= targetPool
+             ]
 
 instance LogFormatting (ShelleyPoolPredFailure era) where
   forMachine _dtal (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
@@ -1181,13 +1184,11 @@ instance
     mconcat [ "kind" .= String "UnelectedCommitteeVoters"
             , "unelectedCommitteeVoters" .= voters
             ]
-  forMachine _ (Conway.InvalidGuardrailsScriptHash _ _) = undefined -- TODO(10.7)
-  -- TODO(10.7): incorporate into the above
-  -- forMachine _ (Conway.InvalidPolicyHash actualPolicyHash expectedPolicyHash) =
-  --   mconcat [ "kind" .= String "InvalidPolicyHash"
-  --           , "actualPolicyHash" .= actualPolicyHash
-  --           , "expectedPolicyHash" .= expectedPolicyHash
-  --           ]
+  forMachine _ (Conway.InvalidGuardrailsScriptHash actualPolicyHash expectedPolicyHash) =
+    mconcat [ "kind" .= String "InvalidPolicyHash"
+            , "actualPolicyHash" .= actualPolicyHash
+            , "expectedPolicyHash" .= expectedPolicyHash
+            ]
 
 
 instance

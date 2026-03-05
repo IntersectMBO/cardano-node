@@ -337,6 +337,16 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Consensus", "DevotedBlockFetch"]
     configureTracers configReflection trConfig [consensusDbfTr]
 
+    !txLogicTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txLogic", "Remote"]
+    configureTracers configReflection trConfig [txLogicTracer]
+
+    !txCountersTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txCounters", "Remote"]
+    configureTracers configReflection trConfig [txCountersTracer]
+
     pure $ Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
@@ -385,8 +395,10 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusDbfTr
       , Consensus.kesAgentTracer = Tracer $
           traceWith consensusKesAgentTr
-      , Consensus.txLogicTracer = undefined -- TODO(10.7)
-      , Consensus.txCountersTracer = undefined -- TODO(10.7)
+      , Consensus.txLogicTracer = Tracer $
+          traceWith txLogicTracer
+      , Consensus.txCountersTracer = Tracer $
+          traceWith txCountersTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -481,11 +493,10 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["PeerSharing", "Remote"]
     configureTracers configReflection trConfig [peerSharingTracer]
 
-    txLogicTracer <- undefined -- TODO(10.7) once TxLogic instance are available
-    -- !txLogicTracer  <-  mkCardanoTracer
-    --             trBase trForward mbTrEKG
-    --             ["txLogic", "Remote"]
-    -- configureTracers configReflection trConfig [txLogicTracer]
+    !txLogicTracer  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["txLogic", "Remote"]
+    configureTracers configReflection trConfig [txLogicTracer]
 
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
