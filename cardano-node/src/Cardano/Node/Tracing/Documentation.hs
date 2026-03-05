@@ -1,9 +1,9 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,6 +20,11 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
+import           Ouroboros.Network.Tracing.TxSubmission.Inbound ()
+import           Ouroboros.Network.Tracing.TxSubmission.Outbound ()
+import           Ouroboros.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging as Logging
 import           Cardano.Logging.Resources
@@ -27,7 +32,6 @@ import           Cardano.Logging.Resources.Types ()
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
-import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.NodeInfo ()
@@ -44,7 +48,6 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
@@ -174,7 +177,7 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
 docTracers ::
-     FilePath
+  FilePath
   -> FilePath
   -> Maybe FilePath
   -> IO ()
@@ -187,8 +190,7 @@ docTracers configFileName outputFileName mbMetricsHelpFilename = do
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
 docTracersFirstPhase :: forall blk peer remotePeer.
-  ( TraceConstraints blk
-  , Proxy blk ~ Proxy (CardanoBlock StandardCrypto)
+  ( Proxy blk ~ Proxy (CardanoBlock StandardCrypto)
   , Proxy peer ~ Proxy (NtN.ConnectionId LocalAddress)
   , Proxy remotePeer ~ Proxy (NtN.ConnectionId NtN.RemoteAddress)
   )
@@ -582,7 +584,7 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "PeerSelection", "Selection"]
     configureTracers configReflection trConfig [peerSelectionTr]
     peerSelectionTrDoc <- documentTracer (peerSelectionTr ::
-      Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Cardano.ExtraTrace Socket.SockAddr))
+      Logging.Trace IO (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr))
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -603,7 +605,7 @@ docTracersFirstPhase condConfigFileName = do
       ["Net", "PeerSelection", "Counters"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
-      Logging.Trace IO (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes Socket.SockAddr)))
+      Logging.Trace IO (PeerSelectionCounters (Cardano.ViewExtraPeers (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr))))
 
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG

@@ -36,7 +36,6 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
 import           Ouroboros.Consensus.Block.SupportsSanityCheck (SanityCheckIssue)
@@ -93,6 +92,9 @@ import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
+import           Ouroboros.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelectionCounters ()
 
 import qualified Codec.CBOR.Term as CBOR
 import qualified Data.Text as T
@@ -311,7 +313,7 @@ getAllNamespaces =
         peerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Selection"])
                                (allNamespaces :: [Namespace
-                                          (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Cardano.ExtraTrace Socket.SockAddr)])
+                                          (TracePeerSelection Cardano.DebugPeerSelectionState PeerTrustable (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr) Socket.SockAddr)])
         debugPeerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Initiator"])
                                (allNamespaces :: [Namespace
@@ -323,7 +325,7 @@ getAllNamespaces =
         peerSelectionCountersNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
-                                        (PeerSelectionCounters (Cardano.ExtraPeerSelectionSetsWithSizes Socket.SockAddr))])
+                                        (PeerSelectionCounters (Cardano.ViewExtraPeers (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr)))])
         peerSelectionActionsNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Actions"])
                                (allNamespaces :: [Namespace

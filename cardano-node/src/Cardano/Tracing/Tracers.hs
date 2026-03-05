@@ -29,7 +29,9 @@ module Cardano.Tracing.Tracers
   , traceCounter
   ) where
 
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import qualified Ouroboros.Network.PeerSelection.Governor as Governor
+import qualified Ouroboros.Network.PeerSelection.Governor.Types as Governor
 import qualified Data.List as List
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
@@ -86,7 +88,6 @@ import           Ouroboros.Consensus.Util.Enclose
 import qualified Network.Mux as Mux
 
 import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
@@ -1620,15 +1621,15 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
       _ -> return ()
 
 tracePeerSelectionTracerMetrics
-    :: forall extraDebugState extraFlags extraPeers extraTrace peeraddr.
+    :: forall extraDebugState extraFlags extraPeers peeraddr.
        OnOff TracePeerSelection
     -> Maybe EKGDirect
-    -> Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers extraTrace peeraddr)
+    -> Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers peeraddr)
 tracePeerSelectionTracerMetrics _             Nothing          = nullTracer
 tracePeerSelectionTracerMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionTracerMetrics (OnOff True)  (Just ekgDirect) = pstTracer
   where
-    pstTracer :: Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers extraTrace peeraddr)
+    pstTracer :: Tracer IO (Governor.TracePeerSelection extraDebugState extraFlags extraPeers peeraddr)
     pstTracer = Tracer $ \a -> do
       case a of
         Governor.TraceChurnAction duration action _ ->
@@ -1648,7 +1649,7 @@ tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
     pscTracer :: Tracer IO CardanoPeerSelectionCounters
     pscTracer = Tracer $ \psc -> do
-      let PeerSelectionCountersHWC {..} = psc
+      let Governor.PeerSelectionCountersHWC {..} = psc
       -- Deprecated counters; they will be removed in a future version
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" numberOfColdPeers
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" numberOfWarmPeers

@@ -1,3 +1,4 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
@@ -64,6 +65,7 @@ import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (.
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
+import           Cardano.Logging.Types (LogFormatting)
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
