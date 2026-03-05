@@ -170,7 +170,6 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
 data TxGeneratorSupport
   = NoTxGeneratorSupport
   | GenerateTemplateConfigForTxGenerator
-  | GenerateAndRunTxGenerator
   deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented
