@@ -44,16 +44,20 @@ in with final;
       }
   ;
 
-  cabal = haskell-nix.cabal-install.${compiler-nix-name};
+  # cabal = haskell-nix.cabal-install.${compiler-nix-name};
+  cabal = haskell-nix.tool compiler-nix-name "cabal" {
+    version = "latest";
+    index-state = "2025-09-29T13:55:56Z";
+  };
 
-  hlint = haskell-nix.tool "ghc96" "hlint" {
-    version = "3.8";
-    index-state = "2025-04-22T00:00:00Z";
+  hlint = haskell-nix.tool compiler-nix-name "hlint" {
+    version = "latest";
+    index-state = "2025-09-29T13:55:56Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
-    version = "0.8.7";
-    index-state = "2024-12-24T12:56:48Z";
+    version = "latest";
+    index-state = "2025-09-29T13:55:56Z";
   };
 
   # The ghc-hls point release compatibility table is documented at:
@@ -68,6 +72,7 @@ in with final;
       ghc963 = haskell-nix.sources."hls-2.5";
       ghc964 = haskell-nix.sources."hls-2.6";
       ghc981 = haskell-nix.sources."hls-2.6";
+      ghc9122 = haskell-nix.sources."hls-2.11";
     }.${compiler-nix-name} or haskell-nix.sources."hls-2.10";
     cabalProject = readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
@@ -75,7 +80,7 @@ in with final;
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2024-12-24T12:56:48Z";
+    index-state = "2025-09-29T13:55:56Z";
   };
 
   profiteur = haskell-nix.tool compiler-nix-name "profiteur" {

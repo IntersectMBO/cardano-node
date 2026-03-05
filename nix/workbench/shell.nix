@@ -106,7 +106,8 @@ project.shellFor {
        moreutils
        nix
        (pkgs.pkg-config or pkgconfig)
-       profiteur
+       # profiteur package is in dire need of a maintenance release / package bumps for GHC9.12. Excluding it for now.
+       # profiteur
        sqlite-interactive
        time
        tmux
