@@ -397,15 +397,16 @@ cardanoTestnet
 
   case cardanoEnableTxGenerator testnetOptions of
     NoTxGeneratorSupport -> pure ()
-    GenerateTemplateConfigForTxGenerator ->
-      void $ generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-    GenerateAndRunTxGenerator -> do
-      configFile <- generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions
-      hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
-        [ "json_highlevel"
-        , configFile
-        ]
-      liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
+    TxGeneratorSupport (TxGeneratorOptions { txGeneratorCmd, txGeneratorConfig }) -> do
+      configFile <- generateTxGenConfig tmpAbsPath nodeConfigFile utxoSigningKeyFile node1SocketPath nodeDescriptions txGeneratorConfig
+      case txGeneratorCmd of
+        GenerateTemplateConfig -> pure ()
+        GenerateAndRun -> do
+          hProcess <- runRIO () $ startTxGenRuntime (TmpAbsolutePath tmpAbsPath)
+                      [ "json_highlevel"
+                      , configFile
+                      ]
+          liftIOAnnotated $ interruptNodesOnSigINT (hProcess : map nodeProcessHandle testnetNodes')
 
   pure runtime
 
@@ -416,33 +417,66 @@ cardanoTestnet
     -- TODO: This should come from the configuration!
     makePathsAbsolute :: (Element a ~ FilePath, MonoFunctor a) => a -> a
     makePathsAbsolute = omap (tmpAbsPath </>)
+
     mkTestnetNodeKeyPaths :: Int -> SpoNodeKeys
     mkTestnetNodeKeyPaths n = makePathsAbsolute $ Defaults.defaultSpoKeys n
 
-    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> m FilePath
-    generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology = do
+    generateTxGenConfig :: MonadUnliftIO m => FilePath -> FilePath -> SigningKeyFile 'In -> String -> NonEmpty NodeDescription -> Maybe FilePath -> m FilePath
+    generateTxGenConfig basePath nodeConfigFilePath utxoSigningKeyFile localNodeSocketPath nodeTopology mUserConfig = do
+      nixServiceOptions <- case mUserConfig of
+        Nothing -> pure defaultTxGenConfig
+        Just userConfigFile -> setTxGenTestnetConfig <$> readPartialTxGenConfig userConfigFile
       let file = basePath </> "tx-generator-config.json"
-          nixServiceOptions = NixServiceOptions {
-            _nix_debugMode        = False
-          , _nix_tx_count         = 100
-          , _nix_tps              = 10
-          , _nix_inputs_per_tx    = 2
-          , _nix_outputs_per_tx   = 2
-          , _nix_tx_fee           = 212_345
-          , _nix_min_utxo_value   = 1_000_000
-          , _nix_add_tx_size      = 39
-          , _nix_init_cooldown    = 50
-          , _nix_era              = AnyCardanoEra ConwayEra
-          , _nix_plutus           = Nothing
-          , _nix_keepalive        = Just 30
-          , _nix_nodeConfigFile       = Just nodeConfigFilePath
-          , _nix_cardanoTracerSocket  = Nothing
-          , _nix_sigKey               = utxoSigningKeyFile
-          , _nix_localNodeSocketPath  = localNodeSocketPath
-          , _nix_targetNodes          = nodeTopology
-          }
       liftIOAnnotated . LBS.writeFile file $ A.encodePretty nixServiceOptions
       pure file
+        where
+        -- | Read a partial tx-generator config from a JSON file, merging it
+        -- on top of the defaults. This allows users to specify only the options they want to change.
+        readPartialTxGenConfig :: MonadUnliftIO m => FilePath -> m NixServiceOptions
+        readPartialTxGenConfig userConfigFile = do
+          eObject <- eitherDecode <$> liftIOAnnotated (LBS.readFile userConfigFile)
+          userObj <- case eObject of
+            Right (Object obj) -> pure obj
+            Right _  -> throwString $ "Expected a JSON Object in tx-generator config file: " <> userConfigFile
+            Left err -> throwString $ "Could not parse tx-generator config file: " <> userConfigFile <> " Error: " <> err
+          defaultObj <- case toJSON defaultTxGenConfig of
+                          Object obj -> return obj
+                          _          -> throwString "Internal error: NixServiceOptions didn't serialize to an Object"
+          case fromJSON (Object (userObj <> defaultObj)) of
+            Success opts -> pure opts
+            Error err    -> throwString $ "Could not decode tx-generator config: " <> userConfigFile <> " Error: " <> err
+
+        setTxGenTestnetConfig :: NixServiceOptions -> NixServiceOptions
+        setTxGenTestnetConfig opts =
+          opts { _nix_nodeConfigFile       = Just nodeConfigFilePath
+               , _nix_sigKey               = utxoSigningKeyFile
+               , _nix_localNodeSocketPath  = localNodeSocketPath
+               , _nix_targetNodes          = nodeTopology
+               }
+
+        defaultTxGenConfig :: NixServiceOptions
+        defaultTxGenConfig =
+          setTxGenTestnetConfig
+            NixServiceOptions
+              { _nix_debugMode        = False
+              , _nix_tx_count         = 100
+              , _nix_tps              = 10
+              , _nix_inputs_per_tx    = 2
+              , _nix_outputs_per_tx   = 2
+              , _nix_tx_fee           = 212_345
+              , _nix_min_utxo_value   = 1_000_000
+              , _nix_add_tx_size      = 39
+              , _nix_init_cooldown    = 50
+              , _nix_era              = AnyCardanoEra ConwayEra
+              , _nix_plutus           = Nothing
+              , _nix_keepalive        = Just 30
+              , _nix_cardanoTracerSocket  = Nothing
+              -- Placeholders for testnet-specific fields (overwritten by setTxGenTestnetConfig)
+              , _nix_nodeConfigFile       = Nothing
+              , _nix_sigKey               = File ""
+              , _nix_localNodeSocketPath  = ""
+              , _nix_targetNodes          = nodeTopology
+              }
 
     -- wait for new blocks or throw an exception if there are none in the timeout period
     waitForBlockThrow :: MonadUnliftIO m
@@ -473,7 +507,6 @@ cardanoTestnet
           throwString $ "foldBlocks on " <> nodeName <> " encountered an error while waiting for new blocks: " <> show (prettyError err)
         _ ->
           throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s"
-
 
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()

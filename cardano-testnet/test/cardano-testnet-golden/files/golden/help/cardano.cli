@@ -3,7 +3,8 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
   [--enable-new-epoch-state-logging]
-  [--generate-tx-generator-config | --run-tx-generator]
+  [(--generate-tx-generator-config | --run-tx-generator)
+    [--tx-generator-config FILEPATH]]
   [--output-dir DIRECTORY]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
@@ -35,6 +36,13 @@ Available options:
                            tx-generator.
   --run-tx-generator       Generate a configuration file for tx-generator and
                            run it.
+  --tx-generator-config FILEPATH
+                           A partial configuration file for tx-generator.
+                           Missing but required fields will be filled with
+                           defaults. And the following testnet-specific fields
+                           will be overridden to match the generated testnet:
+                           "nodeConfigFile", "sigKey", "localNodeSocketPath",
+                           and "targetNodes"
   --output-dir DIRECTORY   Directory where to store files, sockets, and so on.
                            It is created if it doesn't exist. If unset, a
                            temporary directory is used.

@@ -14,6 +14,9 @@ module Testnet.Start.Types
   , NumDReps(..)
   , NumPools(..)
   , NumRelays(..)
+  , TestnetMode(..)
+  , TxGeneratorCmd(..)
+  , TxGeneratorOptions(..)
   , TxGeneratorSupport(..)
   , cardanoNumPools
   , cardanoNumRelays
@@ -167,10 +170,26 @@ data CardanoTestnetCreateEnvOptions = CardanoTestnetCreateEnvOptions
   , createEnvCreateEnvOptions :: CreateEnvOptions
   } deriving (Eq, Show)
 
+-- | Whether we should only generate the configuration
+-- or also run the testnet.
+data TestnetMode
+  = ConfigOnly  -- ^ Only generate configuration
+  | RunTestnet  -- ^ Generate configuration and run the testnet
+  deriving (Eq, Show)
+
+data TxGeneratorCmd
+  = GenerateTemplateConfig
+  | GenerateAndRun
+  deriving (Eq, Show)
+
+data TxGeneratorOptions = TxGeneratorOptions
+  { txGeneratorCmd :: TxGeneratorCmd
+  , txGeneratorConfig :: Maybe FilePath
+  } deriving (Eq, Show)
+
 data TxGeneratorSupport
   = NoTxGeneratorSupport
-  | GenerateTemplateConfigForTxGenerator
-  | GenerateAndRunTxGenerator
+  | TxGeneratorSupport TxGeneratorOptions
   deriving (Eq, Show)
 
 -- | Options which, contrary to 'GenesisOptions' are not implemented
