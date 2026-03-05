@@ -101,6 +101,9 @@ import qualified Data.Text as T
 import qualified Network.Mux as Mux
 import qualified Network.Socket as Socket
 
+import           LeiosDemoTypes (LeiosPoint, LeiosEb, LeiosTx, TraceLeiosKernel, TraceLeiosPeer)
+import           LeiosDemoOnlyTestFetch (LeiosFetch)
+import           LeiosDemoOnlyTestNotify (LeiosNotify)
 
 -- | Check the configuration in the given file.
 -- If there is no configuration in the file check the standard configuration
@@ -207,7 +210,10 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (Jumping.TraceEventCsj peer blk)])
         dbfNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "DevotedBlockFetch"])
                         (allNamespaces :: [Namespace (Jumping.TraceEventDbf peer)])
-
+        leiosKernelNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "LeiosKernel"])
+                        (allNamespaces :: [Namespace TraceLeiosKernel])
+        leiosPeerNS = map (nsGetTuple . nsReplacePrefix  ["Consensus", "LeiosPeer"])
+                        (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer remotePeer TraceLeiosPeer)])
 -- Node to client
         keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
                                 (allNamespaces :: [Namespace  (TraceKeepAliveClient peer)])
@@ -262,6 +268,18 @@ getAllNamespaces =
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
                                       (TxSubmission2 (GenTxId blk) (GenTx blk))))])
+
+        leiosNotifyNS = map (nsGetTuple . nsReplacePrefix ["LeiosNotify", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LeiosNotify LeiosPoint ())))])
+
+        leiosFetchNS = map (nsGetTuple . nsReplacePrefix ["LeiosFetch", "Remote"])
+                             (allNamespaces :: [Namespace
+                                 (BlockFetch.TraceLabelPeer peer
+                                    (TraceSendRecv
+                                      (LeiosFetch LeiosPoint LeiosEb LeiosTx)))])
 
 -- Diffusion
 
@@ -420,6 +438,8 @@ getAllNamespaces =
             <> gsmNS
             <> csjNS
             <> dbfNS
+            <> leiosKernelNS
+            <> leiosPeerNS
 -- NodeToClient
             <> keepAliveClientNS
             <> chainSyncNS
@@ -432,6 +452,8 @@ getAllNamespaces =
             <> blockFetchNS
             <> blockFetchSerialisedNS
             <> txSubmission2NS
+            <> leiosNotifyNS
+            <> leiosFetchNS
 -- Diffusion
             <> dtMuxNS
             <> dtLocalMuxNS
