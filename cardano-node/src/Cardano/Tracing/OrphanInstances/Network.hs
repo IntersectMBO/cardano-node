@@ -93,7 +93,7 @@ import           Ouroboros.Network.Server as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..), TraceTxLogic(..), TxSubmissionCounters(..),
-                   TxDecision(..))
+                   TxDecision(..), TxsToMempool(..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import           Control.Exception (Exception (..))
@@ -2358,5 +2358,14 @@ instance ToObject TxSubmissionCounters where
             , "numOfTxIdsInflight" .= numOfTxIdsInflight
             ]
 
-instance ToObject (TxDecision txid tx) where
-  toObject _ _ = undefined -- TODO(10.7)
+instance Show txid => ToObject (TxDecision txid tx) where
+  toObject verb decision =
+       ("kind" .= String "TraceTxDecisions")
+    <> case verb of
+         MaximalVerbosity -> "decision" .=
+           let g (TxsToMempool txs) = map (show . fst) txs
+               f TxDecision {..} =
+                 [( fromIntegral txdTxIdsToAcknowledge :: Int, fromIntegral txdTxIdsToRequest :: Int
+                  , map (first show) . Map.toList $ txdTxsToRequest, g txdTxsToMempool)]
+            in f decision
+         _otherwise -> mempty
