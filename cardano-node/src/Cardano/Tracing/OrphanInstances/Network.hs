@@ -24,6 +24,7 @@ module Cardano.Tracing.OrphanInstances.Network
 
 
 import qualified Cardano.Network.PeerSelection as Cardano
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import Cardano.Network.PeerSelection.PublicRootPeers (PublicRootPeers(..))
 import           Cardano.Network.Diffusion (CardanoDebugPeerSelection, CardanoPeerSelectionCounters,
                    CardanoTraceLocalRootPeers, TraceChurnMode (..))
@@ -287,8 +288,8 @@ instance HasPrivacyAnnotation TracePublicRootPeers
 instance HasSeverityAnnotation TracePublicRootPeers where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers extraTrace ntnAddr) where
-instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers extraTrace ntnAddr) where
+instance HasPrivacyAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers ntnAddr) where
+instance HasSeverityAnnotation (TracePeerSelection extraDebugState extraFlags extraPeers ntnAddr) where
   getSeverityAnnotation ev =
     case ev of
       TraceLocalRootPeersChanged {} -> Notice
@@ -620,9 +621,9 @@ instance
     , Ord addr
     , Show addr
     ) =>
-    Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
+    Transformable Text IO (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) addr) where
   trTransformer = trStructuredText
-instance (Ord addr, Show addr) => HasTextFormatter (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
+instance (Ord addr, Show addr) => HasTextFormatter (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) addr) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO CardanoDebugPeerSelection where
@@ -1479,7 +1480,7 @@ instance
     , ToJSON addr
     , ToJSONKey addr
     ) =>
-    ToObject (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) Cardano.ExtraTrace addr) where
+    ToObject (TracePeerSelection Cardano.DebugPeerSelectionState Cardano.PeerTrustable (Cardano.ExtraPeers addr) addr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -1846,8 +1847,6 @@ instance ToObject CardanoDebugPeerSelection where
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
              , "counters" .= toObject verb (peerSelectionStateToCounters
-                                             Cardano.PublicRootPeers.toSet
-                                             Cardano.cardanoPeerSelectionStatetoCounters
                                              st)
 
              ]
