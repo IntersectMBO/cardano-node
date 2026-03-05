@@ -13,7 +13,6 @@ module Parsers.Run
 import           Cardano.CLI.Environment
 
 import           Control.Monad (void)
-import           Data.Default.Class (def)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
@@ -75,6 +74,7 @@ runCardanoOptions CardanoTestnetCliOptions
   , cliGenesisOptions=genesisOptions
   , cliNodeEnvironment=env
   , cliUpdateTimestamps=updateTimestamps'
+  , cliOnChainParams=onChainParams
   } = do
     case env of
       NoUserProvidedEnv -> do
@@ -84,7 +84,7 @@ runCardanoOptions CardanoTestnetCliOptions
         conf <- mkConfigAbs "testnet"
         runSimpleApp . runResourceT $ do
           logInfo $ "Creating environment: " <> display (tempAbsPath conf)
-          createTestnetEnv testnetOptions genesisOptions def conf
+          createTestnetEnv testnetOptions genesisOptions (CreateEnvOptions onChainParams) conf
           logInfo $ "Starting testnet in environment: " <> display (tempAbsPath conf)
           void $ cardanoTestnet testnetOptions conf
           logInfo "Testnet started"
