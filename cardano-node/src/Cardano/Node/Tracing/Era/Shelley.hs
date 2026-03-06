@@ -43,7 +43,7 @@ import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Logging
 import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
-                   renderScriptIntegrityHash)
+                   renderScriptIntegrityHash, renderIncompleteWithdrawals)
 import qualified Cardano.Protocol.Crypto as Ledger
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
@@ -70,11 +70,14 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Set.NonEmpty as NonEmptySet
@@ -342,6 +345,15 @@ instance
   ) => LogFormatting (ShelleyLedgersPredFailure era) where
   forMachine dtal (LedgerFailure f) = forMachine dtal f
 
+instance LogFormatting Withdrawals where
+  forMachine _dtal (Withdrawals ws) =
+    mconcat ["kind" .= String "Withdrawals"
+             , "withdrawals" .= Aeson.object (map renderTuple $ Map.toList ws)
+             ]
+    where
+      renderTuple :: (Ledger.AccountAddress, Coin) -> Aeson.Pair
+      renderTuple (address, mismatch) =
+        Aeson.fromText (Api.serialiseAddress $ Api.fromShelleyStakeAddr address) .= show mismatch
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -353,8 +365,10 @@ instance
   forMachine dtal = \case
     UtxowFailure f -> forMachine dtal f
     DelegsFailure f -> forMachine dtal f
-    (ShelleyWithdrawalsMissingAccounts _withdrawals) -> undefined -- TODO(10.7)
-    (ShelleyIncompleteWithdrawals _payload) -> undefined -- TODO(10.7)
+    ShelleyWithdrawalsMissingAccounts withdrawals -> forMachine dtal withdrawals
+    ShelleyIncompleteWithdrawals payload ->
+      mconcat ["kind" .= String "ShelleyIncompleteWithdrawals"
+               , "withdrawals" .= renderIncompleteWithdrawals payload]
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
@@ -1081,9 +1095,9 @@ instance
     mconcat [ "kind" .= String "ConwayWithdrawalsMissingAccounts"
             , "withdrawals" .= unWithdrawals missingWithdrawals
             ]
-  forMachine _ (Conway.ConwayIncompleteWithdrawals _incompleteWithdrawals) =
+  forMachine _ (Conway.ConwayIncompleteWithdrawals incompleteWithdrawals) =
     mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
-            -- , "withdrawals" .= unWithdrawals incompleteWithdrawals -- TODO(10.7)
+            , "withdrawals" .= renderIncompleteWithdrawals incompleteWithdrawals
             ]
   forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
@@ -1207,32 +1221,32 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraGovPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   (LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" ledgerera))
   ) => LogFormatting (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
-  forMachine _ = undefined -- TODO(10.7)
+  forMachine _ = error "Dijkstra era is not active yet"
 
 instance
   ( Ledger.Crypto crypto
