@@ -78,6 +78,7 @@ let
       withUtxoHdLmdb   = profile.node.utxo_lmdb && isProducer;
       withUtxoHdLsmt   = profile.node.utxo_lsmt && isProducer;
       lmdbDatabasePath = liveTablesPath i;
+      lsmDatabasePath  = liveTablesPath i;
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)
