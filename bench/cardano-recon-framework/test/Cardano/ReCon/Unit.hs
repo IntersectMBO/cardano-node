@@ -12,6 +12,7 @@ import           Data.Map (singleton)
 import           Data.Set (fromList)
 import           Data.Text (Text, unpack)
 import qualified Data.Text as Text
+import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Text.Megaparsec
 
 import           Test.Tasty
@@ -134,7 +135,9 @@ prop2 = PropForall "i" $ UntilN
   (Atom Start (fromList [PropConstraint "idx" (Var "i")]))
 
 main :: IO ()
-main = defaultMain tests
+main = do
+  setLocaleEncoding utf8
+  defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Unit tests" [syntacticTests, prop1SatisfiabilityTests, prop2SatisfiabilityTests, parserTests]

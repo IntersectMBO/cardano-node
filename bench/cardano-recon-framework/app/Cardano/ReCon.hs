@@ -43,6 +43,7 @@ import           Options.Applicative hiding (Success)
 import           System.Exit (die)
 import qualified System.Metrics as EKG
 
+import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Streaming
 
 
@@ -149,6 +150,7 @@ setupTraceDispatcher optTraceDispatcherConfigFile = do
 
 main :: IO ()
 main = do
+  setLocaleEncoding utf8
   options <- execParser opts
   ctx <- Map.toList . fromMaybe Map.empty <$> for options.context (readPropValues >=> dieOnYamlException)
   putStrLn "Context:"

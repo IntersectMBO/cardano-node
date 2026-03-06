@@ -136,7 +136,7 @@ executable cardano-recon
       , ekg-core
       , network
       , hostname
-      , contra-tracer
+      , contra-tracer ^>=0.1.0
 
 
     -- Directories containing source files.
