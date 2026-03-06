@@ -50,6 +50,7 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionLogicVersion(..), TxSubmissionInitDelay(..))
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -197,6 +198,9 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
+       , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -297,6 +301,9 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
+       , pncTxSubmissionInitDelay :: !(Last TxSubmissionInitDelay)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -413,6 +420,13 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncTxSubmissionLogicVersion <- undefined -- TODO(10.7)
+      -- the following needs FromJSON TxSubmissionLogicVersion
+      -- pncTxSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
+      pncTxSubmissionInitDelay <- undefined -- TODO(10.7)
+      -- the following needs FromJSON TxSubmissionInitDelay
+      -- pncTxSubmissionInitDelay <- Last <$> v .:? "TxSubmissionInitDelay"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -460,6 +474,8 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncTxSubmissionLogicVersion
+           , pncTxSubmissionInitDelay
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -725,6 +741,9 @@ defaultPartialNodeConfiguration =
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+
+    , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1 -- TODO(10.7)
+    , pncTxSubmissionInitDelay = Last $ Just NoTxSubmissionInitDelay -- TODO(10.7)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -846,6 +865,9 @@ makeNodeConfiguration pnc = do
 
   ncResponderCoreAffinityPolicy <- lastToEither "Missing ResponderCoreAffinityPolicy" $ pncResponderCoreAffinityPolicy pnc
 
+  ncTxSubmissionLogicVersion <- lastToEither "Missing TxSubmissionLogicVersion" $ pncTxSubmissionLogicVersion pnc
+  ncTxSubmissionInitDelay <- lastToEither "Missing TxSubmissionInitDelay" $ pncTxSubmissionInitDelay pnc
+
   let deadlineTargets =
         PeerSelectionTargets {
           targetNumberOfRootPeers = ncDeadlineTargetOfRootPeers,
@@ -923,6 +945,8 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncTxSubmissionLogicVersion
+             , ncTxSubmissionInitDelay
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
