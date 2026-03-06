@@ -19,6 +19,8 @@
 
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
+import           Cardano.Node.Tracing.Render (renderIncompleteWithdrawals)
+
 import           Cardano.Api (textShow)
 import qualified Cardano.Api as Api
 
@@ -74,12 +76,14 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson (Value (..))
-import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -321,6 +325,15 @@ instance
   ) => ToObject (ShelleyLedgersPredFailure ledgerera) where
   toObject verb (LedgerFailure f) = toObject verb f
 
+instance ToObject Withdrawals where
+  toObject _verb (Withdrawals ws) =
+    mconcat ["kind" .= String "Withdrawals"
+             , "withdrawals" .= Aeson.object (map renderTuple $ Map.toList ws)
+             ]
+    where
+      renderTuple :: (Ledger.AccountAddress, Coin) -> Aeson.Pair
+      renderTuple (address, mismatch) =
+        Aeson.fromText (Api.serialiseAddress $ Api.fromShelleyStakeAddr address) .= show mismatch
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "DELEGS" ledgerera))
@@ -328,8 +341,10 @@ instance
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
-  toObject _verb (ShelleyWithdrawalsMissingAccounts _withdrawals) = undefined -- TODO(10.7)
-  toObject _verb (ShelleyIncompleteWithdrawals _payload) = undefined -- TODO(10.7)
+  toObject verb (ShelleyWithdrawalsMissingAccounts withdrawals) = toObject verb withdrawals
+  toObject _verb (ShelleyIncompleteWithdrawals payload) =
+      mconcat ["kind" .= String "ShelleyIncompleteWithdrawals"
+               , "withdrawals" .= renderIncompleteWithdrawals payload]
 
 
 instance
@@ -342,9 +357,9 @@ instance
     mconcat [ "kind" .= String "ConwayWithdrawalsMissingAccounts"
             , "withdrawals" .= unWithdrawals missingWithdrawals
             ]
-  toObject _ (Conway.ConwayIncompleteWithdrawals _incompleteWithdrawals) =
+  toObject _ (Conway.ConwayIncompleteWithdrawals incompleteWithdrawals) =
     mconcat [ "kind" .= String "ConwayIncompleteWithdrawals"
-            -- , "withdrawals" .= undefined -- TODO(10.7)
+            , "withdrawals" .= renderIncompleteWithdrawals incompleteWithdrawals
             ]
   toObject _    (Conway.ConwayTxRefScriptsSizeTooBig Mismatch {mismatchSupplied, mismatchExpected}) =
     mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
@@ -466,32 +481,32 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   ) => ToObject (Dijkstra.DijkstraLedgerPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraGovCertPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraGovPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   ) => ToObject (Dijkstra.DijkstraUtxowPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraBbodyPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   (ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   ) => ToObject (Dijkstra.DijkstraUtxoPredFailure ledgerera) where
-  toObject _verb = undefined -- TODO(10.7)
+  toObject _verb = error "Dijkstra era is not active yet"
 
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera

@@ -28,6 +28,7 @@ module Cardano.Node.Tracing.Render
   , renderScriptIntegrityHash
   , renderScriptPurpose
   , renderMissingRedeemers
+  , renderIncompleteWithdrawals
   ) where
 
 import qualified Cardano.Api as Api
@@ -50,6 +51,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Util.Condense (Condense, condense)
 import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip,
                    getTipPoint)
+import           Cardano.Ledger.BaseTypes (Mismatch(..), Relation(..))
 
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
@@ -62,6 +64,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.NonEmpty as NonEmptyMap
+import Data.Map.NonEmpty (NonEmptyMap)
 
 
 condenseT :: Condense a => a -> Text
@@ -196,6 +200,16 @@ renderMissingRedeemers sbe scripts = Aeson.object $ NonEmpty.toList $ NonEmpty.m
       -> Aeson.Pair
     renderTuple (scriptPurpose, sHash) =
       Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose sbe scriptPurpose
+
+renderIncompleteWithdrawals :: forall payload. Show payload
+  => NonEmptyMap Ledger.AccountAddress (Mismatch RelEQ payload)
+  -> Aeson.Value
+renderIncompleteWithdrawals payload =
+  Aeson.object $ map renderTuple $ NonEmptyMap.toList payload
+  where
+    renderTuple :: (Ledger.AccountAddress, Mismatch RelEQ payload) -> Aeson.Pair
+    renderTuple (address, mismatch) =
+      Aeson.fromText (Api.serialiseAddress $ Api.fromShelleyStakeAddr address) .= show mismatch
 
 renderScriptHash :: Ledger.ScriptHash -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
