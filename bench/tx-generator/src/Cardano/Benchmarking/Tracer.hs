@@ -399,12 +399,10 @@ instance MetaTrace NodeToNodeSubmissionTrace where
         , Namespace [] ["TxList"]
         ]
 
--- TODO(10.7): tracing team, check this makes sense
 instance (Show txid, Show tx) => LogFormatting (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 txid tx)) where
   forHuman = Text.pack . show
   forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "TxSubmission2" ]
 
--- TODO(10.7): tracing team, check this makes sense
 instance MetaTrace (TypedProtocol.AnyMessage (TxSubmission.TxSubmission2 tx a)) where
     namespaceFor _ = Namespace [] ["TxSubmission2"]
     severityFor _ _ = Just Info
