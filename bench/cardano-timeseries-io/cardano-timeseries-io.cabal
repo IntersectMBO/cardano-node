@@ -1,0 +1,145 @@
+cabal-version:      3.4
+name:               cardano-timeseries-io
+description:        Cardano Timeseries Input/Output for realtime metric storage & query.
+version:            1.0.0
+category:           Cardano
+                    Metrics
+copyright:          2026 Intersect.
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             Ruslan Feizerakhmanov
+maintainer:         ruslan.feizerakhmanov@iohk.io
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+                    README.md
+                    examples/*.txt
+                    docs/*.txt
+
+flag profiling
+  description:          Enable profiling
+  default:              False
+  manual:               True
+
+common common
+    ghc-options:
+      -Wall
+
+      -- to ease development only
+      -- -Wno-unused-matches
+      -- -Wno-unused-top-binds
+      -- -Wno-unused-local-binds
+      -- -Wno-unused-imports
+
+    if impl(ghc >= 9.8)
+      ghc-options:
+        -Wno-x-partial
+
+    if flag(profiling)
+      ghc-options:
+        -fno-prof-auto
+
+    default-language: Haskell2010
+
+    default-extensions:
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+
+      -- NB.: This package is strict Haskell!
+      Strict
+
+library
+    import: common
+    hs-source-dirs: src
+
+    build-depends:
+      base,
+      megaparsec,
+      scientific,
+      vector,
+      text,
+      serialise,
+      statistics,
+      time,
+      containers,
+      mtl,
+      deepseq
+
+    exposed-modules:
+      Cardano.Timeseries.AsText,
+      Cardano.Timeseries.Domain.Identifier,
+      Cardano.Timeseries.Domain.Instant,
+      Cardano.Timeseries.Domain.Interval,
+      Cardano.Timeseries.Domain.Timeseries,
+      Cardano.Timeseries.Domain.Types,
+      Cardano.Timeseries.Import.PlainCBOR,
+      Cardano.Timeseries.Interp,
+      Cardano.Timeseries.Interp.Config,
+      Cardano.Timeseries.Interp.Types,
+      Cardano.Timeseries.Interp.Value,
+      Cardano.Timeseries.Query.Expr,
+      Cardano.Timeseries.Store,
+      Cardano.Timeseries.Store.Flat,
+      Cardano.Timeseries.Store.Flat.Parser,
+      Cardano.Timeseries.Store.Tree,
+      Cardano.Timeseries.Elab,
+      Cardano.Timeseries.Surface.Expr,
+      Cardano.Timeseries.Surface.Expr.Parser,
+
+    other-modules:
+      Cardano.Timeseries.Interp.Expect,
+      Cardano.Timeseries.Interp.Statistics,
+      Cardano.Timeseries.Query.BinaryArithmeticOp,
+      Cardano.Timeseries.Query.BinaryRelation,
+      Cardano.Timeseries.Resolve,
+      Cardano.Timeseries.Util,
+      Cardano.Timeseries.Typing,
+      Cardano.Timeseries.Unify,
+      Cardano.Timeseries.Surface.Expr.Head,
+
+executable cardano-timeseries-io
+    import: common
+    ghc-options: -rtsopts
+    hs-source-dirs: app
+    main-is: Cardano/Timeseries.hs
+
+    other-modules:
+      Cardano.Timeseries.Common,
+      Cardano.Timeseries.CLI
+
+    build-depends:
+      base,
+      megaparsec,
+      vector,
+      text,
+      serialise,
+      statistics,
+      time,
+      containers,
+      mtl,
+      trace-resources,
+      cardano-timeseries-io,
+      filepath,
+      deepseq,
+      optparse-applicative
+
+benchmark cardano-timeseries-io-bench
+    import: common
+    type: exitcode-stdio-1.0
+    hs-source-dirs: bench
+    main-is: Bench.hs
+
+    build-depends:
+      base,
+      vector,
+      text,
+      serialise,
+      megaparsec,
+      statistics,
+      time,
+      containers,
+      mtl,
+      trace-resources,
+      cardano-timeseries-io,
+      criterion
