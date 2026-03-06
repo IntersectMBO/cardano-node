@@ -147,6 +147,8 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+        "${optionalString (cfg.shelleyKesAgentSocket != null)
+          "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
       Cardano = [
         "${optionalString (cfg.signingKey != null)
@@ -159,6 +161,8 @@ let
           "--shelley-kes-key ${cfg.kesKey}"}"
         "${optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+        "${optionalString (cfg.shelleyKesAgentSocket != null)
+          "--shelley-kes-agent-socket ${cfg.shelleyKesAgentSocket}"}"
       ];
     };
     instanceDbPath = cfg.databasePath i;
@@ -446,6 +450,14 @@ in {
         description = ''
           A node UTxO-HD on-disk LSM-trees path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
+      };
+
+      shelleyKesAgentSocket = mkOption {
+        type = nullOr (either str path);
+        default = null;
+        description = ''
+          Path to the KES agent socket.
         '';
       };
 
@@ -1020,8 +1032,24 @@ in {
                      as a prefix, for each instance!";
         }
         {
-          assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
-          message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
+          assertion = let
+            hasKes   = cfg.kesKey != null;
+            hasVrf   = cfg.vrfKey != null;
+            hasOpcert = cfg.operationalCertificate != null;
+            hasAgent = cfg.shelleyKesAgentSocket != null;
+          in
+            # (1) No forging: none of the four options set
+            (!hasKes && !hasVrf && !hasOpcert && !hasAgent)
+            # (2) Direct KES forging: kesKey + vrfKey + operationalCertificate, no agent socket
+            || (hasKes && !hasAgent && hasVrf && hasOpcert)
+            # (3) KES agent forging: shelleyKesAgentSocket + vrfKey + operationalCertificate, no kesKey
+            || (!hasKes && hasAgent && hasVrf && hasOpcert);
+          message = ''
+            Shelley Era: valid forging configurations are:
+              (1) none of [operationalCertificate kesKey vrfKey shelleyKesAgentSocket] (relay/non-producer node),
+              (2) all of [operationalCertificate kesKey vrfKey] without shelleyKesAgentSocket (direct KES key forging), or
+              (3) [operationalCertificate vrfKey shelleyKesAgentSocket] without kesKey (KES agent forging).
+          '';
         }
         {
           assertion = !(cfg.systemdSocketActivation && (cfg.useNewTopology != false));

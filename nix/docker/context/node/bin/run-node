@@ -48,7 +48,8 @@ fi
 
 # Block producer key defaults -- only relevant when CARDANO_BLOCK_PRODUCER=true
 if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
-  if [[ -z ${CARDANO_SHELLEY_KES_KEY:-} ]]; then
+  # Only default the KES key when not using a KES agent socket
+  if [[ -z ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} && -z ${CARDANO_SHELLEY_KES_KEY:-} ]]; then
     CARDANO_SHELLEY_KES_KEY="$CARDANO_CONFIG_BASE/keys/kes.skey"
   fi
 
@@ -81,7 +82,11 @@ printRunEnv () {
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]] && echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=$CARDANO_TRACER_SOCKET_PATH_CONNECT"
 
   if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
-    echo "CARDANO_SHELLEY_KES_KEY=$CARDANO_SHELLEY_KES_KEY"
+    if [[ -n ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
+      echo "CARDANO_SHELLEY_KES_AGENT_SOCKET=$CARDANO_SHELLEY_KES_AGENT_SOCKET"
+    else
+      echo "CARDANO_SHELLEY_KES_KEY=$CARDANO_SHELLEY_KES_KEY"
+    fi
     echo "CARDANO_SHELLEY_VRF_KEY=$CARDANO_SHELLEY_VRF_KEY"
     echo "CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
   fi
@@ -98,6 +103,11 @@ cat << EOF > /usr/local/bin/env
 
 # Docker run ENV vars
 EOF
+
+if [[ -n ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
+  echo "CARDANO_SHELLEY_KES_AGENT_SOCKET=\"$CARDANO_SHELLEY_KES_AGENT_SOCKET\"" \
+    >> /usr/local/bin/env
+fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=\"$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT\"" \
@@ -161,13 +171,20 @@ runNode () {
   )
 
   if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
+    if [[ -n ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
+      effopts+=(
+        "--shelley-kes-agent-socket" "$CARDANO_SHELLEY_KES_AGENT_SOCKET"
+      )
+    else
+      effopts+=(
+        "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY"
+      )
+    fi
     effopts+=(
-      "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY"
       "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY"
       "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
     )
   fi
-
   [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]] && effopts+=("--tracer-socket-network-accept" "$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT")
   [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_CONNECT:-} ]] && effopts+=("--tracer-socket-network-connect" "$CARDANO_TRACER_SOCKET_NETWORK_CONNECT")
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
@@ -201,6 +218,7 @@ do
       --socket-path) CARDANO_SOCKET_PATH=${val}; found=true;;
       --host-addr) CARDANO_BIND_ADDR=${val}; found=true;;
       --port) CARDANO_PORT=${val}; found=true;;
+      --shelley-kes-agent-socket) CARDANO_SHELLEY_KES_AGENT_SOCKET=${val}; found=true;;
       --shelley-kes-key) CARDANO_SHELLEY_KES_KEY=${val}; found=true;;
       --shelley-vrf-key) CARDANO_SHELLEY_VRF_KEY=${val}; found=true;;
       --shelley-operational-certificate) CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=${val}; found=true;;
@@ -222,6 +240,11 @@ for arg in "${options[@]}"; do
   [[ -n $arg ]] && filteredOpts+=("$arg")
 done
 
+if [[ -n ${CARDANO_SHELLEY_KES_KEY:-} && -n ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
+  echo "ERROR: CARDANO_SHELLEY_KES_KEY and CARDANO_SHELLEY_KES_AGENT_SOCKET are mutually exclusive; use one or the other, not both."
+  exit 1
+fi
+
 printRunEnv
 writeRootEnv
 
@@ -230,7 +253,10 @@ for f in "$CARDANO_CONFIG" "$CARDANO_TOPOLOGY"; do
   [[ -f $f ]] || { echo "ERROR: required file not found: $f"; exit 1; }
 done
 if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
-  for f in "$CARDANO_SHELLEY_KES_KEY" "$CARDANO_SHELLEY_VRF_KEY" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"; do
+  if [[ -z ${CARDANO_SHELLEY_KES_AGENT_SOCKET:-} ]]; then
+    [[ -f $CARDANO_SHELLEY_KES_KEY ]] || { echo "ERROR: required block producer key file not found: $CARDANO_SHELLEY_KES_KEY"; exit 1; }
+  fi
+  for f in "$CARDANO_SHELLEY_VRF_KEY" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"; do
     [[ -f $f ]] || { echo "ERROR: required block producer key file not found: $f"; exit 1; }
   done
 fi
