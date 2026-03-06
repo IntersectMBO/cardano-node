@@ -20,7 +20,7 @@ give a way to enforce it).
 ## Testing
 
 `cardano-node` is essentially a container which implements several
-components such networking, consensus, and storage. These components
+components such as networking, consensus, and storage. These components
 have individual test coverage. The node goes through integration and
 release testing by Devops/QA while automated CLI tests are ongoing
 alongside development.
@@ -97,7 +97,7 @@ generation workload -- using the `workbench` environment:
     - `default` stands for a light-state, 6-node cluster, under
       transaction saturation workload, ~30min runtime.
     - `ci-test-hydra` is the profile run in the node CI -- very light,
-      just two nodes, Plutus transaction worklooad, =\< 3min runtime.
+      just two nodes, Plutus transaction workload, =\< 3min runtime.
     - `devops` is an unloaded profile (no transaction workload) with
       short slots -- `0.2` sec.
     - ...and many more -- which can be: - listed by name with
