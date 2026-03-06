@@ -99,6 +99,8 @@ cat << EOF > /usr/local/bin/env
 # Docker run ENV vars
 EOF
 
+# TODO-SRE: Add kes-agent CLI arg once available
+
 if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=\"$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT\"" \
     >> /usr/local/bin/env

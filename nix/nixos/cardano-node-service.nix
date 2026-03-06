@@ -909,6 +909,8 @@ in {
             `cardano-cli query ledger-peer-snapshot`
         '';
       };
+
+      # TODO-SRE: Add kes-agent CLI arg opts once available
     };
   };
 
