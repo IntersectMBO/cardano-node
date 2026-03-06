@@ -1,0 +1,579 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-unused-matches #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# HLINT ignore &quot;Redundant irrefutable pattern&quot; #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Satisfy</span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier">SatisfactionResult</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#satisfies"><span class="hs-identifier">satisfies</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#satisfiesS"><span class="hs-identifier">satisfiesS</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier">SatisfyMetrics</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.HomogeneousFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html"><span class="hs-identifier">Cardano.ReCon.LTL.Progress</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Rewrite.html"><span class="hs-identifier">Cardano.ReCon.LTL.Rewrite</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#lookup"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier">Foldable</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier">IORef</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html#modifyIORef%27"><span class="hs-identifier">modifyIORef'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.html"><span class="hs-identifier">Streaming</span></a></span><span class="hs-cpp">
+
+#ifdef TRACE
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula.Prec</span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Prec</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Cardano.ReCon.LTL.Pretty</span><span>                  </span><span class="hs-special">(</span><span class="hs-identifier">prettyFormula</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Text</span><span>                                 </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Text</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Debug.Trace</span><span>                               </span><span class="hs-special">(</span><span class="hs-identifier">trace</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- This file concerns checking formula satisfiability against some input.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- The input can be either pure and finite foldable (e.g. a list, cf. `satisfies`)</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   or effectful and potentially infinite (i.e. a Stream, cf. `satisfiesS`).</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | The result of checking satisfaction of a formula against a timeline.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | If unsatisfied, stores points in the timeline &quot;relevant&quot; to the formula.</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="SatisfactionResult"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-var">SatisfactionResult</span></a></span></span><span> </span><span id="local-6989586621679112839"><span class="annot"><a href="#local-6989586621679112839"><span class="hs-identifier hs-type">event</span></a></span></span><span> </span><span id="local-6989586621679112840"><span class="annot"><a href="#local-6989586621679112840"><span class="hs-identifier hs-type">ty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Satisfied"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#Satisfied"><span class="hs-identifier hs-var">Satisfied</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Unsatisfied"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#Unsatisfied"><span class="hs-identifier hs-var">Unsatisfied</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Relevance"><span class="hs-identifier hs-type">Relevance</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112839"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112840"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679112937"><span id="local-6989586621679112944"><span id="local-6989586621679112948"><span class="annot"><span class="annottext">Int -&gt; SatisfactionResult event ty -&gt; ShowS
+[SatisfactionResult event ty] -&gt; ShowS
+SatisfactionResult event ty -&gt; String
+(Int -&gt; SatisfactionResult event ty -&gt; ShowS)
+-&gt; (SatisfactionResult event ty -&gt; String)
+-&gt; ([SatisfactionResult event ty] -&gt; ShowS)
+-&gt; Show (SatisfactionResult event ty)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall event ty.
+(Show event, Show ty) =&gt;
+Int -&gt; SatisfactionResult event ty -&gt; ShowS
+forall event ty.
+(Show event, Show ty) =&gt;
+[SatisfactionResult event ty] -&gt; ShowS
+forall event ty.
+(Show event, Show ty) =&gt;
+SatisfactionResult event ty -&gt; String
+$cshowsPrec :: forall event ty.
+(Show event, Show ty) =&gt;
+Int -&gt; SatisfactionResult event ty -&gt; ShowS
+showsPrec :: Int -&gt; SatisfactionResult event ty -&gt; ShowS
+$cshow :: forall event ty.
+(Show event, Show ty) =&gt;
+SatisfactionResult event ty -&gt; String
+show :: SatisfactionResult event ty -&gt; String
+$cshowList :: forall event ty.
+(Show event, Show ty) =&gt;
+[SatisfactionResult event ty] -&gt; ShowS
+showList :: [SatisfactionResult event ty] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679112955"><span id="local-6989586621679112960"><span class="annot"><span class="annottext">SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+(SatisfactionResult event ty
+ -&gt; SatisfactionResult event ty -&gt; Bool)
+-&gt; (SatisfactionResult event ty
+    -&gt; SatisfactionResult event ty -&gt; Bool)
+-&gt; Eq (SatisfactionResult event ty)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall event ty.
+(Eq event, Eq ty) =&gt;
+SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+$c== :: forall event ty.
+(Eq event, Eq ty) =&gt;
+SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+== :: SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+$c/= :: forall event ty.
+(Eq event, Eq ty) =&gt;
+SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+/= :: SatisfactionResult event ty -&gt; SatisfactionResult event ty -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621679112808"><span id="local-6989586621679112809"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-type">traceFormula</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112808"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112809"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112808"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112809"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112808"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-42"></span><span id="traceFormula"><span class="annot"><span class="annottext">traceFormula :: forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var hs-var">traceFormula</span></a></span></span><span> </span><span class="hs-glyph">~</span><span id="local-6989586621679112967"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679112967"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span id="local-6989586621679112968"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112968"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span class="hs-cpp">
+#ifdef TRACE
+</span><span>  </span><span class="hs-identifier">trace</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">str</span><span> </span><span class="hs-operator">&lt;&gt;</span><span> </span><span class="hs-string">&quot; &quot;</span><span> </span><span class="hs-operator">&lt;&gt;</span><span> </span><span class="hs-identifier">Text.unpack</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">prettyFormula</span><span> </span><span class="hs-identifier">x</span><span> </span><span class="hs-identifier">Prec.Universe</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-identifier">x</span><span class="hs-cpp">
+#else
+</span><span>  </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112968"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-49"></span><span id="local-6989586621679112813"><span id="local-6989586621679112814"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#handleNext"><span class="hs-identifier hs-type">handleNext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>           </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span>
+</span><span id="line-52"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-type">SatisfactionResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112813"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112814"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-53"></span><span id="handleNext"><span class="annot"><span class="annottext">handleNext :: forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty)
+-&gt; event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleNext"><span class="hs-identifier hs-var hs-var">handleNext</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679112982"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679112982"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679112983"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112983"><span class="hs-identifier hs-var">formula0</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112984"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112984"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679112997"><span class="annot"><span class="annottext">formula1 :: Formula event ty
+</span><a href="#local-6989586621679112997"><span class="hs-identifier hs-var hs-var">formula1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Formula event ty -&gt; Formula event ty
+forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var">traceFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679112982"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;)\ninitial:&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112983"><span class="hs-identifier hs-var">formula0</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679113003"><span class="annot"><span class="annottext">formula2 :: Formula event ty
+</span><a href="#local-6989586621679113003"><span class="hs-identifier hs-var hs-var">formula2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Formula event ty -&gt; Formula event ty
+forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var">traceFormula</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;next:&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Formula event ty -&gt; Formula event ty)
+-&gt; Formula event ty -&gt; Formula event ty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112997"><span class="hs-identifier hs-var">formula1</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112984"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span id="local-6989586621679113006"><span class="annot"><span class="annottext">formula3 :: Formula event ty
+</span><a href="#local-6989586621679113006"><span class="hs-identifier hs-var hs-var">formula3</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Formula event ty -&gt; Formula event ty
+forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var">traceFormula</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rewrite-hom:&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteHomogeneous"><span class="hs-identifier hs-var">rewriteHomogeneous</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113003"><span class="hs-identifier hs-var">formula2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679113013"><span class="annot"><span class="annottext">formula4 :: Formula event ty
+</span><a href="#local-6989586621679113013"><span class="hs-identifier hs-var hs-var">formula4</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Formula event ty -&gt; Formula event ty
+forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var">traceFormula</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rewrite-frag:&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Formula event ty -&gt; Formula event ty)
+-&gt; Formula event ty -&gt; Formula event ty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty.
+(Ord event, Ord ty) =&gt;
+Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteFragment"><span class="hs-identifier hs-var">rewriteFragment</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113006"><span class="hs-identifier hs-var">formula3</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621679113017"><span class="annot"><span class="annottext">formula5 :: Formula event ty
+</span><a href="#local-6989586621679113017"><span class="hs-identifier hs-var hs-var">formula5</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Formula event ty -&gt; Formula event ty
+forall ty event.
+Show ty =&gt;
+String -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#traceFormula"><span class="hs-identifier hs-var">traceFormula</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rewrite-id:&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall ty event. Eq ty =&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Rewrite.html#rewriteIdentity"><span class="hs-identifier hs-var">rewriteIdentity</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113013"><span class="hs-identifier hs-var">formula4</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113017"><span class="hs-identifier hs-var">formula5</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SatisfactionResult event ty
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">SatisfactionResult event ty
+forall event ty. SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#Satisfied"><span class="hs-identifier hs-var">Satisfied</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SatisfactionResult event ty
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Relevance event ty -&gt; SatisfactionResult event ty
+forall event ty. Relevance event ty -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#Unsatisfied"><span class="hs-identifier hs-var">Unsatisfied</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Relevance event ty
+forall event ty.
+(Ord event, Ord ty) =&gt;
+Formula event ty -&gt; Relevance event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#relevance"><span class="hs-identifier hs-var">relevance</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112983"><span class="hs-identifier hs-var">formula0</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679113022"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113022"><span class="hs-identifier hs-var">formula</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Int, Formula event ty)
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679112982"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113017"><span class="hs-identifier hs-var">formula5</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span id="local-6989586621679112843"><span id="local-6989586621679112844"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#handleEnd"><span class="hs-identifier hs-type">handleEnd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112843"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112844"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112844"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112843"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112844"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-type">SatisfactionResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112843"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112844"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-65"></span><span id="handleEnd"><span class="annot"><span class="annottext">handleEnd :: forall event ty.
+(Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty) -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleEnd"><span class="hs-identifier hs-var hs-var">handleEnd</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679113029"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113029"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113030"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113030"><span class="hs-identifier hs-var">formula</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HomogeneousFormula event ty -&gt; Bool
+forall event ty. HomogeneousFormula event ty -&gt; Bool
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">(HomogeneousFormula event ty -&gt; Bool)
+-&gt; (Formula event ty -&gt; HomogeneousFormula event ty)
+-&gt; Formula event ty
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; HomogeneousFormula event ty
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113030"><span class="hs-identifier hs-var">formula</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">SatisfactionResult event ty
+forall event ty. SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#Satisfied"><span class="hs-identifier hs-var">Satisfied</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Relevance event ty -&gt; SatisfactionResult event ty
+forall event ty. Relevance event ty -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#Unsatisfied"><span class="hs-identifier hs-var">Unsatisfied</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; Relevance event ty
+forall event ty.
+(Ord event, Ord ty) =&gt;
+Formula event ty -&gt; Relevance event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#relevance"><span class="hs-identifier hs-var">relevance</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113030"><span class="hs-identifier hs-var">formula</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><span class="hs-comment">-- | Check if the formula is satisfied in the given event timeline.</span></span><span>
+</span><span id="line-71"></span><span id="local-6989586621679112855"><span id="local-6989586621679112856"><span id="local-6989586621679112857"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#satisfies"><span class="hs-identifier hs-type">satisfies</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112855"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112856"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112855"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112856"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112856"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#Foldable"><span class="hs-identifier hs-type">Foldable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112857"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>          </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112855"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112856"><span class="hs-identifier hs-type">ty</span></a></span><span>
+</span><span id="line-73"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679112857"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112855"><span class="hs-identifier hs-type">event</span></a></span><span>
+</span><span id="line-74"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-type">SatisfactionResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112855"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112856"><span class="hs-identifier hs-type">ty</span></a></span></span></span></span><span>
+</span><span id="line-75"></span><span id="satisfies"><span class="annot"><span class="annottext">satisfies :: forall event ty (f :: * -&gt; *).
+(Event event ty, Ord event, Ord ty, Show ty, Foldable f) =&gt;
+Formula event ty -&gt; f event -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#satisfies"><span class="hs-identifier hs-var hs-var">satisfies</span></a></span></span><span> </span><span id="local-6989586621679113050"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113050"><span class="hs-identifier hs-var">formula</span></a></span></span><span> </span><span id="local-6989586621679113051"><span class="annot"><span class="annottext">f event
+</span><a href="#local-6989586621679113051"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either (SatisfactionResult event ty) (SatisfactionResult event ty)
+-&gt; SatisfactionResult event ty
+forall a. Either a a -&gt; a
+</span><a href="#local-6989586621679113052"><span class="hs-identifier hs-var">fromEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (SatisfactionResult event ty) (SatisfactionResult event ty)
+ -&gt; SatisfactionResult event ty)
+-&gt; Either
+     (SatisfactionResult event ty) (SatisfactionResult event ty)
+-&gt; SatisfactionResult event ty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Int, Formula event ty) -&gt; SatisfactionResult event ty
+forall event ty.
+(Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty) -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleEnd"><span class="hs-identifier hs-var">handleEnd</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Formula event ty) -&gt; SatisfactionResult event ty)
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+-&gt; Either
+     (SatisfactionResult event ty) (SatisfactionResult event ty)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (SatisfactionResult event ty) (Int, Formula event ty)
+ -&gt; event
+ -&gt; Either (SatisfactionResult event ty) (Int, Formula event ty))
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+-&gt; f event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldl%27"><span class="hs-identifier hs-var">foldl'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113055"><span class="annot"><span class="annottext">Either (SatisfactionResult event ty) (Int, Formula event ty)
+</span><a href="#local-6989586621679113055"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679113056"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679113056"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either (SatisfactionResult event ty) (Int, Formula event ty)
+</span><a href="#local-6989586621679113055"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Either (SatisfactionResult event ty) (Int, Formula event ty)
+-&gt; ((Int, Formula event ty)
+    -&gt; Either (SatisfactionResult event ty) (Int, Formula event ty))
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b.
+Either (SatisfactionResult event ty) a
+-&gt; (a -&gt; Either (SatisfactionResult event ty) b)
+-&gt; Either (SatisfactionResult event ty) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Formula event ty)
+ -&gt; event
+ -&gt; Either (SatisfactionResult event ty) (Int, Formula event ty))
+-&gt; event
+-&gt; (Int, Formula event ty)
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">(Int, Formula event ty)
+-&gt; event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty)
+-&gt; event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleNext"><span class="hs-identifier hs-var">handleNext</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679113056"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int, Formula event ty)
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113050"><span class="hs-identifier hs-var">formula</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f event
+</span><a href="#local-6989586621679113051"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679112863"><span class="annot"><a href="#local-6989586621679113052"><span class="hs-identifier hs-type">fromEither</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112863"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112863"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679112863"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679113052"><span class="annot"><span class="annottext">fromEither :: forall a. Either a a -&gt; a
+</span><a href="#local-6989586621679113052"><span class="hs-identifier hs-var hs-var">fromEither</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; (a -&gt; a) -&gt; Either a a -&gt; a
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="SatisfyMetrics"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier hs-var">SatisfyMetrics</span></a></span></span><span> </span><span id="local-6989586621679112881"><span class="annot"><a href="#local-6989586621679112881"><span class="hs-identifier hs-type">event</span></a></span></span><span> </span><span id="local-6989586621679112882"><span class="annot"><a href="#local-6989586621679112882"><span class="hs-identifier hs-type">ty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SatisfyMetrics"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier hs-var">SatisfyMetrics</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-81"></span><span>  </span><span id="eventsConsumed"><span class="annot"><span class="annottext">forall event ty. SatisfyMetrics event ty -&gt; Word64
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#eventsConsumed"><span class="hs-identifier hs-var hs-var">eventsConsumed</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>  </span><span id="currentFormula"><span class="annot"><span class="annottext">forall event ty. SatisfyMetrics event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#currentFormula"><span class="hs-identifier hs-var hs-var">currentFormula</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112881"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112882"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="hs-comment">-- | &#956;s</span></span><span>
+</span><span id="line-84"></span><span>  </span><span id="currentTimestamp"><span class="annot"><span class="annottext">forall event ty. SatisfyMetrics event ty -&gt; Word64
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#currentTimestamp"><span class="hs-identifier hs-var hs-var">currentTimestamp</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-85"></span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Given a formula and a stream of events, forms an `IO` computation that returns a `SatisfactionResult` once</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--    the formula is equivalent to &#8868; or &#8869;. This may happen either once the stream terminates or if</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--    the formula is falsified early by some prefix of the stream.</span><span>
+</span><span id="line-90"></span><span id="local-6989586621679112890"><span id="local-6989586621679112891"><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#satisfiesS"><span class="hs-identifier hs-type">satisfiesS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>           </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span>
+</span><span id="line-92"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier hs-type">SatisfyMetrics</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>           </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-type">SatisfactionResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112890"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112891"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-95"></span><span id="satisfiesS"><span class="annot"><span class="annottext">satisfiesS :: forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+Formula event ty
+-&gt; Stream (Of event) IO ()
+-&gt; IORef (SatisfyMetrics event ty)
+-&gt; IO (SatisfactionResult event ty)
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#satisfiesS"><span class="hs-identifier hs-var hs-var">satisfiesS</span></a></span></span><span> </span><span id="local-6989586621679113079"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113079"><span class="hs-identifier hs-var">formula_</span></a></span></span><span> </span><span id="local-6989586621679113080"><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113080"><span class="hs-identifier hs-var">input_</span></a></span></span><span> </span><span id="local-6989586621679113081"><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+</span><a href="#local-6989586621679113081"><span class="hs-identifier hs-var">metrics_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Stream IO IO (SatisfactionResult event ty)
+-&gt; IO (SatisfactionResult event ty)
+forall (m :: * -&gt; *) r. Monad m =&gt; Stream m m r -&gt; m r
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#run"><span class="hs-identifier hs-var">run</span></a></span><span> </span><span class="annot"><span class="annottext">(Stream IO IO (SatisfactionResult event ty)
+ -&gt; IO (SatisfactionResult event ty))
+-&gt; Stream IO IO (SatisfactionResult event ty)
+-&gt; IO (SatisfactionResult event ty)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(forall x. Identity x -&gt; IO (IO x))
+-&gt; Stream Identity IO (SatisfactionResult event ty)
+-&gt; Stream IO IO (SatisfactionResult event ty)
+forall (m :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *) r.
+(Monad m, Functor f) =&gt;
+(forall x. f x -&gt; m (g x)) -&gt; Stream f m r -&gt; Stream g m r
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Prelude.html#mapped"><span class="hs-identifier hs-var">mapped</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO x -&gt; IO (IO x)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span class="annot"><span class="annottext">(IO x -&gt; IO (IO x))
+-&gt; (Identity x -&gt; IO x) -&gt; Identity x -&gt; IO (IO x)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">x -&gt; IO x
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(x -&gt; IO x) -&gt; (Identity x -&gt; x) -&gt; Identity x -&gt; IO x
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Identity x -&gt; x
+forall a. Identity a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#runIdentity"><span class="hs-identifier hs-var">runIdentity</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Stream Identity IO (SatisfactionResult event ty)
+ -&gt; Stream IO IO (SatisfactionResult event ty))
+-&gt; Stream Identity IO (SatisfactionResult event ty)
+-&gt; Stream IO IO (SatisfactionResult event ty)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Formula event ty, Stream (Of event) IO ())
+ -&gt; IO
+      (Either
+         (SatisfactionResult event ty)
+         (Identity (Int, Formula event ty, Stream (Of event) IO ()))))
+-&gt; (Int, Formula event ty, Stream (Of event) IO ())
+-&gt; Stream Identity IO (SatisfactionResult event ty)
+forall (m :: * -&gt; *) (f :: * -&gt; *) s r.
+(Monad m, Functor f) =&gt;
+(s -&gt; m (Either r (f s))) -&gt; s -&gt; Stream f m r
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#unfold"><span class="hs-identifier hs-var">unfold</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+-&gt; (Int, Formula event ty, Stream (Of event) IO ())
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+IORef (SatisfyMetrics event ty)
+-&gt; (Int, Formula event ty, Stream (Of event) IO ())
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+</span><a href="#local-6989586621679113089"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+</span><a href="#local-6989586621679113081"><span class="hs-identifier hs-var">metrics_</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113079"><span class="hs-identifier hs-var">formula_</span></a></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113080"><span class="hs-identifier hs-var">input_</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679112913"><span id="local-6989586621679112914"><span class="annot"><a href="#local-6989586621679113089"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier hs-type">SatisfyMetrics</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfactionResult"><span class="hs-identifier hs-type">SatisfactionResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112914"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112913"><span class="hs-identifier hs-type">event</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679113089"><span class="annot"><span class="annottext">go :: forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+IORef (SatisfyMetrics event ty)
+-&gt; (Int, Formula event ty, Stream (Of event) IO ())
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+</span><a href="#local-6989586621679113089"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679113112"><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+</span><a href="#local-6989586621679113112"><span class="hs-identifier hs-var">metrics</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679113113"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113113"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113114"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113114"><span class="hs-identifier hs-var">formula</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113115"><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113115"><span class="hs-identifier hs-var">input</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Stream (Of event) IO ()
+-&gt; IO (Either () (Of event (Stream (Of event) IO ())))
+forall (m :: * -&gt; *) (f :: * -&gt; *) r.
+Monad m =&gt;
+Stream f m r -&gt; m (Either r (f (Stream f m r)))
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#inspect"><span class="hs-identifier hs-var">inspect</span></a></span><span> </span><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113115"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either () (Of event (Stream (Of event) IO ())))
+-&gt; (Either () (Of event (Stream (Of event) IO ()))
+    -&gt; IO
+         (Either
+            (SatisfactionResult event ty)
+            (Identity (Int, Formula event ty, Stream (Of event) IO ()))))
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either
+  (SatisfactionResult event ty)
+  (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either
+   (SatisfactionResult event ty)
+   (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+ -&gt; IO
+      (Either
+         (SatisfactionResult event ty)
+         (Identity (Int, Formula event ty, Stream (Of event) IO ()))))
+-&gt; Either
+     (SatisfactionResult event ty)
+     (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SatisfactionResult event ty
+-&gt; Either
+     (SatisfactionResult event ty)
+     (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(SatisfactionResult event ty
+ -&gt; Either
+      (SatisfactionResult event ty)
+      (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+-&gt; SatisfactionResult event ty
+-&gt; Either
+     (SatisfactionResult event ty)
+     (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">(Int, Formula event ty) -&gt; SatisfactionResult event ty
+forall event ty.
+(Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty) -&gt; SatisfactionResult event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleEnd"><span class="hs-identifier hs-var">handleEnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113113"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113114"><span class="hs-identifier hs-var">formula</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113117"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679113117"><span class="hs-identifier hs-var">event</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679113119"><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113119"><span class="hs-identifier hs-var">more</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+-&gt; (SatisfyMetrics event ty -&gt; SatisfyMetrics event ty) -&gt; IO ()
+forall a. IORef a -&gt; (a -&gt; a) -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html#modifyIORef%27"><span class="hs-identifier hs-var">modifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (SatisfyMetrics event ty)
+</span><a href="#local-6989586621679113112"><span class="hs-identifier hs-var">metrics</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113120"><span class="annot"><span class="annottext">SatisfyMetrics event ty
+</span><a href="#local-6989586621679113120"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Formula event ty -&gt; Word64 -&gt; SatisfyMetrics event ty
+forall event ty.
+Word64 -&gt; Formula event ty -&gt; Word64 -&gt; SatisfyMetrics event ty
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#SatisfyMetrics"><span class="hs-identifier hs-var">SatisfyMetrics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">SatisfyMetrics event ty
+</span><a href="#local-6989586621679113120"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">eventsConsumed</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113114"><span class="hs-identifier hs-var">formula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">event -&gt; Word64
+forall a ty. Event a ty =&gt; a -&gt; Word64
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#beg"><span class="hs-identifier hs-var">beg</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679113117"><span class="hs-identifier hs-var">event</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">Either
+  (SatisfactionResult event ty)
+  (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either
+   (SatisfactionResult event ty)
+   (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+ -&gt; IO
+      (Either
+         (SatisfactionResult event ty)
+         (Identity (Int, Formula event ty, Stream (Of event) IO ()))))
+-&gt; Either
+     (SatisfactionResult event ty)
+     (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+-&gt; IO
+     (Either
+        (SatisfactionResult event ty)
+        (Identity (Int, Formula event ty, Stream (Of event) IO ())))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">((Int, Formula event ty)
+ -&gt; Identity (Int, Formula event ty, Stream (Of event) IO ()))
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+-&gt; Either
+     (SatisfactionResult event ty)
+     (Identity (Int, Formula event ty, Stream (Of event) IO ()))
+forall a b.
+(a -&gt; b)
+-&gt; Either (SatisfactionResult event ty) a
+-&gt; Either (SatisfactionResult event ty) b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span>
+</span><span id="line-107"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679113122"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113122"><span class="hs-identifier hs-var">n'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113123"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113123"><span class="hs-identifier hs-var">formula'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Int, Formula event ty, Stream (Of event) IO ())
+-&gt; Identity (Int, Formula event ty, Stream (Of event) IO ())
+forall a. a -&gt; Identity a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113122"><span class="hs-identifier hs-var">n'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113123"><span class="hs-identifier hs-var">formula'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Stream (Of event) IO ()
+</span><a href="#local-6989586621679113119"><span class="hs-identifier hs-var">more</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int, Formula event ty)
+-&gt; event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+forall event ty.
+(Event event ty, Ord event, Ord ty, Show ty) =&gt;
+(Int, Formula event ty)
+-&gt; event
+-&gt; Either (SatisfactionResult event ty) (Int, Formula event ty)
+</span><a href="Cardano.ReCon.LTL.Satisfy.html#handleNext"><span class="hs-identifier hs-var">handleNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679113113"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679113114"><span class="hs-identifier hs-var">formula</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679113117"><span class="hs-identifier hs-var">event</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span></pre></body></html>

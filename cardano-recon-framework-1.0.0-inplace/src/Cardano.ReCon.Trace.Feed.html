@@ -1,0 +1,470 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.Trace.Feed</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier">TemporalEvent</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier">TemporalEventDurationMicrosec</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#read"><span class="hs-identifier">read</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#readS"><span class="hs-identifier">readS</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html"><span class="hs-identifier">Cardano.Logging.Types.TraceMessage</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html"><span class="hs-identifier">Cardano.ReCon.Trace.Ingest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier">IngestorReader</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Read.html#read"><span class="hs-identifier">read</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">throwDecodeStrict</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BChar8</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Foldable</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sortOn"><span class="hs-identifier">sortOn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.html"><span class="hs-identifier">Data.Sequence</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#Seq"><span class="hs-identifier">Seq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%7C%3E"><span class="hs-operator">(|&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html"><span class="hs-identifier">Data.Time.Clock.POSIX</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#utcTimeToPOSIXSeconds"><span class="hs-identifier">utcTimeToPOSIXSeconds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.html"><span class="hs-identifier">Streaming</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-type">utcToMicroseconds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-22"></span><span id="utcToMicroseconds"><span class="annot"><span class="annottext">utcToMicroseconds :: UTCTime -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-var hs-var">utcToMicroseconds</span></a></span></span><span> </span><span id="local-6989586621679113742"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679113742"><span class="hs-identifier hs-var">utcTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; Word64
+forall b. Integral b =&gt; POSIXTime -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; Word64) -&gt; POSIXTime -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; POSIXTime
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.POSIX.html#utcTimeToPOSIXSeconds"><span class="hs-identifier hs-var">utcTimeToPOSIXSeconds</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679113742"><span class="hs-identifier hs-var">utcTime</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; POSIXTime -&gt; POSIXTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">POSIXTime
+</span><span class="hs-number">1000000</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span id="local-6989586621679113746"><span id="local-6989586621679113759"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span></span></span><span>
+</span><span id="line-25"></span><span id="local-6989586621679113767"><span id="local-6989586621679113779"><span id="local-6989586621679113788"><span id="local-6989586621679113792"><span id="local-6989586621679113795"><span id="local-6989586621679113798"><span id="local-6989586621679113801"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><span class="hs-comment">-- | Temporal event represents multiple trace messages spanning some duration of time together with an index of the event.</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">data</span><span> </span><span id="TemporalEvent"><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-var">TemporalEvent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TemporalEvent"><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-var">TemporalEvent</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Microseconds since epoch when the event begins.</span></span><span>
+</span><span id="line-30"></span><span>  </span><span id="beg"><span class="annot"><span class="annottext">TemporalEvent -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#beg"><span class="hs-identifier hs-var hs-var">beg</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span id="messages"><span class="annot"><span class="annottext">TemporalEvent -&gt; [TraceMessage]
+</span><a href="Cardano.ReCon.Trace.Feed.html#messages"><span class="hs-identifier hs-var hs-var">messages</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113809"><span id="local-6989586621679113818"><span id="local-6989586621679113822"><span class="annot"><span class="annottext">Int -&gt; TemporalEvent -&gt; ShowS
+[TemporalEvent] -&gt; ShowS
+TemporalEvent -&gt; String
+(Int -&gt; TemporalEvent -&gt; ShowS)
+-&gt; (TemporalEvent -&gt; String)
+-&gt; ([TemporalEvent] -&gt; ShowS)
+-&gt; Show TemporalEvent
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TemporalEvent -&gt; ShowS
+showsPrec :: Int -&gt; TemporalEvent -&gt; ShowS
+$cshow :: TemporalEvent -&gt; String
+show :: TemporalEvent -&gt; String
+$cshowList :: [TemporalEvent] -&gt; ShowS
+showList :: [TemporalEvent] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113827"><span id="local-6989586621679113834"><span class="annot"><span class="annottext">TemporalEvent -&gt; TemporalEvent -&gt; Bool
+(TemporalEvent -&gt; TemporalEvent -&gt; Bool)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; Bool) -&gt; Eq TemporalEvent
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+== :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+$c/= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+/= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113840"><span id="local-6989586621679113846"><span id="local-6989586621679113851"><span id="local-6989586621679113855"><span id="local-6989586621679113858"><span id="local-6989586621679113861"><span id="local-6989586621679113864"><span class="annot"><span class="annottext">Eq TemporalEvent
+Eq TemporalEvent =&gt;
+(TemporalEvent -&gt; TemporalEvent -&gt; Ordering)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; Bool)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; Bool)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; Bool)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; Bool)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent)
+-&gt; (TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent)
+-&gt; Ord TemporalEvent
+TemporalEvent -&gt; TemporalEvent -&gt; Bool
+TemporalEvent -&gt; TemporalEvent -&gt; Ordering
+TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TemporalEvent -&gt; TemporalEvent -&gt; Ordering
+compare :: TemporalEvent -&gt; TemporalEvent -&gt; Ordering
+$c&lt; :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+&lt; :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+$c&lt;= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+&lt;= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+$c&gt; :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+&gt; :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+$c&gt;= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+&gt;= :: TemporalEvent -&gt; TemporalEvent -&gt; Bool
+$cmax :: TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent
+max :: TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent
+$cmin :: TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent
+min :: TemporalEvent -&gt; TemporalEvent -&gt; TemporalEvent
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">-- | For performance considerations we group trace messages within the specified duration in one `TemporalEvent`.</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">type</span><span> </span><span id="TemporalEventDurationMicrosec"><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier hs-var">TemporalEventDurationMicrosec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | Fill in one temporal event.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   Returns the event, the starting time boundary of the next temporal event and the rest of the messages.</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#fill"><span class="hs-identifier hs-type">fill</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier hs-type">TemporalEventDurationMicrosec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#Seq"><span class="hs-identifier hs-type">Seq</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span id="fill"><span class="annot"><span class="annottext">fill :: TemporalEventDurationMicrosec
+-&gt; Seq TraceMessage
+-&gt; Word64
+-&gt; [TraceMessage]
+-&gt; (TemporalEvent, Word64, [TraceMessage])
+</span><a href="Cardano.ReCon.Trace.Feed.html#fill"><span class="hs-identifier hs-var hs-var">fill</span></a></span></span><span> </span><span id="local-6989586621679113867"><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span id="local-6989586621679113868"><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113868"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679113869"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113869"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113870"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679113871"><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113871"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-var">utcToMicroseconds</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">tmsgAt</span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113869"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+-&gt; Seq TraceMessage
+-&gt; Word64
+-&gt; [TraceMessage]
+-&gt; (TemporalEvent, Word64, [TraceMessage])
+</span><a href="Cardano.ReCon.Trace.Feed.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113867"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113868"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage -&gt; TraceMessage -&gt; Seq TraceMessage
+forall a. Seq a -&gt; a -&gt; Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113870"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113869"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113871"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span id="local-6989586621679113874"><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113874"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span id="local-6989586621679113875"><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113875"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679113876"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113876"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679113877"><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; [TraceMessage] -&gt; TemporalEvent
+</span><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-var">TemporalEvent</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113876"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq TraceMessage -&gt; [TraceMessage]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">Foldable.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113875"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113876"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113874"><span class="hs-identifier hs-var">duration</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113877"><span class="hs-identifier hs-var">rest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><span class="hs-comment">-- | Slice up the trace messages into consequtive temporal events.</span></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#slice"><span class="hs-identifier hs-type">slice</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier hs-type">TemporalEventDurationMicrosec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span id="slice"><span class="annot"><span class="annottext">slice :: TemporalEventDurationMicrosec -&gt; [TraceMessage] -&gt; [TemporalEvent]
+</span><a href="Cardano.ReCon.Trace.Feed.html#slice"><span class="hs-identifier hs-var hs-var">slice</span></a></span></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#slice"><span class="hs-identifier hs-var">slice</span></a></span><span> </span><span id="local-6989586621679113880"><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113880"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span id="local-6989586621679113881"><span class="annot"><span class="annottext">msg_ :: [TraceMessage]
+</span><a href="#local-6989586621679113881"><span class="hs-identifier hs-var">msg_</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679113882"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113882"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; [TraceMessage] -&gt; [TemporalEvent]
+</span><a href="#local-6989586621679113883"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-var">utcToMicroseconds</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceMessage -&gt; UTCTime
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#tmsgAt"><span class="hs-identifier hs-var">tmsgAt</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113882"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113881"><span class="hs-identifier hs-var">msg_</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="#local-6989586621679113883"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679113883"><span class="annot"><span class="annottext">go :: Word64 -&gt; [TraceMessage] -&gt; [TemporalEvent]
+</span><a href="#local-6989586621679113883"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="#local-6989586621679113883"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679113885"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113885"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679113886"><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113886"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113888"><span class="annot"><span class="annottext">TemporalEvent
+</span><a href="#local-6989586621679113888"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113889"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113889"><span class="hs-identifier hs-var">t'</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679113890"><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113890"><span class="hs-identifier hs-var">msg'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+-&gt; Seq TraceMessage
+-&gt; Word64
+-&gt; [TraceMessage]
+-&gt; (TemporalEvent, Word64, [TraceMessage])
+</span><a href="Cardano.ReCon.Trace.Feed.html#fill"><span class="hs-identifier hs-var">fill</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113880"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113885"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113886"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">TemporalEvent
+</span><a href="#local-6989586621679113888"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEvent -&gt; [TemporalEvent] -&gt; [TemporalEvent]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; [TraceMessage] -&gt; [TemporalEvent]
+</span><a href="#local-6989586621679113883"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113889"><span class="hs-identifier hs-var">t'</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113890"><span class="hs-identifier hs-var">msg'</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | We assume its possible for the trace messages to come out of order. Remedy that here.</span></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#sortByTimestamp"><span class="hs-identifier hs-type">sortByTimestamp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span id="sortByTimestamp"><span class="annot"><span class="annottext">sortByTimestamp :: [TraceMessage] -&gt; [TraceMessage]
+</span><a href="Cardano.ReCon.Trace.Feed.html#sortByTimestamp"><span class="hs-identifier hs-var hs-var">sortByTimestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TraceMessage -&gt; UTCTime) -&gt; [TraceMessage] -&gt; [TraceMessage]
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.OldList.html#sortOn"><span class="hs-identifier hs-var">sortOn</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage -&gt; UTCTime
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#tmsgAt"><span class="hs-identifier hs-var">tmsgAt</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- | Read a text file where every line is a json object representation of a `TraceMessage`.</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   Trace messages lying within the specified `TemporalEventDurationMicrosec` are grouped in `TemporalEvent`.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   The trace messages are sorted by timestamp before any action.</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#read"><span class="hs-identifier hs-type">read</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier hs-type">TemporalEventDurationMicrosec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span id="read"><span class="annot"><span class="annottext">read :: String -&gt; TemporalEventDurationMicrosec -&gt; IO [TemporalEvent]
+</span><a href="Cardano.ReCon.Trace.Feed.html#read"><span class="hs-identifier hs-var hs-var">read</span></a></span></span><span> </span><span id="local-6989586621679113894"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113894"><span class="hs-identifier hs-var">filename</span></a></span></span><span> </span><span id="local-6989586621679113895"><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113895"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679113896"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679113896"><span class="hs-identifier hs-var">traces</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Char8.html#lines"><span class="hs-identifier hs-var">BChar8.lines</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; [ByteString]) -&gt; IO ByteString -&gt; IO [ByteString]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BChar8.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679113894"><span class="hs-identifier hs-var">filename</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679113900"><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113900"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TraceMessage] -&gt; [TraceMessage]
+</span><a href="Cardano.ReCon.Trace.Feed.html#sortByTimestamp"><span class="hs-identifier hs-var">sortByTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">([TraceMessage] -&gt; [TraceMessage])
+-&gt; IO [TraceMessage] -&gt; IO [TraceMessage]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO TraceMessage)
+-&gt; [ByteString] -&gt; IO [TraceMessage]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO TraceMessage
+forall a (m :: * -&gt; *).
+(FromJSON a, MonadThrow m) =&gt;
+ByteString -&gt; m a
+</span><span class="hs-identifier hs-var">throwDecodeStrict</span></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679113896"><span class="hs-identifier hs-var">traces</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113902"><span class="annot"><span class="annottext">events :: [TemporalEvent]
+</span><a href="#local-6989586621679113902"><span class="hs-identifier hs-var hs-var">events</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec -&gt; [TraceMessage] -&gt; [TemporalEvent]
+</span><a href="Cardano.ReCon.Trace.Feed.html#slice"><span class="hs-identifier hs-var">slice</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113895"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="annot"><span class="annottext">[TraceMessage]
+</span><a href="#local-6989586621679113900"><span class="hs-identifier hs-var">msgs</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">[TemporalEvent] -&gt; IO [TemporalEvent]
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">[TemporalEvent]
+</span><a href="#local-6989586621679113902"><span class="hs-identifier hs-var">events</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="TemporalEventBuilderSt"><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-var">TemporalEventBuilderSt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TemporalEventBuilderSt"><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-var">TemporalEventBuilderSt</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="hs-comment">-- | A message read from the file that hasn't been distributed yet (if any).</span></span><span>
+</span><span id="line-69"></span><span>  </span><span id="nextBuffered"><span class="annot"><span class="annottext">TemporalEventBuilderSt -&gt; Maybe TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBuffered"><span class="hs-identifier hs-var hs-var">nextBuffered</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-comment">-- | The timestamp of the beginning of the next issued temporal event.</span></span><span>
+</span><span id="line-71"></span><span>  </span><span id="nextBeg"><span class="annot"><span class="annottext">TemporalEventBuilderSt -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBeg"><span class="hs-identifier hs-var hs-var">nextBeg</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-comment">-- | The accumulation of trace messages to be issued in the next issued temporal event.</span></span><span>
+</span><span id="line-73"></span><span>  </span><span id="nextMsgs"><span class="annot"><span class="annottext">TemporalEventBuilderSt -&gt; Seq TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextMsgs"><span class="hs-identifier hs-var hs-var">nextMsgs</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#Seq"><span class="hs-identifier hs-type">Seq</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.TraceMessage.html#TraceMessage"><span class="hs-identifier hs-type">TraceMessage</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Whether the file of trace messages has ended.</span></span><span>
+</span><span id="line-75"></span><span>  </span><span id="nextTerminal"><span class="annot"><span class="annottext">TemporalEventBuilderSt -&gt; Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextTerminal"><span class="hs-identifier hs-var hs-var">nextTerminal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-76"></span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#readS"><span class="hs-identifier hs-type">readS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Ingest.html#IngestorReader"><span class="hs-identifier hs-type">IngestorReader</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventDurationMicrosec"><span class="hs-identifier hs-type">TemporalEventDurationMicrosec</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span id="readS"><span class="annot"><span class="annottext">readS :: IngestorReader
+-&gt; TemporalEventDurationMicrosec -&gt; Stream (Of TemporalEvent) IO ()
+</span><a href="Cardano.ReCon.Trace.Feed.html#readS"><span class="hs-identifier hs-var hs-var">readS</span></a></span></span><span> </span><span id="local-6989586621679113908"><span class="annot"><span class="annottext">IngestorReader
+</span><a href="#local-6989586621679113908"><span class="hs-identifier hs-var">ingestor</span></a></span></span><span> </span><span id="local-6989586621679113909"><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113909"><span class="hs-identifier hs-var">duration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679113910"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113910"><span class="hs-identifier hs-var">firstMsg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO TraceMessage -&gt; Stream (Of TemporalEvent) IO TraceMessage
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; Stream (Of TemporalEvent) m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IngestorReader
+</span><a href="#local-6989586621679113908"><span class="hs-identifier hs-var">ingestor</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">readLineIngestor</span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (ByteString -&gt; IO TraceMessage) -&gt; IO TraceMessage
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO TraceMessage
+forall a (m :: * -&gt; *).
+(FromJSON a, MonadThrow m) =&gt;
+ByteString -&gt; m a
+</span><span class="hs-identifier hs-var">throwDecodeStrict</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">(TemporalEventBuilderSt
+ -&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt)))
+-&gt; TemporalEventBuilderSt -&gt; Stream (Of TemporalEvent) IO ()
+forall (m :: * -&gt; *) (f :: * -&gt; *) s r.
+(Monad m, Functor f) =&gt;
+(s -&gt; m (Either r (f s))) -&gt; s -&gt; Stream f m r
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Streaming.Internal.html#unfold"><span class="hs-identifier hs-var">unfold</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventBuilderSt
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+</span><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(TemporalEventBuilderSt -&gt; Stream (Of TemporalEvent) IO ())
+-&gt; TemporalEventBuilderSt -&gt; Stream (Of TemporalEvent) IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-82"></span><span>   </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span>
+</span><span id="line-83"></span><span>     </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">nextBuffered :: Maybe TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBuffered"><span class="hs-identifier hs-var">nextBuffered</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TraceMessage -&gt; Maybe TraceMessage
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113910"><span class="hs-identifier hs-var">firstMsg</span></a></span><span>
+</span><span id="line-84"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">nextBeg :: Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBeg"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-var">utcToMicroseconds</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113910"><span class="hs-identifier hs-var">firstMsg</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">tmsgAt</span><span>
+</span><span id="line-85"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">nextMsgs :: Seq TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextMsgs"><span class="hs-identifier hs-var">nextMsgs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-86"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">nextTerminal :: Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextTerminal"><span class="hs-identifier hs-var">nextTerminal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-87"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="#local-6989586621679113913"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span>
+</span><span id="line-90"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-type">TemporalEvent</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679113913"><span class="annot"><span class="annottext">go :: TemporalEventBuilderSt
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+</span><a href="#local-6989586621679113913"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">nextTerminal :: TemporalEventBuilderSt -&gt; Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextTerminal"><span class="hs-identifier hs-var">nextTerminal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either () (Of TemporalEvent TemporalEventBuilderSt)
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either () (Of TemporalEvent TemporalEventBuilderSt)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">nextBuffered :: TemporalEventBuilderSt -&gt; Maybe TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBuffered"><span class="hs-identifier hs-var">nextBuffered</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe TraceMessage
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113914"><span id="local-6989586621679113915"><span id="local-6989586621679113916"><span class="annot"><span class="annottext">Bool
+Word64
+Seq TraceMessage
+nextBeg :: TemporalEventBuilderSt -&gt; Word64
+nextMsgs :: TemporalEventBuilderSt -&gt; Seq TraceMessage
+nextTerminal :: TemporalEventBuilderSt -&gt; Bool
+nextBeg :: Word64
+nextMsgs :: Seq TraceMessage
+nextTerminal :: Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBeg"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>      </span><span id="local-6989586621679113917"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113917"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IngestorReader -&gt; IO ByteString
+</span><a href="Cardano.ReCon.Trace.Ingest.html#readLineIngestor"><span class="hs-identifier hs-var">readLineIngestor</span></a></span><span> </span><span class="annot"><span class="annottext">IngestorReader
+</span><a href="#local-6989586621679113908"><span class="hs-identifier hs-var">ingestor</span></a></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; (ByteString -&gt; IO TraceMessage) -&gt; IO TraceMessage
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO TraceMessage
+forall a (m :: * -&gt; *).
+(FromJSON a, MonadThrow m) =&gt;
+ByteString -&gt; m a
+</span><span class="hs-identifier hs-var">throwDecodeStrict</span></span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">TemporalEventBuilderSt
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+</span><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TraceMessage
+-&gt; Word64 -&gt; Seq TraceMessage -&gt; Bool -&gt; TemporalEventBuilderSt
+</span><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-var">TemporalEventBuilderSt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceMessage -&gt; Maybe TraceMessage
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113917"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113914"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113915"><span class="hs-identifier hs-var">nextMsgs</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">nextBuffered :: TemporalEventBuilderSt -&gt; Maybe TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBuffered"><span class="hs-identifier hs-var">nextBuffered</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113919"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113919"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113920"><span id="local-6989586621679113921"><span id="local-6989586621679113922"><span class="annot"><span class="annottext">Bool
+Word64
+Seq TraceMessage
+nextBeg :: TemporalEventBuilderSt -&gt; Word64
+nextMsgs :: TemporalEventBuilderSt -&gt; Seq TraceMessage
+nextTerminal :: TemporalEventBuilderSt -&gt; Bool
+nextBeg :: Word64
+nextMsgs :: Seq TraceMessage
+nextTerminal :: Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBeg"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.ReCon.Trace.Feed.html#utcToMicroseconds"><span class="hs-identifier hs-var">utcToMicroseconds</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113919"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-operator">.</span><span class="hs-identifier">tmsgAt</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113920"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113909"><span class="hs-identifier hs-var">duration</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">TemporalEventBuilderSt
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+</span><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe TraceMessage
+-&gt; Word64 -&gt; Seq TraceMessage -&gt; Bool -&gt; TemporalEventBuilderSt
+</span><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-var">TemporalEventBuilderSt</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe TraceMessage
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113920"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113921"><span class="hs-identifier hs-var">nextMsgs</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage -&gt; TraceMessage -&gt; Seq TraceMessage
+forall a. Seq a -&gt; a -&gt; Seq a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Sequence.Internal.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113919"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="#local-6989586621679113913"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-type">TemporalEventBuilderSt</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">nextBuffered :: TemporalEventBuilderSt -&gt; Maybe TraceMessage
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBuffered"><span class="hs-identifier hs-var">nextBuffered</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113923"><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113923"><span class="hs-identifier hs-var">msg</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113924"><span id="local-6989586621679113925"><span id="local-6989586621679113926"><span class="annot"><span class="annottext">Bool
+Word64
+Seq TraceMessage
+nextBeg :: TemporalEventBuilderSt -&gt; Word64
+nextMsgs :: TemporalEventBuilderSt -&gt; Seq TraceMessage
+nextTerminal :: TemporalEventBuilderSt -&gt; Bool
+nextBeg :: Word64
+nextMsgs :: Seq TraceMessage
+nextTerminal :: Bool
+</span><a href="Cardano.ReCon.Trace.Feed.html#nextBeg"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either () (Of TemporalEvent TemporalEventBuilderSt)
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either () (Of TemporalEvent TemporalEventBuilderSt)
+ -&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt)))
+-&gt; Either () (Of TemporalEvent TemporalEventBuilderSt)
+-&gt; IO (Either () (Of TemporalEvent TemporalEventBuilderSt))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Of TemporalEvent TemporalEventBuilderSt
+-&gt; Either () (Of TemporalEvent TemporalEventBuilderSt)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Of TemporalEvent TemporalEventBuilderSt
+ -&gt; Either () (Of TemporalEvent TemporalEventBuilderSt))
+-&gt; Of TemporalEvent TemporalEventBuilderSt
+-&gt; Either () (Of TemporalEvent TemporalEventBuilderSt)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">Word64 -&gt; [TraceMessage] -&gt; TemporalEvent
+</span><a href="Cardano.ReCon.Trace.Feed.html#TemporalEvent"><span class="hs-identifier hs-var">TemporalEvent</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113924"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq TraceMessage -&gt; [TraceMessage]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#toList"><span class="hs-identifier hs-var">Foldable.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+</span><a href="#local-6989586621679113925"><span class="hs-identifier hs-var">nextMsgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">TemporalEvent
+-&gt; TemporalEventBuilderSt
+-&gt; Of TemporalEvent TemporalEventBuilderSt
+forall a b. a -&gt; b -&gt; Of a b
+</span><a href="file:///nix/store/4v9xg903pcv9q4352casdypaw3z67h7m-streaming-lib-streaming-0.2.4.0-haddock-doc/share/doc/streaming/html/src/Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">Maybe TraceMessage
+-&gt; Word64 -&gt; Seq TraceMessage -&gt; Bool -&gt; TemporalEventBuilderSt
+</span><a href="Cardano.ReCon.Trace.Feed.html#TemporalEventBuilderSt"><span class="hs-identifier hs-var">TemporalEventBuilderSt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceMessage -&gt; Maybe TraceMessage
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">TraceMessage
+</span><a href="#local-6989586621679113923"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679113924"><span class="hs-identifier hs-var">nextBeg</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">TemporalEventDurationMicrosec
+</span><a href="#local-6989586621679113909"><span class="hs-identifier hs-var">duration</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Seq TraceMessage
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-101"></span></pre></body></html>

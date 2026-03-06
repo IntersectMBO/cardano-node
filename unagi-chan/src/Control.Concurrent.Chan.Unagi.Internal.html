@@ -1,0 +1,983 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns , DeriveDataTypeable, CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Concurrent.Chan.Unagi.Internal</span><span class="hs-cpp">
+#ifdef NOT_optimised
+</span><span>    </span><span class="hs-pragma">{-# WARNING</span><span> </span><span class="hs-pragma">&quot;This library is unlikely to perform well on architectures other than i386/x64/aarch64&quot;</span><span> </span><span class="hs-pragma">#-}</span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier">sEGMENT_LENGTH</span></a></span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier">InChan</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier">OutChan</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier">ChanEnd</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamSegment"><span class="hs-identifier">StreamSegment</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier">Cell</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier">Stream</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#NextSegment"><span class="hs-identifier">NextSegment</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier">StreamHead</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#newChanStarting"><span class="hs-identifier">newChanStarting</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-identifier">writeChan</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier">readChan</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChanOnException"><span class="hs-identifier">readChanOnException</span></a></span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-identifier">dupChan</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-identifier">tryReadChan</span></a></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- For Unagi.NoBlocking:</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier">moveToNextCell</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-identifier">waitingAdvanceStream</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#newSegmentSource"><span class="hs-identifier">newSegmentSource</span></a></span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-comment">-- sanity tests:</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#assertionCanary"><span class="hs-identifier">assertionCanary</span></a></span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Internals exposed for testing.</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Primitive</span></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld"><span class="hs-identifier">RealWorld</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Atomics.Counter.Fat.html"><span class="hs-identifier">Data.Atomics.Counter.Fat</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Atomics</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Primitive</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Magic.html#inline"><span class="hs-identifier">inline</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Constants.html"><span class="hs-identifier">Control.Concurrent.Chan.Unagi.Constants</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html"><span class="hs-identifier">Control.Concurrent.Chan.Unagi.NoBlocking.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UT</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Utilities.html"><span class="hs-identifier">Utilities</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Utilities.html#touchIORef"><span class="hs-identifier">touchIORef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | The write end of a channel created with 'newChan'.</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="InChan"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-var">InChan</span></a></span></span><span> </span><span id="local-6989586621679053203"><span class="annot"><a href="#local-6989586621679053203"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="InChan"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-var">InChan</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ticket</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier hs-type">Cell</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053203"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier hs-type">Cell</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053203"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679053163"><span id="local-6989586621679053292"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053163"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679053299"><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053299"><span class="hs-identifier hs-var">headA</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679053300"><span class="annot"><span class="annottext">== :: InChan a -&gt; InChan a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679053301"><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053301"><span class="hs-identifier hs-var">headB</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053299"><span class="hs-identifier hs-var">headA</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a)) -&gt; IORef (StreamHead (Cell a)) -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053301"><span class="hs-identifier hs-var">headB</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | The read end of a channel created with 'newChan'.</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">newtype</span><span> </span><span id="OutChan"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-var">OutChan</span></a></span></span><span> </span><span id="local-6989586621679053204"><span class="annot"><a href="#local-6989586621679053204"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OutChan"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-var">OutChan</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier hs-type">Cell</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053204"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679053304"><span id="local-6989586621679053309"><span class="annot"><span class="annottext">OutChan a -&gt; OutChan a -&gt; Bool
+(OutChan a -&gt; OutChan a -&gt; Bool)
+-&gt; (OutChan a -&gt; OutChan a -&gt; Bool) -&gt; Eq (OutChan a)
+forall a. OutChan a -&gt; OutChan a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. OutChan a -&gt; OutChan a -&gt; Bool
+== :: OutChan a -&gt; OutChan a -&gt; Bool
+$c/= :: forall a. OutChan a -&gt; OutChan a -&gt; Bool
+/= :: OutChan a -&gt; OutChan a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- TODO POTENTIAL CPP FLAGS (or functions)</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--   - Strict element (or lazy? maybe also expose a writeChan' when relevant?)</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--   - sEGMENT_LENGTH</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--   - reads that clear the element immediately (or export as a special function?)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- InChan &amp; OutChan are mostly identical, sharing a stream, but with</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- independent counters.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   NOTE: we parameterize this, and its child types, by `cell_a` (instantiated</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   to `Cell a` in this module) instead of `a` so that we can use</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   `moveToNextCell`, `waitingAdvanceStream`, and `newSegmentSource` and all</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--   the types below in Unagi.NoBlocking, which uses a different type `Cell a`;</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--   Sorry!</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="ChanEnd"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-var">ChanEnd</span></a></span></span><span> </span><span id="local-6989586621679053195"><span class="annot"><a href="#local-6989586621679053195"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span>
+</span><span id="line-66"></span><span>           </span><span class="hs-comment">-- an efficient producer of segments of length sEGMENT_LENGTH:</span><span>
+</span><span id="line-67"></span><span>    </span><span id="ChanEnd"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-var">ChanEnd</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#SegSource"><span class="hs-identifier hs-type">SegSource</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053195"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-comment">-- Both Chan ends must start with the same counter value.</span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-glyph">!</span><span class="annot"><a href="Data.Atomics.Counter.Fat.html#AtomicCounter"><span class="hs-identifier hs-type">AtomicCounter</span></a></span><span> </span><span>
+</span><span id="line-70"></span><span>            </span><span class="hs-comment">-- the stream head; this must never point to a segment whose offset</span><span>
+</span><span id="line-71"></span><span>            </span><span class="hs-comment">-- is greater than the counter value</span><span>
+</span><span id="line-72"></span><span>            </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-type">StreamHead</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053195"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679053177"><span id="local-6989586621679053315"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053177"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>     </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679053318"><span class="annot"><span class="annottext">IORef (StreamHead a)
+</span><a href="#local-6989586621679053318"><span class="hs-identifier hs-var">headA</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679053319"><span class="annot"><span class="annottext">== :: ChanEnd a -&gt; ChanEnd a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var hs-var hs-var hs-var">==</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679053320"><span class="annot"><span class="annottext">IORef (StreamHead a)
+</span><a href="#local-6989586621679053320"><span class="hs-identifier hs-var">headB</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead a)
+</span><a href="#local-6989586621679053318"><span class="hs-identifier hs-var">headA</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead a) -&gt; IORef (StreamHead a) -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead a)
+</span><a href="#local-6989586621679053320"><span class="hs-identifier hs-var">headB</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="StreamHead"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-var">StreamHead</span></a></span></span><span> </span><span id="local-6989586621679053199"><span class="annot"><a href="#local-6989586621679053199"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="StreamHead"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-var">StreamHead</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053199"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">--TODO later see if we get a benefit from the small array primops in 7.10,</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--     which omit card-marking overhead and might have faster clone.</span><span>
+</span><span id="line-84"></span><span class="hs-keyword">type</span><span> </span><span id="StreamSegment"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamSegment"><span class="hs-identifier hs-var">StreamSegment</span></a></span></span><span> </span><span id="local-6989586621679053322"><span class="annot"><a href="#local-6989586621679053322"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">P.MutableArray</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#RealWorld"><span class="hs-identifier hs-type">RealWorld</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053322"><span class="hs-identifier hs-type">cell_a</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- TRANSITIONS and POSSIBLE VALUES:</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--   During Read:</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--     Empty   -&gt; Blocking</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--     Written</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--     Blocking (only when dupChan used)</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   During Write:</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--     Empty   -&gt; Written </span><span>
+</span><span id="line-93"></span><span class="hs-comment">--     Blocking</span><span>
+</span><span id="line-94"></span><span class="hs-keyword">data</span><span> </span><span id="Cell"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier hs-var">Cell</span></a></span></span><span> </span><span id="local-6989586621679053183"><span class="annot"><a href="#local-6989586621679053183"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Empty"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Written"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-var">Written</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679053183"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Blocking"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-var">Blocking</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053183"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- NOTE In general we'll have two segments allocated at any given time in</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- addition to the segment template, so in the worst case, when the program</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- exits we will have allocated ~ 3 segments extra memory than was actually</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- required.</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">data</span><span> </span><span id="Stream"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span></span><span> </span><span id="local-6989586621679053189"><span class="annot"><a href="#local-6989586621679053189"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span>
+</span><span id="line-103"></span><span>    </span><span id="Stream"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamSegment"><span class="hs-identifier hs-type">StreamSegment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053189"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>           </span><span class="hs-comment">-- The next segment in the stream; new segments are allocated and</span><span>
+</span><span id="line-105"></span><span>           </span><span class="hs-comment">-- put here as we go, with threads cooperating to allocate new</span><span>
+</span><span id="line-106"></span><span>           </span><span class="hs-comment">-- segments:</span><span>
+</span><span id="line-107"></span><span>           </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#NextSegment"><span class="hs-identifier hs-type">NextSegment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053189"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">data</span><span> </span><span id="NextSegment"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#NextSegment"><span class="hs-identifier hs-var">NextSegment</span></a></span></span><span> </span><span id="local-6989586621679053194"><span class="annot"><a href="#local-6989586621679053194"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoSegment"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#NoSegment"><span class="hs-identifier hs-var">NoSegment</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Next"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Next"><span class="hs-identifier hs-var">Next</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053194"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- we expose `startingCellOffset` for debugging correct behavior with overflow:</span><span>
+</span><span id="line-112"></span><span id="local-6989586621679053180"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#newChanStarting"><span class="hs-identifier hs-type">newChanStarting</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053180"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053180"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-113"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#newChanStarting"><span class="hs-pragma hs-type">newChanStarting</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-114"></span><span id="newChanStarting"><span class="annot"><span class="annottext">newChanStarting :: forall a. Int -&gt; IO (InChan a, OutChan a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#newChanStarting"><span class="hs-identifier hs-var hs-var">newChanStarting</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679053339"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053339"><span class="hs-identifier hs-var">startingCellOffset</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621679053340"><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053340"><span class="hs-identifier hs-var">segSource</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Cell a -&gt; IO (SegSource (Cell a))
+forall cell_a. cell_a -&gt; IO (SegSource cell_a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#newSegmentSource"><span class="hs-identifier hs-var">newSegmentSource</span></a></span><span> </span><span class="annot"><span class="annottext">Cell a
+forall a. Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span id="local-6989586621679053341"><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053341"><span class="hs-identifier hs-var">firstSeg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053340"><span class="hs-identifier hs-var">segSource</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">-- collect a ticket to save for writer CAS</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679053342"><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053342"><span class="hs-identifier hs-var">savedEmptyTkt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a) -&gt; Int -&gt; IO (Ticket (Cell a))
+forall a. MutableArray RealWorld a -&gt; Int -&gt; IO (Ticket a)
+</span><span class="hs-identifier hs-var">readArrayElem</span></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053341"><span class="hs-identifier hs-var">firstSeg</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679053344"><span class="annot"><span class="annottext">Stream (Cell a)
+</span><a href="#local-6989586621679053344"><span class="hs-identifier hs-var">stream</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+-&gt; IORef (NextSegment (Cell a)) -&gt; Stream (Cell a)
+forall cell_a.
+StreamSegment cell_a -&gt; IORef (NextSegment cell_a) -&gt; Stream cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053341"><span class="hs-identifier hs-var">firstSeg</span></a></span><span> </span><span class="annot"><span class="annottext">(IORef (NextSegment (Cell a)) -&gt; Stream (Cell a))
+-&gt; IO (IORef (NextSegment (Cell a))) -&gt; IO (Stream (Cell a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">NextSegment (Cell a) -&gt; IO (IORef (NextSegment (Cell a)))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">NextSegment (Cell a)
+forall cell_a. NextSegment cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#NoSegment"><span class="hs-identifier hs-var">NoSegment</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679053349"><span class="annot"><span class="annottext">end :: IO (ChanEnd (Cell a))
+</span><a href="#local-6989586621679053349"><span class="hs-identifier hs-var hs-var">end</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+-&gt; AtomicCounter -&gt; IORef (StreamHead (Cell a)) -&gt; ChanEnd (Cell a)
+forall cell_a.
+SegSource cell_a
+-&gt; AtomicCounter -&gt; IORef (StreamHead cell_a) -&gt; ChanEnd cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-var">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053340"><span class="hs-identifier hs-var">segSource</span></a></span><span> </span><span>
+</span><span id="line-121"></span><span>                  </span><span class="annot"><span class="annottext">(AtomicCounter -&gt; IORef (StreamHead (Cell a)) -&gt; ChanEnd (Cell a))
+-&gt; IO AtomicCounter
+-&gt; IO (IORef (StreamHead (Cell a)) -&gt; ChanEnd (Cell a))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO AtomicCounter
+</span><a href="Data.Atomics.Counter.Fat.html#newCounter"><span class="hs-identifier hs-var">newCounter</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053339"><span class="hs-identifier hs-var">startingCellOffset</span></a></span><span>
+</span><span id="line-122"></span><span>                  </span><span class="annot"><span class="annottext">IO (IORef (StreamHead (Cell a)) -&gt; ChanEnd (Cell a))
+-&gt; IO (IORef (StreamHead (Cell a))) -&gt; IO (ChanEnd (Cell a))
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">StreamHead (Cell a) -&gt; IO (IORef (StreamHead (Cell a)))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Stream (Cell a) -&gt; StreamHead (Cell a)
+forall cell_a. Int -&gt; Stream cell_a -&gt; StreamHead cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-var">StreamHead</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053339"><span class="hs-identifier hs-var">startingCellOffset</span></a></span><span> </span><span class="annot"><span class="annottext">Stream (Cell a)
+</span><a href="#local-6989586621679053344"><span class="hs-identifier hs-var">stream</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">(InChan a -&gt; OutChan a -&gt; (InChan a, OutChan a))
+-&gt; IO (InChan a) -&gt; IO (OutChan a) -&gt; IO (InChan a, OutChan a)
+forall a b c. (a -&gt; b -&gt; c) -&gt; IO a -&gt; IO b -&gt; IO c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ticket (Cell a) -&gt; ChanEnd (Cell a) -&gt; InChan a
+forall a. Ticket (Cell a) -&gt; ChanEnd (Cell a) -&gt; InChan a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-var">InChan</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053342"><span class="hs-identifier hs-var">savedEmptyTkt</span></a></span><span> </span><span class="annot"><span class="annottext">(ChanEnd (Cell a) -&gt; InChan a)
+-&gt; IO (ChanEnd (Cell a)) -&gt; IO (InChan a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (ChanEnd (Cell a))
+</span><a href="#local-6989586621679053349"><span class="hs-identifier hs-var">end</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; OutChan a
+forall a. ChanEnd (Cell a) -&gt; OutChan a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-var">OutChan</span></a></span><span> </span><span class="annot"><span class="annottext">(ChanEnd (Cell a) -&gt; OutChan a)
+-&gt; IO (ChanEnd (Cell a)) -&gt; IO (OutChan a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (ChanEnd (Cell a))
+</span><a href="#local-6989586621679053349"><span class="hs-identifier hs-var">end</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- | Duplicate a chan: the returned @OutChan@ begins empty, but data written to</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- the argument @InChan@ from then on will be available from both the original</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- @OutChan@ and the one returned here, creating a kind of broadcast channel.</span><span>
+</span><span id="line-128"></span><span id="local-6989586621679053205"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-identifier hs-type">dupChan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053205"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053205"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-129"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-pragma hs-type">dupChan</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-130"></span><span id="dupChan"><span class="annot"><span class="annottext">dupChan :: forall a. InChan a -&gt; IO (OutChan a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#dupChan"><span class="hs-identifier hs-var hs-var">dupChan</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span id="local-6989586621679053358"><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053358"><span class="hs-identifier hs-var">segSource</span></a></span></span><span> </span><span id="local-6989586621679053359"><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053359"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span id="local-6989586621679053360"><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053360"><span class="hs-identifier hs-var">streamHead</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679053361"><span class="annot"><span class="annottext">StreamHead (Cell a)
+</span><a href="#local-6989586621679053361"><span class="hs-identifier hs-var">hLoc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a)) -&gt; IO (StreamHead (Cell a))
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053360"><span class="hs-identifier hs-var">streamHead</span></a></span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier hs-var">loadLoadBarrier</span></span><span>  </span><span class="hs-comment">-- NOTE [1]</span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621679053364"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053364"><span class="hs-identifier hs-var">wCount</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AtomicCounter -&gt; IO Int
+</span><a href="Data.Atomics.Counter.Fat.html#readCounter"><span class="hs-identifier hs-var">readCounter</span></a></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053359"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679053366"><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053366"><span class="hs-identifier hs-var">counter'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO AtomicCounter
+</span><a href="Data.Atomics.Counter.Fat.html#newCounter"><span class="hs-identifier hs-var">newCounter</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053364"><span class="hs-identifier hs-var">wCount</span></a></span><span> </span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621679053367"><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053367"><span class="hs-identifier hs-var">streamHead'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamHead (Cell a) -&gt; IO (IORef (StreamHead (Cell a)))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">StreamHead (Cell a)
+</span><a href="#local-6989586621679053361"><span class="hs-identifier hs-var">hLoc</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">OutChan a -&gt; IO (OutChan a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(OutChan a -&gt; IO (OutChan a)) -&gt; OutChan a -&gt; IO (OutChan a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; OutChan a
+forall a. ChanEnd (Cell a) -&gt; OutChan a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-var">OutChan</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SegSource (Cell a)
+-&gt; AtomicCounter -&gt; IORef (StreamHead (Cell a)) -&gt; ChanEnd (Cell a)
+forall cell_a.
+SegSource cell_a
+-&gt; AtomicCounter -&gt; IORef (StreamHead cell_a) -&gt; ChanEnd cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-var">ChanEnd</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053358"><span class="hs-identifier hs-var">segSource</span></a></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053366"><span class="hs-identifier hs-var">counter'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><a href="#local-6989586621679053367"><span class="hs-identifier hs-var">streamHead'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-comment">-- [1] We must read the streamHead before inspecting the counter; otherwise,</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-comment">-- as writers write, the stream head pointer may advance past the cell</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-comment">-- indicated by wCount. For the corresponding store-store barrier see [*] in</span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-comment">-- moveToNextCell</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><span class="hs-comment">-- | Write a value to the channel.</span></span><span>
+</span><span id="line-144"></span><span id="local-6989586621679053213"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-identifier hs-type">writeChan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053213"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679053213"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-145"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-pragma hs-type">writeChan</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-146"></span><span id="writeChan"><span class="annot"><span class="annottext">writeChan :: forall a. InChan a -&gt; a -&gt; IO ()
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#writeChan"><span class="hs-identifier hs-var hs-var">writeChan</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#InChan"><span class="hs-identifier hs-type">InChan</span></a></span><span> </span><span id="local-6989586621679053383"><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053383"><span class="hs-identifier hs-var">savedEmptyTkt</span></a></span></span><span> </span><span id="local-6989586621679053384"><span class="annot"><span class="annottext">ce :: ChanEnd (Cell a)
+</span><a href="#local-6989586621679053384"><span class="hs-identifier hs-var">ce</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span id="local-6989586621679053385"><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053385"><span class="hs-identifier hs-var">segSource</span></a></span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead (Cell a))
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679053386"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053386"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall a. IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span> </span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679053388"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053388"><span class="hs-identifier hs-var">segIx</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span id="local-6989586621679053389"><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053389"><span class="hs-identifier hs-var">seg</span></a></span></span><span> </span><span id="local-6989586621679053390"><span class="annot"><span class="annottext">IORef (NextSegment (Cell a))
+</span><a href="#local-6989586621679053390"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679053391"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053391"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; IO (Int, Stream (Cell a), IO ())
+forall cell_a. ChanEnd cell_a -&gt; IO (Int, Stream cell_a, IO ())
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-var">moveToNextCell</span></a></span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053384"><span class="hs-identifier hs-var">ce</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053391"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679053392"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679053392"><span class="hs-identifier hs-var">success</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679053393"><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053393"><span class="hs-identifier hs-var">nonEmptyTkt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+-&gt; Int -&gt; Ticket (Cell a) -&gt; Cell a -&gt; IO (Bool, Ticket (Cell a))
+forall a.
+MutableArray RealWorld a
+-&gt; Int -&gt; Ticket a -&gt; a -&gt; IO (Bool, Ticket a)
+</span><span class="hs-identifier hs-var">casArrayElem</span></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053389"><span class="hs-identifier hs-var">seg</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053388"><span class="hs-identifier hs-var">segIx</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053383"><span class="hs-identifier hs-var">savedEmptyTkt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Cell a
+forall a. a -&gt; Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-var">Written</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053386"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">-- try to pre-allocate next segment; NOTE [1]</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053388"><span class="hs-identifier hs-var">segIx</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Stream (Cell a)) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Stream (Cell a)) -&gt; IO ()) -&gt; IO (Stream (Cell a)) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-152"></span><span>      </span><span class="annot"><span class="annottext">IORef (NextSegment (Cell a))
+-&gt; SegSource (Cell a) -&gt; Int -&gt; IO (Stream (Cell a))
+forall cell_a.
+IORef (NextSegment cell_a)
+-&gt; SegSource cell_a -&gt; Int -&gt; IO (Stream cell_a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-identifier hs-var">waitingAdvanceStream</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment (Cell a))
+</span><a href="#local-6989586621679053390"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource (Cell a)
+</span><a href="#local-6989586621679053385"><span class="hs-identifier hs-var">segSource</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679053392"><span class="hs-identifier hs-var">success</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a) -&gt; Cell a
+forall a. Ticket a -&gt; a
+</span><span class="hs-identifier hs-var">peekTicket</span></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053393"><span class="hs-identifier hs-var">nonEmptyTkt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-155"></span><span>             </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-type">Blocking</span></a></span><span> </span><span id="local-6989586621679053399"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053399"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; a -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053399"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053386"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-156"></span><span>             </span><span class="annot"><span class="annottext">Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+forall a. (?callStack::CallStack) =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Stored Empty Ticket went stale!&quot;</span></span><span> </span><span class="hs-comment">-- NOTE [2]</span><span>
+</span><span id="line-157"></span><span>             </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-type">Written</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+forall a. (?callStack::CallStack) =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Nearly Impossible! Expected Blocking&quot;</span></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-comment">-- [1] the writer which arrives first to the first cell of a new segment is</span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-comment">-- tasked (somewhat arbitrarily) with trying to pre-allocate the *next*</span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-comment">-- segment hopefully ahead of any readers or writers who might need it. This</span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-comment">-- will race with any reader *or* writer that tries to read the next segment</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-comment">-- and finds it's empty (see `waitingAdvanceStream`); when this wins</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-comment">-- (hopefully the vast majority of the time) we avoid a throughput hit.</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-comment">-- [2] this assumes that the compiler is statically-allocating Empty, sharing</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-comment">-- the constructor among all uses, and that it never moves it between</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-comment">-- checking the pointer stored in the array and checking the pointer in the</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-comment">-- cached Any Empty value. If this is incorrect then the Ticket approach to</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-comment">-- CAS is equally incorrect (though maybe less likely to fail).</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- We would like our queue to behave like Chan in that an async exception</span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- raised in a reader known to be blocked or about to block on an empty queue</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- never results in a lost message; this matches our simple intuition about the</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- mechanics of a queue: if you're last in line for a cupcake and have to leave</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- you wouldn't expect the cake that would have gone to you to disappear.</span><span>
+</span><span id="line-177"></span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- But there are other systems that a busy cake shop might use that you could</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- easily imagine resulting in a lost cake, and that's a different question</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- from whether cakes are given to well-behaved customers in the order they</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- came out of the oven, or whether a customer leaving at the wrong moment</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- might cause the cake shop to burn down...</span><span>
+</span><span id="line-183"></span><span id="local-6989586621679053227"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-identifier hs-type">readSegIxUnmasked</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053227"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053227"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Cell"><span class="hs-identifier hs-type">Cell</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053227"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053227"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-184"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-pragma hs-type">readSegIxUnmasked</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-185"></span><span id="readSegIxUnmasked"><span class="annot"><span class="annottext">readSegIxUnmasked :: forall a. (IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-identifier hs-var hs-var">readSegIxUnmasked</span></a></span></span><span> </span><span id="local-6989586621679053411"><span class="annot"><span class="annottext">IO a -&gt; IO a
+</span><a href="#local-6989586621679053411"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679053412"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053412"><span class="hs-identifier hs-var">segIx</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span id="local-6989586621679053413"><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053413"><span class="hs-identifier hs-var">seg</span></a></span></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment (Cell a))
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679053414"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053414"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span></span><span class="hs-special">)</span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053414"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span id="local-6989586621679053415"><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053415"><span class="hs-identifier hs-var">cellTkt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a) -&gt; Int -&gt; IO (Ticket (Cell a))
+forall a. MutableArray RealWorld a -&gt; Int -&gt; IO (Ticket a)
+</span><span class="hs-identifier hs-var">readArrayElem</span></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053413"><span class="hs-identifier hs-var">seg</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053412"><span class="hs-identifier hs-var">segIx</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a) -&gt; Cell a
+forall a. Ticket a -&gt; a
+</span><span class="hs-identifier hs-var">peekTicket</span></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053415"><span class="hs-identifier hs-var">cellTkt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-190"></span><span>         </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-type">Written</span></a></span><span> </span><span id="local-6989586621679053416"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053416"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053416"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-191"></span><span>         </span><span class="annot"><span class="annottext">Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-192"></span><span>            </span><span id="local-6989586621679053417"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053417"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (MVar a)
+forall a. IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span>
+</span><span id="line-193"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679053419"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679053419"><span class="hs-identifier hs-var">success</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679053420"><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053420"><span class="hs-identifier hs-var">elseWrittenCell</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+-&gt; Int -&gt; Ticket (Cell a) -&gt; Cell a -&gt; IO (Bool, Ticket (Cell a))
+forall a.
+MutableArray RealWorld a
+-&gt; Int -&gt; Ticket a -&gt; a -&gt; IO (Bool, Ticket a)
+</span><span class="hs-identifier hs-var">casArrayElem</span></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053413"><span class="hs-identifier hs-var">seg</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053412"><span class="hs-identifier hs-var">segIx</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053415"><span class="hs-identifier hs-var">cellTkt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar a -&gt; Cell a
+forall a. MVar a -&gt; Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-var">Blocking</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053417"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679053419"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span>
+</span><span id="line-195"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+</span><a href="#local-6989586621679053421"><span class="hs-identifier hs-var">readBlocking</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053417"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-196"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a) -&gt; Cell a
+forall a. Ticket a -&gt; a
+</span><span class="hs-identifier hs-var">peekTicket</span></span><span> </span><span class="annot"><span class="annottext">Ticket (Cell a)
+</span><a href="#local-6989586621679053420"><span class="hs-identifier hs-var">elseWrittenCell</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-197"></span><span>                        </span><span class="hs-comment">-- In the meantime a writer has written. Good!</span><span>
+</span><span id="line-198"></span><span>                        </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-type">Written</span></a></span><span> </span><span id="local-6989586621679053422"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053422"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053422"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-199"></span><span>                        </span><span class="hs-comment">-- ...or a dupChan reader initiated blocking:</span><span>
+</span><span id="line-200"></span><span>                        </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-type">Blocking</span></a></span><span> </span><span id="local-6989586621679053423"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053423"><span class="hs-identifier hs-var">v2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+</span><a href="#local-6989586621679053421"><span class="hs-identifier hs-var">readBlocking</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053423"><span class="hs-identifier hs-var">v2</span></a></span><span>
+</span><span id="line-201"></span><span>                        </span><span class="annot"><span class="annottext">Cell a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO a
+forall a. (?callStack::CallStack) =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Impossible! Expecting Written or Blocking&quot;</span></span><span>
+</span><span id="line-202"></span><span>         </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-type">Blocking</span></a></span><span> </span><span id="local-6989586621679053424"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053424"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+</span><a href="#local-6989586621679053421"><span class="hs-identifier hs-var">readBlocking</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053424"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-comment">-- N.B. must use `readMVar` here to support `dupChan`:</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679053421"><span class="annot"><span class="annottext">readBlocking :: MVar a -&gt; IO a
+</span><a href="#local-6989586621679053421"><span class="hs-identifier hs-var hs-var">readBlocking</span></a></span></span><span> </span><span id="local-6989586621679053425"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053425"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Magic.html#inline"><span class="hs-identifier hs-var">inline</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+</span><a href="#local-6989586621679053411"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; IO a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO a
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#readMVar"><span class="hs-identifier hs-var">readMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053425"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- | Returns immediately with:</span><span>
+</span><span id="line-208"></span><span class="hs-comment">--</span><span>
+</span><span id="line-209"></span><span class="hs-comment">--  - an @'UT.Element' a@ future, which returns one unique element when it</span><span>
+</span><span id="line-210"></span><span class="hs-comment">--  becomes available via 'UT.tryRead'.</span><span>
+</span><span id="line-211"></span><span class="hs-comment">--</span><span>
+</span><span id="line-212"></span><span class="hs-comment">--  - a blocking @IO@ action that returns the element when it becomes available.</span><span>
+</span><span id="line-213"></span><span class="hs-comment">--</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- /Note/: This is a destructive operation. See 'UT.Element' for more details.</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- If you're using this function exclusively you might find the implementation</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- in &quot;Control.Concurrent.Chan.Unagi.NoBlocking&quot; is faster.</span><span>
+</span><span id="line-218"></span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- /Note re. exceptions/: When an async exception is raised during a @tryReadChan@ </span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- the message that the read would have returned is likely to be lost, just as</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- it would be when raised directly after this function returns.</span><span>
+</span><span id="line-222"></span><span id="local-6989586621679053232"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-identifier hs-type">tryReadChan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053232"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-type">UT.Element</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053232"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053232"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-223"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-pragma hs-type">tryReadChan</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-224"></span><span id="tryReadChan"><span class="annot"><span class="annottext">tryReadChan :: forall a. OutChan a -&gt; IO (Element a, IO a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#tryReadChan"><span class="hs-identifier hs-var hs-var">tryReadChan</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span id="local-6989586621679053437"><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053437"><span class="hs-identifier hs-var">ce</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- no masking needed</span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621679053438"><span class="annot"><span class="annottext">segStuff :: (Int, Stream (Cell a), IO ())
+</span><a href="#local-6989586621679053438"><span class="hs-identifier hs-var">segStuff</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679053439"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053439"><span class="hs-identifier hs-var">segIx</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span id="local-6989586621679053440"><span class="annot"><span class="annottext">StreamSegment (Cell a)
+</span><a href="#local-6989586621679053440"><span class="hs-identifier hs-var">seg</span></a></span></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment (Cell a))
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679053441"><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053441"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; IO (Int, Stream (Cell a), IO ())
+forall cell_a. ChanEnd cell_a -&gt; IO (Int, Stream cell_a, IO ())
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-var">moveToNextCell</span></a></span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053437"><span class="hs-identifier hs-var">ce</span></a></span><span>
+</span><span id="line-226"></span><span>    </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053441"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span><span>
+</span><span id="line-227"></span><span>    </span><span class="annot"><span class="annottext">(Element a, IO a) -&gt; IO (Element a, IO a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span>
+</span><span id="line-228"></span><span>        </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Element a
+forall a. IO (Maybe a) -&gt; Element a
+</span><a href="Control.Concurrent.Chan.Unagi.NoBlocking.Types.html#Element"><span class="hs-identifier hs-var">UT.Element</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; Element a) -&gt; IO (Maybe a) -&gt; Element a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-229"></span><span>          </span><span id="local-6989586621679053442"><span class="annot"><span class="annottext">Cell a
+</span><a href="#local-6989586621679053442"><span class="hs-identifier hs-var">cell</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MutableArray (PrimState IO) (Cell a) -&gt; Int -&gt; IO (Cell a)
+forall (m :: * -&gt; *) a.
+PrimMonad m =&gt;
+MutableArray (PrimState m) a -&gt; Int -&gt; m a
+</span><span class="hs-identifier hs-var">P.readArray</span></span><span> </span><span class="annot"><span class="annottext">StreamSegment (Cell a)
+MutableArray (PrimState IO) (Cell a)
+</span><a href="#local-6989586621679053440"><span class="hs-identifier hs-var">seg</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053439"><span class="hs-identifier hs-var">segIx</span></a></span><span>
+</span><span id="line-230"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Cell a
+</span><a href="#local-6989586621679053442"><span class="hs-identifier hs-var">cell</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-231"></span><span>               </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Written"><span class="hs-identifier hs-type">Written</span></a></span><span> </span><span id="local-6989586621679053444"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053444"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; IO (Maybe a)) -&gt; Maybe a -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679053444"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-232"></span><span>               </span><span class="annot"><span class="annottext">Cell a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-233"></span><span>               </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Blocking"><span class="hs-identifier hs-type">Blocking</span></a></span><span> </span><span id="local-6989586621679053445"><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053445"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MVar a -&gt; IO (Maybe a)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryReadMVar"><span class="hs-identifier hs-var">tryReadMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar a
+</span><a href="#local-6989586621679053445"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+forall a. (IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-identifier hs-var">readSegIxUnmasked</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">(Int, Stream (Cell a), IO ())
+</span><a href="#local-6989586621679053438"><span class="hs-identifier hs-var">segStuff</span></a></span><span> </span><span>
+</span><span id="line-236"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- | Read an element from the chan, blocking if the chan is empty.</span><span>
+</span><span id="line-240"></span><span class="hs-comment">--</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- /Note re. exceptions/: When an async exception is raised during a @readChan@ </span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- the message that the read would have returned is likely to be lost, even when</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- the read is known to be blocked on an empty queue. If you need to handle</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- this scenario, you can use 'readChanOnException'.</span><span>
+</span><span id="line-245"></span><span id="local-6989586621679053241"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier hs-type">readChan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053241"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053241"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-246"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-pragma hs-type">readChan</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-247"></span><span id="readChan"><span class="annot"><span class="annottext">readChan :: forall a. OutChan a -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChan"><span class="hs-identifier hs-var hs-var">readChan</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span id="local-6989586621679053449"><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053449"><span class="hs-identifier hs-var">ce</span></a></span></span><span class="hs-special">)</span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; IO (Int, Stream (Cell a), IO ())
+forall cell_a. ChanEnd cell_a -&gt; IO (Int, Stream cell_a, IO ())
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-var">moveToNextCell</span></a></span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053449"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Int, Stream (Cell a), IO ())
+-&gt; ((Int, Stream (Cell a), IO ()) -&gt; IO a) -&gt; IO a
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+forall a. (IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-identifier hs-var">readSegIxUnmasked</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- | Like 'readChan' but allows recovery of the queue element which would have</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- been read, in the case that an async exception is raised during the read. To</span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- be precise exceptions are raised, and the handler run, only when</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- @readChanOnException@ is blocking.</span><span>
+</span><span id="line-253"></span><span class="hs-comment">--</span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- The second argument is a handler that takes a blocking IO action returning</span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- the element, and performs some recovery action.  When the handler is called,</span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- the passed @IO a@ is the only way to access the element.</span><span>
+</span><span id="line-257"></span><span id="local-6989586621679053245"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChanOnException"><span class="hs-identifier hs-type">readChanOnException</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053245"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053245"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053245"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-258"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChanOnException"><span class="hs-pragma hs-type">readChanOnException</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-259"></span><span id="readChanOnException"><span class="annot"><span class="annottext">readChanOnException :: forall a. OutChan a -&gt; (IO a -&gt; IO ()) -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readChanOnException"><span class="hs-identifier hs-var hs-var">readChanOnException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#OutChan"><span class="hs-identifier hs-type">OutChan</span></a></span><span> </span><span id="local-6989586621679053451"><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053451"><span class="hs-identifier hs-var">ce</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679053452"><span class="annot"><span class="annottext">IO a -&gt; IO ()
+</span><a href="#local-6989586621679053452"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO a
+forall a. IO a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#mask_"><span class="hs-identifier hs-var">mask_</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span>
+</span><span id="line-260"></span><span>    </span><span class="annot"><span class="annottext">ChanEnd (Cell a) -&gt; IO (Int, Stream (Cell a), IO ())
+forall cell_a. ChanEnd cell_a -&gt; IO (Int, Stream cell_a, IO ())
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-var">moveToNextCell</span></a></span><span> </span><span class="annot"><span class="annottext">ChanEnd (Cell a)
+</span><a href="#local-6989586621679053451"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Int, Stream (Cell a), IO ())
+-&gt; ((Int, Stream (Cell a), IO ()) -&gt; IO a) -&gt; IO a
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span>
+</span><span id="line-261"></span><span>      </span><span class="annot"><span class="annottext">(IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+forall a. (IO a -&gt; IO a) -&gt; (Int, Stream (Cell a), IO ()) -&gt; IO a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#readSegIxUnmasked"><span class="hs-identifier hs-var">readSegIxUnmasked</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679053453"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679053453"><span class="hs-identifier hs-var">io</span></a></span></span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679053453"><span class="hs-identifier hs-var">io</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; IO () -&gt; IO a
+forall a b. IO a -&gt; IO b -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#onException"><span class="hs-operator hs-var">`onException`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO a -&gt; IO ()
+</span><a href="#local-6989586621679053452"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679053453"><span class="hs-identifier hs-var">io</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span>
+</span><span id="line-264"></span><span class="hs-comment">------------ NOTE: ALL CODE BELOW IS RE-USED IN Unagi.NoBlocking --------------</span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span class="hs-comment">-- increments counter, finds stream segment of corresponding cell (updating the</span><span>
+</span><span id="line-268"></span><span class="hs-comment">-- stream head pointer as needed), and returns the stream segment and relative</span><span>
+</span><span id="line-269"></span><span class="hs-comment">-- index of our cell.</span><span>
+</span><span id="line-270"></span><span id="local-6989586621679053216"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-type">moveToNextCell</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053216"><span class="hs-identifier hs-type">cell_a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053216"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-271"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-pragma hs-type">moveToNextCell</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-272"></span><span id="moveToNextCell"><span class="annot"><span class="annottext">moveToNextCell :: forall cell_a. ChanEnd cell_a -&gt; IO (Int, Stream cell_a, IO ())
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#moveToNextCell"><span class="hs-identifier hs-var hs-var">moveToNextCell</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#ChanEnd"><span class="hs-identifier hs-type">ChanEnd</span></a></span><span> </span><span id="local-6989586621679053461"><span class="annot"><span class="annottext">SegSource cell_a
+</span><a href="#local-6989586621679053461"><span class="hs-identifier hs-var">segSource</span></a></span></span><span> </span><span id="local-6989586621679053462"><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053462"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span id="local-6989586621679053463"><span class="annot"><span class="annottext">IORef (StreamHead cell_a)
+</span><a href="#local-6989586621679053463"><span class="hs-identifier hs-var">streamHead</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-273"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-type">StreamHead</span></a></span><span> </span><span id="local-6989586621679053464"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053464"><span class="hs-identifier hs-var">offset0</span></a></span></span><span> </span><span id="local-6989586621679053465"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053465"><span class="hs-identifier hs-var">str0</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a) -&gt; IO (StreamHead cell_a)
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a)
+</span><a href="#local-6989586621679053463"><span class="hs-identifier hs-var">streamHead</span></a></span><span>
+</span><span id="line-274"></span><span>    </span><span class="hs-comment">-- NOTE [3/4]</span><span>
+</span><span id="line-275"></span><span>    </span><span id="local-6989586621679053466"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053466"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; AtomicCounter -&gt; IO Int
+</span><a href="Data.Atomics.Counter.Fat.html#incrCounter"><span class="hs-identifier hs-var">incrCounter</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">AtomicCounter
+</span><a href="#local-6989586621679053462"><span class="hs-identifier hs-var">counter</span></a></span><span>  </span><span class="hs-comment">-- [*]</span><span>
+</span><span id="line-276"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679053475"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053475"><span class="hs-identifier hs-var">segsAway</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679053476"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053476"><span class="hs-identifier hs-var">segIx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; (Int, Int) -&gt; (Int, Int)
+forall a. (?callStack::CallStack) =&gt; Bool -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#assert"><span class="hs-identifier hs-var hs-var">assert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053466"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053464"><span class="hs-identifier hs-var">offset0</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Int, Int) -&gt; (Int, Int)) -&gt; (Int, Int) -&gt; (Int, Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span>
+</span><span id="line-277"></span><span>                 </span><span class="annot"><span class="annottext">Int -&gt; (Int, Int)
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#divMod_sEGMENT_LENGTH"><span class="hs-identifier hs-var">divMod_sEGMENT_LENGTH</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; (Int, Int)) -&gt; Int -&gt; (Int, Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053466"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053464"><span class="hs-identifier hs-var">offset0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-278"></span><span>              </span><span class="hs-comment">-- (ix - offset0) `quotRem` sEGMENT_LENGTH</span><span>
+</span><span id="line-279"></span><span>        </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679053479"><span class="hs-pragma hs-type">go</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-280"></span><span>        </span><span id="local-6989586621679053479"><span class="annot"><span class="annottext">go :: t -&gt; Stream cell_a -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053479"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">t
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679053489"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053489"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Stream cell_a -&gt; IO (Stream cell_a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053489"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-281"></span><span>        </span><span class="annot"><a href="#local-6989586621679053479"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679053490"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053490"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><span class="annottext">StreamSegment cell_a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679053491"><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+</span><a href="#local-6989586621679053491"><span class="hs-identifier hs-var">next</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-282"></span><span>            </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+-&gt; SegSource cell_a -&gt; Int -&gt; IO (Stream cell_a)
+forall cell_a.
+IORef (NextSegment cell_a)
+-&gt; SegSource cell_a -&gt; Int -&gt; IO (Stream cell_a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-identifier hs-var">waitingAdvanceStream</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+</span><a href="#local-6989586621679053491"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource cell_a
+</span><a href="#local-6989586621679053461"><span class="hs-identifier hs-var">segSource</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#nEW_SEGMENT_WAIT"><span class="hs-identifier hs-var">nEW_SEGMENT_WAIT</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053476"><span class="hs-identifier hs-var">segIx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- NOTE [1]</span><span>
+</span><span id="line-283"></span><span>              </span><span class="annot"><span class="annottext">IO (Stream cell_a)
+-&gt; (Stream cell_a -&gt; IO (Stream cell_a)) -&gt; IO (Stream cell_a)
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; Stream cell_a -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053479"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053490"><span class="hs-identifier hs-var">n</span></a></span><span class="annot"><span class="annottext">t -&gt; t -&gt; t
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">t
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-284"></span><span>    </span><span id="local-6989586621679053494"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053494"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Stream cell_a -&gt; IO (Stream cell_a)
+forall {t}.
+(Eq t, Num t) =&gt;
+t -&gt; Stream cell_a -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053479"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053475"><span class="hs-identifier hs-var">segsAway</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053465"><span class="hs-identifier hs-var">str0</span></a></span><span>
+</span><span id="line-285"></span><span>    </span><span class="hs-comment">-- In Unagi.NoBlocking we need to control when this is run (see also [5]):</span><span>
+</span><span id="line-286"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679053499"><span class="annot"><span class="annottext">maybeUpdateStreamHead :: IO ()
+</span><a href="#local-6989586621679053499"><span class="hs-identifier hs-var hs-var">maybeUpdateStreamHead</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-287"></span><span>          </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053475"><span class="hs-identifier hs-var">segsAway</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-288"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679053504"><span class="annot"><span class="annottext">offsetN :: Int
+</span><a href="#local-6989586621679053504"><span class="hs-identifier hs-var hs-var">offsetN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span>
+</span><span id="line-289"></span><span>                  </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053464"><span class="hs-identifier hs-var">offset0</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053475"><span class="hs-identifier hs-var">segsAway</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#unsafeShiftL"><span class="hs-operator hs-var">`unsafeShiftL`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#lOG_SEGMENT_LENGTH"><span class="hs-identifier hs-var">lOG_SEGMENT_LENGTH</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">--(segsAway*sEGMENT_LENGTH)</span><span>
+</span><span id="line-290"></span><span>            </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a) -&gt; StreamHead cell_a -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#writeIORef"><span class="hs-identifier hs-var">writeIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a)
+</span><a href="#local-6989586621679053463"><span class="hs-identifier hs-var">streamHead</span></a></span><span> </span><span class="annot"><span class="annottext">(StreamHead cell_a -&gt; IO ()) -&gt; StreamHead cell_a -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Stream cell_a -&gt; StreamHead cell_a
+forall cell_a. Int -&gt; Stream cell_a -&gt; StreamHead cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamHead"><span class="hs-identifier hs-var">StreamHead</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053504"><span class="hs-identifier hs-var">offsetN</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053494"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-291"></span><span>          </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a) -&gt; IO ()
+forall a. IORef a -&gt; IO ()
+</span><a href="Utilities.html#touchIORef"><span class="hs-identifier hs-var">touchIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (StreamHead cell_a)
+</span><a href="#local-6989586621679053463"><span class="hs-identifier hs-var">streamHead</span></a></span><span> </span><span class="hs-comment">-- NOTE [5]</span><span>
+</span><span id="line-292"></span><span>    </span><span class="annot"><span class="annottext">(Int, Stream cell_a, IO ()) -&gt; IO (Int, Stream cell_a, IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679053476"><span class="hs-identifier hs-var">segIx</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053494"><span class="hs-identifier hs-var">str</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679053499"><span class="hs-identifier hs-var">maybeUpdateStreamHead</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-comment">-- [1] All readers or writers needing to work with a not-yet-created segment</span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-comment">-- race to create it, but those past index 0 have progressively long waits; 20</span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-comment">-- is chosen as 20 readIORefs should be more than enough time for writer/reader</span><span>
+</span><span id="line-296"></span><span>  </span><span class="hs-comment">-- 0 to add the new segment (if it's not descheduled).</span><span>
+</span><span id="line-297"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-298"></span><span>  </span><span class="hs-comment">-- [2] advancing the stream head pointer on segIx == sEGMENT_LENGTH - 1 would</span><span>
+</span><span id="line-299"></span><span>  </span><span class="hs-comment">-- be more correct, but this is simpler here. This may move the head pointer</span><span>
+</span><span id="line-300"></span><span>  </span><span class="hs-comment">-- BACKWARDS if the thread was descheduled, but that's not a correctness</span><span>
+</span><span id="line-301"></span><span>  </span><span class="hs-comment">-- issue.</span><span>
+</span><span id="line-302"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-303"></span><span>  </span><span class="hs-comment">-- [3] There is a theoretical race condition here: thread reads head and is</span><span>
+</span><span id="line-304"></span><span>  </span><span class="hs-comment">-- descheduled, meanwhile other readers/writers increment counter one full</span><span>
+</span><span id="line-305"></span><span>  </span><span class="hs-comment">-- lap; when we increment we think we've found our cell in what is actually a</span><span>
+</span><span id="line-306"></span><span>  </span><span class="hs-comment">-- very old segment. However in this scenario all addressable memory will</span><span>
+</span><span id="line-307"></span><span>  </span><span class="hs-comment">-- have been consumed just by the array pointers which haven't been able to</span><span>
+</span><span id="line-308"></span><span>  </span><span class="hs-comment">-- be GC'd. So I don't think this is something to worry about.</span><span>
+</span><span id="line-309"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-comment">-- [4] We must ensure the read above doesn't move ahead of our incrCounter</span><span>
+</span><span id="line-311"></span><span>  </span><span class="hs-comment">-- below. But fetchAddByteArrayInt is meant to be a full barrier (for</span><span>
+</span><span id="line-312"></span><span>  </span><span class="hs-comment">-- compiler and processor) across architectures, so no explicit barrier is</span><span>
+</span><span id="line-313"></span><span>  </span><span class="hs-comment">-- needed here.</span><span>
+</span><span id="line-314"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-315"></span><span>  </span><span class="hs-comment">-- [[5]] FOR Unagi.NoBlocking: This helps ensure that our (possibly last) use</span><span>
+</span><span id="line-316"></span><span>  </span><span class="hs-comment">-- of streamHead occurs after our (possibly last) write, for correctness of</span><span>
+</span><span id="line-317"></span><span>  </span><span class="hs-comment">-- 'isActive'.  See NOTE 1 of 'Unagi.NoBlocking.writeChan'</span><span>
+</span><span id="line-318"></span><span>
+</span><span id="line-319"></span><span>
+</span><span id="line-320"></span><span class="hs-comment">-- thread-safely try to fill `nextSegRef` at the next offset with a new</span><span>
+</span><span id="line-321"></span><span class="hs-comment">-- segment, waiting some number of iterations (for other threads to handle it).</span><span>
+</span><span id="line-322"></span><span class="hs-comment">-- Returns nextSegRef's StreamSegment.</span><span>
+</span><span id="line-323"></span><span id="local-6989586621679053221"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-identifier hs-type">waitingAdvanceStream</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#NextSegment"><span class="hs-identifier hs-type">NextSegment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053221"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#SegSource"><span class="hs-identifier hs-type">SegSource</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053221"><span class="hs-identifier hs-type">cell_a</span></a></span><span> </span><span>
+</span><span id="line-324"></span><span>                     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053221"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-325"></span><span class="hs-pragma">{-# NOINLINE</span><span> </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-pragma hs-type">waitingAdvanceStream</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-326"></span><span id="waitingAdvanceStream"><span class="annot"><span class="annottext">waitingAdvanceStream :: forall cell_a.
+IORef (NextSegment cell_a)
+-&gt; SegSource cell_a -&gt; Int -&gt; IO (Stream cell_a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#waitingAdvanceStream"><span class="hs-identifier hs-var hs-var">waitingAdvanceStream</span></a></span></span><span> </span><span id="local-6989586621679053511"><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+</span><a href="#local-6989586621679053511"><span class="hs-identifier hs-var">nextSegRef</span></a></span></span><span> </span><span id="local-6989586621679053512"><span class="annot"><span class="annottext">SegSource cell_a
+</span><a href="#local-6989586621679053512"><span class="hs-identifier hs-var">segSource</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (Stream cell_a)
+forall {t}. (Ord t, Num t) =&gt; t -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053513"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-327"></span><span>  </span><span id="local-6989586621679053513"><span class="annot"><span class="annottext">go :: t -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053513"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679053536"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053536"><span class="hs-identifier hs-var">wait</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO (Stream cell_a) -&gt; IO (Stream cell_a)
+forall a. (?callStack::CallStack) =&gt; Bool -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#assert"><span class="hs-identifier hs-var hs-var">assert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053536"><span class="hs-identifier hs-var">wait</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; t -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO (Stream cell_a) -&gt; IO (Stream cell_a))
+-&gt; IO (Stream cell_a) -&gt; IO (Stream cell_a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-328"></span><span>    </span><span id="local-6989586621679053537"><span class="annot"><span class="annottext">Ticket (NextSegment cell_a)
+</span><a href="#local-6989586621679053537"><span class="hs-identifier hs-var">tk</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a) -&gt; IO (Ticket (NextSegment cell_a))
+forall a. IORef a -&gt; IO (Ticket a)
+</span><span class="hs-identifier hs-var">readForCAS</span></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+</span><a href="#local-6989586621679053511"><span class="hs-identifier hs-var">nextSegRef</span></a></span><span>
+</span><span id="line-329"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ticket (NextSegment cell_a) -&gt; NextSegment cell_a
+forall a. Ticket a -&gt; a
+</span><span class="hs-identifier hs-var">peekTicket</span></span><span> </span><span class="annot"><span class="annottext">Ticket (NextSegment cell_a)
+</span><a href="#local-6989586621679053537"><span class="hs-identifier hs-var">tk</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-330"></span><span>         </span><span class="annot"><span class="annottext">NextSegment cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#NoSegment"><span class="hs-identifier hs-var">NoSegment</span></a></span><span> </span><span>
+</span><span id="line-331"></span><span>           </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053536"><span class="hs-identifier hs-var">wait</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; t -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">t -&gt; IO (Stream cell_a)
+</span><a href="#local-6989586621679053513"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679053536"><span class="hs-identifier hs-var">wait</span></a></span><span> </span><span class="annot"><span class="annottext">t -&gt; t -&gt; t
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-332"></span><span>             </span><span class="hs-comment">-- Create a potential next segment and try to insert it:</span><span>
+</span><span id="line-333"></span><span>           </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span> </span><span>
+</span><span id="line-334"></span><span>               </span><span id="local-6989586621679053539"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053539"><span class="hs-identifier hs-var">potentialStrNext</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StreamSegment cell_a -&gt; IORef (NextSegment cell_a) -&gt; Stream cell_a
+forall cell_a.
+StreamSegment cell_a -&gt; IORef (NextSegment cell_a) -&gt; Stream cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Stream"><span class="hs-identifier hs-var">Stream</span></a></span><span> </span><span class="annot"><span class="annottext">(StreamSegment cell_a
+ -&gt; IORef (NextSegment cell_a) -&gt; Stream cell_a)
+-&gt; SegSource cell_a
+-&gt; IO (IORef (NextSegment cell_a) -&gt; Stream cell_a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SegSource cell_a
+</span><a href="#local-6989586621679053512"><span class="hs-identifier hs-var">segSource</span></a></span><span> </span><span>
+</span><span id="line-335"></span><span>                                          </span><span class="annot"><span class="annottext">IO (IORef (NextSegment cell_a) -&gt; Stream cell_a)
+-&gt; IO (IORef (NextSegment cell_a)) -&gt; IO (Stream cell_a)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">NextSegment cell_a -&gt; IO (IORef (NextSegment cell_a))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">NextSegment cell_a
+forall cell_a. NextSegment cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#NoSegment"><span class="hs-identifier hs-var">NoSegment</span></a></span><span>
+</span><span id="line-336"></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span id="local-6989586621679053540"><span class="annot"><span class="annottext">Ticket (NextSegment cell_a)
+</span><a href="#local-6989586621679053540"><span class="hs-identifier hs-var">tkDone</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+-&gt; Ticket (NextSegment cell_a)
+-&gt; NextSegment cell_a
+-&gt; IO (Bool, Ticket (NextSegment cell_a))
+forall a. IORef a -&gt; Ticket a -&gt; a -&gt; IO (Bool, Ticket a)
+</span><span class="hs-identifier hs-var">casIORef</span></span><span> </span><span class="annot"><span class="annottext">IORef (NextSegment cell_a)
+</span><a href="#local-6989586621679053511"><span class="hs-identifier hs-var">nextSegRef</span></a></span><span> </span><span class="annot"><span class="annottext">Ticket (NextSegment cell_a)
+</span><a href="#local-6989586621679053537"><span class="hs-identifier hs-var">tk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Stream cell_a -&gt; NextSegment cell_a
+forall cell_a. Stream cell_a -&gt; NextSegment cell_a
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#Next"><span class="hs-identifier hs-var">Next</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053539"><span class="hs-identifier hs-var">potentialStrNext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-337"></span><span>               </span><span class="hs-comment">-- If that failed another thread succeeded (no false negatives)</span><span>
+</span><span id="line-338"></span><span>               </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Ticket (NextSegment cell_a) -&gt; NextSegment cell_a
+forall a. Ticket a -&gt; a
+</span><span class="hs-identifier hs-var">peekTicket</span></span><span> </span><span class="annot"><span class="annottext">Ticket (NextSegment cell_a)
+</span><a href="#local-6989586621679053540"><span class="hs-identifier hs-var">tkDone</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-339"></span><span>                 </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679053542"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053542"><span class="hs-identifier hs-var">strNext</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Stream cell_a -&gt; IO (Stream cell_a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053542"><span class="hs-identifier hs-var">strNext</span></a></span><span>
+</span><span id="line-340"></span><span>                 </span><span class="annot"><span class="annottext">NextSegment cell_a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO (Stream cell_a)
+forall a. (?callStack::CallStack) =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Impossible! This should only have been Next segment&quot;</span></span><span>
+</span><span id="line-341"></span><span>         </span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679053543"><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053543"><span class="hs-identifier hs-var">strNext</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Stream cell_a -&gt; IO (Stream cell_a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Stream cell_a
+</span><a href="#local-6989586621679053543"><span class="hs-identifier hs-var">strNext</span></a></span><span>
+</span><span id="line-342"></span><span>
+</span><span id="line-343"></span><span>
+</span><span id="line-344"></span><span class="hs-comment">-- copying a template array with cloneMutableArray is much faster than creating</span><span>
+</span><span id="line-345"></span><span class="hs-comment">-- a new one; in fact it seems we need this in order to scale, since as cores</span><span>
+</span><span id="line-346"></span><span class="hs-comment">-- increase we don't have enough &quot;runway&quot; and can't allocate fast enough:</span><span>
+</span><span id="line-347"></span><span class="hs-keyword">type</span><span> </span><span id="SegSource"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#SegSource"><span class="hs-identifier hs-var">SegSource</span></a></span></span><span> </span><span id="local-6989586621679053544"><span class="annot"><a href="#local-6989586621679053544"><span class="hs-identifier hs-type">cell_a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#StreamSegment"><span class="hs-identifier hs-type">StreamSegment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053544"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-348"></span><span>
+</span><span id="line-349"></span><span id="local-6989586621679053182"><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#newSegmentSource"><span class="hs-identifier hs-type">newSegmentSource</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679053182"><span class="hs-identifier hs-type">cell_a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#SegSource"><span class="hs-identifier hs-type">SegSource</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679053182"><span class="hs-identifier hs-type">cell_a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-350"></span><span id="newSegmentSource"><span class="annot"><span class="annottext">newSegmentSource :: forall cell_a. cell_a -&gt; IO (SegSource cell_a)
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#newSegmentSource"><span class="hs-identifier hs-var hs-var">newSegmentSource</span></a></span></span><span> </span><span id="local-6989586621679053550"><span class="annot"><span class="annottext">cell_a
+</span><a href="#local-6989586621679053550"><span class="hs-identifier hs-var">cell_empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-351"></span><span>    </span><span class="hs-comment">-- NOTE: evaluate Empty seems to be required here in order to not raise</span><span>
+</span><span id="line-352"></span><span>    </span><span class="hs-comment">-- &quot;Stored Empty Ticket went stale!&quot;  exception when in GHCi.</span><span>
+</span><span id="line-353"></span><span>    </span><span id="local-6989586621679053551"><span class="annot"><span class="annottext">MutableArray RealWorld cell_a
+</span><a href="#local-6989586621679053551"><span class="hs-identifier hs-var">arr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">cell_a -&gt; IO cell_a
+forall a. a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#evaluate"><span class="hs-identifier hs-var">evaluate</span></a></span><span> </span><span class="annot"><span class="annottext">cell_a
+</span><a href="#local-6989586621679053550"><span class="hs-identifier hs-var">cell_empty</span></a></span><span> </span><span class="annot"><span class="annottext">IO cell_a -&gt; (cell_a -&gt; SegSource cell_a) -&gt; SegSource cell_a
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; cell_a -&gt; IO (MutableArray (PrimState IO) cell_a)
+forall (m :: * -&gt; *) a.
+PrimMonad m =&gt;
+Int -&gt; a -&gt; m (MutableArray (PrimState m) a)
+</span><span class="hs-identifier hs-var">P.newArray</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var">sEGMENT_LENGTH</span></a></span><span>
+</span><span id="line-354"></span><span>    </span><span class="annot"><span class="annottext">SegSource cell_a -&gt; IO (SegSource cell_a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MutableArray (PrimState IO) cell_a
+-&gt; Int -&gt; Int -&gt; IO (MutableArray (PrimState IO) cell_a)
+forall (m :: * -&gt; *) a.
+PrimMonad m =&gt;
+MutableArray (PrimState m) a
+-&gt; Int -&gt; Int -&gt; m (MutableArray (PrimState m) a)
+</span><span class="hs-identifier hs-var">P.cloneMutableArray</span></span><span> </span><span class="annot"><span class="annottext">MutableArray RealWorld cell_a
+MutableArray (PrimState IO) cell_a
+</span><a href="#local-6989586621679053551"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Control.Concurrent.Chan.Unagi.Constants.html#sEGMENT_LENGTH"><span class="hs-identifier hs-var">sEGMENT_LENGTH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-355"></span><span>
+</span><span id="line-356"></span><span class="hs-comment">-- ----------</span><span>
+</span><span id="line-357"></span><span class="hs-comment">-- CELLS AND GC:</span><span>
+</span><span id="line-358"></span><span class="hs-comment">--</span><span>
+</span><span id="line-359"></span><span class="hs-comment">--   Each cell in a segment is assigned at most one reader and one writer</span><span>
+</span><span id="line-360"></span><span class="hs-comment">--</span><span>
+</span><span id="line-361"></span><span class="hs-comment">--   When all readers disappear and writers continue we'll have at most one</span><span>
+</span><span id="line-362"></span><span class="hs-comment">--   segment-worth of garbage that can't be collected at a time; when writers</span><span>
+</span><span id="line-363"></span><span class="hs-comment">--   advance the head segment pointer, the previous may be GC'd.</span><span>
+</span><span id="line-364"></span><span class="hs-comment">--</span><span>
+</span><span id="line-365"></span><span class="hs-comment">--   Readers blocked indefinitely should eventually raise a</span><span>
+</span><span id="line-366"></span><span class="hs-comment">--   BlockedIndefinitelyOnMVar.</span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- ----------</span><span>
+</span><span id="line-368"></span><span>
+</span><span id="line-369"></span><span>
+</span><span id="line-370"></span><span class="hs-comment">-- This could go anywhere, and lets us ensure that assertions are turned on</span><span>
+</span><span id="line-371"></span><span class="hs-comment">-- when running test suite.</span><span>
+</span><span id="line-372"></span><span class="annot"><a href="Control.Concurrent.Chan.Unagi.Internal.html#assertionCanary"><span class="hs-identifier hs-type">assertionCanary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-373"></span><span id="assertionCanary"><span class="annot"><span class="annottext">assertionCanary :: IO Bool
+</span><a href="Control.Concurrent.Chan.Unagi.Internal.html#assertionCanary"><span class="hs-identifier hs-var hs-var">assertionCanary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-374"></span><span>    </span><span id="local-6989586621679053555"><span class="annot"><span class="annottext">Either AssertionFailed ()
+</span><a href="#local-6989586621679053555"><span class="hs-identifier hs-var">assertionsWorking</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO (Either AssertionFailed ())
+forall e a. Exception e =&gt; IO a -&gt; IO (Either e a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Exception.Base.html#try"><span class="hs-identifier hs-var">try</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (Either AssertionFailed ()))
+-&gt; IO () -&gt; IO (Either AssertionFailed ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall a. (?callStack::CallStack) =&gt; Bool -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#assert"><span class="hs-identifier hs-var hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-375"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; IO Bool) -&gt; Bool -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-376"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either AssertionFailed ()
+</span><a href="#local-6989586621679053555"><span class="hs-identifier hs-var">assertionsWorking</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-377"></span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Exception.html#AssertionFailed"><span class="hs-identifier hs-type">AssertionFailed</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-378"></span><span>           </span><span class="annot"><span class="annottext">Either AssertionFailed ()
+</span><span class="hs-identifier">_</span></span><span>                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-379"></span><span>
+</span><span id="line-380"></span></pre></body></html>

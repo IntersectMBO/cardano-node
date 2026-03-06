@@ -1,0 +1,353 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | This modules provides a tripwire abstraction. You can use tripwire as a detection mechanism if the code</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- path was executed. Trip a tripwire with 'trip' in the place where you'd like to detect if it was</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- reached. The tripwire can then be checked in the other place in the code using for example 'isTripped' or</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- 'assertNotTripped'.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Hedgehog.Extras.Test.Tripwire</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Create a tripwire</span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier">Tripwire</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwire"><span class="hs-identifier">makeTripwire</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwireWithLabel"><span class="hs-identifier">makeTripwireWithLabel</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Tripwire operations</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#trip"><span class="hs-identifier">trip</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#trip_"><span class="hs-identifier">trip_</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#isTripped"><span class="hs-identifier">isTripped</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#getTripSite"><span class="hs-identifier">getTripSite</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#resetTripwire"><span class="hs-identifier">resetTripwire</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Assertions</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#assertNotTripped"><span class="hs-identifier">assertNotTripped</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#assertTripped"><span class="hs-identifier">assertTripped</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadTest</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Base.html"><span class="hs-identifier">Hedgehog.Extras.Test.Base</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog.Internal.Property</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/System.IO.Unsafe.html"><span class="hs-identifier">System.IO.Unsafe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Unsafe.html#unsafePerformIO"><span class="hs-identifier">unsafePerformIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | Counter used to allocate consecutive IDs to tripwires</span></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireCounter"><span class="hs-identifier hs-type">tripwireCounter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-40"></span><span id="tripwireCounter"><span class="annot"><span class="annottext">tripwireCounter :: IORef Int
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireCounter"><span class="hs-identifier hs-var hs-var">tripwireCounter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (IORef Int) -&gt; IORef Int
+forall a. IO a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.Unsafe.html#unsafePerformIO"><span class="hs-identifier hs-var">unsafePerformIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (IORef Int) -&gt; IORef Int) -&gt; IO (IORef Int) -&gt; IORef Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO (IORef Int)
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-41"></span><span class="hs-pragma">{-# NOINLINE</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireCounter"><span class="hs-pragma hs-type">tripwireCounter</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Represents a tripwire which can be tripped only once. It can be used to detect if a particular code path</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- was reached.</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="Tripwire"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-var">Tripwire</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Tripwire"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-var">Tripwire</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tripwireId"><span class="annot"><span class="annottext">Tripwire -&gt; String
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireId"><span class="hs-identifier hs-var hs-var">tripwireId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ a label for identifying the tripwire</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tripSite"><span class="annot"><span class="annottext">Tripwire -&gt; MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ call stack of the trip site</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144662"><span id="local-6989586621679144667"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679144672"><span class="annot"><span class="annottext">show :: Tripwire -&gt; String
+</span><a href="#local-6989586621679144672"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144674"><span class="annot"><span class="annottext">String
+tripwireId :: Tripwire -&gt; String
+tripwireId :: String
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireId"><span class="hs-identifier hs-var hs-var">tripwireId</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Tripwire &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144674"><span class="hs-identifier hs-var">tripwireId</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Creates a new tripwire</span></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679144589"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwire"><span class="hs-identifier hs-type">makeTripwire</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144589"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144589"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span></span><span>
+</span><span id="line-55"></span><span id="makeTripwire"><span class="annot"><span class="annottext">makeTripwire :: forall (m :: * -&gt; *). MonadIO m =&gt; m Tripwire
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwire"><span class="hs-identifier hs-var hs-var">makeTripwire</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Tripwire -&gt; m Tripwire
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Tripwire -&gt; m Tripwire) -&gt; IO Tripwire -&gt; m Tripwire
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679144688"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144688"><span class="hs-identifier hs-var">id'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef Int -&gt; (Int -&gt; (Int, Int)) -&gt; IO Int
+forall a b. IORef a -&gt; (a -&gt; (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#atomicModifyIORef%27"><span class="hs-identifier hs-var">atomicModifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef Int
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripwireCounter"><span class="hs-identifier hs-var">tripwireCounter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; (Int, Int)) -&gt; Int -&gt; (Int, Int)
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; (Int, Int)) -&gt; (Int -&gt; Int) -&gt; Int -&gt; (Int, Int)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; MVar CallStack -&gt; Tripwire
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-var">Tripwire</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144688"><span class="hs-identifier hs-var">id'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MVar CallStack -&gt; Tripwire) -&gt; IO (MVar CallStack) -&gt; IO Tripwire
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (MVar CallStack)
+forall a. IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | Creates a new tripwire with a label, which is visible when 'show'ed: @Tripwire mylabel@</span></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679144609"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwireWithLabel"><span class="hs-identifier hs-type">makeTripwireWithLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144609"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-61"></span><span>                      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-62"></span><span>                      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144609"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span></span><span>
+</span><span id="line-63"></span><span id="makeTripwireWithLabel"><span class="annot"><span class="annottext">makeTripwireWithLabel :: forall (m :: * -&gt; *). MonadIO m =&gt; String -&gt; m Tripwire
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#makeTripwireWithLabel"><span class="hs-identifier hs-var hs-var">makeTripwireWithLabel</span></a></span></span><span> </span><span id="local-6989586621679144697"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144697"><span class="hs-keyword hs-var">label</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Tripwire -&gt; m Tripwire
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Tripwire -&gt; m Tripwire) -&gt; IO Tripwire -&gt; m Tripwire
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; MVar CallStack -&gt; Tripwire
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-var">Tripwire</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679144697"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar CallStack -&gt; Tripwire) -&gt; IO (MVar CallStack) -&gt; IO Tripwire
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (MVar CallStack)
+forall a. IO (MVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#newEmptyMVar"><span class="hs-identifier hs-var">newEmptyMVar</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | Triggers the tripwire and registers the place of the first trigger. Idempotent.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- Prints the information in the test log about tripping the tripwire.</span><span>
+</span><span id="line-68"></span><span id="local-6989586621679144612"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#trip"><span class="hs-identifier hs-type">trip</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-69"></span><span>     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144612"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-70"></span><span>     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679144612"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-71"></span><span>     </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-72"></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144612"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-73"></span><span id="trip"><span class="annot"><span class="annottext">trip :: forall (m :: * -&gt; *).
+(HasCallStack, MonadIO m, MonadTest m) =&gt;
+Tripwire -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#trip"><span class="hs-identifier hs-var hs-var">trip</span></a></span></span><span> </span><span id="local-6989586621679144709"><span class="annot"><span class="annottext">t :: Tripwire
+</span><a href="#local-6989586621679144709"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144710"><span class="annot"><span class="annottext">MVar CallStack
+tripSite :: Tripwire -&gt; MVar CallStack
+tripSite :: MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144709"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; has been tripped&quot;</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">m Bool -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m Bool -&gt; m ()) -&gt; (IO Bool -&gt; m Bool) -&gt; IO Bool -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; m Bool
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; m ()) -&gt; IO Bool -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack -&gt; CallStack -&gt; IO Bool
+forall a. MVar a -&gt; a -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryPutMVar"><span class="hs-identifier hs-var">tryPutMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack
+</span><a href="#local-6989586621679144710"><span class="hs-identifier hs-var">tripSite</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">callStack</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Triggers the tripwire and registers the place of the first trigger. Idempotent. A silent variant of</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- 'trip' which does not require 'MonadTest', but also does not log the information about tripping.</span><span>
+</span><span id="line-79"></span><span id="local-6989586621679144622"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#trip_"><span class="hs-identifier hs-type">trip_</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144622"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144622"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-83"></span><span id="trip_"><span class="annot"><span class="annottext">trip_ :: forall (m :: * -&gt; *). (HasCallStack, MonadIO m) =&gt; Tripwire -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#trip_"><span class="hs-identifier hs-var hs-var">trip_</span></a></span></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144734"><span class="annot"><span class="annottext">MVar CallStack
+tripSite :: Tripwire -&gt; MVar CallStack
+tripSite :: MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">m Bool -&gt; m ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(m Bool -&gt; m ()) -&gt; (IO Bool -&gt; m Bool) -&gt; IO Bool -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; m Bool
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; m ()) -&gt; IO Bool -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack -&gt; CallStack -&gt; IO Bool
+forall a. MVar a -&gt; a -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryPutMVar"><span class="hs-identifier hs-var">tryPutMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack
+</span><a href="#local-6989586621679144734"><span class="hs-identifier hs-var">tripSite</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">callStack</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><span class="hs-comment">-- | Restore tripwire to initial non triggered state</span></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679144624"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#resetTripwire"><span class="hs-identifier hs-type">resetTripwire</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144624"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-88"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-89"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144624"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-90"></span><span id="resetTripwire"><span class="annot"><span class="annottext">resetTripwire :: forall (m :: * -&gt; *). MonadIO m =&gt; Tripwire -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#resetTripwire"><span class="hs-identifier hs-var hs-var">resetTripwire</span></a></span></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144743"><span class="annot"><span class="annottext">MVar CallStack
+tripSite :: Tripwire -&gt; MVar CallStack
+tripSite :: MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Maybe CallStack) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe CallStack) -&gt; IO ()) -&gt; IO (Maybe CallStack) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack -&gt; IO (Maybe CallStack)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryTakeMVar"><span class="hs-identifier hs-var">tryTakeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack
+</span><a href="#local-6989586621679144743"><span class="hs-identifier hs-var">tripSite</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Return the call stack, where the tripwire was tripped - if it was tripped.</span></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679144627"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#getTripSite"><span class="hs-identifier hs-type">getTripSite</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144627"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-94"></span><span>            </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-95"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144627"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-96"></span><span id="getTripSite"><span class="annot"><span class="annottext">getTripSite :: forall (m :: * -&gt; *). MonadIO m =&gt; Tripwire -&gt; m (Maybe CallStack)
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#getTripSite"><span class="hs-identifier hs-var hs-var">getTripSite</span></a></span></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144747"><span class="annot"><span class="annottext">MVar CallStack
+tripSite :: Tripwire -&gt; MVar CallStack
+tripSite :: MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe CallStack) -&gt; m (Maybe CallStack)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe CallStack) -&gt; m (Maybe CallStack))
+-&gt; IO (Maybe CallStack) -&gt; m (Maybe CallStack)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack -&gt; IO (Maybe CallStack)
+forall a. MVar a -&gt; IO (Maybe a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#tryReadMVar"><span class="hs-identifier hs-var">tryReadMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack
+</span><a href="#local-6989586621679144747"><span class="hs-identifier hs-var">tripSite</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="annot"><span class="hs-comment">-- | Check if the tripwire was tripped.</span></span><span>
+</span><span id="line-99"></span><span id="local-6989586621679144629"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#isTripped"><span class="hs-identifier hs-type">isTripped</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144629"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144629"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-102"></span><span id="isTripped"><span class="annot"><span class="annottext">isTripped :: forall (m :: * -&gt; *). MonadIO m =&gt; Tripwire -&gt; m Bool
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#isTripped"><span class="hs-identifier hs-var hs-var">isTripped</span></a></span></span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span class="hs-special">{</span><span id="local-6989586621679144752"><span class="annot"><span class="annottext">MVar CallStack
+tripSite :: Tripwire -&gt; MVar CallStack
+tripSite :: MVar CallStack
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#tripSite"><span class="hs-identifier hs-var hs-var">tripSite</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; m Bool
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; m Bool) -&gt; IO Bool -&gt; m Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; IO Bool -&gt; IO Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack -&gt; IO Bool
+forall a. MVar a -&gt; IO Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.MVar.html#isEmptyMVar"><span class="hs-identifier hs-var">isEmptyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar CallStack
+</span><a href="#local-6989586621679144752"><span class="hs-identifier hs-var">tripSite</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><span class="hs-comment">-- | Fails the test if the tripwire was triggered. Prints the call stack where the tripwire was triggered.</span></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679144632"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#assertNotTripped"><span class="hs-identifier hs-type">assertNotTripped</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-106"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679144632"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-107"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144632"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-108"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-109"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144632"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-110"></span><span id="assertNotTripped"><span class="annot"><span class="annottext">assertNotTripped :: forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m, MonadIO m) =&gt;
+Tripwire -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#assertNotTripped"><span class="hs-identifier hs-var hs-var">assertNotTripped</span></a></span></span><span> </span><span id="local-6989586621679144762"><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144762"><span class="hs-identifier hs-var">tripwire</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679144779"><span class="annot"><span class="annottext">Maybe CallStack
+</span><a href="#local-6989586621679144779"><span class="hs-identifier hs-var">mTripSite</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tripwire -&gt; m (Maybe CallStack)
+forall (m :: * -&gt; *). MonadIO m =&gt; Tripwire -&gt; m (Maybe CallStack)
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#getTripSite"><span class="hs-identifier hs-var">getTripSite</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144762"><span class="hs-identifier hs-var">tripwire</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">Maybe CallStack -&gt; (CallStack -&gt; m Any) -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CallStack
+</span><a href="#local-6989586621679144779"><span class="hs-identifier hs-var">mTripSite</span></a></span><span> </span><span class="annot"><span class="annottext">((CallStack -&gt; m Any) -&gt; m ()) -&gt; (CallStack -&gt; m Any) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679144781"><span class="annot"><span class="annottext">CallStack
+</span><a href="#local-6989586621679144781"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144762"><span class="hs-identifier hs-var">tripwire</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; has been tripped at: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Exception.html#prettyCallStack"><span class="hs-identifier hs-var">prettyCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+</span><a href="#local-6989586621679144781"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">m Any
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><span class="hs-identifier hs-var">H.failure</span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><span class="hs-comment">-- | Fails the test if the tripwire was not triggered yet.</span></span><span>
+</span><span id="line-117"></span><span id="local-6989586621679144784"><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#assertTripped"><span class="hs-identifier hs-type">assertTripped</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-118"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTest</span></span><span> </span><span class="annot"><a href="#local-6989586621679144784"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-119"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144784"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-120"></span><span>              </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Hedgehog.Extras.Test.Tripwire.html#Tripwire"><span class="hs-identifier hs-type">Tripwire</span></a></span><span>
+</span><span id="line-121"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144784"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-122"></span><span id="assertTripped"><span class="annot"><span class="annottext">assertTripped :: forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m, MonadIO m) =&gt;
+Tripwire -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#assertTripped"><span class="hs-identifier hs-var hs-var">assertTripped</span></a></span></span><span> </span><span id="local-6989586621679144792"><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144792"><span class="hs-identifier hs-var">tripwire</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679144806"><span class="annot"><span class="annottext">Maybe CallStack
+</span><a href="#local-6989586621679144806"><span class="hs-identifier hs-var">mTripSite</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Tripwire -&gt; m (Maybe CallStack)
+forall (m :: * -&gt; *). MonadIO m =&gt; Tripwire -&gt; m (Maybe CallStack)
+</span><a href="Hedgehog.Extras.Test.Tripwire.html#getTripSite"><span class="hs-identifier hs-var">getTripSite</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144792"><span class="hs-identifier hs-var">tripwire</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe CallStack -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#isNothing"><span class="hs-identifier hs-var">isNothing</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe CallStack
+</span><a href="#local-6989586621679144806"><span class="hs-identifier hs-var">mTripSite</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ()) -&gt; String -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Tripwire
+</span><a href="#local-6989586621679144792"><span class="hs-identifier hs-var">tripwire</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; was not tripped&quot;</span></span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><span class="hs-identifier hs-var">H.failure</span></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span></pre></body></html>

@@ -1,0 +1,930 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE Trustworthy #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">{- HLINT ignore &quot;Use :&quot; -}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- All the `FixedLoaded`, `timescaleCompressed` and `datasetEmpty` profiles!</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Benchmarking.Profile.Builtin.Empty</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#base"><span class="hs-identifier">base</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#baseNoDataset"><span class="hs-identifier">baseNoDataset</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#fastDuration"><span class="hs-identifier">fastDuration</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#ciTestDuration"><span class="hs-identifier">ciTestDuration</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceBenchDuration"><span class="hs-identifier">traceBenchDuration</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceFullDuration"><span class="hs-identifier">traceFullDuration</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#defaultDuration"><span class="hs-identifier">defaultDuration</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#epochTransitionDuration"><span class="hs-identifier">epochTransitionDuration</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#profilesNoEraEmpty"><span class="hs-identifier">profilesNoEraEmpty</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- Package: self.</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Primitives.html"><span class="hs-identifier">Cardano.Benchmarking.Profile.Primitives</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html"><span class="hs-identifier">Cardano.Benchmarking.Profile.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Types</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Vocabulary.html"><span class="hs-identifier">Cardano.Benchmarking.Profile.Vocabulary</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- Use `base` and pick a duration.</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#base"><span class="hs-identifier hs-type">base</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-32"></span><span id="base"><span class="annot"><span class="annottext">base :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#base"><span class="hs-identifier hs-var hs-var">base</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#baseNoDataset"><span class="hs-identifier hs-var">baseNoDataset</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- Genesis:</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- TODO: &quot;default*&quot;, &quot;oldtracing&quot; and &quot;plutus*&quot; below have `P.delegators 6`.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--       Remove them, make delegators zero by using `V.datasetEmpty` here.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--       It was kept to make test pass because &quot;prof0-defaults.jq&quot; set it,</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--       `n_pools` used as &quot;effective_delegators&quot; when delegators zero/null.</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#baseNoDataset"><span class="hs-identifier hs-type">baseNoDataset</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-42"></span><span id="baseNoDataset"><span class="annot"><span class="annottext">baseNoDataset :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#baseNoDataset"><span class="hs-identifier hs-var hs-var">baseNoDataset</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#fixedLoaded"><span class="hs-identifier hs-var">P.fixedLoaded</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-comment">-- Genesis:</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#fundsDefault"><span class="hs-identifier hs-var">V.fundsDefault</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#initCooldown"><span class="hs-identifier hs-var">P.initCooldown</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisStandard"><span class="hs-identifier hs-var">P.analysisStandard</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- TODO: Move to `base` when &quot;default*&quot; and &quot;oldtracing&quot; genesis are the same.</span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-type">genesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-51"></span><span id="genesis"><span class="annot"><span class="annottext">genesis :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-var hs-var">genesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#genesisVariant300"><span class="hs-identifier hs-var">V.genesisVariant300</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#fastDuration"><span class="hs-identifier hs-type">fastDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-56"></span><span id="fastDuration"><span class="annot"><span class="annottext">fastDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#fastDuration"><span class="hs-identifier hs-var hs-var">fastDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnBlock"><span class="hs-identifier hs-var">P.shutdownOnBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-comment">-- TODO: dummy &quot;generator.epochs&quot; ignored in favor of &quot;--shutdown-on&quot;.</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-comment">--       Create a &quot;time.epochs&quot; or &quot;time.blocks&quot; or similar, IDK!</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-comment">-- This applies to all profiles!</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#desc"><span class="hs-identifier hs-var">P.desc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Stop as soon as we've seen a single block&quot;</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#ciTestDuration"><span class="hs-identifier hs-type">ciTestDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-65"></span><span id="ciTestDuration"><span class="annot"><span class="annottext">ciTestDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#ciTestDuration"><span class="hs-identifier hs-var hs-var">ciTestDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnBlock"><span class="hs-identifier hs-var">P.shutdownOnBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- TODO: dummy &quot;generator.epochs&quot; ignored in favor of &quot;--shutdown-on&quot;.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">--       Create a &quot;time.epochs&quot; or &quot;time.blocks&quot; or similar, IDK!</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">-- This applies to all profiles!</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#desc"><span class="hs-identifier hs-var">P.desc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Miniature dataset, CI-friendly duration (2-3min), test scale&quot;</span></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceBenchDuration"><span class="hs-identifier hs-type">traceBenchDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-74"></span><span id="traceBenchDuration"><span class="annot"><span class="annottext">traceBenchDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceBenchDuration"><span class="hs-identifier hs-var hs-var">traceBenchDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnBlock"><span class="hs-identifier hs-var">P.shutdownOnBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">15</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- TODO: dummy &quot;generator.epochs&quot; ignored in favor of &quot;--shutdown-on&quot;.</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-comment">--       Create a &quot;time.epochs&quot; or &quot;time.blocks&quot; or similar, IDK!</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-comment">-- This applies to all profiles!</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#desc"><span class="hs-identifier hs-var">P.desc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;6 low-footprint nodes in a torus topology, 5 minutes runtime&quot;</span></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceFullDuration"><span class="hs-identifier hs-type">traceFullDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-83"></span><span id="traceFullDuration"><span class="annot"><span class="annottext">traceFullDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceFullDuration"><span class="hs-identifier hs-var hs-var">traceFullDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnSlot"><span class="hs-identifier hs-var">P.shutdownOnSlot</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1200</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">-- TODO: dummy &quot;generator.epochs&quot; ignored in favor of &quot;--shutdown-on&quot;.</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-comment">--       Create a &quot;time.epochs&quot; or &quot;time.blocks&quot; or similar, IDK!</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-comment">-- This applies to all profiles!</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#desc"><span class="hs-identifier hs-var">P.desc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;6 low-footprint nodes in a torus topology, 20 minutes runtime&quot;</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#defaultDuration"><span class="hs-identifier hs-type">defaultDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-92"></span><span id="defaultDuration"><span class="annot"><span class="annottext">defaultDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#defaultDuration"><span class="hs-identifier hs-var hs-var">defaultDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnOff"><span class="hs-identifier hs-var">P.shutdownOnOff</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- . P.desc &quot;2 low-footprint nodes, 15 minutes runtime&quot;</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#epochTransitionDuration"><span class="hs-identifier hs-type">epochTransitionDuration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span>
+</span><span id="line-98"></span><span id="epochTransitionDuration"><span class="annot"><span class="annottext">epochTransitionDuration :: Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#epochTransitionDuration"><span class="hs-identifier hs-var hs-var">epochTransitionDuration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#timescaleCompressed"><span class="hs-identifier hs-var">V.timescaleCompressed</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#shutdownOnSlot"><span class="hs-identifier hs-var">P.shutdownOnSlot</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">900</span></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-comment">-- TODO: dummy &quot;generator.epochs&quot; ignored in favor of &quot;--shutdown-on&quot;.</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-comment">--       Create a &quot;time.epochs&quot; or &quot;time.blocks&quot; or similar, IDK!</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-comment">-- This applies to all profiles!</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#generatorEpochs"><span class="hs-identifier hs-var">P.generatorEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#desc"><span class="hs-identifier hs-var">P.desc</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;2 low-footprint nodes, 15 minutes runtime&quot;</span></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="annot"><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#profilesNoEraEmpty"><span class="hs-identifier hs-type">profilesNoEraEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Benchmarking.Profile.Types.html#Profile"><span class="hs-identifier hs-type">Types.Profile</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-109"></span><span id="profilesNoEraEmpty"><span class="annot"><span class="annottext">profilesNoEraEmpty :: [Profile]
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#profilesNoEraEmpty"><span class="hs-identifier hs-var hs-var">profilesNoEraEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; [Profile] -&gt; [Profile]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#baseNoDataset"><span class="hs-identifier hs-var">baseNoDataset</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">([Profile] -&gt; [Profile]) -&gt; [Profile] -&gt; [Profile]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-comment">-- fast: FixedLoaded and &quot;--shutdown-on-block-synced 1&quot; with 1 or 2 nodes.</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140609"><span class="annot"><span class="annottext">fast :: Profile
+</span><a href="#local-6989586621679140609"><span class="hs-identifier hs-var hs-var">fast</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#fastDuration"><span class="hs-identifier hs-var">fastDuration</span></a></span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#uniCircle"><span class="hs-identifier hs-var">P.uniCircle</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span id="local-6989586621679140613"><span class="annot"><span class="annottext">fast1 :: Profile
+</span><a href="#local-6989586621679140613"><span class="hs-identifier hs-var hs-var">fast1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140609"><span class="hs-identifier hs-var">fast</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-118"></span><span>      </span><span id="local-6989586621679140615"><span class="annot"><span class="annottext">fast2 :: Profile
+</span><a href="#local-6989586621679140615"><span class="hs-identifier hs-var hs-var">fast2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140609"><span class="hs-identifier hs-var">fast</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-comment">-- Local.</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140613"><span class="hs-identifier hs-var">fast1</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fast-solo&quot;</span></span><span>       </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140615"><span class="hs-identifier hs-var">fast2</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fast&quot;</span></span><span>            </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140615"><span class="hs-identifier hs-var">fast2</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fast-oldtracing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#oldTracing"><span class="hs-identifier hs-var">P.oldTracing</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140615"><span class="hs-identifier hs-var">fast2</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fast-notracer&quot;</span></span><span>   </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOff"><span class="hs-identifier hs-var">P.traceForwardingOff</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140615"><span class="hs-identifier hs-var">fast2</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fast-plutus&quot;</span></span><span>     </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusLoop"><span class="hs-identifier hs-var">V.plutusLoop</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><span class="annottext">[Profile] -&gt; [Profile] -&gt; [Profile]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-comment">-- ci-test: FixedLoaded and &quot;--shutdown-on-block-synced 3&quot; with 2 nodes.</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140626"><span class="annot"><span class="annottext">ciTest :: Profile
+</span><a href="#local-6989586621679140626"><span class="hs-identifier hs-var hs-var">ciTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#ciTestDuration"><span class="hs-identifier hs-var">ciTestDuration</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#uniCircle"><span class="hs-identifier hs-var">P.uniCircle</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-comment">-- Local</span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140626"><span class="hs-identifier hs-var">ciTest</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ci-test&quot;</span></span><span>          </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140626"><span class="hs-identifier hs-var">ciTest</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ci-test-rtview&quot;</span></span><span>   </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#tracerRtview"><span class="hs-identifier hs-var">P.tracerRtview</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140626"><span class="hs-identifier hs-var">ciTest</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ci-test-notracer&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOff"><span class="hs-identifier hs-var">P.traceForwardingOff</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140626"><span class="hs-identifier hs-var">ciTest</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ci-test-plutus&quot;</span></span><span>   </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusLoop"><span class="hs-identifier hs-var">V.plutusLoop</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><span class="annottext">[Profile] -&gt; [Profile] -&gt; [Profile]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-comment">-- ci-test-hydra: FixedLoaded and &quot;--shutdown-on-block-synced 3&quot; with 2 nodes.</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140632"><span class="annot"><span class="annottext">ciTestHydra :: Profile
+</span><a href="#local-6989586621679140632"><span class="hs-identifier hs-var hs-var">ciTestHydra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#genesisVariantPreVoltaire"><span class="hs-identifier hs-var">V.genesisVariantPreVoltaire</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#ciTestDuration"><span class="hs-identifier hs-var">ciTestDuration</span></a></span><span>
+</span><span id="line-147"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#uniCircle"><span class="hs-identifier hs-var">P.uniCircle</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-150"></span><span>     </span><span class="hs-comment">-- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140632"><span class="hs-identifier hs-var">ciTestHydra</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ci-test-hydra&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#txFeeOverwrite"><span class="hs-identifier hs-var">P.txFeeOverwrite</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1380000</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusLoop"><span class="hs-identifier hs-var">V.plutusLoop</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#blocksize64k"><span class="hs-identifier hs-var">P.blocksize64k</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><span class="annottext">[Profile] -&gt; [Profile] -&gt; [Profile]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-comment">-- trace-*: FixedLoaded and &quot;tracer.withresources = true&quot; with 6 nodes.</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140638"><span class="annot"><span class="annottext">trace :: Profile
+</span><a href="#local-6989586621679140638"><span class="hs-identifier hs-var hs-var">trace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span class="hs-comment">-- TODO: &quot;default-*&quot; uses 6 nodes and `uniCircle`.</span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#torus"><span class="hs-identifier hs-var">P.torus</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#tracerWithresources"><span class="hs-identifier hs-var">P.tracerWithresources</span></a></span><span>
+</span><span id="line-162"></span><span>      </span><span id="local-6989586621679140641"><span class="annot"><span class="annottext">bench :: Profile
+</span><a href="#local-6989586621679140641"><span class="hs-identifier hs-var hs-var">bench</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140638"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceBenchDuration"><span class="hs-identifier hs-var">traceBenchDuration</span></a></span><span>
+</span><span id="line-163"></span><span>      </span><span id="local-6989586621679140642"><span class="annot"><span class="annottext">full :: Profile
+</span><a href="#local-6989586621679140642"><span class="hs-identifier hs-var hs-var">full</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140638"><span class="hs-identifier hs-var">trace</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#traceFullDuration"><span class="hs-identifier hs-var">traceFullDuration</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-comment">-- &quot;--shutdown-on-block-synced 15&quot;</span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140641"><span class="hs-identifier hs-var">bench</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-bench&quot;</span></span><span>            </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140641"><span class="hs-identifier hs-var">bench</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-bench-rtview&quot;</span></span><span>     </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#tracerRtview"><span class="hs-identifier hs-var">P.tracerRtview</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140641"><span class="hs-identifier hs-var">bench</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-bench-oldtracing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#oldTracing"><span class="hs-identifier hs-var">P.oldTracing</span></a></span><span> </span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140641"><span class="hs-identifier hs-var">bench</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-bench-notracer&quot;</span></span><span>   </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOff"><span class="hs-identifier hs-var">P.traceForwardingOff</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-comment">-- &quot;--shutdown-on-slot-synced 1200&quot;</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140642"><span class="hs-identifier hs-var">full</span></a></span><span>  </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-full&quot;</span></span><span>             </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140642"><span class="hs-identifier hs-var">full</span></a></span><span>  </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;trace-full-rtview&quot;</span></span><span>      </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#tracerRtview"><span class="hs-identifier hs-var">P.tracerRtview</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><span class="annottext">[Profile] -&gt; [Profile] -&gt; [Profile]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-comment">-- 6 nodes and no &quot;--shutdown-on-slot-synced&quot; and no &quot;--shutdown-on-block-synced&quot;</span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140651"><span class="annot"><span class="annottext">noCliStop :: Profile
+</span><a href="#local-6989586621679140651"><span class="hs-identifier hs-var hs-var">noCliStop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-179"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#defaultDuration"><span class="hs-identifier hs-var">defaultDuration</span></a></span><span>
+</span><span id="line-180"></span><span>        </span><span class="hs-comment">-- TODO: &quot;trace-*&quot; uses 6 nodes and `torus`.</span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#uniCircle"><span class="hs-identifier hs-var">P.uniCircle</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-182"></span><span>        </span><span class="hs-comment">-- TODO: The only one without 0 delegators.</span><span>
+</span><span id="line-183"></span><span>        </span><span class="hs-comment">--       Fix and remove `baseNoDataset` (Same `base` for all).</span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#utxo"><span class="hs-identifier hs-var">P.utxo</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#delegators"><span class="hs-identifier hs-var">P.delegators</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#dreps"><span class="hs-identifier hs-var">P.dreps</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-185"></span><span>      </span><span id="local-6989586621679140655"><span class="annot"><span class="annottext">value :: Profile
+</span><a href="#local-6989586621679140655"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140651"><span class="hs-identifier hs-var">noCliStop</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#genesisVariant300"><span class="hs-identifier hs-var">V.genesisVariant300</span></a></span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-comment">-- TODO: &quot;fast-plutus&quot; and &quot;ci-test-plutus&quot; are using `genesisVariant300`.</span><span>
+</span><span id="line-187"></span><span>      </span><span id="local-6989586621679140656"><span class="annot"><span class="annottext">plutus :: Profile
+</span><a href="#local-6989586621679140656"><span class="hs-identifier hs-var hs-var">plutus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140651"><span class="hs-identifier hs-var">noCliStop</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#genesisVariantPreVoltaire"><span class="hs-identifier hs-var">V.genesisVariantPreVoltaire</span></a></span><span>
+</span><span id="line-188"></span><span>      </span><span class="hs-comment">-- intricacies of fee calculation..., default fee works for ci-test-plutus and ci-bench-plutus</span><span>
+</span><span id="line-189"></span><span>      </span><span id="local-6989586621679140659"><span class="annot"><span class="annottext">loop :: Profile -&gt; Profile
+</span><a href="#local-6989586621679140659"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; Profile -&gt; Profile
+Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#txFeeOverwrite"><span class="hs-identifier hs-var">P.txFeeOverwrite</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1380000</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusLoop"><span class="hs-identifier hs-var">V.plutusLoop</span></a></span><span>
+</span><span id="line-190"></span><span>      </span><span id="local-6989586621679140660"><span class="annot"><span class="annottext">ecdsa :: Profile -&gt; Profile
+</span><a href="#local-6989586621679140660"><span class="hs-identifier hs-var hs-var">ecdsa</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusSaturation"><span class="hs-identifier hs-var">V.plutusSaturation</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusTypeECDSA"><span class="hs-identifier hs-var">V.plutusTypeECDSA</span></a></span><span>
+</span><span id="line-191"></span><span>      </span><span id="local-6989586621679140663"><span class="annot"><span class="annottext">schnorr :: Profile -&gt; Profile
+</span><a href="#local-6989586621679140663"><span class="hs-identifier hs-var hs-var">schnorr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusSaturation"><span class="hs-identifier hs-var">V.plutusSaturation</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#plutusTypeSchnorr"><span class="hs-identifier hs-var">V.plutusTypeSchnorr</span></a></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-comment">-- TODO: TX fee went from 1025000 to 1008000 ????</span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140655"><span class="hs-identifier hs-var">value</span></a></span><span>  </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;default&quot;</span></span><span>             </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueCloud"><span class="hs-identifier hs-var">V.valueCloud</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisUnitary"><span class="hs-identifier hs-var">P.analysisUnitary</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140655"><span class="hs-identifier hs-var">value</span></a></span><span>  </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;oldtracing&quot;</span></span><span>          </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueCloud"><span class="hs-identifier hs-var">V.valueCloud</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#oldTracing"><span class="hs-identifier hs-var">P.oldTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisUnitary"><span class="hs-identifier hs-var">P.analysisUnitary</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140656"><span class="hs-identifier hs-var">plutus</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plutus&quot;</span></span><span>              </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="#local-6989586621679140659"><span class="hs-identifier hs-var">loop</span></a></span><span>         </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140656"><span class="hs-identifier hs-var">plutus</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plutus-secp-ecdsa&quot;</span></span><span>   </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="#local-6989586621679140660"><span class="hs-identifier hs-var">ecdsa</span></a></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140656"><span class="hs-identifier hs-var">plutus</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plutus-secp-schnorr&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="#local-6989586621679140663"><span class="hs-identifier hs-var">schnorr</span></a></span><span>      </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span>  </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#analysisSizeSmall"><span class="hs-identifier hs-var">P.analysisSizeSmall</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-200"></span><span>  </span><span class="annot"><span class="annottext">[Profile] -&gt; [Profile] -&gt; [Profile]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-comment">-- epoch transition: FixedLoaded and &quot;--shutdown-on-slot-synced 900&quot; with 2 nodes.</span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679140669"><span class="annot"><span class="annottext">ep :: Profile
+</span><a href="#local-6989586621679140669"><span class="hs-identifier hs-var hs-var">ep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-205"></span><span>          </span><span class="annot"><span class="annottext">Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#empty"><span class="hs-identifier hs-var">P.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#datasetEmpty"><span class="hs-identifier hs-var">V.datasetEmpty</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Builtin.Empty.html#epochTransitionDuration"><span class="hs-identifier hs-var">epochTransitionDuration</span></a></span><span>
+</span><span id="line-206"></span><span>        </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#uniCircle"><span class="hs-identifier hs-var">P.uniCircle</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#hosts"><span class="hs-identifier hs-var">V.hosts</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#loopback"><span class="hs-identifier hs-var">P.loopback</span></a></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><span class="annottext">Profile
+</span><a href="#local-6989586621679140669"><span class="hs-identifier hs-var">ep</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; (Profile -&gt; Profile) -&gt; Profile
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Profile -&gt; Profile
+String -&gt; Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#name"><span class="hs-identifier hs-var">P.name</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;epoch-transition&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Vocabulary.html#valueLocal"><span class="hs-identifier hs-var">V.valueLocal</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#traceForwardingOn"><span class="hs-identifier hs-var">P.traceForwardingOn</span></a></span><span> </span><span class="annot"><span class="annottext">(Profile -&gt; Profile) -&gt; (Profile -&gt; Profile) -&gt; Profile -&gt; Profile
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Profile -&gt; Profile
+Profile -&gt; Profile
+</span><a href="Cardano.Benchmarking.Profile.Primitives.html#newTracing"><span class="hs-identifier hs-var">P.newTracing</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-210"></span></pre></body></html>

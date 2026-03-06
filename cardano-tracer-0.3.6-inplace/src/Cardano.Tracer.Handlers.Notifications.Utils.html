@@ -1,0 +1,330 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Utils</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#addNewEvent"><span class="hs-identifier">addNewEvent</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#getNewEvents"><span class="hs-identifier">getNewEvents</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#initEventsQueues"><span class="hs-identifier">initEventsQueues</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsEvents"><span class="hs-identifier">updateNotificationsEvents</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsPeriods"><span class="hs-identifier">updateNotificationsPeriods</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier">Trace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Send.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Send</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Settings.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Settings</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Timer.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Timer</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Notifications.Types</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Utils</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html"><span class="hs-identifier">Cardano.Tracer.MetaTrace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html#TracerTrace"><span class="hs-identifier">TracerTrace</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html"><span class="hs-identifier">Control.Concurrent.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html#Lock"><span class="hs-identifier">Lock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html"><span class="hs-identifier">Control.Concurrent.STM.TBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#flushTBQueue"><span class="hs-identifier">flushTBQueue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#isFullTBQueue"><span class="hs-identifier">isFullTBQueue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#newTBQueueIO"><span class="hs-identifier">newTBQueueIO</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>                   </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#writeTBQueue"><span class="hs-identifier">writeTBQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier">readTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html"><span class="hs-identifier">Control.Monad.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#unlessM"><span class="hs-identifier">unlessM</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJust"><span class="hs-identifier">whenJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#initEventsQueues"><span class="hs-identifier hs-type">initEventsQueues</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.7/trace-dispatcher-2.11.1/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html#TracerTrace"><span class="hs-identifier hs-type">TracerTrace</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#ConnectedNodesNames"><span class="hs-identifier hs-type">ConnectedNodesNames</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#DataPointRequestors"><span class="hs-identifier hs-type">DataPointRequestors</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html#Lock"><span class="hs-identifier hs-type">Lock</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-34"></span><span id="initEventsQueues"><span class="annot"><span class="annottext">initEventsQueues :: Trace IO TracerTrace
+-&gt; Maybe FilePath
+-&gt; ConnectedNodesNames
+-&gt; DataPointRequestors
+-&gt; Lock
+-&gt; IO EventsQueues
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#initEventsQueues"><span class="hs-identifier hs-var hs-var">initEventsQueues</span></a></span></span><span> </span><span id="local-6989586621679182807"><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679182807"><span class="hs-identifier hs-var">tracer</span></a></span></span><span> </span><span id="local-6989586621679182808"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679182808"><span class="hs-identifier hs-var">rtvSD</span></a></span></span><span> </span><span id="local-6989586621679182809"><span class="annot"><span class="annottext">ConnectedNodesNames
+</span><a href="#local-6989586621679182809"><span class="hs-identifier hs-var">nodesNames</span></a></span></span><span> </span><span id="local-6989586621679182810"><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679182810"><span class="hs-identifier hs-var">dpReqs</span></a></span></span><span> </span><span id="local-6989586621679182811"><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679182811"><span class="hs-identifier hs-var">curDPLock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679182812"><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679182812"><span class="hs-identifier hs-var">emailSettings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO EmailSettings
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEmailSettings"><span class="hs-identifier hs-var">readSavedEmailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679182808"><span class="hs-identifier hs-var">rtvSD</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer) -&gt; IO EventsQueues
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">(Map EventGroup (EventsQueue, Timer) -&gt; IO EventsQueues)
+-&gt; ([(EventGroup, (EventsQueue, Timer))]
+    -&gt; Map EventGroup (EventsQueue, Timer))
+-&gt; [(EventGroup, (EventsQueue, Timer))]
+-&gt; IO EventsQueues
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(EventGroup, (EventsQueue, Timer))]
+-&gt; Map EventGroup (EventsQueue, Timer)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">M.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(EventGroup, (EventsQueue, Timer))] -&gt; IO EventsQueues)
+-&gt; IO [(EventGroup, (EventsQueue, Timer))] -&gt; IO EventsQueues
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">EmailSettings -&gt; Bool
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#incompleteEmailSettings"><span class="hs-identifier hs-var">incompleteEmailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679182812"><span class="hs-identifier hs-var">emailSettings</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[(EventGroup, (EventsQueue, Timer))]
+-&gt; IO [(EventGroup, (EventsQueue, Timer))]
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>      </span><span id="local-6989586621679182818"><span class="annot"><span class="annottext">TVar UTCTime
+</span><a href="#local-6989586621679182818"><span class="hs-identifier hs-var">lastTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; IO (TVar UTCTime)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="Cardano.Tracer.Handlers.Utils.html#nullTime"><span class="hs-identifier hs-var">nullTime</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679182825"><span class="annot"><span class="annottext">mkEventQueue :: a -&gt; (Bool, PeriodInSec) -&gt; IO (a, (EventsQueue, Timer))
+</span><a href="#local-6989586621679182825"><span class="hs-identifier hs-var hs-var">mkEventQueue</span></a></span></span><span> </span><span id="local-6989586621679182826"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679182826"><span class="hs-identifier hs-var">ident</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679182827"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679182827"><span class="hs-identifier hs-var">evsS</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679182828"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679182828"><span class="hs-identifier hs-var">evsP</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>            </span><span id="local-6989586621679182829"><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182829"><span class="hs-identifier hs-var">evsQ</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; IO EventsQueue
+forall a. Natural -&gt; IO (TBQueue a)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#newTBQueueIO"><span class="hs-identifier hs-var">newTBQueueIO</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2000</span></span><span>
+</span><span id="line-44"></span><span>            </span><span id="local-6989586621679182830"><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679182830"><span class="hs-identifier hs-var">evsT</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; IO () -&gt; Bool -&gt; PeriodInSec -&gt; IO Timer
+</span><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#mkTimer"><span class="hs-identifier hs-var">mkTimer</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679182807"><span class="hs-identifier hs-var">tracer</span></a></span><span>
+</span><span id="line-45"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Trace IO TracerTrace
+-&gt; EmailSettings
+-&gt; ConnectedNodesNames
+-&gt; DataPointRequestors
+-&gt; Lock
+-&gt; TVar UTCTime
+-&gt; EventsQueue
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Send.html#makeAndSendNotification"><span class="hs-identifier hs-var">makeAndSendNotification</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679182807"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">EmailSettings
+</span><a href="#local-6989586621679182812"><span class="hs-identifier hs-var">emailSettings</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodesNames
+</span><a href="#local-6989586621679182809"><span class="hs-identifier hs-var">nodesNames</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679182810"><span class="hs-identifier hs-var">dpReqs</span></a></span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679182811"><span class="hs-identifier hs-var">curDPLock</span></a></span><span> </span><span class="annot"><span class="annottext">TVar UTCTime
+</span><a href="#local-6989586621679182818"><span class="hs-identifier hs-var">lastTime</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182829"><span class="hs-identifier hs-var">evsQ</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679182827"><span class="hs-identifier hs-var">evsS</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679182828"><span class="hs-identifier hs-var">evsP</span></a></span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><span class="annottext">(a, (EventsQueue, Timer)) -&gt; IO (a, (EventsQueue, Timer))
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679182826"><span class="hs-identifier hs-var">ident</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182829"><span class="hs-identifier hs-var">evsQ</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679182830"><span class="hs-identifier hs-var">evsT</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>      </span><span id="local-6989586621679182833"><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath -&gt; IO EventsSettings
+</span><a href="Cardano.Tracer.Handlers.Notifications.Settings.html#readSavedEventsSettings"><span class="hs-identifier hs-var">readSavedEventsSettings</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679182808"><span class="hs-identifier hs-var">rtvSD</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">((EventGroup, (Bool, PeriodInSec))
+ -&gt; IO (EventGroup, (EventsQueue, Timer)))
+-&gt; [(EventGroup, (Bool, PeriodInSec))]
+-&gt; IO [(EventGroup, (EventsQueue, Timer))]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(EventGroup
+ -&gt; (Bool, PeriodInSec) -&gt; IO (EventGroup, (EventsQueue, Timer)))
+-&gt; (EventGroup, (Bool, PeriodInSec))
+-&gt; IO (EventGroup, (EventsQueue, Timer))
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+-&gt; (Bool, PeriodInSec) -&gt; IO (EventGroup, (EventsQueue, Timer))
+forall {a}.
+a -&gt; (Bool, PeriodInSec) -&gt; IO (a, (EventsQueue, Timer))
+</span><a href="#local-6989586621679182825"><span class="hs-identifier hs-var">mkEventQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventWarnings"><span class="hs-identifier hs-var">EventWarnings</span></a></span><span class="hs-special">,</span><span>         </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsWarnings"><span class="hs-identifier hs-var">evsWarnings</span></a></span><span>    </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventErrors"><span class="hs-identifier hs-var">EventErrors</span></a></span><span class="hs-special">,</span><span>           </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsErrors"><span class="hs-identifier hs-var">evsErrors</span></a></span><span>      </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventCriticals"><span class="hs-identifier hs-var">EventCriticals</span></a></span><span class="hs-special">,</span><span>        </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsCriticals"><span class="hs-identifier hs-var">evsCriticals</span></a></span><span>   </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventAlerts"><span class="hs-identifier hs-var">EventAlerts</span></a></span><span class="hs-special">,</span><span>           </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsAlerts"><span class="hs-identifier hs-var">evsAlerts</span></a></span><span>      </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventEmergencies"><span class="hs-identifier hs-var">EventEmergencies</span></a></span><span class="hs-special">,</span><span>      </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsEmergencies"><span class="hs-identifier hs-var">evsEmergencies</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventNodeDisconnected"><span class="hs-identifier hs-var">EventNodeDisconnected</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EventsSettings -&gt; (Bool, PeriodInSec)
+</span><a href="Cardano.Tracer.Handlers.Notifications.Types.html#evsNodeDisconnected"><span class="hs-identifier hs-var">evsNodeDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">EventsSettings
+</span><a href="#local-6989586621679182833"><span class="hs-identifier hs-var">settings</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#getNewEvents"><span class="hs-identifier hs-type">getNewEvents</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventGroup"><span class="hs-identifier hs-type">EventGroup</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span id="getNewEvents"><span class="annot"><span class="annottext">getNewEvents :: EventsQueues -&gt; EventGroup -&gt; IO [Event]
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#getNewEvents"><span class="hs-identifier hs-var hs-var">getNewEvents</span></a></span></span><span> </span><span id="local-6989586621679182849"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182849"><span class="hs-identifier hs-var">eventsQueues</span></a></span></span><span> </span><span id="local-6989586621679182850"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182850"><span class="hs-identifier hs-var">eventGroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679182851"><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182851"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EventsQueues -&gt; IO (Map EventGroup (EventsQueue, Timer))
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182849"><span class="hs-identifier hs-var">eventsQueues</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">EventGroup
+-&gt; Map EventGroup (EventsQueue, Timer)
+-&gt; Maybe (EventsQueue, Timer)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182850"><span class="hs-identifier hs-var">eventGroup</span></a></span><span> </span><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182851"><span class="hs-identifier hs-var">queues</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Maybe (EventsQueue, Timer)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Event] -&gt; IO [Event]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679182853"><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182853"><span class="hs-identifier hs-var">queue</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Timer
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM [Event] -&gt; IO [Event]
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM [Event] -&gt; IO [Event]) -&gt; STM [Event] -&gt; IO [Event]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue -&gt; STM [Event]
+forall a. TBQueue a -&gt; STM [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#flushTBQueue"><span class="hs-identifier hs-var">flushTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182853"><span class="hs-identifier hs-var">queue</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#addNewEvent"><span class="hs-identifier hs-type">addNewEvent</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventGroup"><span class="hs-identifier hs-type">EventGroup</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span id="addNewEvent"><span class="annot"><span class="annottext">addNewEvent :: EventsQueues -&gt; EventGroup -&gt; Event -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#addNewEvent"><span class="hs-identifier hs-var hs-var">addNewEvent</span></a></span></span><span> </span><span id="local-6989586621679182854"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182854"><span class="hs-identifier hs-var">eventsQueues</span></a></span></span><span> </span><span id="local-6989586621679182855"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182855"><span class="hs-identifier hs-var">eventGroup</span></a></span></span><span> </span><span id="local-6989586621679182856"><span class="annot"><span class="annottext">Event
+</span><a href="#local-6989586621679182856"><span class="hs-identifier hs-var">event</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679182857"><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182857"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EventsQueues -&gt; IO (Map EventGroup (EventsQueue, Timer))
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182854"><span class="hs-identifier hs-var">eventsQueues</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">Maybe (EventsQueue, Timer)
+-&gt; ((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+Maybe a -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJust"><span class="hs-identifier hs-var">whenJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+-&gt; Map EventGroup (EventsQueue, Timer)
+-&gt; Maybe (EventsQueue, Timer)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182855"><span class="hs-identifier hs-var">eventGroup</span></a></span><span> </span><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182857"><span class="hs-identifier hs-var">queues</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ())
+-&gt; ((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679182858"><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182858"><span class="hs-identifier hs-var">queue</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Timer
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">STM Bool -&gt; STM () -&gt; STM ()
+forall (m :: * -&gt; *). Monad m =&gt; m Bool -&gt; m () -&gt; m ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#unlessM"><span class="hs-identifier hs-var">unlessM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventsQueue -&gt; STM Bool
+forall a. TBQueue a -&gt; STM Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#isFullTBQueue"><span class="hs-identifier hs-var">isFullTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182858"><span class="hs-identifier hs-var">queue</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; STM ()) -&gt; STM () -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue -&gt; Event -&gt; STM ()
+forall a. TBQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#writeTBQueue"><span class="hs-identifier hs-var">writeTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueue
+</span><a href="#local-6989586621679182858"><span class="hs-identifier hs-var">queue</span></a></span><span> </span><span class="annot"><span class="annottext">Event
+</span><a href="#local-6989586621679182856"><span class="hs-identifier hs-var">event</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><span class="hs-comment">-- | ..</span></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsEvents"><span class="hs-identifier hs-type">updateNotificationsEvents</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventGroup"><span class="hs-identifier hs-type">EventGroup</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span id="updateNotificationsEvents"><span class="annot"><span class="annottext">updateNotificationsEvents :: EventsQueues -&gt; EventGroup -&gt; Bool -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsEvents"><span class="hs-identifier hs-var hs-var">updateNotificationsEvents</span></a></span></span><span> </span><span id="local-6989586621679182859"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182859"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span id="local-6989586621679182860"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182860"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; IO ()) -&gt; EventsQueues -&gt; EventGroup -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#changeTimerState"><span class="hs-identifier hs-var">changeTimerState</span></a></span><span> </span><span class="annot"><span class="annottext">Timer -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#startTimer"><span class="hs-identifier hs-var">startTimer</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182859"><span class="hs-identifier hs-var">queues</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182860"><span class="hs-identifier hs-var">group</span></a></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsEvents"><span class="hs-identifier hs-var">updateNotificationsEvents</span></a></span><span> </span><span id="local-6989586621679182863"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182863"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span id="local-6989586621679182864"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182864"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; IO ()) -&gt; EventsQueues -&gt; EventGroup -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#changeTimerState"><span class="hs-identifier hs-var">changeTimerState</span></a></span><span> </span><span class="annot"><span class="annottext">Timer -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#stopTimer"><span class="hs-identifier hs-var">stopTimer</span></a></span><span>  </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182863"><span class="hs-identifier hs-var">queues</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182864"><span class="hs-identifier hs-var">group</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsPeriods"><span class="hs-identifier hs-type">updateNotificationsPeriods</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventGroup"><span class="hs-identifier hs-type">EventGroup</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#PeriodInSec"><span class="hs-identifier hs-type">PeriodInSec</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span id="updateNotificationsPeriods"><span class="annot"><span class="annottext">updateNotificationsPeriods :: EventsQueues -&gt; EventGroup -&gt; PeriodInSec -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#updateNotificationsPeriods"><span class="hs-identifier hs-var hs-var">updateNotificationsPeriods</span></a></span></span><span> </span><span id="local-6989586621679182866"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182866"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span id="local-6989586621679182867"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182867"><span class="hs-identifier hs-var">group</span></a></span></span><span> </span><span id="local-6989586621679182868"><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679182868"><span class="hs-identifier hs-var">period</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">(Timer -&gt; IO ()) -&gt; EventsQueues -&gt; EventGroup -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#changeTimerState"><span class="hs-identifier hs-var">changeTimerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Timer -&gt; PeriodInSec -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#setCallPeriod"><span class="hs-operator hs-var">`setCallPeriod`</span></a></span><span> </span><span class="annot"><span class="annottext">PeriodInSec
+</span><a href="#local-6989586621679182868"><span class="hs-identifier hs-var">period</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182866"><span class="hs-identifier hs-var">queues</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182867"><span class="hs-identifier hs-var">group</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#changeTimerState"><span class="hs-identifier hs-type">changeTimerState</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Timer.html#Timer"><span class="hs-identifier hs-type">Timer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventsQueues"><span class="hs-identifier hs-type">EventsQueues</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Notifications.Types.html#EventGroup"><span class="hs-identifier hs-type">EventGroup</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span id="changeTimerState"><span class="annot"><span class="annottext">changeTimerState :: (Timer -&gt; IO ()) -&gt; EventsQueues -&gt; EventGroup -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Notifications.Utils.html#changeTimerState"><span class="hs-identifier hs-var hs-var">changeTimerState</span></a></span></span><span> </span><span id="local-6989586621679182870"><span class="annot"><span class="annottext">Timer -&gt; IO ()
+</span><a href="#local-6989586621679182870"><span class="hs-identifier hs-var">setter</span></a></span></span><span> </span><span id="local-6989586621679182871"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182871"><span class="hs-identifier hs-var">eventsQueues</span></a></span></span><span> </span><span id="local-6989586621679182872"><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182872"><span class="hs-identifier hs-var">eventGroup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679182873"><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182873"><span class="hs-identifier hs-var">queues</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EventsQueues -&gt; IO (Map EventGroup (EventsQueue, Timer))
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679182871"><span class="hs-identifier hs-var">eventsQueues</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">Maybe (EventsQueue, Timer)
+-&gt; ((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+Maybe a -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/xh6gfvw2lj1gmksjayv4c02ms78jg954-extra-lib-extra-1.8-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJust"><span class="hs-identifier hs-var">whenJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventGroup
+-&gt; Map EventGroup (EventsQueue, Timer)
+-&gt; Maybe (EventsQueue, Timer)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="#local-6989586621679182872"><span class="hs-identifier hs-var">eventGroup</span></a></span><span> </span><span class="annot"><span class="annottext">Map EventGroup (EventsQueue, Timer)
+</span><a href="#local-6989586621679182873"><span class="hs-identifier hs-var">queues</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ())
+-&gt; ((EventsQueue, Timer) -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Timer -&gt; IO ()
+</span><a href="#local-6989586621679182870"><span class="hs-identifier hs-var">setter</span></a></span><span> </span><span class="annot"><span class="annottext">(Timer -&gt; IO ())
+-&gt; ((EventsQueue, Timer) -&gt; Timer) -&gt; (EventsQueue, Timer) -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(EventsQueue, Timer) -&gt; Timer
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span>
+</span><span id="line-103"></span></pre></body></html>

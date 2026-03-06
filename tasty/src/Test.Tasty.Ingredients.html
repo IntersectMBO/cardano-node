@@ -1,0 +1,344 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module contains the core definitions related to ingredients.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- Ingredients themselves are provided by other modules (usually under</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- the @Test.Tasty.Ingredients.*@ hierarchy).</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- @since 0.8</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Tasty.Ingredients</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier">Ingredient</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#tryIngredients"><span class="hs-identifier">tryIngredients</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#ingredientOptions"><span class="hs-identifier">ingredientOptions</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#ingredientsOptions"><span class="hs-identifier">ingredientsOptions</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#suiteOptions"><span class="hs-identifier">suiteOptions</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#composeReporters"><span class="hs-identifier">composeReporters</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html"><span class="hs-identifier">Test.Tasty.Core</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Run.html"><span class="hs-identifier">Test.Tasty.Run</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html"><span class="hs-identifier">Test.Tasty.Options</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html"><span class="hs-identifier">Test.Tasty.Options.Core</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Concurrent.Async.html#concurrently"><span class="hs-identifier">concurrently</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | 'Ingredient's make your test suite tasty.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- Ingredients represent different actions that you can perform on your</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- test suite. One obvious ingredient that you want to include is</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- one that runs tests and reports the progress and results.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- Another standard ingredient is one that simply prints the names of all</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- tests.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- Similar to test providers (see 'IsTest'), every ingredient may specify</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- which options it cares about, so that those options are presented to</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- the user if the ingredient is included in the test suite.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- An ingredient can choose, typically based on the 'OptionSet', whether to</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- run. That's what the 'Maybe' is for. The first ingredient that agreed to</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- run does its work, and the remaining ingredients are ignored. Thus, the</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- order in which you arrange the ingredients may matter.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Usually, the ingredient which runs the tests is unconditional and thus</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- should be placed last in the list. Other ingredients usually run only</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- if explicitly requested via an option. Their relative order thus doesn't</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- matter.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- That's all you need to know from an (advanced) user perspective. Read</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- on if you want to create a new ingredient.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- There are two kinds of ingredients.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- The first kind is 'TestReporter'. If the ingredient that agrees to run</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- is a 'TestReporter', then tasty will automatically launch the tests and</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- pass a 'StatusMap' to the ingredient. All the ingredient needs to do</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- then is to process the test results and probably report them to the user</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- in some way (hence the name).</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- 'TestManager' is the second kind of ingredient. It is typically used for</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- test management purposes (such as listing the test names), although it</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- can also be used for running tests (but, unlike 'TestReporter', it has</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- to launch the tests manually if it wants them to be run).  It is</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- therefore more general than 'TestReporter'. 'TestReporter' is provided</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- just for convenience.</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- The function's result should indicate whether all the tests passed.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- In the 'TestManager' case, it's up to the ingredient author to decide</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- what the result should be. When no tests are run, the result should</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- probably be 'True'. Sometimes, even if some tests run and fail, it still</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- makes sense to return 'True'.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-75"></span><span class="hs-keyword">data</span><span> </span><span id="Ingredient"><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-var">Ingredient</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TestReporter"><span class="annot"><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-var">TestReporter</span></a></span></span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Run.html#StatusMap"><span class="hs-identifier hs-type">StatusMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Core.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>   </span><span class="hs-comment">-- ^ For the explanation on how the callback works, see the</span><span>
+</span><span id="line-80"></span><span>   </span><span class="hs-comment">-- documentation for 'launchTestTree'.</span><span>
+</span><span id="line-81"></span><span>   </span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span>   </span><span class="hs-comment">-- @since 0.10</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TestManager"><span class="annot"><a href="Test.Tasty.Ingredients.html#TestManager"><span class="hs-identifier hs-var">TestManager</span></a></span></span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ @since 0.4</span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Try to run an 'Ingredient'.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- If the ingredient refuses to run (usually based on the 'OptionSet'),</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- the function returns 'Nothing'.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- For a 'TestReporter', this function automatically starts running the</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- tests in the background.</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- This function is not publicly exposed.</span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#tryIngredient"><span class="hs-identifier hs-type">tryIngredient</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span id="tryIngredient"><span class="annot"><span class="annottext">tryIngredient :: Ingredient -&gt; OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="Test.Tasty.Ingredients.html#tryIngredient"><span class="hs-identifier hs-var hs-var">tryIngredient</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-type">TestReporter</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679096097"><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096097"><span class="hs-identifier hs-var">report</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679096098"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096098"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679096099"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096099"><span class="hs-identifier hs-var">testTree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="hs-comment">-- Maybe monad</span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679096100"><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096100"><span class="hs-identifier hs-var">reportFn</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096097"><span class="hs-identifier hs-var">report</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096098"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096099"><span class="hs-identifier hs-var">testTree</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">IO Bool -&gt; Maybe (IO Bool)
+forall a. a -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; Maybe (IO Bool)) -&gt; IO Bool -&gt; Maybe (IO Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+-&gt; TestTree -&gt; (StatusMap -&gt; IO (Time -&gt; IO Bool)) -&gt; IO Bool
+forall a.
+OptionSet -&gt; TestTree -&gt; (StatusMap -&gt; IO (Time -&gt; IO a)) -&gt; IO a
+</span><a href="Test.Tasty.Run.html#launchTestTree"><span class="hs-identifier hs-var">launchTestTree</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096098"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096099"><span class="hs-identifier hs-var">testTree</span></a></span><span> </span><span class="annot"><span class="annottext">((StatusMap -&gt; IO (Time -&gt; IO Bool)) -&gt; IO Bool)
+-&gt; (StatusMap -&gt; IO (Time -&gt; IO Bool)) -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096101"><span class="annot"><span class="annottext">StatusMap
+</span><a href="#local-6989586621679096101"><span class="hs-identifier hs-var">smap</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096100"><span class="hs-identifier hs-var">reportFn</span></a></span><span> </span><span class="annot"><span class="annottext">StatusMap
+</span><a href="#local-6989586621679096101"><span class="hs-identifier hs-var">smap</span></a></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#tryIngredient"><span class="hs-identifier hs-var">tryIngredient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestManager"><span class="hs-identifier hs-type">TestManager</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679096102"><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="#local-6989586621679096102"><span class="hs-identifier hs-var">manage</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679096103"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096103"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span id="local-6989586621679096104"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096104"><span class="hs-identifier hs-var">testTree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="#local-6989586621679096102"><span class="hs-identifier hs-var">manage</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096103"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096104"><span class="hs-identifier hs-var">testTree</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Run the first 'Ingredient' that agrees to be run.</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- If no one accepts the task, return 'Nothing'. This is usually a sign of</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- misconfiguration.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#tryIngredients"><span class="hs-identifier hs-type">tryIngredients</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Options.html#OptionSet"><span class="hs-identifier hs-type">OptionSet</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span id="tryIngredients"><span class="annot"><span class="annottext">tryIngredients :: [Ingredient] -&gt; OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="Test.Tasty.Ingredients.html#tryIngredients"><span class="hs-identifier hs-var hs-var">tryIngredients</span></a></span></span><span> </span><span id="local-6989586621679096105"><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679096105"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621679096106"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096106"><span class="hs-identifier hs-var">opts'</span></a></span></span><span> </span><span id="local-6989586621679096107"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096107"><span class="hs-identifier hs-var">tree'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">[Maybe (IO Bool)] -&gt; Maybe (IO Bool)
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable t, MonadPlus m) =&gt;
+t (m a) -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#msum"><span class="hs-identifier hs-var">msum</span></a></span><span> </span><span class="annot"><span class="annottext">([Maybe (IO Bool)] -&gt; Maybe (IO Bool))
+-&gt; [Maybe (IO Bool)] -&gt; Maybe (IO Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Ingredient -&gt; Maybe (IO Bool))
+-&gt; [Ingredient] -&gt; [Maybe (IO Bool)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679096109"><span class="annot"><span class="annottext">Ingredient
+</span><a href="#local-6989586621679096109"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ingredient -&gt; OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><a href="Test.Tasty.Ingredients.html#tryIngredient"><span class="hs-identifier hs-var">tryIngredient</span></a></span><span> </span><span class="annot"><span class="annottext">Ingredient
+</span><a href="#local-6989586621679096109"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096110"><span class="hs-identifier hs-var">opts</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096111"><span class="hs-identifier hs-var">tree</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679096105"><span class="hs-identifier hs-var">ins</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679096110"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096110"><span class="hs-identifier hs-var">opts</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679096111"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096111"><span class="hs-identifier hs-var">tree</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; (OptionSet, TestTree)
+</span><a href="Test.Tasty.Run.html#applyTopLevelPlusTestOptions"><span class="hs-identifier hs-var">applyTopLevelPlusTestOptions</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096106"><span class="hs-identifier hs-var">opts'</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096107"><span class="hs-identifier hs-var">tree'</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- | Return the options which are relevant for the given ingredient.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- Note that this isn't the same as simply pattern-matching on</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- 'Ingredient'. E.g. options for a 'TestReporter' automatically include</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- 'NumThreads'.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#ingredientOptions"><span class="hs-identifier hs-type">ingredientOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span id="ingredientOptions"><span class="annot"><span class="annottext">ingredientOptions :: Ingredient -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#ingredientOptions"><span class="hs-identifier hs-var hs-var">ingredientOptions</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-type">TestReporter</span></a></span><span> </span><span id="local-6989586621679096114"><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096114"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><span class="annottext">Proxy NumThreads -&gt; OptionDescription
+forall v. IsOption v =&gt; Proxy v -&gt; OptionDescription
+</span><a href="Test.Tasty.Options.html#Option"><span class="hs-identifier hs-var">Option</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy NumThreads
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Test.Tasty.Options.Core.html#NumThreads"><span class="hs-identifier hs-type">NumThreads</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OptionDescription -&gt; [OptionDescription] -&gt; [OptionDescription]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096114"><span class="hs-identifier hs-var">opts</span></a></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#ingredientOptions"><span class="hs-identifier hs-var">ingredientOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestManager"><span class="hs-identifier hs-type">TestManager</span></a></span><span> </span><span id="local-6989586621679096117"><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096117"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (IO Bool)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096117"><span class="hs-identifier hs-var">opts</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- | Like 'ingredientOptions', but folds over multiple ingredients.</span><span>
+</span><span id="line-129"></span><span class="hs-comment">--</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#ingredientsOptions"><span class="hs-identifier hs-type">ingredientsOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span id="ingredientsOptions"><span class="annot"><span class="annottext">ingredientsOptions :: [Ingredient] -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#ingredientsOptions"><span class="hs-identifier hs-var hs-var">ingredientsOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Options.html#uniqueOptionDescriptions"><span class="hs-identifier hs-var">uniqueOptionDescriptions</span></a></span><span> </span><span class="annot"><span class="annottext">([OptionDescription] -&gt; [OptionDescription])
+-&gt; ([Ingredient] -&gt; [OptionDescription])
+-&gt; [Ingredient]
+-&gt; [OptionDescription]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Ingredient -&gt; [OptionDescription])
+-&gt; [Ingredient] -&gt; [OptionDescription]
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; [a] -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#foldMap"><span class="hs-identifier hs-var">F.foldMap</span></a></span><span> </span><span class="annot"><span class="annottext">Ingredient -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#ingredientOptions"><span class="hs-identifier hs-var">ingredientOptions</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- | All the options relevant for this test suite. This includes the</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- options for the test tree and ingredients, and the core options.</span><span>
+</span><span id="line-136"></span><span class="hs-comment">--</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- @since 0.4</span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#suiteOptions"><span class="hs-identifier hs-type">suiteOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Tasty.Options.html#OptionDescription"><span class="hs-identifier hs-type">OptionDescription</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-139"></span><span id="suiteOptions"><span class="annot"><span class="annottext">suiteOptions :: [Ingredient] -&gt; TestTree -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#suiteOptions"><span class="hs-identifier hs-var hs-var">suiteOptions</span></a></span></span><span> </span><span id="local-6989586621679096121"><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679096121"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621679096122"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096122"><span class="hs-identifier hs-var">tree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Options.html#uniqueOptionDescriptions"><span class="hs-identifier hs-var">uniqueOptionDescriptions</span></a></span><span> </span><span class="annot"><span class="annottext">([OptionDescription] -&gt; [OptionDescription])
+-&gt; [OptionDescription] -&gt; [OptionDescription]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="Test.Tasty.Options.Core.html#coreOptions"><span class="hs-identifier hs-var">coreOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; [OptionDescription] -&gt; [OptionDescription]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><span class="annottext">[Ingredient] -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Ingredients.html#ingredientsOptions"><span class="hs-identifier hs-var">ingredientsOptions</span></a></span><span> </span><span class="annot"><span class="annottext">[Ingredient]
+</span><a href="#local-6989586621679096121"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; [OptionDescription] -&gt; [OptionDescription]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><span class="annottext">TestTree -&gt; [OptionDescription]
+</span><a href="Test.Tasty.Core.html#treeOptions"><span class="hs-identifier hs-var">treeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096122"><span class="hs-identifier hs-var">tree</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- | Compose two 'TestReporter' ingredients which are then executed</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- in parallel. This can be useful if you want to have two reporters</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- active at the same time, e.g., one which prints to the console and</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- one which writes the test results to a file.</span><span>
+</span><span id="line-148"></span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- Be aware that it is not possible to use 'composeReporters' with a 'TestManager',</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- it only works for 'TestReporter' ingredients.</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- @since 0.11.2</span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#composeReporters"><span class="hs-identifier hs-type">composeReporters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Tasty.Ingredients.html#Ingredient"><span class="hs-identifier hs-type">Ingredient</span></a></span><span>
+</span><span id="line-154"></span><span id="composeReporters"><span class="annot"><span class="annottext">composeReporters :: Ingredient -&gt; Ingredient -&gt; Ingredient
+</span><a href="Test.Tasty.Ingredients.html#composeReporters"><span class="hs-identifier hs-var hs-var">composeReporters</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-type">TestReporter</span></a></span><span> </span><span id="local-6989586621679096125"><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096125"><span class="hs-identifier hs-var">o1</span></a></span></span><span> </span><span id="local-6989586621679096126"><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096126"><span class="hs-identifier hs-var">f1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-type">TestReporter</span></a></span><span> </span><span id="local-6989586621679096127"><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096127"><span class="hs-identifier hs-var">o2</span></a></span></span><span> </span><span id="local-6989586621679096128"><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096128"><span class="hs-identifier hs-var">f2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><span class="annottext">[OptionDescription]
+-&gt; (OptionSet
+    -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool)))
+-&gt; Ingredient
+</span><a href="Test.Tasty.Ingredients.html#TestReporter"><span class="hs-identifier hs-var">TestReporter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096125"><span class="hs-identifier hs-var">o1</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription] -&gt; [OptionDescription] -&gt; [OptionDescription]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[OptionDescription]
+</span><a href="#local-6989586621679096127"><span class="hs-identifier hs-var">o2</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((OptionSet
+  -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool)))
+ -&gt; Ingredient)
+-&gt; (OptionSet
+    -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool)))
+-&gt; Ingredient
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096129"><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096129"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679096130"><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096130"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096126"><span class="hs-identifier hs-var">f1</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096129"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096130"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OptionSet -&gt; TestTree -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096128"><span class="hs-identifier hs-var">f2</span></a></span><span> </span><span class="annot"><span class="annottext">OptionSet
+</span><a href="#local-6989586621679096129"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679096130"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679096131"><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096131"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096131"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679096132"><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096132"><span class="hs-identifier hs-var">g</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+</span><a href="#local-6989586621679096132"><span class="hs-identifier hs-var">g</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679096133"><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096133"><span class="hs-identifier hs-var">g1</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679096134"><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096134"><span class="hs-identifier hs-var">g2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(StatusMap -&gt; IO (Time -&gt; IO Bool))
+-&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">((StatusMap -&gt; IO (Time -&gt; IO Bool))
+ -&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool)))
+-&gt; (StatusMap -&gt; IO (Time -&gt; IO Bool))
+-&gt; Maybe (StatusMap -&gt; IO (Time -&gt; IO Bool))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096135"><span class="annot"><span class="annottext">StatusMap
+</span><a href="#local-6989586621679096135"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-160"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679096136"><span class="annot"><span class="annottext">Time -&gt; IO Bool
+</span><a href="#local-6989586621679096136"><span class="hs-identifier hs-var">h1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679096137"><span class="annot"><span class="annottext">Time -&gt; IO Bool
+</span><a href="#local-6989586621679096137"><span class="hs-identifier hs-var">h2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Time -&gt; IO Bool)
+-&gt; IO (Time -&gt; IO Bool) -&gt; IO (Time -&gt; IO Bool, Time -&gt; IO Bool)
+forall a b. IO a -&gt; IO b -&gt; IO (a, b)
+</span><a href="Control.Concurrent.Async.html#concurrently"><span class="hs-identifier hs-var">concurrently</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096133"><span class="hs-identifier hs-var">g1</span></a></span><span> </span><span class="annot"><span class="annottext">StatusMap
+</span><a href="#local-6989586621679096135"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StatusMap -&gt; IO (Time -&gt; IO Bool)
+</span><a href="#local-6989586621679096134"><span class="hs-identifier hs-var">g2</span></a></span><span> </span><span class="annot"><span class="annottext">StatusMap
+</span><a href="#local-6989586621679096135"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>      </span><span class="annot"><span class="annottext">(Time -&gt; IO Bool) -&gt; IO (Time -&gt; IO Bool)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">((Time -&gt; IO Bool) -&gt; IO (Time -&gt; IO Bool))
+-&gt; (Time -&gt; IO Bool) -&gt; IO (Time -&gt; IO Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679096138"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679096138"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((Bool, Bool) -&gt; Bool) -&gt; IO (Bool, Bool) -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Bool -&gt; Bool -&gt; Bool) -&gt; (Bool, Bool) -&gt; Bool
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">(&amp;&amp;)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO (Bool, Bool) -&gt; IO Bool) -&gt; IO (Bool, Bool) -&gt; IO Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; IO Bool -&gt; IO (Bool, Bool)
+forall a b. IO a -&gt; IO b -&gt; IO (a, b)
+</span><a href="Control.Concurrent.Async.html#concurrently"><span class="hs-identifier hs-var">concurrently</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time -&gt; IO Bool
+</span><a href="#local-6989586621679096136"><span class="hs-identifier hs-var">h1</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679096138"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time -&gt; IO Bool
+</span><a href="#local-6989586621679096137"><span class="hs-identifier hs-var">h2</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679096138"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span class="annot"><a href="Test.Tasty.Ingredients.html#composeReporters"><span class="hs-identifier hs-var">composeReporters</span></a></span><span> </span><span class="annot"><span class="annottext">Ingredient
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Ingredient
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Ingredient
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Only TestReporters can be composed&quot;</span></span><span>
+</span><span id="line-163"></span></pre></body></html>

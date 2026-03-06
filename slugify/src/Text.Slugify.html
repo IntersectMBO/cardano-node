@@ -1,0 +1,365 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679033135"><span id="local-6989586621679033136"></span></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">{-|
+Module      : Text.Slugify
+Description : The module to convert text into /slug/s. A slug is a hyphen separated string of words.
+Maintainer  : hapytexeu+gh@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+The module to convert text into /slug/s. A slug is a hyphen separated string of words. Slugs are often used
+to make visually pleasant URLs by transforming for example the title of an article into a slug, and use this
+in the URL, for more information see the &lt;https://en.wikipedia.org/wiki/Clean_URL#Slug Wikipedia section&gt;.
+-}</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Text.Slugify</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Slug modes</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Text.Slugify.html#SlugMode"><span class="hs-identifier">SlugMode</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Text.Slugify.html#SlugAscii"><span class="hs-identifier">SlugAscii</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#SlugUnicode"><span class="hs-identifier">SlugUnicode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Character tests</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier">isWordSeparator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier">isWordChar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#isRetainChar"><span class="hs-identifier">isRetainChar</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Slug algorithms</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#slugify"><span class="hs-identifier">slugify</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#slugifyUnicode"><span class="hs-identifier">slugifyUnicode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.Slugify.html#slugifyWith"><span class="hs-identifier">slugifyWith</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#GeneralCategory"><span class="hs-identifier">GeneralCategory</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LowercaseLetter"><span class="hs-identifier">LowercaseLetter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#ModifierLetter"><span class="hs-identifier">ModifierLetter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#OtherLetter"><span class="hs-identifier">OtherLetter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#UppercaseLetter"><span class="hs-identifier">UppercaseLetter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#TitlecaseLetter"><span class="hs-identifier">TitlecaseLetter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#DecimalNumber"><span class="hs-identifier">DecimalNumber</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LetterNumber"><span class="hs-identifier">LetterNumber</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#OtherNumber"><span class="hs-identifier">OtherNumber</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LineSeparator"><span class="hs-identifier">LineSeparator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#ParagraphSeparator"><span class="hs-identifier">ParagraphSeparator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#Space"><span class="hs-identifier">Space</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isAscii"><span class="hs-identifier">isAscii</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#generalCategory"><span class="hs-identifier">generalCategory</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#dropAround"><span class="hs-identifier">dropAround</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#split"><span class="hs-identifier">split</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#toLower"><span class="hs-identifier">toLower</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Normalize</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NormalizationMode</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFKC</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NFKD</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">normalize</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><span class="hs-comment">-- | The given mode to slugify a 'Text' object.</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">data</span><span> </span><span id="SlugMode"><span class="annot"><a href="Text.Slugify.html#SlugMode"><span class="hs-identifier hs-var">SlugMode</span></a></span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SlugAscii"><span class="annot"><a href="Text.Slugify.html#SlugAscii"><span class="hs-identifier hs-var">SlugAscii</span></a></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Slugify by removing diacritics and only retain ASCII characters.</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlugUnicode"><span class="annot"><a href="Text.Slugify.html#SlugUnicode"><span class="hs-identifier hs-var">SlugUnicode</span></a></span></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Slugify by allowing unicode characters.</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679033168"><span id="local-6989586621679033170"><span class="annot"><span class="annottext">SlugMode
+SlugMode -&gt; SlugMode -&gt; Bounded SlugMode
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: SlugMode
+minBound :: SlugMode
+$cmaxBound :: SlugMode
+maxBound :: SlugMode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679033174"><span id="local-6989586621679033182"><span id="local-6989586621679033188"><span id="local-6989586621679033202"><span id="local-6989586621679033204"><span id="local-6989586621679033208"><span id="local-6989586621679033212"><span id="local-6989586621679033216"><span class="annot"><span class="annottext">Int -&gt; SlugMode
+SlugMode -&gt; Int
+SlugMode -&gt; [SlugMode]
+SlugMode -&gt; SlugMode
+SlugMode -&gt; SlugMode -&gt; [SlugMode]
+SlugMode -&gt; SlugMode -&gt; SlugMode -&gt; [SlugMode]
+(SlugMode -&gt; SlugMode)
+-&gt; (SlugMode -&gt; SlugMode)
+-&gt; (Int -&gt; SlugMode)
+-&gt; (SlugMode -&gt; Int)
+-&gt; (SlugMode -&gt; [SlugMode])
+-&gt; (SlugMode -&gt; SlugMode -&gt; [SlugMode])
+-&gt; (SlugMode -&gt; SlugMode -&gt; [SlugMode])
+-&gt; (SlugMode -&gt; SlugMode -&gt; SlugMode -&gt; [SlugMode])
+-&gt; Enum SlugMode
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: SlugMode -&gt; SlugMode
+succ :: SlugMode -&gt; SlugMode
+$cpred :: SlugMode -&gt; SlugMode
+pred :: SlugMode -&gt; SlugMode
+$ctoEnum :: Int -&gt; SlugMode
+toEnum :: Int -&gt; SlugMode
+$cfromEnum :: SlugMode -&gt; Int
+fromEnum :: SlugMode -&gt; Int
+$cenumFrom :: SlugMode -&gt; [SlugMode]
+enumFrom :: SlugMode -&gt; [SlugMode]
+$cenumFromThen :: SlugMode -&gt; SlugMode -&gt; [SlugMode]
+enumFromThen :: SlugMode -&gt; SlugMode -&gt; [SlugMode]
+$cenumFromTo :: SlugMode -&gt; SlugMode -&gt; [SlugMode]
+enumFromTo :: SlugMode -&gt; SlugMode -&gt; [SlugMode]
+$cenumFromThenTo :: SlugMode -&gt; SlugMode -&gt; SlugMode -&gt; [SlugMode]
+enumFromThenTo :: SlugMode -&gt; SlugMode -&gt; SlugMode -&gt; [SlugMode]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679033220"><span id="local-6989586621679033222"><span class="annot"><span class="annottext">SlugMode -&gt; SlugMode -&gt; Bool
+(SlugMode -&gt; SlugMode -&gt; Bool)
+-&gt; (SlugMode -&gt; SlugMode -&gt; Bool) -&gt; Eq SlugMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SlugMode -&gt; SlugMode -&gt; Bool
+== :: SlugMode -&gt; SlugMode -&gt; Bool
+$c/= :: SlugMode -&gt; SlugMode -&gt; Bool
+/= :: SlugMode -&gt; SlugMode -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679033229"><span id="local-6989586621679033231"><span id="local-6989586621679033233"><span id="local-6989586621679033237"><span id="local-6989586621679033240"><span id="local-6989586621679033243"><span id="local-6989586621679033246"><span class="annot"><span class="annottext">Eq SlugMode
+Eq SlugMode =&gt;
+(SlugMode -&gt; SlugMode -&gt; Ordering)
+-&gt; (SlugMode -&gt; SlugMode -&gt; Bool)
+-&gt; (SlugMode -&gt; SlugMode -&gt; Bool)
+-&gt; (SlugMode -&gt; SlugMode -&gt; Bool)
+-&gt; (SlugMode -&gt; SlugMode -&gt; Bool)
+-&gt; (SlugMode -&gt; SlugMode -&gt; SlugMode)
+-&gt; (SlugMode -&gt; SlugMode -&gt; SlugMode)
+-&gt; Ord SlugMode
+SlugMode -&gt; SlugMode -&gt; Bool
+SlugMode -&gt; SlugMode -&gt; Ordering
+SlugMode -&gt; SlugMode -&gt; SlugMode
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SlugMode -&gt; SlugMode -&gt; Ordering
+compare :: SlugMode -&gt; SlugMode -&gt; Ordering
+$c&lt; :: SlugMode -&gt; SlugMode -&gt; Bool
+&lt; :: SlugMode -&gt; SlugMode -&gt; Bool
+$c&lt;= :: SlugMode -&gt; SlugMode -&gt; Bool
+&lt;= :: SlugMode -&gt; SlugMode -&gt; Bool
+$c&gt; :: SlugMode -&gt; SlugMode -&gt; Bool
+&gt; :: SlugMode -&gt; SlugMode -&gt; Bool
+$c&gt;= :: SlugMode -&gt; SlugMode -&gt; Bool
+&gt;= :: SlugMode -&gt; SlugMode -&gt; Bool
+$cmax :: SlugMode -&gt; SlugMode -&gt; SlugMode
+max :: SlugMode -&gt; SlugMode -&gt; SlugMode
+$cmin :: SlugMode -&gt; SlugMode -&gt; SlugMode
+min :: SlugMode -&gt; SlugMode -&gt; SlugMode
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679033250"><span id="local-6989586621679033254"><span id="local-6989586621679033257"><span id="local-6989586621679033262"><span class="annot"><span class="annottext">ReadPrec [SlugMode]
+ReadPrec SlugMode
+Int -&gt; ReadS SlugMode
+ReadS [SlugMode]
+(Int -&gt; ReadS SlugMode)
+-&gt; ReadS [SlugMode]
+-&gt; ReadPrec SlugMode
+-&gt; ReadPrec [SlugMode]
+-&gt; Read SlugMode
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS SlugMode
+readsPrec :: Int -&gt; ReadS SlugMode
+$creadList :: ReadS [SlugMode]
+readList :: ReadS [SlugMode]
+$creadPrec :: ReadPrec SlugMode
+readPrec :: ReadPrec SlugMode
+$creadListPrec :: ReadPrec [SlugMode]
+readListPrec :: ReadPrec [SlugMode]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679033266"><span id="local-6989586621679033268"><span id="local-6989586621679033272"><span class="annot"><span class="annottext">Int -&gt; SlugMode -&gt; ShowS
+[SlugMode] -&gt; ShowS
+SlugMode -&gt; [Char]
+(Int -&gt; SlugMode -&gt; ShowS)
+-&gt; (SlugMode -&gt; [Char]) -&gt; ([SlugMode] -&gt; ShowS) -&gt; Show SlugMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SlugMode -&gt; ShowS
+showsPrec :: Int -&gt; SlugMode -&gt; ShowS
+$cshow :: SlugMode -&gt; [Char]
+show :: SlugMode -&gt; [Char]
+$cshowList :: [SlugMode] -&gt; ShowS
+showList :: [SlugMode] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Check if the given 'Char'acter is a word separator, for the given slugify</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- algorithm.</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-type">isWordSeparator</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given 'Char'acter to check.</span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ 'True' if the given character is a separator; 'False' otherwise.</span></span><span>
+</span><span id="line-40"></span><span id="isWordSeparator"><span class="annot"><span class="annottext">isWordSeparator :: Char -&gt; Bool
+</span><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var hs-var">isWordSeparator</span></a></span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x0b'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x0c'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x1c'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x85'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\t'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\r'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x1d'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x1f'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\x1e'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span id="local-6989586621679033275"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033275"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Char -&gt; GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#generalCategory"><span class="hs-identifier hs-var">generalCategory</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033275"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LineSeparator"><span class="hs-identifier hs-var">LineSeparator</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>         </span><span class="hs-comment">-- Zl</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#ParagraphSeparator"><span class="hs-identifier hs-var">ParagraphSeparator</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>    </span><span class="hs-comment">-- Zp</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#Space"><span class="hs-identifier hs-var">Space</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>                 </span><span class="hs-comment">-- Zs</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | Check if the given 'Char'acter is considered a word character for the</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- slugify algorithm.</span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-type">isWordChar</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given 'Char'acter to check.</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ 'True' if it is a word character; 'False' otherwise.</span></span><span>
+</span><span id="line-63"></span><span id="isWordChar"><span class="annot"><span class="annottext">isWordChar :: Char -&gt; Bool
+</span><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var hs-var">isWordChar</span></a></span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var">isWordChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\125259'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var">isWordChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\72162'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var">isWordChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\123215'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var">isWordChar</span></a></span><span> </span><span id="local-6989586621679033276"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033276"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Char -&gt; GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#generalCategory"><span class="hs-identifier hs-var">generalCategory</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033276"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LowercaseLetter"><span class="hs-identifier hs-var">LowercaseLetter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>       </span><span class="hs-comment">-- Ll</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#ModifierLetter"><span class="hs-identifier hs-var">ModifierLetter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>        </span><span class="hs-comment">-- Lm</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#OtherLetter"><span class="hs-identifier hs-var">OtherLetter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>           </span><span class="hs-comment">-- Lo</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#UppercaseLetter"><span class="hs-identifier hs-var">UppercaseLetter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>       </span><span class="hs-comment">-- Lu</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#TitlecaseLetter"><span class="hs-identifier hs-var">TitlecaseLetter</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>       </span><span class="hs-comment">-- Lt</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#DecimalNumber"><span class="hs-identifier hs-var">DecimalNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>         </span><span class="hs-comment">-- Nd</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#LetterNumber"><span class="hs-identifier hs-var">LetterNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>          </span><span class="hs-comment">-- Nl</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#OtherNumber"><span class="hs-identifier hs-var">OtherNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>           </span><span class="hs-comment">-- No</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">GeneralCategory
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Text.Slugify.html#_postDrop"><span class="hs-identifier hs-type">_postDrop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-79"></span><span id="_postDrop"><span class="annot"><span class="annottext">_postDrop :: Char -&gt; Bool
+</span><a href="Text.Slugify.html#_postDrop"><span class="hs-identifier hs-var hs-var">_postDrop</span></a></span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'_'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Text.Slugify.html#_postDrop"><span class="hs-identifier hs-var">_postDrop</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'-'</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Text.Slugify.html#_postDrop"><span class="hs-identifier hs-var">_postDrop</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | Check if the given character is retained by the slugify algorithm.</span></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Text.Slugify.html#isRetainChar"><span class="hs-identifier hs-type">isRetainChar</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given 'Char'acter to check.</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ True if the given 'Char'acter will be retained; 'False' otherwise. Some of these characters will however be converted to a hyphen (@-@), and thus eventually will only produce a different character in the slug.</span></span><span>
+</span><span id="line-87"></span><span id="isRetainChar"><span class="annot"><span class="annottext">isRetainChar :: Char -&gt; Bool
+</span><a href="Text.Slugify.html#isRetainChar"><span class="hs-identifier hs-var hs-var">isRetainChar</span></a></span></span><span> </span><span id="local-6989586621679033278"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033278"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Text.Slugify.html#isWordChar"><span class="hs-identifier hs-var">isWordChar</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033278"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679033278"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Text.Slugify.html#_slugify%27"><span class="hs-identifier hs-type">_slugify'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-90"></span><span id="_slugify%27"><span class="annot"><span class="annottext">_slugify' :: Text -&gt; Text
+</span><a href="Text.Slugify.html#_slugify%27"><span class="hs-identifier hs-var hs-var">_slugify'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#dropAround"><span class="hs-identifier hs-var">dropAround</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Text.Slugify.html#_postDrop"><span class="hs-identifier hs-var">_postDrop</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text) -&gt; (Text -&gt; [Text]) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Bool) -&gt; [Text] -&gt; [Text]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Text -&gt; Bool) -&gt; Text -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">T.null</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; [Text]) -&gt; (Text -&gt; [Text]) -&gt; Text -&gt; [Text]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; [Text]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#split"><span class="hs-identifier hs-var">split</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Text.Slugify.html#isWordSeparator"><span class="hs-identifier hs-var">isWordSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; [Text]) -&gt; (Text -&gt; Text) -&gt; Text -&gt; [Text]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#filter"><span class="hs-identifier hs-var">T.filter</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="Text.Slugify.html#isRetainChar"><span class="hs-identifier hs-var">isRetainChar</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Slugify the given 'Text' object and retain Unicode characters.</span></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Text.Slugify.html#slugifyUnicode"><span class="hs-identifier hs-type">slugifyUnicode</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given text to convert to a slug.</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The corresponding /slug/.</span></span><span>
+</span><span id="line-96"></span><span id="slugifyUnicode"><span class="annot"><span class="annottext">slugifyUnicode :: Text -&gt; Text
+</span><a href="Text.Slugify.html#slugifyUnicode"><span class="hs-identifier hs-var hs-var">slugifyUnicode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="Text.Slugify.html#_slugify%27"><span class="hs-identifier hs-var">_slugify'</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NormalizationMode -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">normalize</span></span><span> </span><span class="annot"><span class="annottext">NormalizationMode
+</span><span class="hs-identifier hs-var">NFKC</span></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- | Slugify the given 'Text' object and remove diacritics and convert</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- characters to the corresponding ASCII equivalent.</span><span>
+</span><span id="line-100"></span><span class="annot"><a href="Text.Slugify.html#slugify"><span class="hs-identifier hs-type">slugify</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given text to convert to a slug.</span></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The corresponding /slug/.</span></span><span>
+</span><span id="line-103"></span><span id="slugify"><span class="annot"><span class="annottext">slugify :: Text -&gt; Text
+</span><a href="Text.Slugify.html#slugify"><span class="hs-identifier hs-var hs-var">slugify</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="Text.Slugify.html#_slugify%27"><span class="hs-identifier hs-var">_slugify'</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#filter"><span class="hs-identifier hs-var">T.filter</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isAscii"><span class="hs-identifier hs-var">isAscii</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NormalizationMode -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">normalize</span></span><span> </span><span class="annot"><span class="annottext">NormalizationMode
+</span><span class="hs-identifier hs-var">NFKD</span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><span class="hs-comment">-- | Slugify the given 'Text' with the given 'SlugMode'.</span></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Text.Slugify.html#slugifyWith"><span class="hs-identifier hs-type">slugifyWith</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.Slugify.html#SlugMode"><span class="hs-identifier hs-type">SlugMode</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given mode to slugify.</span></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The given text to convert to a slug.</span></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The corresponding /slug/.</span></span><span>
+</span><span id="line-110"></span><span id="slugifyWith"><span class="annot"><span class="annottext">slugifyWith :: SlugMode -&gt; Text -&gt; Text
+</span><a href="Text.Slugify.html#slugifyWith"><span class="hs-identifier hs-var hs-var">slugifyWith</span></a></span></span><span> </span><span class="annot"><span class="annottext">SlugMode
+</span><a href="Text.Slugify.html#SlugAscii"><span class="hs-identifier hs-var">SlugAscii</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="Text.Slugify.html#slugify"><span class="hs-identifier hs-var">slugify</span></a></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Text.Slugify.html#slugifyWith"><span class="hs-identifier hs-var">slugifyWith</span></a></span><span> </span><span class="annot"><span class="annottext">SlugMode
+</span><a href="Text.Slugify.html#SlugUnicode"><span class="hs-identifier hs-var">SlugUnicode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="Text.Slugify.html#slugifyUnicode"><span class="hs-identifier hs-var">slugifyUnicode</span></a></span><span>
+</span><span id="line-112"></span></pre></body></html>

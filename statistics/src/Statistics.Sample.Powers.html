@@ -1,0 +1,722 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679214673"><span id="local-6989586621679214674"></span></span><span class="hs-pragma">{-# LANGUAGE BangPatterns, DeriveDataTypeable, DeriveGeneric,
+    FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module    : Statistics.Sample.Powers</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright : (c) 2009, 2010 Bryan O'Sullivan</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License   : BSD3</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Maintainer  : bos@serpentine.com</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Portability : portable</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Very fast statistics over simple powers of a sample.  These can all</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- be computed efficiently in just a single pass over a sample, with</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- that pass subject to stream fusion.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- The tradeoff is that some of these functions are less numerically</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- robust than their counterparts in the 'Statistics.Sample' module.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Where this is the case, the alternatives are noted.</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Statistics.Sample.Powers</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Types</span></span><span>
+</span><span id="line-23"></span><span>      </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier">Powers</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Constructor</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#powers"><span class="hs-identifier">powers</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Descriptive functions</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#order"><span class="hs-identifier">order</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#count"><span class="hs-identifier">count</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#sum"><span class="hs-identifier">sum</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Statistics of location</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#mean"><span class="hs-identifier">mean</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Statistics of dispersion</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier">variance</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#stdDev"><span class="hs-identifier">stdDev</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#varianceUnbiased"><span class="hs-identifier">varianceUnbiased</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Functions over central moments</span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier">centralMoment</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#skewness"><span class="hs-identifier">skewness</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#kurtosis"><span class="hs-identifier">kurtosis</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="hs-comment">-- * References</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="hs-comment">-- $references</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.ST.html"><span class="hs-identifier">Control.Monad.ST</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/binary-0.8.9.1/src/Data.Binary.html"><span class="hs-identifier">Data.Binary</span></a></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/binary-0.8.9.1/src/Data.Binary.Class.html#Binary"><span class="hs-identifier">Binary</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span>             </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Binary</span></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(!)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.SpecFunctions</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">choose</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#sum"><span class="hs-identifier">sum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Statistics.Function.html"><span class="hs-identifier">Statistics.Function</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Function.html#indexed"><span class="hs-identifier">indexed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector</span></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Generic</span></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">G</span></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Storable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SV</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed.Mutable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MU</span></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Statistics.Sample.Internal.html"><span class="hs-identifier">Statistics.Sample.Internal</span></a></span><span>  </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">newtype</span><span> </span><span id="Powers"><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-var">Powers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Powers"><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-var">Powers</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">U.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679214756"><span id="local-6989586621679214761"><span class="annot"><span class="annottext">Powers -&gt; Powers -&gt; Bool
+(Powers -&gt; Powers -&gt; Bool)
+-&gt; (Powers -&gt; Powers -&gt; Bool) -&gt; Eq Powers
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Powers -&gt; Powers -&gt; Bool
+== :: Powers -&gt; Powers -&gt; Bool
+$c/= :: Powers -&gt; Powers -&gt; Bool
+/= :: Powers -&gt; Powers -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679214767"><span id="local-6989586621679214771"><span id="local-6989586621679214774"><span id="local-6989586621679214783"><span class="annot"><span class="annottext">ReadPrec [Powers]
+ReadPrec Powers
+Int -&gt; ReadS Powers
+ReadS [Powers]
+(Int -&gt; ReadS Powers)
+-&gt; ReadS [Powers]
+-&gt; ReadPrec Powers
+-&gt; ReadPrec [Powers]
+-&gt; Read Powers
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS Powers
+readsPrec :: Int -&gt; ReadS Powers
+$creadList :: ReadS [Powers]
+readList :: ReadS [Powers]
+$creadPrec :: ReadPrec Powers
+readPrec :: ReadPrec Powers
+$creadListPrec :: ReadPrec [Powers]
+readListPrec :: ReadPrec [Powers]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679214788"><span id="local-6989586621679214794"><span id="local-6989586621679214798"><span class="annot"><span class="annottext">Int -&gt; Powers -&gt; ShowS
+[Powers] -&gt; ShowS
+Powers -&gt; String
+(Int -&gt; Powers -&gt; ShowS)
+-&gt; (Powers -&gt; String) -&gt; ([Powers] -&gt; ShowS) -&gt; Show Powers
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Powers -&gt; ShowS
+showsPrec :: Int -&gt; Powers -&gt; ShowS
+$cshow :: Powers -&gt; String
+show :: Powers -&gt; String
+$cshowList :: [Powers] -&gt; ShowS
+showList :: [Powers] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679214805"><span id="local-6989586621679214810"><span id="local-6989586621679214814"><span id="local-6989586621679214816"><span id="local-6989586621679214818"><span id="local-6989586621679214824"><span id="local-6989586621679214829"><span id="local-6989586621679214832"><span id="local-6989586621679214835"><span id="local-6989586621679214838"><span id="local-6989586621679214841"><span id="local-6989586621679214844"><span id="local-6989586621679214849"><span id="local-6989586621679214854"><span class="annot"><span class="annottext">Typeable Powers
+Typeable Powers =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Powers -&gt; c Powers)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Powers)
+-&gt; (Powers -&gt; Constr)
+-&gt; (Powers -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Powers))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Powers))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Powers -&gt; Powers)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers)
+-&gt; Data Powers
+Powers -&gt; Constr
+Powers -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Powers -&gt; Powers
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Powers
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Powers -&gt; c Powers
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Powers)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Powers)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Powers -&gt; c Powers
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Powers -&gt; c Powers
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Powers
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Powers
+$ctoConstr :: Powers -&gt; Constr
+toConstr :: Powers -&gt; Constr
+$cdataTypeOf :: Powers -&gt; DataType
+dataTypeOf :: Powers -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Powers)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Powers)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Powers)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Powers)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Powers -&gt; Powers
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Powers -&gt; Powers
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Powers -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Powers -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Powers -&gt; m Powers
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679214861"><span id="local-6989586621679214863"><span class="annot"><span class="annottext">(forall x. Powers -&gt; Rep Powers x)
+-&gt; (forall x. Rep Powers x -&gt; Powers) -&gt; Generic Powers
+forall x. Rep Powers x -&gt; Powers
+forall x. Powers -&gt; Rep Powers x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Powers -&gt; Rep Powers x
+from :: forall x. Powers -&gt; Rep Powers x
+$cto :: forall x. Rep Powers x -&gt; Powers
+to :: forall x. Rep Powers x -&gt; Powers
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679214867"><span id="local-6989586621679214874"><span id="local-6989586621679214877"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span></span></span></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679214928"><span id="local-6989586621679214935"><span id="local-6989586621679214938"><span id="local-6989586621679214941"><span id="local-6989586621679214944"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span></span></span></span></span></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679214994"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/binary-0.8.9.1/src/Data.Binary.Class.html#Binary"><span class="hs-identifier hs-type">Binary</span></a></span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679215002"><span class="annot"><span class="annottext">put :: Powers -&gt; Put
+</span><a href="#local-6989586621679215002"><span class="hs-identifier hs-var hs-var hs-var hs-var">put</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215004"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215004"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Put
+forall t. Binary t =&gt; t -&gt; Put
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/binary-0.8.9.1/src/Data.Binary.Class.html#put"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215004"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679215009"><span class="annot"><span class="annottext">get :: Get Powers
+</span><a href="#local-6989586621679215009"><span class="hs-identifier hs-var hs-var hs-var hs-var">get</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vector Double -&gt; Powers) -&gt; Get (Vector Double) -&gt; Get Powers
+forall a b. (a -&gt; b) -&gt; Get a -&gt; Get b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Powers
+</span><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-var">Powers</span></a></span><span> </span><span class="annot"><span class="annottext">Get (Vector Double)
+forall t. Binary t =&gt; Get t
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/binary-0.8.9.1/src/Data.Binary.Class.html#get"><span class="hs-identifier hs-var">get</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | O(/n/) Collect the /n/ simple powers of a sample.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- Functions computed over a sample's simple powers require at least a</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- certain number (or /order/) of powers to be collected.</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- * To compute the /k/th 'centralMoment', at least /k/ simple powers</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--   must be collected.</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- * For the 'variance', at least 2 simple powers are needed.</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- * For 'skewness', we need at least 3 simple powers.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- * For 'kurtosis', at least 4 simple powers are required.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- This function is subject to stream fusion.</span><span>
+</span><span id="line-92"></span><span id="local-6989586621679214595"><span class="annot"><a href="Statistics.Sample.Powers.html#powers"><span class="hs-identifier hs-type">powers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">G.Vector</span></span><span> </span><span class="annot"><a href="#local-6989586621679214595"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-93"></span><span>          </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>                   </span><span class="annot"><span class="hs-comment">-- ^ /n/, the number of powers, where /n/ &gt;= 2.</span></span><span>
+</span><span id="line-94"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679214595"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-95"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span></span><span>
+</span><span id="line-96"></span><span id="powers"><span class="annot"><span class="annottext">powers :: forall (v :: * -&gt; *). Vector v Double =&gt; Int -&gt; v Double -&gt; Powers
+</span><a href="Statistics.Sample.Powers.html#powers"><span class="hs-identifier hs-var hs-var">powers</span></a></span></span><span> </span><span id="local-6989586621679215016"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215016"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679215017"><span class="annot"><span class="annottext">v Double
+</span><a href="#local-6989586621679215017"><span class="hs-identifier hs-var">sample</span></a></span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215016"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Powers
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Statistics.Sample.powers: too few powers&quot;</span></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall s. ST s Powers) -&gt; Powers
+forall a. (forall s. ST s a) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.ST.html#runST"><span class="hs-identifier hs-var">runST</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. ST s Powers) -&gt; Powers)
+-&gt; (forall s. ST s Powers) -&gt; Powers
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>      </span><span id="local-6989586621679215034"><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double
+</span><a href="#local-6989586621679215034"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double -&gt; ST s (MVector (PrimState (ST s)) Double)
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+Int -&gt; a -&gt; m (MVector (PrimState m) a)
+</span><span class="hs-identifier hs-var">MU.replicate</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215036"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">v Double -&gt; (Double -&gt; ST s ()) -&gt; ST s ()
+forall (m :: * -&gt; *) (v :: * -&gt; *) a b.
+(Monad m, Vector v a) =&gt;
+v a -&gt; (a -&gt; m b) -&gt; m ()
+</span><span class="hs-identifier hs-var">G.forM_</span></span><span> </span><span class="annot"><span class="annottext">v Double
+</span><a href="#local-6989586621679215017"><span class="hs-identifier hs-var">sample</span></a></span><span> </span><span class="annot"><span class="annottext">((Double -&gt; ST s ()) -&gt; ST s ()) -&gt; (Double -&gt; ST s ()) -&gt; ST s ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679215038"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215038"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679215057"><span class="annot"><span class="annottext">loop :: Int -&gt; Double -&gt; ST s ()
+</span><a href="#local-6989586621679215057"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679215058"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215058"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679215059"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215059"><span class="hs-identifier hs-var">xk</span></a></span></span><span>
+</span><span id="line-102"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215058"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215036"><span class="hs-identifier hs-var">l</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; ST s ()
+forall a. a -&gt; ST s a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double -&gt; Int -&gt; Double -&gt; ST s ()
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+MVector (PrimState m) a -&gt; Int -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">MU.write</span></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double
+</span><a href="#local-6989586621679215034"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215058"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; ST s ()) -&gt; (Double -&gt; Double) -&gt; Double -&gt; ST s ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215059"><span class="hs-identifier hs-var">xk</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Double -&gt; ST s ()) -&gt; ST s Double -&gt; ST s ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double -&gt; Int -&gt; ST s Double
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+MVector (PrimState m) a -&gt; Int -&gt; m a
+</span><span class="hs-identifier hs-var">MU.read</span></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double
+</span><a href="#local-6989586621679215034"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215058"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-104"></span><span>                               </span><span class="annot"><span class="annottext">Int -&gt; Double -&gt; ST s ()
+</span><a href="#local-6989586621679215057"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215058"><span class="hs-identifier hs-var">i</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215059"><span class="hs-identifier hs-var">xk</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215038"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double -&gt; ST s ()
+</span><a href="#local-6989586621679215057"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">(Vector Double -&gt; Powers) -&gt; ST s (Vector Double) -&gt; ST s Powers
+forall a b. (a -&gt; b) -&gt; ST s a -&gt; ST s b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Powers
+</span><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-var">Powers</span></a></span><span> </span><span class="annot"><span class="annottext">(ST s (Vector Double) -&gt; ST s Powers)
+-&gt; ST s (Vector Double) -&gt; ST s Powers
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double -&gt; ST s (Vector Double)
+forall a (m :: * -&gt; *).
+(Unbox a, PrimMonad m) =&gt;
+MVector (PrimState m) a -&gt; m (Vector a)
+</span><span class="hs-identifier hs-var">U.unsafeFreeze</span></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Double
+</span><a href="#local-6989586621679215034"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679215036"><span class="annot"><span class="annottext">l :: Int
+</span><a href="#local-6989586621679215036"><span class="hs-identifier hs-var hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215016"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-109"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#powers"><span class="hs-pragma hs-type">powers</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-pragma hs-type">Int</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><span class="hs-pragma hs-type">U.Vector</span></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-pragma hs-type">Powers</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-110"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#powers"><span class="hs-pragma hs-type">powers</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-pragma hs-type">Int</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><span class="hs-pragma hs-type">V.Vector</span></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-pragma hs-type">Powers</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-111"></span><span class="hs-pragma">{-# SPECIALIZE</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#powers"><span class="hs-pragma hs-type">powers</span></a></span><span> </span><span class="hs-pragma">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-pragma hs-type">Int</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><span class="hs-pragma hs-type">SV.Vector</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-pragma hs-type">Double</span></a></span><span> </span><span class="hs-pragma">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-pragma hs-type">Powers</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | The order (number) of simple powers collected from a 'sample'.</span></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Statistics.Sample.Powers.html#order"><span class="hs-identifier hs-type">order</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-115"></span><span id="order"><span class="annot"><span class="annottext">order :: Powers -&gt; Int
+</span><a href="Statistics.Sample.Powers.html#order"><span class="hs-identifier hs-var hs-var">order</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215069"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215069"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Int
+forall a. Unbox a =&gt; Vector a -&gt; Int
+</span><span class="hs-identifier hs-var">U.length</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215069"><span class="hs-identifier hs-var">pa</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | Compute the /k/th central moment of a sample.  The central</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- moment is also known as the moment about the mean.</span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier hs-type">centralMoment</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-120"></span><span id="centralMoment"><span class="annot"><span class="annottext">centralMoment :: Int -&gt; Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier hs-var hs-var">centralMoment</span></a></span></span><span> </span><span id="local-6989586621679215071"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679215072"><span class="annot"><span class="annottext">p :: Powers
+</span><a href="#local-6989586621679215072"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215073"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215073"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Int
+</span><a href="Statistics.Sample.Powers.html#order"><span class="hs-identifier hs-var">order</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215072"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>                  </span><span class="annot"><span class="annottext">String -&gt; Double
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Statistics.Sample.Powers.centralMoment: &quot;</span></span><span>
+</span><span id="line-123"></span><span>                         </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;invalid argument&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215077"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Double)
+-&gt; (Vector Double -&gt; Double) -&gt; Vector Double -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Double
+forall (v :: * -&gt; *). Vector v Double =&gt; v Double -&gt; Double
+</span><a href="Statistics.Sample.Internal.html#sum"><span class="hs-identifier hs-var">S.sum</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector Double -&gt; Double)
+-&gt; (Vector Double -&gt; Vector Double) -&gt; Vector Double -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Int, Double) -&gt; Double) -&gt; Vector (Int, Double) -&gt; Vector Double
+forall a b. (Unbox a, Unbox b) =&gt; (a -&gt; b) -&gt; Vector a -&gt; Vector b
+</span><span class="hs-identifier hs-var">U.map</span></span><span> </span><span class="annot"><span class="annottext">(Int, Double) -&gt; Double
+</span><a href="#local-6989586621679215080"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector (Int, Double) -&gt; Vector Double)
+-&gt; (Vector Double -&gt; Vector (Int, Double))
+-&gt; Vector Double
+-&gt; Vector Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Vector (Int, Double)
+forall (v :: * -&gt; *) e.
+(Vector v e, Vector v (Int, e)) =&gt;
+v e -&gt; v (Int, e)
+</span><a href="Statistics.Function.html#indexed"><span class="hs-identifier hs-var">indexed</span></a></span><span> </span><span class="annot"><span class="annottext">(Vector Double -&gt; Vector (Int, Double))
+-&gt; (Vector Double -&gt; Vector Double)
+-&gt; Vector Double
+-&gt; Vector (Int, Double)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Vector Double -&gt; Vector Double
+forall a. Unbox a =&gt; Int -&gt; Vector a -&gt; Vector a
+</span><span class="hs-identifier hs-var">U.take</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Vector Double -&gt; Double) -&gt; Vector Double -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215073"><span class="hs-identifier hs-var">pa</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679215080"><span class="annot"><span class="annottext">go :: (Int, Double) -&gt; Double
+</span><a href="#local-6989586621679215080"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679215088"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215088"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215089"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215089"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Double
+</span><span class="hs-operator hs-var">`choose`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215088"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215090"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Int -&gt; Double
+forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%5E"><span class="hs-operator hs-var">^</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215071"><span class="hs-identifier hs-var">k</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215088"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215089"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679215077"><span class="annot"><span class="annottext">n :: Double
+</span><a href="#local-6989586621679215077"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Double
+forall a. Unbox a =&gt; Vector a -&gt; a
+</span><span class="hs-identifier hs-var">U.head</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215073"><span class="hs-identifier hs-var">pa</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679215090"><span class="annot"><span class="annottext">m :: Double
+</span><a href="#local-6989586621679215090"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#mean"><span class="hs-identifier hs-var">mean</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215072"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- | Maximum likelihood estimate of a sample's variance.  Also known</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- as the population variance, where the denominator is /n/.  This is</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- the second central moment of the sample.</span><span>
+</span><span id="line-134"></span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- This is less numerically robust than the variance function in the</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- 'Statistics.Sample' module, but the number is essentially free to</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- compute if you have already collected a sample's simple powers.</span><span>
+</span><span id="line-138"></span><span class="hs-comment">--</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- Requires 'Powers' with 'order' at least 2.</span><span>
+</span><span id="line-140"></span><span class="annot"><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-type">variance</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-141"></span><span id="variance"><span class="annot"><span class="annottext">variance :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-var hs-var">variance</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier hs-var">centralMoment</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- | Standard deviation.  This is simply the square root of the</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- maximum likelihood estimate of the variance.</span><span>
+</span><span id="line-145"></span><span class="annot"><a href="Statistics.Sample.Powers.html#stdDev"><span class="hs-identifier hs-type">stdDev</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-146"></span><span id="stdDev"><span class="annot"><span class="annottext">stdDev :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#stdDev"><span class="hs-identifier hs-var hs-var">stdDev</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double
+forall a. Floating a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#sqrt"><span class="hs-identifier hs-var">sqrt</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Double) -&gt; (Powers -&gt; Double) -&gt; Powers -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-var">variance</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- | Unbiased estimate of a sample's variance.  Also known as the</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- sample variance, where the denominator is /n/-1.</span><span>
+</span><span id="line-150"></span><span class="hs-comment">--</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- Requires 'Powers' with 'order' at least 2.</span><span>
+</span><span id="line-152"></span><span class="annot"><a href="Statistics.Sample.Powers.html#varianceUnbiased"><span class="hs-identifier hs-type">varianceUnbiased</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-153"></span><span id="varianceUnbiased"><span class="annot"><span class="annottext">varianceUnbiased :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#varianceUnbiased"><span class="hs-identifier hs-var hs-var">varianceUnbiased</span></a></span></span><span> </span><span id="local-6989586621679215095"><span class="annot"><span class="annottext">p :: Powers
+</span><a href="#local-6989586621679215095"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215096"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215096"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215097"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-var">variance</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215095"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215097"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215097"><span class="hs-identifier hs-var">n</span></a></span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679215097"><span class="annot"><span class="annottext">n :: Double
+</span><a href="#local-6989586621679215097"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Double
+forall a. Unbox a =&gt; Vector a -&gt; a
+</span><span class="hs-identifier hs-var">U.head</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215096"><span class="hs-identifier hs-var">pa</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | Compute the skewness of a sample. This is a measure of the</span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- asymmetry of its distribution.</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- A sample with negative skew is said to be /left-skewed/.  Most of</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- its mass is on the right of the distribution, with the tail on the</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- left.</span><span>
+</span><span id="line-164"></span><span class="hs-comment">--</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- &gt; skewness . powers 3 $ U.to [1,100,101,102,103]</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- &gt; ==&gt; -1.497681449918257</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- A sample with positive skew is said to be /right-skewed/.</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- &gt; skewness . powers 3 $ U.to [1,2,3,4,100]</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- &gt; ==&gt; 1.4975367033335198</span><span>
+</span><span id="line-172"></span><span class="hs-comment">--</span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- A sample's skewness is not defined if its 'variance' is zero.</span><span>
+</span><span id="line-174"></span><span class="hs-comment">--</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- Requires 'Powers' with 'order' at least 3.</span><span>
+</span><span id="line-176"></span><span class="annot"><a href="Statistics.Sample.Powers.html#skewness"><span class="hs-identifier hs-type">skewness</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-177"></span><span id="skewness"><span class="annot"><span class="annottext">skewness :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#skewness"><span class="hs-identifier hs-var hs-var">skewness</span></a></span></span><span> </span><span id="local-6989586621679215099"><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215099"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier hs-var">centralMoment</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215099"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-var">variance</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215099"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Floating a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Float.html#%2A%2A"><span class="hs-operator hs-var">**</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1.5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- | Compute the excess kurtosis of a sample.  This is a measure of</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- the \&quot;peakedness\&quot; of its distribution.  A high kurtosis indicates</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- that the sample's variance is due more to infrequent severe</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- deviations than to frequent modest deviations.</span><span>
+</span><span id="line-183"></span><span class="hs-comment">--</span><span>
+</span><span id="line-184"></span><span class="hs-comment">-- A sample's excess kurtosis is not defined if its 'variance' is</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- zero.</span><span>
+</span><span id="line-186"></span><span class="hs-comment">--</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- Requires 'Powers' with 'order' at least 4.</span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Statistics.Sample.Powers.html#kurtosis"><span class="hs-identifier hs-type">kurtosis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-189"></span><span id="kurtosis"><span class="annot"><span class="annottext">kurtosis :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#kurtosis"><span class="hs-identifier hs-var hs-var">kurtosis</span></a></span></span><span> </span><span id="local-6989586621679215101"><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215101"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#centralMoment"><span class="hs-identifier hs-var">centralMoment</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215101"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215102"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215102"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679215102"><span class="annot"><span class="annottext">v :: Double
+</span><a href="#local-6989586621679215102"><span class="hs-identifier hs-var hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#variance"><span class="hs-identifier hs-var">variance</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215101"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- | The number of elements in the original 'Sample'.  This is the</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- sample's zeroth simple power.</span><span>
+</span><span id="line-194"></span><span class="annot"><a href="Statistics.Sample.Powers.html#count"><span class="hs-identifier hs-type">count</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-195"></span><span id="count"><span class="annot"><span class="annottext">count :: Powers -&gt; Int
+</span><a href="Statistics.Sample.Powers.html#count"><span class="hs-identifier hs-var hs-var">count</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215103"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215103"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Int
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#floor"><span class="hs-identifier hs-var">floor</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Int) -&gt; Double -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Double
+forall a. Unbox a =&gt; Vector a -&gt; a
+</span><span class="hs-identifier hs-var">U.head</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215103"><span class="hs-identifier hs-var">pa</span></a></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | The sum of elements in the original 'Sample'.  This is the</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- sample's first simple power.</span><span>
+</span><span id="line-199"></span><span class="annot"><a href="Statistics.Sample.Powers.html#sum"><span class="hs-identifier hs-type">sum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-200"></span><span id="sum"><span class="annot"><span class="annottext">sum :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#sum"><span class="hs-identifier hs-var hs-var">sum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215105"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215105"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215105"><span class="hs-identifier hs-var">pa</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Int -&gt; Double
+forall a. Unbox a =&gt; Vector a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">!</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- | The arithmetic mean of elements in the original 'Sample'.</span><span>
+</span><span id="line-203"></span><span class="hs-comment">--</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- This is less numerically robust than the mean function in the</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- 'Statistics.Sample' module, but the number is essentially free to</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- compute if you have already collected a sample's simple powers.</span><span>
+</span><span id="line-207"></span><span class="annot"><a href="Statistics.Sample.Powers.html#mean"><span class="hs-identifier hs-type">mean</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-208"></span><span id="mean"><span class="annot"><span class="annottext">mean :: Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#mean"><span class="hs-identifier hs-var hs-var">mean</span></a></span></span><span> </span><span id="local-6989586621679215106"><span class="annot"><span class="annottext">p :: Powers
+</span><a href="#local-6989586621679215106"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Statistics.Sample.Powers.html#Powers"><span class="hs-identifier hs-type">Powers</span></a></span><span> </span><span id="local-6989586621679215107"><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215107"><span class="hs-identifier hs-var">pa</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215108"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Powers -&gt; Double
+</span><a href="Statistics.Sample.Powers.html#sum"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">Powers
+</span><a href="#local-6989586621679215106"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679215108"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679215108"><span class="annot"><span class="annottext">n :: Double
+</span><a href="#local-6989586621679215108"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vector Double -&gt; Double
+forall a. Unbox a =&gt; Vector a -&gt; a
+</span><span class="hs-identifier hs-var">U.head</span></span><span> </span><span class="annot"><span class="annottext">Vector Double
+</span><a href="#local-6989586621679215107"><span class="hs-identifier hs-var">pa</span></a></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- $references</span><span>
+</span><span id="line-214"></span><span class="hs-comment">--</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- * Besset, D.H. (2000) Elements of statistics.</span><span>
+</span><span id="line-216"></span><span class="hs-comment">--   /Object-oriented implementation of numerical methods/</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--   ch. 9, pp. 311&amp;#8211;331.</span><span>
+</span><span id="line-218"></span><span class="hs-comment">--   &lt;http://www.elsevier.com/wps/product/cws_home/677916&gt;</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- * Anderson, G. (2009) Compute /k/th central moments in one</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--   pass. /quantblog/. &lt;http://quantblog.wordpress.com/2009/02/07/compute-kth-central-moments-in-one-pass/&gt;</span><span>
+</span><span id="line-222"></span></pre></body></html>

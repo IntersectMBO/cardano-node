@@ -1,0 +1,874 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ExtendedDefaultRules #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-type-defaults #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Module      : Text.EDE.Internal.Filters</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Copyright   : (c) 2013-2022 Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- License     : This Source Code Form is subject to the terms of</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--               the Mozilla Public License, v. 2.0.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--               A copy of the MPL can be found in the LICENSE file or</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--               you can obtain it at http://mozilla.org/MPL/2.0/.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Maintainer  : Brendan Hay &lt;brendan.g.hay@gmail.com&gt;</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Portability : non-portable (GHC extensions)</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- /Warning/: this is an internal module, and does not have a stable</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- API or name. Functions in this module may not check or enforce</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- preconditions expected by public modules. Use at your own risk!</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Text.EDE.Internal.Filters</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Value</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Char</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HashMap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HashMap</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Maybe</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Scientific</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Scientific</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Lazy</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Encoding.html"><span class="hs-identifier">Data.Text.Lazy.Encoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Lazy.Encoding</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Manipulate</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Manipulate</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Unsafe.html"><span class="hs-identifier">Data.Text.Unsafe</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text.Unsafe</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Vector</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vector</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&lt;+&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Compat.html"><span class="hs-identifier">Text.EDE.Internal.Compat</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html"><span class="hs-identifier">Text.EDE.Internal.Quoting</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html"><span class="hs-identifier">Text.EDE.Internal.Types</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">default</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#stdlib"><span class="hs-identifier hs-type">stdlib</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span>
+</span><span id="line-48"></span><span id="stdlib"><span class="annot"><span class="annottext">stdlib :: HashMap Text Term
+</span><a href="Text.EDE.Internal.Filters.html#stdlib"><span class="hs-identifier hs-var hs-var">stdlib</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">[(Text, Term)] -&gt; HashMap Text Term
+forall k v. (Eq k, Hashable k) =&gt; [(k, v)] -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HashMap.fromList</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- boolean</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;!&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Bool -&gt; Bool) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&amp;&amp;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Bool -&gt; Bool -&gt; Bool) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">(&amp;&amp;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;||&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Bool -&gt; Bool -&gt; Bool) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%7C%7C"><span class="hs-operator hs-var">(||)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-comment">-- equality</span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;==&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Value -&gt; Value -&gt; Bool) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; (Value -&gt; Value -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qpoly2"><span class="hs-operator hs-var">`qpoly2`</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">(==)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;!=&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Value -&gt; Value -&gt; Bool) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; (Value -&gt; Value -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qpoly2"><span class="hs-operator hs-var">`qpoly2`</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">(/=)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-comment">-- relational</span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&gt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Bool) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">(&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&gt;=&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Bool) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">(&gt;=)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&lt;=&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Bool) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">(&lt;=)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&lt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Bool) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">(&lt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-comment">-- numeric</span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;+&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Scientific) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Scientific
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">(+)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Scientific) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;*&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific -&gt; Scientific) -&gt; (Text, Term)
+forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-operator hs-var">`qnum2`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Scientific
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">(*)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;abs&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#abs"><span class="hs-identifier hs-var">abs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;signum&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#signum"><span class="hs-identifier hs-var">signum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;negate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific
+forall a. Num a =&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#negate"><span class="hs-identifier hs-var">negate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>      </span><span class="hs-comment">-- fractional</span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;truncate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Scientific)
+-&gt; (Scientific -&gt; Integer) -&gt; Scientific -&gt; Scientific
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Integer
+forall b. Integral b =&gt; Scientific -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#truncate"><span class="hs-identifier hs-var">truncate</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;round&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Scientific)
+-&gt; (Scientific -&gt; Integer) -&gt; Scientific -&gt; Scientific
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Integer
+forall b. Integral b =&gt; Scientific -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#round"><span class="hs-identifier hs-var">round</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ceiling&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Scientific)
+-&gt; (Scientific -&gt; Integer) -&gt; Scientific -&gt; Scientific
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Integer
+forall b. Integral b =&gt; Scientific -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#ceiling"><span class="hs-identifier hs-var">ceiling</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;floor&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-operator hs-var">`qnum1`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Scientific)
+-&gt; (Scientific -&gt; Integer) -&gt; Scientific -&gt; Scientific
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Integer
+forall b. Integral b =&gt; Scientific -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#floor"><span class="hs-identifier hs-var">floor</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-comment">-- text</span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;lowerHead&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.lowerHead</span></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;upperHead&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.upperHead</span></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toTitle&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toTitle</span></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toCamel&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toCamel</span></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toPascal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toPascal</span></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toSnake&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toSnake</span></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toSpinal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toSpinal</span></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toTrain&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toTrain</span></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toUpper&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#toUpper"><span class="hs-identifier hs-var">Text.toUpper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toLower&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#toLower"><span class="hs-identifier hs-var">Text.toLower</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toOrdinal&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Integer -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Text
+forall a. Integral a =&gt; a -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toOrdinal</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;dropLower&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#dropWhile"><span class="hs-identifier hs-var">Text.dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Char -&gt; Bool) -&gt; Char -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isUpper"><span class="hs-identifier hs-var">Char.isUpper</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;dropUpper&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#dropWhile"><span class="hs-identifier hs-var">Text.dropWhile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Char -&gt; Bool) -&gt; Char -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Unicode.html#isLower"><span class="hs-identifier hs-var">Char.isLower</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;takeWord&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.takeWord</span></span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;dropWord&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.dropWord</span></span><span class="hs-special">,</span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;splitWords&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; [Text]) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text]
+</span><span class="hs-identifier hs-var">Text.Manipulate.splitWords</span></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;strip&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#strip"><span class="hs-identifier hs-var">Text.strip</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;stripPrefix&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156482"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156482"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156483"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156483"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Text
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">Maybe.fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156482"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156483"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Maybe Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripPrefix"><span class="hs-operator hs-var">`Text.stripPrefix`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156482"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;stripSuffix&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156486"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156486"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156487"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156487"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; Text
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">Maybe.fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156486"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156487"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Maybe Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripSuffix"><span class="hs-operator hs-var">`Text.stripSuffix`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156486"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;stripStart&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripStart"><span class="hs-identifier hs-var">Text.stripStart</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;stripEnd&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#stripEnd"><span class="hs-identifier hs-var">Text.stripEnd</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;replace&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text -&gt; Text -&gt; Text) -&gt; Text -&gt; Text -&gt; Text -&gt; Text
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">Text.replace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;remove&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156493"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156493"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156494"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156494"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text -&gt; Text -&gt; Text
+Text -&gt; Text -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#replace"><span class="hs-identifier hs-var">Text.replace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156494"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156493"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toEllipsis&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Text -&gt; Text) -&gt; Text -&gt; Int -&gt; Text
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toEllipsis</span></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toEllipsisWith&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156496"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156496"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156497"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156497"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679156498"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156498"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.toEllipsisWith</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156497"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156498"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156496"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;indentLines&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Text -&gt; Text) -&gt; Text -&gt; Int -&gt; Text
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.indentLines</span></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;prependLines&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Text -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text -&gt; Text) -&gt; Text -&gt; Text -&gt; Text
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">Text.Manipulate.prependLines</span></span><span class="hs-special">,</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;justifyLeft&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156502"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156502"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156503"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156503"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyLeft"><span class="hs-identifier hs-var">Text.justifyLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156503"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156502"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;justifyRight&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156505"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156505"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156506"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156506"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#justifyRight"><span class="hs-identifier hs-var">Text.justifyRight</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156506"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156505"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;center&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Int -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156508"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156508"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156509"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156509"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#center"><span class="hs-identifier hs-var">Text.center</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156509"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156508"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-comment">-- sequences</span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">Text
+-&gt; (Text -&gt; Int)
+-&gt; (HashMap Text Value -&gt; Int)
+-&gt; (Vector Value -&gt; Int)
+-&gt; (Text, Term)
+forall a b c.
+(Quote a, Quote b, Quote c) =&gt;
+Text
+-&gt; (Text -&gt; a)
+-&gt; (HashMap Text Value -&gt; b)
+-&gt; (Vector Value -&gt; c)
+-&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qcol1"><span class="hs-identifier hs-var">qcol1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;length&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text Value -&gt; Int
+forall k v. HashMap k v -&gt; Int
+</span><span class="hs-identifier hs-var">HashMap.size</span></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Int
+forall a. Vector a -&gt; Int
+</span><span class="hs-identifier hs-var">Vector.length</span></span><span class="hs-special">,</span><span>
+</span><span id="line-107"></span><span>      </span><span class="annot"><span class="annottext">Text
+-&gt; (Text -&gt; Bool)
+-&gt; (HashMap Text Value -&gt; Bool)
+-&gt; (Vector Value -&gt; Bool)
+-&gt; (Text, Term)
+forall a b c.
+(Quote a, Quote b, Quote c) =&gt;
+Text
+-&gt; (Text -&gt; a)
+-&gt; (HashMap Text Value -&gt; b)
+-&gt; (Vector Value -&gt; c)
+-&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qcol1"><span class="hs-identifier hs-var">qcol1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;empty&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">Text.null</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text Value -&gt; Bool
+forall k v. HashMap k v -&gt; Bool
+</span><span class="hs-identifier hs-var">HashMap.null</span></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Bool
+forall a. Vector a -&gt; Bool
+</span><span class="hs-identifier hs-var">Vector.null</span></span><span class="hs-special">,</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">Text
+-&gt; (Text -&gt; Text)
+-&gt; (HashMap Text Value -&gt; HashMap Text Value)
+-&gt; (Vector Value -&gt; Vector Value)
+-&gt; (Text, Term)
+forall a b c.
+(Quote a, Quote b, Quote c) =&gt;
+Text
+-&gt; (Text -&gt; a)
+-&gt; (HashMap Text Value -&gt; b)
+-&gt; (Vector Value -&gt; c)
+-&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qcol1"><span class="hs-identifier hs-var">qcol1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;reverse&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#reverse"><span class="hs-identifier hs-var">Text.reverse</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text Value -&gt; HashMap Text Value
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Vector Value
+forall a. Vector a -&gt; Vector a
+</span><span class="hs-identifier hs-var">Vector.reverse</span></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- lists</span><span>
+</span><span id="line-110"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Value) -&gt; (Vector Value -&gt; Value) -&gt; (Text, Term)
+forall a b.
+(Quote a, Quote b) =&gt;
+Text -&gt; (Text -&gt; a) -&gt; (Vector Value -&gt; b) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-var">qlist1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;head&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#headT"><span class="hs-identifier hs-var">headT</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#headV"><span class="hs-identifier hs-var">headV</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Value) -&gt; (Vector Value -&gt; Value) -&gt; (Text, Term)
+forall a b.
+(Quote a, Quote b) =&gt;
+Text -&gt; (Text -&gt; a) -&gt; (Vector Value -&gt; b) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-var">qlist1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;last&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#lastT"><span class="hs-identifier hs-var">lastT</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#lastV"><span class="hs-identifier hs-var">lastV</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Value) -&gt; (Vector Value -&gt; Value) -&gt; (Text, Term)
+forall a b.
+(Quote a, Quote b) =&gt;
+Text -&gt; (Text -&gt; a) -&gt; (Vector Value -&gt; b) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-var">qlist1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;tail&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#tailT"><span class="hs-identifier hs-var">tailT</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#tailV"><span class="hs-identifier hs-var">tailV</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Value) -&gt; (Vector Value -&gt; Value) -&gt; (Text, Term)
+forall a b.
+(Quote a, Quote b) =&gt;
+Text -&gt; (Text -&gt; a) -&gt; (Vector Value -&gt; b) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-var">qlist1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;init&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#initT"><span class="hs-identifier hs-var">initT</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#initV"><span class="hs-identifier hs-var">initV</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;at&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Vector Value -&gt; Int -&gt; Value) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679156530"><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156530"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679156531"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156531"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156530"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Int -&gt; Value
+forall a. Vector a -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">Vector.!</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679156531"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-comment">-- object</span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;keys&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (HashMap Text Value -&gt; [Text]) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Text Value -&gt; [Text]
+forall k v. HashMap k v -&gt; [k]
+</span><span class="hs-identifier hs-var">HashMap.keys</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;elems&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (HashMap Text Value -&gt; [Value]) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HashMap Text Value -&gt; [Value]
+forall k v. HashMap k v -&gt; [v]
+</span><span class="hs-identifier hs-var">HashMap.elems</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-comment">-- , &quot;map&quot;        @: undefined</span><span>
+</span><span id="line-119"></span><span>      </span><span class="hs-comment">-- , &quot;filter&quot;     @: undefined</span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-comment">-- , &quot;zip&quot;        @: undefined</span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-comment">-- , &quot;join&quot;       @: undefined</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-comment">-- polymorphic</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;show&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Value -&gt; Text) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Encoding.html#decodeUtf8"><span class="hs-identifier hs-var">Text.Lazy.Encoding.decodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Text) -&gt; (Value -&gt; ByteString) -&gt; Value -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">Aeson.encode</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Lazy.html#Text"><span class="hs-identifier hs-type">Text.Lazy.Text</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;singleton&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Value -&gt; Vector Value) -&gt; (Text, Term)
+forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var">@:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Value -&gt; Vector Value
+forall a. a -&gt; Vector a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-comment">-- FIXME: existence checks currently hardcoded into the evaluator:</span><span>
+</span><span id="line-127"></span><span>      </span><span class="hs-comment">-- &quot;default&quot;</span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-comment">-- &quot;defined&quot;</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span id="local-6989586621679156130"><span class="annot"><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-type">(@:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156130"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156130"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-132"></span><span id="local-6989586621679156540"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156540"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="%40%3A"><span class="annot"><span class="annottext">@: :: forall a. Quote a =&gt; Text -&gt; a -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#%40%3A"><span class="hs-operator hs-var hs-var">@:</span></a></span></span><span> </span><span id="local-6989586621679156541"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679156541"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156540"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; a -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156540"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679156541"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="annot"><span class="hs-comment">-- | Quote a binary function which takes the most general binding value.</span></span><span>
+</span><span id="line-135"></span><span id="local-6989586621679156131"><span class="annot"><a href="Text.EDE.Internal.Filters.html#qpoly2"><span class="hs-identifier hs-type">qpoly2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156131"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156131"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-136"></span><span id="qpoly2"><span class="annot"><span class="annottext">qpoly2 :: forall a. Quote a =&gt; Text -&gt; (Value -&gt; Value -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qpoly2"><span class="hs-identifier hs-var hs-var">qpoly2</span></a></span></span><span> </span><span id="local-6989586621679156546"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156546"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156546"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term -&gt; (Text, Term))
+-&gt; ((Value -&gt; Value -&gt; a) -&gt; Term)
+-&gt; (Value -&gt; Value -&gt; a)
+-&gt; (Text, Term)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; (Value -&gt; Value -&gt; a) -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156546"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><span class="hs-comment">-- | Quote an unary numeric function.</span></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-identifier hs-type">qnum1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Scientific</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Scientific</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span id="qnum1"><span class="annot"><span class="annottext">qnum1 :: Text -&gt; (Scientific -&gt; Scientific) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum1"><span class="hs-identifier hs-var hs-var">qnum1</span></a></span></span><span> </span><span id="local-6989586621679156547"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156547"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156547"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term -&gt; (Text, Term))
+-&gt; ((Scientific -&gt; Scientific) -&gt; Term)
+-&gt; (Scientific -&gt; Scientific)
+-&gt; (Text, Term)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; (Scientific -&gt; Scientific) -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156547"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><span class="hs-comment">-- | Quote a binary numeric function.</span></span><span>
+</span><span id="line-143"></span><span id="local-6989586621679156133"><span class="annot"><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-identifier hs-type">qnum2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156133"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Scientific</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Scientific</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156133"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-144"></span><span id="qnum2"><span class="annot"><span class="annottext">qnum2 :: forall a.
+Quote a =&gt;
+Text -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qnum2"><span class="hs-identifier hs-var hs-var">qnum2</span></a></span></span><span> </span><span id="local-6989586621679156551"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156551"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156551"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term -&gt; (Text, Term))
+-&gt; ((Scientific -&gt; Scientific -&gt; a) -&gt; Term)
+-&gt; (Scientific -&gt; Scientific -&gt; a)
+-&gt; (Text, Term)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; (Scientific -&gt; Scientific -&gt; a) -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156551"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | Quote a comprehensive set of unary functions to create a binding</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- that supports list collection types.</span><span>
+</span><span id="line-148"></span><span id="local-6989586621679156159"><span id="local-6989586621679156160"><span class="annot"><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-type">qlist1</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156159"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156160"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156159"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156160"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-154"></span><span id="qlist1"><span class="annot"><span class="annottext">qlist1 :: forall a b.
+(Quote a, Quote b) =&gt;
+Text -&gt; (Text -&gt; a) -&gt; (Vector Value -&gt; b) -&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qlist1"><span class="hs-identifier hs-var hs-var">qlist1</span></a></span></span><span> </span><span id="local-6989586621679156563"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156563"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679156564"><span class="annot"><span class="annottext">Text -&gt; a
+</span><a href="#local-6989586621679156564"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679156565"><span class="annot"><span class="annottext">Vector Value -&gt; b
+</span><a href="#local-6989586621679156565"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156563"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term -&gt; (Text, Term))
+-&gt; ((Term -&gt; Result Term) -&gt; Term)
+-&gt; (Term -&gt; Result Term)
+-&gt; (Text, Term)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#TLam"><span class="hs-identifier hs-var">TLam</span></a></span><span> </span><span class="annot"><span class="annottext">((Term -&gt; Result Term) -&gt; (Text, Term))
+-&gt; (Term -&gt; Result Term) -&gt; (Text, Term)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#TVal"><span class="hs-identifier hs-type">TVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span id="local-6989586621679156569"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156569"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term -&gt; Result Term
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; (a -&gt; Term) -&gt; a -&gt; Result Term
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; a -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156563"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Result Term) -&gt; a -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; a
+</span><a href="#local-6989586621679156564"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156569"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#TVal"><span class="hs-identifier hs-type">TVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Array</span></span><span> </span><span id="local-6989586621679156571"><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156571"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term -&gt; Result Term
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; (b -&gt; Term) -&gt; b -&gt; Result Term
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; b -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156563"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Result Term) -&gt; b -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; b
+</span><a href="#local-6989586621679156565"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156571"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span id="local-6989586621679156572"><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679156572"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Result Term
+forall a. Doc AnsiStyle -&gt; Result a
+</span><a href="Text.EDE.Internal.Types.html#Failure"><span class="hs-identifier hs-var">Failure</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Result Term) -&gt; Doc AnsiStyle -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-159"></span><span>      </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;when expecting a String or Array, encountered&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Term -&gt; Doc AnsiStyle
+forall a. AnsiPretty a =&gt; a -&gt; Doc AnsiStyle
+</span><a href="Text.EDE.Internal.Types.html#apretty"><span class="hs-identifier hs-var">apretty</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679156572"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- | Quote a comprehensive set of unary functions to create a binding</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- that supports all collection types.</span><span>
+</span><span id="line-163"></span><span id="local-6989586621679156148"><span id="local-6989586621679156149"><span id="local-6989586621679156150"><span class="annot"><a href="Text.EDE.Internal.Filters.html#qcol1"><span class="hs-identifier hs-type">qcol1</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156148"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156149"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Quote"><span class="hs-identifier hs-type">Quote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679156150"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-165"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156148"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HashMap</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156149"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156150"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Text.EDE.Internal.Types.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-170"></span><span id="qcol1"><span class="annot"><span class="annottext">qcol1 :: forall a b c.
+(Quote a, Quote b, Quote c) =&gt;
+Text
+-&gt; (Text -&gt; a)
+-&gt; (HashMap Text Value -&gt; b)
+-&gt; (Vector Value -&gt; c)
+-&gt; (Text, Term)
+</span><a href="Text.EDE.Internal.Filters.html#qcol1"><span class="hs-identifier hs-var hs-var">qcol1</span></a></span></span><span> </span><span id="local-6989586621679156586"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156586"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679156587"><span class="annot"><span class="annottext">Text -&gt; a
+</span><a href="#local-6989586621679156587"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679156588"><span class="annot"><span class="annottext">HashMap Text Value -&gt; b
+</span><a href="#local-6989586621679156588"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679156589"><span class="annot"><span class="annottext">Vector Value -&gt; c
+</span><a href="#local-6989586621679156589"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156586"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term -&gt; (Text, Term))
+-&gt; ((Term -&gt; Result Term) -&gt; Term)
+-&gt; (Term -&gt; Result Term)
+-&gt; (Text, Term)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#TLam"><span class="hs-identifier hs-var">TLam</span></a></span><span> </span><span class="annot"><span class="annottext">((Term -&gt; Result Term) -&gt; (Text, Term))
+-&gt; (Term -&gt; Result Term) -&gt; (Text, Term)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#TVal"><span class="hs-identifier hs-type">TVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span id="local-6989586621679156590"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156590"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term -&gt; Result Term
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; (a -&gt; Term) -&gt; a -&gt; Result Term
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; a -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156586"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Result Term) -&gt; a -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; a
+</span><a href="#local-6989586621679156587"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156590"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#TVal"><span class="hs-identifier hs-type">TVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Object</span></span><span> </span><span id="local-6989586621679156592"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679156592"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term -&gt; Result Term
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; (b -&gt; Term) -&gt; b -&gt; Result Term
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; b -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156586"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Result Term) -&gt; b -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text Value -&gt; b
+</span><a href="#local-6989586621679156588"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; HashMap Text Value
+forall v. KeyMap v -&gt; HashMap Text v
+</span><span class="hs-identifier hs-var">toHashMapText</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679156592"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><a href="Text.EDE.Internal.Quoting.html#TVal"><span class="hs-identifier hs-type">TVal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Array</span></span><span> </span><span id="local-6989586621679156594"><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156594"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term -&gt; Result Term
+forall a. a -&gt; Result a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Term -&gt; Result Term) -&gt; (c -&gt; Term) -&gt; c -&gt; Result Term
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; c -&gt; Term
+forall a. Quote a =&gt; Text -&gt; Int -&gt; a -&gt; Term
+</span><a href="Text.EDE.Internal.Quoting.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679156586"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(c -&gt; Result Term) -&gt; c -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; c
+</span><a href="#local-6989586621679156589"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value
+</span><a href="#local-6989586621679156594"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679156595"><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679156595"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Result Term
+forall a. Doc AnsiStyle -&gt; Result a
+</span><a href="Text.EDE.Internal.Types.html#Failure"><span class="hs-identifier hs-var">Failure</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Result Term) -&gt; Doc AnsiStyle -&gt; Result Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-176"></span><span>      </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;when expecting a String, Object, or Array, encountered&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><span class="hs-operator hs-var">&lt;+&gt;</span></span><span> </span><span class="annot"><span class="annottext">Term -&gt; Doc AnsiStyle
+forall a. AnsiPretty a =&gt; a -&gt; Doc AnsiStyle
+</span><a href="Text.EDE.Internal.Types.html#apretty"><span class="hs-identifier hs-var">apretty</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679156595"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#headT"><span class="hs-identifier hs-type">headT</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#lastT"><span class="hs-identifier hs-type">lastT</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#tailT"><span class="hs-identifier hs-type">tailT</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#initT"><span class="hs-identifier hs-type">initT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-179"></span><span id="headT"><span class="annot"><span class="annottext">headT :: Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#headT"><span class="hs-identifier hs-var hs-var">headT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Text) -&gt; (Text -&gt; Char) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Char
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Unsafe.html#unsafeHead"><span class="hs-identifier hs-var">Text.Unsafe.unsafeHead</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span id="lastT"><span class="annot"><span class="annottext">lastT :: Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#lastT"><span class="hs-identifier hs-var hs-var">lastT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Text) -&gt; (Text -&gt; Char) -&gt; Text -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Char
+Text -&gt; Char
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#last"><span class="hs-identifier hs-var">Text.last</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span id="tailT"><span class="annot"><span class="annottext">tailT :: Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#tailT"><span class="hs-identifier hs-var hs-var">tailT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Unsafe.html#unsafeTail"><span class="hs-identifier hs-var">Text.Unsafe.unsafeTail</span></a></span><span>
+</span><span id="line-182"></span><span id="initT"><span class="annot"><span class="annottext">initT :: Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#initT"><span class="hs-identifier hs-var hs-var">initT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Text -&gt; Text
+Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#init"><span class="hs-identifier hs-var">Text.init</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#headV"><span class="hs-identifier hs-type">headV</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#lastV"><span class="hs-identifier hs-type">lastV</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#tailV"><span class="hs-identifier hs-type">tailV</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Text.EDE.Internal.Filters.html#initV"><span class="hs-identifier hs-type">initV</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-185"></span><span id="headV"><span class="annot"><span class="annottext">headV :: Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#headV"><span class="hs-identifier hs-var hs-var">headV</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value) -&gt; Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-var">vec</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+forall a. Vector a -&gt; a
+</span><span class="hs-identifier hs-var">Vector.unsafeHead</span></span><span>
+</span><span id="line-186"></span><span id="lastV"><span class="annot"><span class="annottext">lastV :: Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#lastV"><span class="hs-identifier hs-var hs-var">lastV</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value) -&gt; Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-var">vec</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+forall a. Vector a -&gt; a
+</span><span class="hs-identifier hs-var">Vector.unsafeLast</span></span><span>
+</span><span id="line-187"></span><span id="tailV"><span class="annot"><span class="annottext">tailV :: Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#tailV"><span class="hs-identifier hs-var hs-var">tailV</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value) -&gt; Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-var">vec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><span class="hs-identifier hs-var">Array</span></span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value)
+-&gt; (Vector Value -&gt; Vector Value) -&gt; Vector Value -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Vector Value
+forall a. Vector a -&gt; Vector a
+</span><span class="hs-identifier hs-var">Vector.unsafeTail</span></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span id="initV"><span class="annot"><span class="annottext">initV :: Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#initV"><span class="hs-identifier hs-var hs-var">initV</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value) -&gt; Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-var">vec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><span class="hs-identifier hs-var">Array</span></span><span> </span><span class="annot"><span class="annottext">(Vector Value -&gt; Value)
+-&gt; (Vector Value -&gt; Vector Value) -&gt; Vector Value -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Vector Value
+forall a. Vector a -&gt; Vector a
+</span><span class="hs-identifier hs-var">Vector.unsafeInit</span></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-type">text</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-191"></span><span id="text"><span class="annot"><span class="annottext">text :: (Text -&gt; Text) -&gt; Text -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#text"><span class="hs-identifier hs-var hs-var">text</span></a></span></span><span> </span><span id="local-6989586621679156607"><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679156607"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Text -&gt; Bool) -&gt; (Text -&gt; Text) -&gt; Text -&gt; Text
+forall b a. b -&gt; (a -&gt; Bool) -&gt; (a -&gt; b) -&gt; a -&gt; b
+</span><a href="Text.EDE.Internal.Filters.html#safe"><span class="hs-keyword hs-var">safe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#null"><span class="hs-identifier hs-var">Text.null</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679156607"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-type">vec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Vector</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Value</span></span><span>
+</span><span id="line-194"></span><span id="vec"><span class="annot"><span class="annottext">vec :: (Vector Value -&gt; Value) -&gt; Vector Value -&gt; Value
+</span><a href="Text.EDE.Internal.Filters.html#vec"><span class="hs-identifier hs-var hs-var">vec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value
+-&gt; (Vector Value -&gt; Bool)
+-&gt; (Vector Value -&gt; Value)
+-&gt; Vector Value
+-&gt; Value
+forall b a. b -&gt; (a -&gt; Bool) -&gt; (a -&gt; b) -&gt; a -&gt; b
+</span><a href="Text.EDE.Internal.Filters.html#safe"><span class="hs-keyword hs-var">safe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Vector Value -&gt; Value
+</span><span class="hs-identifier hs-var">Array</span></span><span> </span><span class="annot"><span class="annottext">Vector Value
+forall a. Vector a
+</span><span class="hs-identifier hs-var">Vector.empty</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Vector Value -&gt; Bool
+forall a. Vector a -&gt; Bool
+</span><span class="hs-identifier hs-var">Vector.null</span></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span id="local-6989586621679156194"><span id="local-6989586621679156195"><span class="annot"><a href="Text.EDE.Internal.Filters.html#safe"><span class="hs-keyword hs-type">safe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679156194"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679156195"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679156195"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156194"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156195"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679156194"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-197"></span><span id="safe"><span class="annot"><span class="annottext">safe :: forall b a. b -&gt; (a -&gt; Bool) -&gt; (a -&gt; b) -&gt; a -&gt; b
+</span><a href="Text.EDE.Internal.Filters.html#safe"><span class="hs-keyword hs-var hs-var">safe</span></a></span></span><span> </span><span id="local-6989586621679156610"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679156610"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679156611"><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679156611"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679156612"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679156612"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679156613"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679156613"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679156611"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679156613"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679156610"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679156612"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679156613"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-200"></span></pre></body></html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{-|
+Module      : Control.TracerA.Arrow
+Copyright   : (c) Alexander Vieth, 2019
+Licence     : Apache-2.0
+Maintainer  : aovieth@gmail.com
+-}</span></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Tracer.Arrow</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier">TracerA</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-identifier">runTracerA</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier">compute</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier">emit</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#effect"><span class="hs-identifier">effect</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier">squelch</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier">nat</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier">id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html"><span class="hs-identifier">Control.Arrow</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html"><span class="hs-identifier">Control.Category</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Formal representation of a tracer arrow as a Kleisli arrow over some</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- monad, but tagged so that we know whether it has any effects which will emit</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- a trace.</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="TracerA"><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-var">TracerA</span></a></span></span><span> </span><span id="local-6989586621679139163"><span class="annot"><a href="#local-6989586621679139163"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679139164"><span class="annot"><a href="#local-6989586621679139164"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679139165"><span class="annot"><a href="#local-6989586621679139165"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- | An emitting part, followed by a non-emitting part.</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">-- The non-emitting part is there so that later emitting parts can be</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-comment">-- tacked-on later.</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679139056"><span id="local-6989586621679139057"><span id="local-6989586621679139059"><span id="local-6989586621679139166"><span id="Emitting"><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139056"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139057"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139166"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139056"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139166"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139059"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139056"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139057"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139059"><span class="hs-identifier hs-type">b</span></a></span></span></span></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- | No emitting. There may be side-effects, but they are assumed to be</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- benign and will be discarded by 'runTracerA'.</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679139071"><span id="local-6989586621679139072"><span id="local-6989586621679139073"><span id="Squelching"><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139071"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139072"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139073"><span class="hs-identifier hs-type">b</span></a></span><span>                  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139071"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139072"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139073"><span class="hs-identifier hs-type">b</span></a></span></span></span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | The resulting Kleisli arrow includes all of the effects required to do</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- the emitting part.</span><span>
+</span><span id="line-40"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-pragma hs-type">runTracerA</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-41"></span><span id="local-6989586621679139024"><span id="local-6989586621679139025"><span class="annot"><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-identifier hs-type">runTracerA</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139024"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139024"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139025"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139024"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139025"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-42"></span><span id="runTracerA"><span class="annot"><span class="annottext">runTracerA :: forall (m :: * -&gt; *) a. Monad m =&gt; TracerA m a () -&gt; Kleisli m a ()
+</span><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-identifier hs-var hs-var">runTracerA</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span> </span><span id="local-6989586621679139175"><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139175"><span class="hs-identifier hs-var">emits</span></a></span></span><span> </span><span id="local-6989586621679139176"><span class="annot"><span class="annottext">Kleisli m x ()
+</span><a href="#local-6989586621679139176"><span class="hs-identifier hs-var">_noEmits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139175"><span class="hs-identifier hs-var">emits</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m a x -&gt; Kleisli m x () -&gt; Kleisli m a ()
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k) (b :: k) (c :: k).
+Category cat =&gt;
+cat a b -&gt; cat b c -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#%3E%3E%3E"><span class="hs-operator hs-var">&gt;&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(x -&gt; ()) -&gt; Kleisli m x ()
+forall b c. (b -&gt; c) -&gt; Kleisli m b c
+forall (a :: * -&gt; * -&gt; *) b c. Arrow a =&gt; (b -&gt; c) -&gt; a b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; x -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Control.Tracer.Arrow.html#runTracerA"><span class="hs-identifier hs-var">runTracerA</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span>     </span><span class="annot"><span class="annottext">Kleisli m a ()
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>           </span><span class="annot"><span class="annottext">(a -&gt; ()) -&gt; Kleisli m a ()
+forall b c. (b -&gt; c) -&gt; Kleisli m b c
+forall (a :: * -&gt; * -&gt; *) b c. Arrow a =&gt; (b -&gt; c) -&gt; a b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var">arr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; a -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Ignore the input and do not emit. The name is intended to lead to clear</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- and suggestive arrow expressions.</span><span>
+</span><span id="line-47"></span><span id="local-6989586621679139045"><span id="local-6989586621679139046"><span class="annot"><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier hs-type">squelch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139045"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139045"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139046"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-48"></span><span id="squelch"><span class="annot"><span class="annottext">squelch :: forall (m :: * -&gt; *) a. Applicative m =&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#squelch"><span class="hs-identifier hs-var hs-var">squelch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; ()) -&gt; TracerA m a ()
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+(a -&gt; b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier hs-var">compute</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; a -&gt; ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Do an emitting effect. Contrast with 'effect' which does not make the</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- tracer an emitting tracer.</span><span>
+</span><span id="line-52"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#emit"><span class="hs-pragma hs-type">emit</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-53"></span><span id="local-6989586621679139052"><span id="local-6989586621679139053"><span class="annot"><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-type">emit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139053"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139052"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139053"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-54"></span><span id="emit"><span class="annot"><span class="annottext">emit :: forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+(a -&gt; m ()) -&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-var hs-var">emit</span></a></span></span><span> </span><span id="local-6989586621679139183"><span class="annot"><span class="annottext">a -&gt; m ()
+</span><a href="#local-6989586621679139183"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a () -&gt; Kleisli m () () -&gt; TracerA m a ()
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; m ()) -&gt; Kleisli m a ()
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m ()
+</span><a href="#local-6989586621679139183"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(() -&gt; m ()) -&gt; Kleisli m () ()
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m () -&gt; () -&gt; m ()
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | Do a non-emitting effect. This effect will only be run if some part of</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- the tracer downstream emits (see 'emit').</span><span>
+</span><span id="line-58"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#effect"><span class="hs-pragma hs-type">effect</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-59"></span><span id="local-6989586621679139065"><span id="local-6989586621679139066"><span id="local-6989586621679139067"><span class="annot"><a href="Control.Tracer.Arrow.html#effect"><span class="hs-identifier hs-type">effect</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139065"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139066"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139067"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139066"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139065"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139067"><span class="hs-identifier hs-type">b</span></a></span></span></span></span><span>
+</span><span id="line-60"></span><span id="effect"><span class="annot"><span class="annottext">effect :: forall a (m :: * -&gt; *) b. (a -&gt; m b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#effect"><span class="hs-identifier hs-var hs-var">effect</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a b -&gt; TracerA m a b
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span><span> </span><span class="annot"><span class="annottext">(Kleisli m a b -&gt; TracerA m a b)
+-&gt; ((a -&gt; m b) -&gt; Kleisli m a b) -&gt; (a -&gt; m b) -&gt; TracerA m a b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; m b) -&gt; Kleisli m a b
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | Pure computation in a tracer: no side effects or emits.</span></span><span>
+</span><span id="line-63"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#compute"><span class="hs-pragma hs-type">compute</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-64"></span><span id="local-6989586621679139049"><span id="local-6989586621679139050"><span id="local-6989586621679139051"><span class="annot"><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier hs-type">compute</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139049"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679139050"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139051"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139049"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139050"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139051"><span class="hs-identifier hs-type">b</span></a></span></span></span></span><span>
+</span><span id="line-65"></span><span id="compute"><span class="annot"><span class="annottext">compute :: forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+(a -&gt; b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier hs-var hs-var">compute</span></a></span></span><span> </span><span id="local-6989586621679139191"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679139191"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m b) -&gt; TracerA m a b
+forall a (m :: * -&gt; *) b. (a -&gt; m b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#effect"><span class="hs-identifier hs-var">effect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; m b
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; m b) -&gt; (a -&gt; b) -&gt; a -&gt; m b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679139191"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139084"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139084"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#Category"><span class="hs-identifier hs-type">Category</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139084"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679139201"><span class="annot"><span class="annottext">id :: forall a. TracerA m a a
+</span><a href="#local-6989586621679139201"><span class="hs-identifier hs-var hs-var hs-var hs-var">id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a) -&gt; TracerA m a a
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+(a -&gt; b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier hs-var">compute</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+forall a. a -&gt; a
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k). Category cat =&gt; cat a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139204"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139204"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span id="local-6989586621679139205"><span class="annot"><span class="annottext">. :: forall b c a. TracerA m b c -&gt; TracerA m a b -&gt; TracerA m a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var hs-var hs-var hs-var">.</span></a></span></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139206"><span class="annot"><span class="annottext">Kleisli m a b
+</span><a href="#local-6989586621679139206"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a c -&gt; TracerA m a c
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139204"><span class="hs-identifier hs-var">l</span></a></span><span>  </span><span class="annot"><span class="annottext">Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall b c a. Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m a b
+</span><a href="#local-6989586621679139206"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-comment">-- Crucial: the squelching parts stay together. Could also have written</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-comment">--                                  = Emitting   (rp . re)      l</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-comment">-- but that would miss opportunities to skip doing work.</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139207"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139207"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139209"><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139209"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139210"><span class="annot"><span class="annottext">Kleisli m x b
+</span><a href="#local-6989586621679139210"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a x -&gt; Kleisli m x c -&gt; TracerA m a c
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139209"><span class="hs-identifier hs-var">re</span></a></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139207"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b c -&gt; Kleisli m x b -&gt; Kleisli m x c
+forall b c a. Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x b
+</span><a href="#local-6989586621679139210"><span class="hs-identifier hs-var">rp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- Contrast with the above clause: here the emitting part comes _after_ the</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- squelching part, so the squelching part becomes part of the emitting part.</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139212"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139212"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139213"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139213"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139214"><span class="annot"><span class="annottext">Kleisli m a b
+</span><a href="#local-6989586621679139214"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a x -&gt; Kleisli m x c -&gt; TracerA m a c
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139212"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b x -&gt; Kleisli m a b -&gt; Kleisli m a x
+forall b c a. Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m a b
+</span><a href="#local-6989586621679139214"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>       </span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139213"><span class="hs-identifier hs-var">lp</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139215"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139215"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139216"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139216"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139219"><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139219"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139220"><span class="annot"><span class="annottext">Kleisli m x b
+</span><a href="#local-6989586621679139220"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m a x -&gt; Kleisli m x c -&gt; TracerA m a c
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139215"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b x -&gt; Kleisli m a b -&gt; Kleisli m a x
+forall b c a. Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x b
+</span><a href="#local-6989586621679139220"><span class="hs-identifier hs-var">rp</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x b -&gt; Kleisli m a x -&gt; Kleisli m a b
+forall b c a. Kleisli m b c -&gt; Kleisli m a b -&gt; Kleisli m a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m a x
+</span><a href="#local-6989586621679139219"><span class="hs-identifier hs-var">re</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139216"><span class="hs-identifier hs-var">lp</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139108"><span id="local-6989586621679139226"><span id="local-6989586621679139230"><span id="local-6989586621679139234"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139108"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Arrow"><span class="hs-identifier hs-type">Arrow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139108"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679139239"><span class="annot"><span class="annottext">arr :: forall b c. (b -&gt; c) -&gt; TracerA m b c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#arr"><span class="hs-identifier hs-var hs-var hs-var hs-var">arr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; c) -&gt; TracerA m b c
+forall (m :: * -&gt; *) a b.
+Applicative m =&gt;
+(a -&gt; b) -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#compute"><span class="hs-identifier hs-var">compute</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139241"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139241"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span id="local-6989586621679139242"><span class="annot"><span class="annottext">*** :: forall b c b' c'.
+TracerA m b c -&gt; TracerA m b' c' -&gt; TracerA m (b, b') (c, c')
+</span><a href="#local-6989586621679139242"><span class="hs-operator hs-var hs-var hs-var hs-var">***</span></a></span></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139244"><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139244"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (b, b') (c, c') -&gt; TracerA m (b, b') (c, c')
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139241"><span class="hs-identifier hs-var">l</span></a></span><span>  </span><span class="annot"><span class="annottext">Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall b c b' c'.
+Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139244"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139245"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139245"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139248"><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139248"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139249"><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139249"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (b, b') (b, x)
+-&gt; Kleisli m (b, x) (c, c') -&gt; TracerA m (b, b') (c, c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b' x -&gt; Kleisli m (b, b') (b, x)
+forall b c d. Kleisli m b c -&gt; Kleisli m (d, b) (d, c)
+forall (a :: * -&gt; * -&gt; *) b c d.
+Arrow a =&gt;
+a b c -&gt; a (d, b) (d, c)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#second"><span class="hs-identifier hs-var">second</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139248"><span class="hs-identifier hs-var">re</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139245"><span class="hs-identifier hs-var">l</span></a></span><span>  </span><span class="annot"><span class="annottext">Kleisli m b c -&gt; Kleisli m x c' -&gt; Kleisli m (b, x) (c, c')
+forall b c b' c'.
+Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139249"><span class="hs-identifier hs-var">rp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139253"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139253"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139254"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139254"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139255"><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139255"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (b, b') (x, b')
+-&gt; Kleisli m (x, b') (c, c') -&gt; TracerA m (b, b') (c, c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x -&gt; Kleisli m (b, b') (x, b')
+forall b c d. Kleisli m b c -&gt; Kleisli m (b, d) (c, d)
+forall (a :: * -&gt; * -&gt; *) b c d.
+Arrow a =&gt;
+a b c -&gt; a (b, d) (c, d)
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#first"><span class="hs-identifier hs-var">first</span></a></span><span>  </span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139253"><span class="hs-identifier hs-var">le</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139254"><span class="hs-identifier hs-var">lp</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c -&gt; Kleisli m b' c' -&gt; Kleisli m (x, b') (c, c')
+forall b c b' c'.
+Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139255"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139256"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139256"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139257"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139257"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139260"><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139260"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139261"><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139261"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (b, b') (x, x)
+-&gt; Kleisli m (x, x) (c, c') -&gt; TracerA m (b, b') (c, c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139256"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b x -&gt; Kleisli m b' x -&gt; Kleisli m (b, b') (x, x)
+forall b c b' c'.
+Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139260"><span class="hs-identifier hs-var">re</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139257"><span class="hs-identifier hs-var">lp</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c -&gt; Kleisli m x c' -&gt; Kleisli m (x, x) (c, c')
+forall b c b' c'.
+Kleisli m b c -&gt; Kleisli m b' c' -&gt; Kleisli m (b, b') (c, c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+Arrow a =&gt;
+a b c -&gt; a b' c' -&gt; a (b, b') (c, c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2A%2A%2A"><span class="hs-operator hs-var">***</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139261"><span class="hs-identifier hs-var">rp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679139135"><span id="local-6989586621679139266"><span id="local-6989586621679139270"><span id="local-6989586621679139274"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139135"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#ArrowChoice"><span class="hs-identifier hs-type">ArrowChoice</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139135"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139279"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139279"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span id="local-6989586621679139280"><span class="annot"><span class="annottext">+++ :: forall b c b' c'.
+TracerA m b c
+-&gt; TracerA m b' c' -&gt; TracerA m (Either b b') (Either c c')
+</span><a href="#local-6989586621679139280"><span class="hs-operator hs-var hs-var hs-var hs-var">+++</span></a></span></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139282"><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139282"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (Either b b') (Either c c')
+-&gt; TracerA m (Either b b') (Either c c')
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139279"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139282"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139283"><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139283"><span class="hs-identifier hs-var">l</span></a></span></span><span>     </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139287"><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139287"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139288"><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139288"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (Either b b') (Either b x)
+-&gt; Kleisli m (Either b x) (Either c c')
+-&gt; TracerA m (Either b b') (Either c c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b b
+forall a. Kleisli m a a
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k). Category cat =&gt; cat a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b b
+-&gt; Kleisli m b' x -&gt; Kleisli m (Either b b') (Either b x)
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139287"><span class="hs-identifier hs-var">re</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b c
+</span><a href="#local-6989586621679139283"><span class="hs-identifier hs-var">l</span></a></span><span>  </span><span class="annot"><span class="annottext">Kleisli m b c
+-&gt; Kleisli m x c' -&gt; Kleisli m (Either b x) (Either c c')
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139288"><span class="hs-identifier hs-var">rp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139292"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139292"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139293"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139293"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span id="local-6989586621679139294"><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139294"><span class="hs-identifier hs-var">r</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (Either b b') (Either x b')
+-&gt; Kleisli m (Either x b') (Either c c')
+-&gt; TracerA m (Either b b') (Either c c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139292"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b x
+-&gt; Kleisli m b' b' -&gt; Kleisli m (Either b b') (Either x b')
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' b'
+forall a. Kleisli m a a
+forall {k} (cat :: k -&gt; k -&gt; *) (a :: k). Category cat =&gt; cat a a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#id"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139293"><span class="hs-identifier hs-var">lp</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either x b') (Either c c')
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' c'
+</span><a href="#local-6989586621679139294"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139295"><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139295"><span class="hs-identifier hs-var">le</span></a></span></span><span> </span><span id="local-6989586621679139296"><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139296"><span class="hs-identifier hs-var">lp</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span id="local-6989586621679139299"><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139299"><span class="hs-identifier hs-var">re</span></a></span></span><span> </span><span id="local-6989586621679139300"><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139300"><span class="hs-identifier hs-var">rp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli m (Either b b') (Either x x)
+-&gt; Kleisli m (Either x x) (Either c c')
+-&gt; TracerA m (Either b b') (Either c c')
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m b x
+</span><a href="#local-6989586621679139295"><span class="hs-identifier hs-var">le</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b x
+-&gt; Kleisli m b' x -&gt; Kleisli m (Either b b') (Either x x)
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m b' x
+</span><a href="#local-6989586621679139299"><span class="hs-identifier hs-var">re</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Kleisli m x c
+</span><a href="#local-6989586621679139296"><span class="hs-identifier hs-var">lp</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c
+-&gt; Kleisli m x c' -&gt; Kleisli m (Either x x) (Either c c')
+forall b c b' c'.
+Kleisli m b c
+-&gt; Kleisli m b' c' -&gt; Kleisli m (Either b b') (Either c c')
+forall (a :: * -&gt; * -&gt; *) b c b' c'.
+ArrowChoice a =&gt;
+a b c -&gt; a b' c' -&gt; a (Either b b') (Either c c')
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#%2B%2B%2B"><span class="hs-operator hs-var">+++</span></a></span><span> </span><span class="annot"><span class="annottext">Kleisli m x c'
+</span><a href="#local-6989586621679139300"><span class="hs-identifier hs-var">rp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">-- | Use a natural transformation to change the underlying monad.</span></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679139145"><span id="local-6989586621679139147"><span id="local-6989586621679139148"><span id="local-6989586621679139149"><span class="annot"><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier hs-type">nat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679139146"><span class="annot"><a href="#local-6989586621679139146"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="#local-6989586621679139145"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139146"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679139147"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139146"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139145"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139148"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139149"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Tracer.Arrow.html#TracerA"><span class="hs-identifier hs-type">TracerA</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139147"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139148"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679139149"><span class="hs-identifier hs-type">b</span></a></span></span></span></span></span><span>
+</span><span id="line-94"></span><span id="nat"><span class="annot"><span class="annottext">nat :: forall (m :: * -&gt; *) (n :: * -&gt; *) a b.
+(forall x. m x -&gt; n x) -&gt; TracerA m a b -&gt; TracerA n a b
+</span><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier hs-var hs-var">nat</span></a></span></span><span> </span><span id="local-6989586621679139302"><span class="annot"><span class="annottext">forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139302"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-type">Squelching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span id="local-6989586621679139303"><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679139303"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli n a b -&gt; TracerA n a b
+forall (m :: * -&gt; *) a b. Kleisli m a b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Squelching"><span class="hs-identifier hs-var">Squelching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; n b) -&gt; Kleisli n a b
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m b -&gt; n b
+forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139302"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">(m b -&gt; n b) -&gt; (a -&gt; m b) -&gt; a -&gt; n b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m b
+</span><a href="#local-6989586621679139303"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Control.Tracer.Arrow.html#nat"><span class="hs-identifier hs-var">nat</span></a></span><span> </span><span id="local-6989586621679139304"><span class="annot"><span class="annottext">forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139304"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-type">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span id="local-6989586621679139307"><span class="annot"><span class="annottext">a -&gt; m x
+</span><a href="#local-6989586621679139307"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-type">Kleisli</span></a></span><span> </span><span id="local-6989586621679139308"><span class="annot"><span class="annottext">x -&gt; m b
+</span><a href="#local-6989586621679139308"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Kleisli n a x -&gt; Kleisli n x b -&gt; TracerA n a b
+forall (m :: * -&gt; *) a x b.
+Kleisli m a x -&gt; Kleisli m x b -&gt; TracerA m a b
+</span><a href="Control.Tracer.Arrow.html#Emitting"><span class="hs-identifier hs-var">Emitting</span></a></span><span>   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; n x) -&gt; Kleisli n a x
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m x -&gt; n x
+forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139304"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">(m x -&gt; n x) -&gt; (a -&gt; m x) -&gt; a -&gt; n x
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m x
+</span><a href="#local-6989586621679139307"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(x -&gt; n b) -&gt; Kleisli n x b
+forall (m :: * -&gt; *) a b. (a -&gt; m b) -&gt; Kleisli m a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Arrow.html#Kleisli"><span class="hs-identifier hs-var">Kleisli</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">m b -&gt; n b
+forall x. m x -&gt; n x
+</span><a href="#local-6989586621679139304"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">(m b -&gt; n b) -&gt; (x -&gt; m b) -&gt; x -&gt; n b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Category.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">x -&gt; m b
+</span><a href="#local-6989586621679139308"><span class="hs-identifier hs-var">l</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span></pre></body></html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Wai.Handler.WarpTLS.Internal</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier">CertSettings</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier">TLSSettings</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultTlsSettings"><span class="hs-identifier">defaultTlsSettings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#OnInsecure"><span class="hs-identifier">OnInsecure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Accessors</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#getCertSettings"><span class="hs-identifier">getCertSettings</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">I</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.TLS</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TLS</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.TLS.Extra</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TLSExtra</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.TLS.SessionManager</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SM</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- | Determines where to load the certificate, chain</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- certificates, and key from.</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="CertSettings"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier hs-var">CertSettings</span></a></span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="CertFromFile"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromFile"><span class="hs-identifier hs-var">CertFromFile</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CertFromMemory"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromMemory"><span class="hs-identifier hs-var">CertFromMemory</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="CertFromRef"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromRef"><span class="hs-identifier hs-var">CertFromRef</span></a></span></span><span>
+</span><span id="line-28"></span><span>        </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">I.IORef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>        </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">I.IORef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-30"></span><span>        </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">I.IORef</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679089911"><span id="local-6989586621679089916"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier hs-type">CertSettings</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679089937"><span class="annot"><span class="annottext">show :: CertSettings -&gt; String
+</span><a href="#local-6989586621679089937"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromFile"><span class="hs-identifier hs-type">CertFromFile</span></a></span><span> </span><span id="local-6989586621679089939"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089939"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679089940"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679089940"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679089941"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089941"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CertFromFile &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089939"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679089940"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679089941"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromMemory"><span class="hs-identifier hs-type">CertFromMemory</span></a></span><span> </span><span id="local-6989586621679089942"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089942"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679089943"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089943"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679089944"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089944"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CertFromMemory &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089942"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679089943"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679089944"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromRef"><span class="hs-identifier hs-type">CertFromRef</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CertFromRef&quot;</span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | An action when a plain HTTP comes to HTTP over TLS/SSL port.</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="OnInsecure"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#OnInsecure"><span class="hs-identifier hs-var">OnInsecure</span></a></span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">=</span><span> </span><span id="DenyInsecure"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#DenyInsecure"><span class="hs-identifier hs-var">DenyInsecure</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">L.ByteString</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span id="AllowInsecure"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#AllowInsecure"><span class="hs-identifier hs-var">AllowInsecure</span></a></span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679089948"><span id="local-6989586621679089954"><span id="local-6989586621679089958"><span class="annot"><span class="annottext">Int -&gt; OnInsecure -&gt; ShowS
+[OnInsecure] -&gt; ShowS
+OnInsecure -&gt; String
+(Int -&gt; OnInsecure -&gt; ShowS)
+-&gt; (OnInsecure -&gt; String)
+-&gt; ([OnInsecure] -&gt; ShowS)
+-&gt; Show OnInsecure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; OnInsecure -&gt; ShowS
+showsPrec :: Int -&gt; OnInsecure -&gt; ShowS
+$cshow :: OnInsecure -&gt; String
+show :: OnInsecure -&gt; String
+$cshowList :: [OnInsecure] -&gt; ShowS
+showList :: [OnInsecure] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | Settings for WarpTLS.</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="TLSSettings"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier hs-var">TLSSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TLSSettings"><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier hs-var">TLSSettings</span></a></span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="certSettings"><span class="annot"><span class="annottext">TLSSettings -&gt; CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#certSettings"><span class="hs-identifier hs-var hs-var">certSettings</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier hs-type">CertSettings</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- ^ Where are the certificate, chain certificates, and key</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- loaded from?</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- &gt;&gt;&gt; certSettings defaultTlsSettings</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- CertFromFile &quot;certificate.pem&quot; [] &quot;key.pem&quot;</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">-- @since 3.3.0</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="onInsecure"><span class="annot"><span class="annottext">TLSSettings -&gt; OnInsecure
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#onInsecure"><span class="hs-identifier hs-var hs-var">onInsecure</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#OnInsecure"><span class="hs-identifier hs-type">OnInsecure</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- ^ Do we allow insecure connections with this server as well?</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- &gt;&gt;&gt; onInsecure defaultTlsSettings</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- DenyInsecure &quot;This server only accepts secure HTTPS connections.&quot;</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- Since 1.4.0</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsLogging"><span class="annot"><span class="annottext">TLSSettings -&gt; Logging
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsLogging"><span class="hs-identifier hs-var hs-var">tlsLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TLS.Logging</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- ^ The level of logging to turn on.</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- Default: 'TLS.defaultLogging'.</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- Since 1.4.0</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsAllowedVersions"><span class="annot"><span class="annottext">TLSSettings -&gt; [Version]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsAllowedVersions"><span class="hs-identifier hs-var hs-var">tlsAllowedVersions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TLS.Version</span></span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- ^ The TLS versions this server accepts.</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- Since 1.4.2</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsCiphers"><span class="annot"><span class="annottext">TLSSettings -&gt; [Cipher]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsCiphers"><span class="hs-identifier hs-var hs-var">tlsCiphers</span></a></span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TLS.Cipher</span></span><span class="hs-special">]</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- ^ The TLS ciphers this server accepts.</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- Since 1.4.2</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsWantClientCert"><span class="annot"><span class="annottext">TLSSettings -&gt; Bool
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsWantClientCert"><span class="hs-identifier hs-var hs-var">tlsWantClientCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- ^ Whether or not to demand a certificate from the client.  If this</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- is set to True, you must handle received certificates in a server hook</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- or all connections will fail.</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- &gt;&gt;&gt; tlsWantClientCert defaultTlsSettings</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- False</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- Since 3.0.2</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsServerHooks"><span class="annot"><span class="annottext">TLSSettings -&gt; ServerHooks
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsServerHooks"><span class="hs-identifier hs-var hs-var">tlsServerHooks</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TLS.ServerHooks</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- ^ The server-side hooks called by the tls package, including actions</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">-- to take when a client certificate is received.  See the &quot;Network.TLS&quot;</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">-- module for details.</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- Default: defaultServerHooks</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- Since 3.0.2</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsServerDHEParams"><span class="annot"><span class="annottext">TLSSettings -&gt; Maybe DHParams
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsServerDHEParams"><span class="hs-identifier hs-var hs-var">tlsServerDHEParams</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TLS.DHParams</span></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- ^ Configuration for ServerDHEParams</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- more function lives in `crypton` package</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">-- Default: Nothing</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- Since 3.2.2</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsSessionManagerConfig"><span class="annot"><span class="annottext">TLSSettings -&gt; Maybe Config
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSessionManagerConfig"><span class="hs-identifier hs-var hs-var">tlsSessionManagerConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">SM.Config</span></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- ^ Configuration for in-memory TLS session manager.</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- If Nothing, 'TLS.noSessionManager' is used.</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- Otherwise, an in-memory TLS session manager is created</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- according to 'Config'.</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- Default: Nothing</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- Since 3.2.4</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsCredentials"><span class="annot"><span class="annottext">TLSSettings -&gt; Maybe Credentials
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsCredentials"><span class="hs-identifier hs-var hs-var">tlsCredentials</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TLS.Credentials</span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- ^ Specifying 'TLS.Credentials' directly.  If this value is</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">--   specified, other fields such as 'certFile' are ignored.</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">--   Since 3.2.12</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsSessionManager"><span class="annot"><span class="annottext">TLSSettings -&gt; Maybe SessionManager
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSessionManager"><span class="hs-identifier hs-var hs-var">tlsSessionManager</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">TLS.SessionManager</span></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- ^ Specifying 'TLS.SessionManager' directly. If this value is</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">--   specified, 'tlsSessionManagerConfig' is ignored.</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-comment">--   Since 3.2.12</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="tlsSupportedHashSignatures"><span class="annot"><span class="annottext">TLSSettings -&gt; [HashAndSignatureAlgorithm]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSupportedHashSignatures"><span class="hs-identifier hs-var hs-var">tlsSupportedHashSignatures</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TLS.HashAndSignatureAlgorithm</span></span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- ^ Specifying supported hash/signature algorithms, ordered by decreasing</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- priority. See the &quot;Network.TLS&quot; module for details</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-comment">--   Since 3.3.3</span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- Since 3.3.1</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | Some programs need access to cert settings</span></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#getCertSettings"><span class="hs-identifier hs-type">getCertSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier hs-type">TLSSettings</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier hs-type">CertSettings</span></a></span><span>
+</span><span id="line-133"></span><span id="getCertSettings"><span class="annot"><span class="annottext">getCertSettings :: TLSSettings -&gt; CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#getCertSettings"><span class="hs-identifier hs-var hs-var">getCertSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TLSSettings -&gt; CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#certSettings"><span class="hs-identifier hs-var">certSettings</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><span class="hs-comment">-- | The default 'CertSettings'.</span></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultCertSettings"><span class="hs-identifier hs-type">defaultCertSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertSettings"><span class="hs-identifier hs-type">CertSettings</span></a></span><span>
+</span><span id="line-137"></span><span id="defaultCertSettings"><span class="annot"><span class="annottext">defaultCertSettings :: CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultCertSettings"><span class="hs-identifier hs-var hs-var">defaultCertSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String -&gt; CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#CertFromFile"><span class="hs-identifier hs-var">CertFromFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;certificate.pem&quot;</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;key.pem&quot;</span></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">----------------------------------------------------------------</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><span class="hs-comment">-- | Default 'TLSSettings'. Use this to create 'TLSSettings' with the field record name (aka accessors).</span></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultTlsSettings"><span class="hs-identifier hs-type">defaultTlsSettings</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier hs-type">TLSSettings</span></a></span><span>
+</span><span id="line-143"></span><span id="defaultTlsSettings"><span class="annot"><span class="annottext">defaultTlsSettings :: TLSSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultTlsSettings"><span class="hs-identifier hs-var hs-var">defaultTlsSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#TLSSettings"><span class="hs-identifier hs-type">TLSSettings</span></a></span><span>
+</span><span id="line-145"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">certSettings :: CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#certSettings"><span class="hs-identifier hs-var">certSettings</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertSettings
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#defaultCertSettings"><span class="hs-identifier hs-var">defaultCertSettings</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">onInsecure :: OnInsecure
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#onInsecure"><span class="hs-identifier hs-var">onInsecure</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; OnInsecure
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#DenyInsecure"><span class="hs-identifier hs-var">DenyInsecure</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;This server only accepts secure HTTPS connections.&quot;</span></span><span>
+</span><span id="line-147"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsLogging :: Logging
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsLogging"><span class="hs-identifier hs-var">tlsLogging</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Logging
+</span><span class="hs-identifier hs-var">TLS.defaultLogging</span></span><span>
+</span><span id="line-148"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsAllowedVersions :: [Version]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsAllowedVersions"><span class="hs-identifier hs-var">tlsAllowedVersions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Supported -&gt; [Version]
+</span><span class="hs-identifier hs-var">TLS.supportedVersions</span></span><span> </span><span class="annot"><span class="annottext">Supported
+</span><span class="hs-identifier hs-var">TLS.defaultSupported</span></span><span>
+</span><span id="line-149"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsCiphers :: [Cipher]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsCiphers"><span class="hs-identifier hs-var">tlsCiphers</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Cipher]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#ciphers"><span class="hs-identifier hs-var">ciphers</span></a></span><span>
+</span><span id="line-150"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsWantClientCert :: Bool
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsWantClientCert"><span class="hs-identifier hs-var">tlsWantClientCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-151"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsServerHooks :: ServerHooks
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsServerHooks"><span class="hs-identifier hs-var">tlsServerHooks</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ServerHooks
+</span><span class="hs-identifier hs-var">TLS.defaultServerHooks</span></span><span>
+</span><span id="line-152"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsServerDHEParams :: Maybe DHParams
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsServerDHEParams"><span class="hs-identifier hs-var">tlsServerDHEParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe DHParams
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsSessionManagerConfig :: Maybe Config
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSessionManagerConfig"><span class="hs-identifier hs-var">tlsSessionManagerConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Config
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsCredentials :: Maybe Credentials
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsCredentials"><span class="hs-identifier hs-var">tlsCredentials</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Credentials
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-155"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsSessionManager :: Maybe SessionManager
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSessionManager"><span class="hs-identifier hs-var">tlsSessionManager</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SessionManager
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-156"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">tlsSupportedHashSignatures :: [HashAndSignatureAlgorithm]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#tlsSupportedHashSignatures"><span class="hs-identifier hs-var">tlsSupportedHashSignatures</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Supported -&gt; [HashAndSignatureAlgorithm]
+</span><span class="hs-identifier hs-var">TLS.supportedHashSignatures</span></span><span> </span><span class="annot"><span class="annottext">Supported
+</span><span class="hs-identifier hs-var">TLS.defaultSupported</span></span><span>
+</span><span id="line-157"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- taken from stunnel example in tls-extra</span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Network.Wai.Handler.WarpTLS.Internal.html#ciphers"><span class="hs-identifier hs-type">ciphers</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">TLS.Cipher</span></span><span class="hs-special">]</span><span>
+</span><span id="line-161"></span><span id="ciphers"><span class="annot"><span class="annottext">ciphers :: [Cipher]
+</span><a href="Network.Wai.Handler.WarpTLS.Internal.html#ciphers"><span class="hs-identifier hs-var hs-var">ciphers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Cipher]
+</span><span class="hs-identifier hs-var">TLSExtra.ciphersuite_strong</span></span><span>
+</span><span id="line-162"></span></pre></body></html>

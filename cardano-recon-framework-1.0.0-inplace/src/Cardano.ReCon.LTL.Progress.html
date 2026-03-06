@@ -1,0 +1,610 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.ReCon.LTL.Progress</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier">next</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier">terminate</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.Formula</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.HomogeneousFormula</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#HomogeneousFormula"><span class="hs-identifier">HomogeneousFormula</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html"><span class="hs-identifier">Cardano.ReCon.LTL.Lang.HomogeneousFormula</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#lookup"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-cpp">
+
+#ifdef CRASH_ON_MISSING_KEY
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data.Text</span><span>                           </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Text</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- This file concerns algorithmically checking formula satisfiability.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--  There are two parts:</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--    *) (t t&#772; &#8871; &#966;) for producing a new formula &#966;' such that the two are equi-satisfiable,</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--          but the new one operates on the suffix of the original context: (t&#772; &#8871; &#966;')</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--    *) (&#8709; &#8871; &#966;) for checking satisfiability against the empty context.</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- | This is an algorithm for representing</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   (t t&#772; &#8871; &#966;) in terms of &#8707;&#966;'. (t&#772; &#8871; &#966;')</span><span>
+</span><span id="line-26"></span><span id="local-6989586621679112358"><span id="local-6989586621679112359"><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-type">next</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112358"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112359"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112359"><span class="hs-identifier hs-type">ty</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112358"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112359"><span class="hs-identifier hs-type">ty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679112358"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112358"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112359"><span class="hs-identifier hs-type">ty</span></a></span></span></span><span>
+</span><span id="line-27"></span><span id="next"><span class="annot"><span class="annottext">next :: forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var hs-var">next</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span id="local-6989586621679112444"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112444"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112445"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112445"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112446"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112446"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForall"><span class="hs-identifier hs-var">unfoldForall</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112444"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112445"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112446"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679112449"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112449"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112450"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112450"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112451"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112451"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForallN"><span class="hs-identifier hs-var">unfoldForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112449"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112450"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112451"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679112454"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112454"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112455"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112455"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112456"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112456"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldExistsN"><span class="hs-identifier hs-var">unfoldExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112454"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112455"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112456"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span id="local-6989586621679112459"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112459"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112460"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112460"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112461"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112461"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldNextN"><span class="hs-identifier hs-var">unfoldNextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112459"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112460"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112461"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679112464"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112464"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112465"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112465"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112466"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112466"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112467"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112467"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldUntilN"><span class="hs-identifier hs-var">unfoldUntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112464"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112465"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112466"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112467"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679112470"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112470"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112470"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112472"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112472"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112473"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112473"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112474"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112474"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-var">And</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112472"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112474"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112473"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112474"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112476"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112476"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112477"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112477"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112478"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112478"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112476"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112478"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112477"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112478"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112480"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112480"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112481"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112481"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112482"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112482"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-var">Implies</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112480"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112482"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112481"><span class="hs-identifier hs-var">psi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112482"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112484"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112484"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112485"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112485"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty -&gt; Formula event ty
+forall event ty. Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112484"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112485"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span id="local-6989586621679112489"><span class="annot"><span class="annottext">ty
+</span><a href="#local-6989586621679112489"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679112490"><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112490"><span class="hs-identifier hs-var">is</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112491"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112491"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">event -&gt; ty -&gt; Bool
+forall a ty. Event a ty =&gt; a -&gt; ty -&gt; Bool
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#ofTy"><span class="hs-identifier hs-var">ofTy</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112491"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ty
+</span><a href="#local-6989586621679112489"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">[Formula event ty] -&gt; Formula event ty
+forall event ty. [Formula event ty] -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#and"><span class="hs-identifier hs-var">F.and</span></a></span><span> </span><span class="annot"><span class="annottext">([Formula event ty] -&gt; Formula event ty)
+-&gt; [Formula event ty] -&gt; Formula event ty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((PropConstraint -&gt; Formula event ty)
+ -&gt; [PropConstraint] -&gt; [Formula event ty])
+-&gt; [PropConstraint]
+-&gt; (PropConstraint -&gt; Formula event ty)
+-&gt; [Formula event ty]
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">(PropConstraint -&gt; Formula event ty)
+-&gt; [PropConstraint] -&gt; [Formula event ty]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set PropConstraint -&gt; [PropConstraint]
+forall a. Set a -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#toList"><span class="hs-identifier hs-var">Set.toList</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112490"><span class="hs-identifier hs-var">is</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((PropConstraint -&gt; Formula event ty) -&gt; [Formula event ty])
+-&gt; (PropConstraint -&gt; Formula event ty) -&gt; [Formula event ty]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropConstraint"><span class="hs-identifier hs-type">PropConstraint</span></a></span><span> </span><span id="local-6989586621679112497"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112497"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679112498"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112498"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PropName -&gt; Map PropName PropValue -&gt; Maybe PropValue
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">lookup</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112497"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">event -&gt; ty -&gt; Map PropName PropValue
+forall a ty. Event a ty =&gt; a -&gt; ty -&gt; Map PropName PropValue
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#props"><span class="hs-identifier hs-var">props</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112491"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ty
+</span><a href="#local-6989586621679112489"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679112500"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112500"><span class="hs-identifier hs-var">v</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Relevance event ty -&gt; PropTerm -&gt; PropValue -&gt; Formula event ty
+forall event ty.
+Relevance event ty -&gt; PropTerm -&gt; PropValue -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-var">PropEq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(event, ty) -&gt; Relevance event ty
+forall a. a -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#singleton"><span class="hs-identifier hs-var">Set.singleton</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112491"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ty
+</span><a href="#local-6989586621679112489"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112498"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112500"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">Maybe PropValue
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span class="hs-cpp">
+#ifdef CRASH_ON_MISSING_KEY
+</span><span>        </span><span class="hs-identifier">error</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-string">&quot;Missing key: &quot;</span><span> </span><span class="hs-operator">&lt;&gt;</span><span> </span><span class="hs-identifier">Text.unpack</span><span> </span><span class="hs-identifier">key</span><span class="hs-cpp">
+#else
+</span><span>        </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span class="hs-cpp">
+#endif
+</span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event ty
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112504"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112504"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112505"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112505"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112506"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112506"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName -&gt; Formula event ty -&gt; Formula event ty
+forall event ty. PropName -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-var">PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112504"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112505"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112506"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112508"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112508"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112509"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112509"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112510"><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112510"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679112511"><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112511"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName -&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+forall event ty.
+PropName -&gt; Set PropValue -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-var">PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112508"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112509"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event ty -&gt; event -&gt; Formula event ty
+forall event ty.
+(Event event ty, Eq ty) =&gt;
+Formula event ty -&gt; event -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event ty
+</span><a href="#local-6989586621679112510"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">event
+</span><a href="#local-6989586621679112511"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#next"><span class="hs-identifier hs-var">next</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span id="local-6989586621679112512"><span class="annot"><span class="annottext">Relevance event ty
+</span><a href="#local-6989586621679112512"><span class="hs-identifier hs-var">rel</span></a></span></span><span> </span><span id="local-6989586621679112513"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112513"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679112514"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112514"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">event
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Relevance event ty -&gt; PropTerm -&gt; PropValue -&gt; Formula event ty
+forall event ty.
+Relevance event ty -&gt; PropTerm -&gt; PropValue -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-var">PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event ty
+</span><a href="#local-6989586621679112512"><span class="hs-identifier hs-var">rel</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112513"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112514"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | This is an algorithm for (&#8709; &#8871; &#9711; &#966;)</span></span><span>
+</span><span id="line-55"></span><span id="local-6989586621679112394"><span id="local-6989586621679112395"><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-type">terminateNext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112394"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112395"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#HomogeneousFormula"><span class="hs-identifier hs-type">HomogeneousFormula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112394"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112395"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-56"></span><span id="terminateNext"><span class="annot"><span class="annottext">terminateNext :: forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var hs-var">terminateNext</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679112516"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112516"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112516"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112517"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112517"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112517"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112518"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112518"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112519"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112519"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112518"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Or"><span class="hs-operator hs-var">`H.Or`</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112519"><span class="hs-identifier hs-var">psi</span></a></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112521"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112521"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112522"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112522"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112521"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#And"><span class="hs-operator hs-var">`H.And`</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112522"><span class="hs-identifier hs-var">psi</span></a></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112524"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112524"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112525"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112525"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112524"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Implies"><span class="hs-operator hs-var">`H.Implies`</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112525"><span class="hs-identifier hs-var">psi</span></a></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112527"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112527"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Not"><span class="hs-identifier hs-var">H.Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112527"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112529"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112529"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112530"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112530"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+PropName
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropForall"><span class="hs-identifier hs-var">H.PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112529"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112530"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112532"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112532"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112533"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112533"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112534"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112534"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName
+-&gt; Set PropValue
+-&gt; HomogeneousFormula event a
+-&gt; HomogeneousFormula event a
+forall event ty.
+PropName
+-&gt; Set PropValue
+-&gt; HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropForallN"><span class="hs-identifier hs-var">H.PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112532"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112533"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112534"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span id="local-6989586621679112536"><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679112536"><span class="hs-identifier hs-var">rel</span></a></span></span><span> </span><span id="local-6989586621679112537"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112537"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span id="local-6989586621679112538"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112538"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Relevance event a
+-&gt; PropTerm -&gt; PropValue -&gt; HomogeneousFormula event a
+forall event ty.
+Relevance event ty
+-&gt; PropTerm -&gt; PropValue -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropEq"><span class="hs-identifier hs-var">H.PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679112536"><span class="hs-identifier hs-var">rel</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112537"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112538"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679112540"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112540"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112540"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span id="local-6989586621679112541"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112541"><span class="hs-identifier hs-var">ty</span></a></span></span><span> </span><span id="local-6989586621679112542"><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112542"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Set PropConstraint -&gt; Formula event a
+forall event ty. ty -&gt; Set PropConstraint -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-var">Atom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679112541"><span class="hs-identifier hs-var">ty</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropConstraint
+</span><a href="#local-6989586621679112542"><span class="hs-identifier hs-var">cs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+forall event ty. Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679112543"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112543"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112544"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112544"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldExistsN"><span class="hs-identifier hs-var">unfoldExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112543"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112544"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679112545"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112545"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112546"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112546"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForallN"><span class="hs-identifier hs-var">unfoldForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112545"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112546"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679112547"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112547"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112548"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112548"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112549"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112549"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldUntilN"><span class="hs-identifier hs-var">unfoldUntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112547"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112548"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112549"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><span class="hs-comment">-- | This is an algorithm for (&#8709; &#8871; &#966;)</span></span><span>
+</span><span id="line-74"></span><span id="local-6989586621679112550"><span id="local-6989586621679112551"><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-type">terminate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Formula"><span class="hs-identifier hs-type">Formula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112550"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112551"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#HomogeneousFormula"><span class="hs-identifier hs-type">HomogeneousFormula</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112550"><span class="hs-identifier hs-type">event</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112551"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-75"></span><span id="terminate"><span class="annot"><span class="annottext">terminate :: forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var hs-var">terminate</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Forall"><span class="hs-identifier hs-type">Forall</span></a></span><span> </span><span id="local-6989586621679112552"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112552"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112553"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112553"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForall"><span class="hs-identifier hs-var">unfoldForall</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112552"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112553"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ForallN"><span class="hs-identifier hs-type">ForallN</span></a></span><span> </span><span id="local-6989586621679112554"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112554"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112555"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112555"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldForallN"><span class="hs-identifier hs-var">unfoldForallN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112554"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112555"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#ExistsN"><span class="hs-identifier hs-type">ExistsN</span></a></span><span> </span><span id="local-6989586621679112556"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112556"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112557"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112557"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldExistsN"><span class="hs-identifier hs-var">unfoldExistsN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112556"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112557"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#UntilN"><span class="hs-identifier hs-type">UntilN</span></a></span><span> </span><span id="local-6989586621679112558"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112558"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112559"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112559"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112560"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112560"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a -&gt; Formula event a
+forall event ty.
+Word -&gt; Formula event ty -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldUntilN"><span class="hs-identifier hs-var">unfoldUntilN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112558"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112559"><span class="hs-identifier hs-var">phi</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112560"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#NextN"><span class="hs-identifier hs-type">NextN</span></a></span><span> </span><span id="local-6989586621679112561"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112561"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679112562"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112562"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Formula event a -&gt; Formula event a
+forall event ty. Word -&gt; Formula event ty -&gt; Formula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#unfoldNextN"><span class="hs-identifier hs-var">unfoldNextN</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679112561"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112562"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Atom"><span class="hs-identifier hs-type">Atom</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Set PropConstraint
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+forall event ty. HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Bottom"><span class="hs-identifier hs-var">H.Bottom</span></a></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Next"><span class="hs-identifier hs-type">Next</span></a></span><span> </span><span id="local-6989586621679112564"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112564"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminateNext"><span class="hs-identifier hs-var">terminateNext</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112564"><span class="hs-identifier hs-var">phi</span></a></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#And"><span class="hs-identifier hs-type">And</span></a></span><span> </span><span id="local-6989586621679112565"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112565"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112566"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112566"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#And"><span class="hs-identifier hs-var">H.And</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112565"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112566"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Or"><span class="hs-identifier hs-type">Or</span></a></span><span> </span><span id="local-6989586621679112567"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112567"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112568"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112568"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span>            </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Or"><span class="hs-identifier hs-var">H.Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112567"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112568"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Implies"><span class="hs-identifier hs-type">Implies</span></a></span><span> </span><span id="local-6989586621679112569"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112569"><span class="hs-identifier hs-var">phi</span></a></span></span><span> </span><span id="local-6989586621679112570"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112570"><span class="hs-identifier hs-var">psi</span></a></span></span><span class="hs-special">)</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Implies"><span class="hs-identifier hs-var">H.Implies</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112569"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112570"><span class="hs-identifier hs-var">psi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#Not"><span class="hs-identifier hs-type">Not</span></a></span><span> </span><span id="local-6989586621679112571"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112571"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Not"><span class="hs-identifier hs-var">H.Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112571"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Bottom"><span class="hs-identifier hs-var">Bottom</span></a></span><span>                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+forall event ty. HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Bottom"><span class="hs-identifier hs-var">H.Bottom</span></a></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="Cardano.ReCon.LTL.Lang.Formula.html#Top"><span class="hs-identifier hs-var">Top</span></a></span><span>                     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HomogeneousFormula event a
+forall event ty. HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#Top"><span class="hs-identifier hs-var">H.Top</span></a></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForall"><span class="hs-identifier hs-type">PropForall</span></a></span><span> </span><span id="local-6989586621679112573"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112573"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112574"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112574"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName
+-&gt; HomogeneousFormula event a -&gt; HomogeneousFormula event a
+forall event ty.
+PropName
+-&gt; HomogeneousFormula event ty -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropForall"><span class="hs-identifier hs-var">H.PropForall</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112573"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112574"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropForallN"><span class="hs-identifier hs-type">PropForallN</span></a></span><span> </span><span id="local-6989586621679112575"><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112575"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679112576"><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112576"><span class="hs-identifier hs-var">dom</span></a></span></span><span> </span><span id="local-6989586621679112577"><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112577"><span class="hs-identifier hs-var">phi</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PropName
+-&gt; Set PropValue
+-&gt; HomogeneousFormula event a
+-&gt; HomogeneousFormula event a
+forall event ty.
+PropName
+-&gt; Set PropValue
+-&gt; HomogeneousFormula event ty
+-&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropForallN"><span class="hs-identifier hs-var">H.PropForallN</span></a></span><span> </span><span class="annot"><span class="annottext">PropName
+</span><a href="#local-6989586621679112575"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set PropValue
+</span><a href="#local-6989586621679112576"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Formula event a -&gt; HomogeneousFormula event a
+forall event a. Formula event a -&gt; HomogeneousFormula event a
+</span><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="annot"><span class="annottext">Formula event a
+</span><a href="#local-6989586621679112577"><span class="hs-identifier hs-var">phi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Cardano.ReCon.LTL.Progress.html#terminate"><span class="hs-identifier hs-var">terminate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.ReCon.LTL.Lang.Formula.html#PropEq"><span class="hs-identifier hs-type">PropEq</span></a></span><span> </span><span id="local-6989586621679112578"><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679112578"><span class="hs-identifier hs-var">rel</span></a></span></span><span> </span><span id="local-6989586621679112579"><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112579"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679112580"><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112580"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Relevance event a
+-&gt; PropTerm -&gt; PropValue -&gt; HomogeneousFormula event a
+forall event ty.
+Relevance event ty
+-&gt; PropTerm -&gt; PropValue -&gt; HomogeneousFormula event ty
+</span><a href="Cardano.ReCon.LTL.Lang.HomogeneousFormula.html#PropEq"><span class="hs-identifier hs-var">H.PropEq</span></a></span><span> </span><span class="annot"><span class="annottext">Relevance event a
+</span><a href="#local-6989586621679112578"><span class="hs-identifier hs-var">rel</span></a></span><span> </span><span class="annot"><span class="annottext">PropTerm
+</span><a href="#local-6989586621679112579"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">PropValue
+</span><a href="#local-6989586621679112580"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-91"></span></pre></body></html>

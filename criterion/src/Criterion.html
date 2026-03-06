@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- Module      : Criterion</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Copyright   : (c) 2009-2014 Bryan O'Sullivan</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License     : BSD-style</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- Maintainer  : bos@serpentine.com</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Stability   : experimental</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Portability : GHC</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- Core benchmarking code.</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Criterion</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Benchmarkable code</span></span><span>
+</span><span id="line-16"></span><span>      </span><span class="annot"><span class="hs-identifier">Benchmarkable</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Creating a benchmark suite</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Benchmark</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">env</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">envWithCleanup</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perBatchEnv</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perBatchEnvWithCleanup</span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perRunEnv</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">perRunEnvWithCleanup</span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toBenchmarkable</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bench</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">bgroup</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Running a benchmark</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nf</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnf</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nfIO</span></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnfIO</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nfAppIO</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">whnfAppIO</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="hs-comment">-- * For interactive use</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.html#benchmark"><span class="hs-identifier">benchmark</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.html#benchmarkWith"><span class="hs-identifier">benchmarkWith</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.html#benchmark%27"><span class="hs-identifier">benchmark'</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Criterion.html#benchmarkWith%27"><span class="hs-identifier">benchmarkWith'</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier">void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.IO.Printf.html"><span class="hs-identifier">Criterion.IO.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.IO.Printf.html#note"><span class="hs-identifier">note</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Internal.html"><span class="hs-identifier">Criterion.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Internal.html#runAndAnalyseOne"><span class="hs-identifier">runAndAnalyseOne</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Main.Options.html"><span class="hs-identifier">Criterion.Main.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Main.Options.html#defaultConfig"><span class="hs-identifier">defaultConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Criterion.Measurement</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">initializeTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Monad.html"><span class="hs-identifier">Criterion.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Criterion.Monad.html#withConfig"><span class="hs-identifier">withConfig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Criterion.Types.html"><span class="hs-identifier">Criterion.Types</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><span class="hs-comment">-- | Run a benchmark interactively, and analyse its performance.</span></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Criterion.html#benchmark"><span class="hs-identifier hs-type">benchmark</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Benchmarkable</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span id="benchmark"><span class="annot"><span class="annottext">benchmark :: Benchmarkable -&gt; IO ()
+</span><a href="Criterion.html#benchmark"><span class="hs-identifier hs-var hs-var">benchmark</span></a></span></span><span> </span><span id="local-6989586621679126538"><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126538"><span class="hs-identifier hs-var">bm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Report -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Report -&gt; IO ()) -&gt; IO Report -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmarkable -&gt; IO Report
+</span><a href="Criterion.html#benchmark%27"><span class="hs-identifier hs-var">benchmark'</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126538"><span class="hs-identifier hs-var">bm</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Run a benchmark interactively, analyse its performance, and</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- return the analysis.</span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Criterion.html#benchmark%27"><span class="hs-identifier hs-type">benchmark'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Benchmarkable</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Criterion.Types.html#Report"><span class="hs-identifier hs-type">Report</span></a></span><span>
+</span><span id="line-57"></span><span id="benchmark%27"><span class="annot"><span class="annottext">benchmark' :: Benchmarkable -&gt; IO Report
+</span><a href="Criterion.html#benchmark%27"><span class="hs-identifier hs-var hs-var">benchmark'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config -&gt; Benchmarkable -&gt; IO Report
+</span><a href="Criterion.html#benchmarkWith%27"><span class="hs-identifier hs-var">benchmarkWith'</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="Criterion.Main.Options.html#defaultConfig"><span class="hs-identifier hs-var">defaultConfig</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><span class="hs-comment">-- | Run a benchmark interactively, and analyse its performance.</span></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Criterion.html#benchmarkWith"><span class="hs-identifier hs-type">benchmarkWith</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Benchmarkable</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span id="benchmarkWith"><span class="annot"><span class="annottext">benchmarkWith :: Config -&gt; Benchmarkable -&gt; IO ()
+</span><a href="Criterion.html#benchmarkWith"><span class="hs-identifier hs-var hs-var">benchmarkWith</span></a></span></span><span> </span><span id="local-6989586621679126539"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126539"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span id="local-6989586621679126540"><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126540"><span class="hs-identifier hs-var">bm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO Report -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Report -&gt; IO ()) -&gt; IO Report -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Config -&gt; Benchmarkable -&gt; IO Report
+</span><a href="Criterion.html#benchmarkWith%27"><span class="hs-identifier hs-var">benchmarkWith'</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126539"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126540"><span class="hs-identifier hs-var">bm</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | Run a benchmark interactively, analyse its performance, and</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- return the analysis.</span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Criterion.html#benchmarkWith%27"><span class="hs-identifier hs-type">benchmarkWith'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Criterion.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Benchmarkable</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Criterion.Types.html#Report"><span class="hs-identifier hs-type">Report</span></a></span><span>
+</span><span id="line-66"></span><span id="benchmarkWith%27"><span class="annot"><span class="annottext">benchmarkWith' :: Config -&gt; Benchmarkable -&gt; IO Report
+</span><a href="Criterion.html#benchmarkWith%27"><span class="hs-identifier hs-var hs-var">benchmarkWith'</span></a></span></span><span> </span><span id="local-6989586621679126541"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126541"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span id="local-6989586621679126542"><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126542"><span class="hs-identifier hs-var">bm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">IO ()
+</span><span class="hs-identifier hs-var">initializeTime</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">Config -&gt; Criterion Report -&gt; IO Report
+forall a. Config -&gt; Criterion a -&gt; IO a
+</span><a href="Criterion.Monad.html#withConfig"><span class="hs-identifier hs-var">withConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679126541"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">(Criterion Report -&gt; IO Report) -&gt; Criterion Report -&gt; IO Report
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Any
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String -&gt; Criterion Any
+forall r. CritHPrintfType r =&gt; String -&gt; r
+</span><a href="Criterion.IO.Printf.html#note"><span class="hs-identifier hs-var">note</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;benchmarking...\n&quot;</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="Criterion.Types.html#Analysed"><span class="hs-identifier hs-type">Analysed</span></a></span><span> </span><span id="local-6989586621679126544"><span class="annot"><span class="annottext">Report
+</span><a href="#local-6989586621679126544"><span class="hs-identifier hs-var">rpt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; Benchmarkable -&gt; Criterion DataRecord
+</span><a href="Criterion.Internal.html#runAndAnalyseOne"><span class="hs-identifier hs-var">runAndAnalyseOne</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;function&quot;</span></span><span> </span><span class="annot"><span class="annottext">Benchmarkable
+</span><a href="#local-6989586621679126542"><span class="hs-identifier hs-var">bm</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">Report -&gt; Criterion Report
+forall a. a -&gt; Criterion a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Report
+</span><a href="#local-6989586621679126544"><span class="hs-identifier hs-var">rpt</span></a></span><span>
+</span><span id="line-72"></span></pre></body></html>

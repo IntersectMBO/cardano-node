@@ -1,0 +1,391 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-glyph">\</span><span class="hs-identifier">subsection</span><span class="hs-special">{</span><span class="hs-identifier">Cardano.BM.Scribe.Systemd</span><span class="hs-special">}</span><span>
+</span><span id="line-2"></span><span class="hs-glyph">\</span><span class="hs-keyword">label</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-glyph">:</span><span class="hs-identifier">Cardano.BM.Scribe.Systemd</span><span class="hs-special">}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-operator">%</span><span class="hs-keyword">if</span><span> </span><span class="hs-identifier">style</span><span> </span><span class="hs-operator">==</span><span> </span><span class="hs-identifier">newcode</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span class="hs-cpp">
+
+#if defined(linux_HOST_OS)
+</span><span class="hs-cpp">#define LINUX
+</span><span class="hs-cpp">#endif
+</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.BM.Scribe.Systemd</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-special">(</span><span class="hs-cpp">
+#if defined(LINUX)
+</span><span>      </span><span class="annot"><a href="Cardano.BM.Scribe.Systemd.html#plugin"><span class="hs-identifier">plugin</span></a></span><span class="hs-cpp">
+#endif
+</span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+
+#ifdef LINUX
+</span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">encode</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier">toStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HM</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier">encodeUtf8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TL</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier">toLazyText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html"><span class="hs-identifier">Language.Haskell.TH.Syntax</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Loc"><span class="hs-identifier">Loc</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Loc"><span class="hs-identifier">Loc</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_filename"><span class="hs-identifier">loc_filename</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_start"><span class="hs-identifier">loc_start</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Systemd.Journal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">JournalFields</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">codeFile</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">codeLine</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">message</span></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>                     </span><span class="annot"><span class="hs-identifier">mkJournalField</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">priority</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">sendJournalFields</span></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>                     </span><span class="annot"><span class="hs-identifier">syslogFacility</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">syslogIdentifier</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Systemd.Journal</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">J</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Posix.Syslog</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Facility</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Katip</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">K</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Katip.Core</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">KC</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Katip.Format.Time</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">formatAsIso8601</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Configuration</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Backend.Log</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">sev2klog</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Backend</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Severity</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Data.Trace</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Cardano.BM.Plugin</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Plugin</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-48"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-49"></span><span class="hs-operator">%</span><span class="hs-identifier">endif</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-identifier">This</span><span> </span><span class="hs-identifier">plugin</span><span> </span><span class="hs-identifier">provides</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-identifier">scribe</span><span> </span><span class="hs-identifier">to</span><span> </span><span class="hs-glyph">\</span><span class="hs-identifier">emph</span><span class="hs-special">{</span><span class="hs-identifier">katip</span><span class="hs-special">}</span><span> </span><span class="hs-identifier">to</span><span> </span><span class="hs-identifier">output</span><span> </span><span class="hs-identifier">logged</span><span> </span><span class="hs-identifier">items</span><span>
+</span><span id="line-52"></span><span class="hs-identifier">to</span><span> </span><span class="hs-identifier">systemd's</span><span> </span><span class="hs-identifier">journal</span><span> </span><span class="hs-identifier">on</span><span> </span><span class="hs-glyph">\</span><span class="hs-identifier">emph</span><span class="hs-special">{</span><span class="hs-identifier">Linux</span><span class="hs-special">}</span><span class="hs-operator">.</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Plugin</span><span> </span><span class="hs-identifier">definition</span><span class="hs-special">}</span><span>
+</span><span id="line-55"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span class="hs-cpp">
+#ifdef LINUX
+</span><span id="local-6989586621679078206"><span id="local-6989586621679078207"><span class="annot"><a href="Cardano.BM.Scribe.Systemd.html#plugin"><span class="hs-identifier hs-type">plugin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">IsEffectuator</span></span><span> </span><span class="annot"><a href="#local-6989586621679078206"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Configuration</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Trace</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679078206"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Plugin</span></span><span> </span><span class="annot"><a href="#local-6989586621679078207"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-59"></span><span id="plugin"><span class="annot"><span class="annottext">plugin :: forall (s :: * -&gt; *) a.
+(IsEffectuator s a, ToJSON a, FromJSON a) =&gt;
+Configuration -&gt; Trace IO a -&gt; s a -&gt; Text -&gt; IO (Plugin a)
+</span><a href="Cardano.BM.Scribe.Systemd.html#plugin"><span class="hs-identifier hs-var hs-var">plugin</span></a></span></span><span> </span><span class="annot"><span class="annottext">Configuration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Trace IO a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">s a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679078332"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078332"><span class="hs-identifier hs-var">syslogIdent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Scribe -&gt; Text -&gt; Plugin a
+forall a. Scribe -&gt; Text -&gt; Plugin a
+</span><span class="hs-identifier hs-var">ScribePlugin</span></span><span>
+</span><span id="line-61"></span><span>               </span><span class="annot"><span class="annottext">(Scribe -&gt; Text -&gt; Plugin a) -&gt; IO Scribe -&gt; IO (Text -&gt; Plugin a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Scribe
+</span><a href="Cardano.BM.Scribe.Systemd.html#mkJournalScribe"><span class="hs-identifier hs-var">mkJournalScribe</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078332"><span class="hs-identifier hs-var">syslogIdent</span></a></span><span>
+</span><span id="line-62"></span><span>               </span><span class="annot"><span class="annottext">IO (Text -&gt; Plugin a) -&gt; IO Text -&gt; IO (Plugin a)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; IO Text
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;JournalSK::&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078332"><span class="hs-identifier hs-var">syslogIdent</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-65"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Scribe</span><span> </span><span class="hs-identifier">definition</span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span class="hs-cpp">
+#ifdef LINUX
+</span><span class="annot"><a href="Cardano.BM.Scribe.Systemd.html#mkJournalScribe"><span class="hs-identifier hs-type">mkJournalScribe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Scribe</span></span><span>
+</span><span id="line-71"></span><span id="mkJournalScribe"><span class="annot"><span class="annottext">mkJournalScribe :: Text -&gt; IO Scribe
+</span><a href="Cardano.BM.Scribe.Systemd.html#mkJournalScribe"><span class="hs-identifier hs-var hs-var">mkJournalScribe</span></a></span></span><span> </span><span id="local-6989586621679078336"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078336"><span class="hs-identifier hs-var">identifier</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Scribe -&gt; IO Scribe
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Scribe -&gt; IO Scribe) -&gt; Scribe -&gt; IO Scribe
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Facility -&gt; Severity -&gt; Text -&gt; Verbosity -&gt; Scribe
+</span><a href="Cardano.BM.Scribe.Systemd.html#journalScribe"><span class="hs-identifier hs-var">journalScribe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Facility
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Severity -&gt; Severity
+</span><span class="hs-identifier hs-var">sev2klog</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">Debug</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078336"><span class="hs-identifier hs-var">identifier</span></a></span><span> </span><span class="annot"><span class="annottext">Verbosity
+</span><span class="hs-identifier hs-var">K.V3</span></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- taken from https://github.com/haskell-service/katip-libsystemd-journal</span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Cardano.BM.Scribe.Systemd.html#journalScribe"><span class="hs-identifier hs-type">journalScribe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Facility</span></span><span>
+</span><span id="line-75"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Severity</span></span><span>
+</span><span id="line-76"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span>
+</span><span id="line-77"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Verbosity</span></span><span>
+</span><span id="line-78"></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Scribe</span></span><span>
+</span><span id="line-79"></span><span id="journalScribe"><span class="annot"><span class="annottext">journalScribe :: Maybe Facility -&gt; Severity -&gt; Text -&gt; Verbosity -&gt; Scribe
+</span><a href="Cardano.BM.Scribe.Systemd.html#journalScribe"><span class="hs-identifier hs-var hs-var">journalScribe</span></a></span></span><span> </span><span id="local-6989586621679078340"><span class="annot"><span class="annottext">Maybe Facility
+</span><a href="#local-6989586621679078340"><span class="hs-identifier hs-var">facility</span></a></span></span><span> </span><span id="local-6989586621679078341"><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679078341"><span class="hs-identifier hs-var">severity</span></a></span></span><span> </span><span id="local-6989586621679078342"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078342"><span class="hs-identifier hs-var">identifier</span></a></span></span><span> </span><span id="local-6989586621679078343"><span class="annot"><span class="annottext">Verbosity
+</span><a href="#local-6989586621679078343"><span class="hs-identifier hs-var">verbosity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="annottext">(forall a. LogItem a =&gt; Item a -&gt; IO ())
+-&gt; IO () -&gt; PermitFunc -&gt; Scribe
+</span><span class="hs-identifier hs-var">K.Scribe</span></span><span> </span><span class="annot"><span class="annottext">Item a -&gt; IO ()
+forall a. LogItem a =&gt; Item a -&gt; IO ()
+</span><a href="#local-6989586621679078345"><span class="hs-identifier hs-var">liPush</span></a></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679078348"><span class="hs-identifier hs-var">scribeFinalizer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; IO Bool
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; IO Bool) -&gt; (Item a -&gt; Bool) -&gt; Item a -&gt; IO Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Item a -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679078352"><span class="annot"><a href="#local-6989586621679078345"><span class="hs-identifier hs-type">liPush</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.LogItem</span></span><span> </span><span class="annot"><a href="#local-6989586621679078352"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Item</span></span><span> </span><span class="annot"><a href="#local-6989586621679078352"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679078345"><span class="annot"><span class="annottext">liPush :: forall a. LogItem a =&gt; Item a -&gt; IO ()
+</span><a href="#local-6989586621679078345"><span class="hs-identifier hs-var hs-var">liPush</span></a></span></span><span> </span><span id="local-6989586621679078358"><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078358"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621679078359"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679078359"><span class="hs-identifier hs-var">permit</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Severity -&gt; Item a -&gt; IO Bool
+forall (m :: * -&gt; *) a. Monad m =&gt; Severity -&gt; Item a -&gt; m Bool
+</span><span class="hs-identifier hs-var">K.permitItem</span></span><span> </span><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679078341"><span class="hs-identifier hs-var">severity</span></a></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078358"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679078359"><span class="hs-identifier hs-var">permit</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-86"></span><span>            </span><span class="annot"><span class="annottext">JournalFields -&gt; IO ()
+</span><span class="hs-identifier hs-var">sendJournalFields</span></span><span> </span><span class="annot"><span class="annottext">(JournalFields -&gt; IO ()) -&gt; JournalFields -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Facility -&gt; Text -&gt; Verbosity -&gt; Item a -&gt; JournalFields
+forall a.
+LogItem a =&gt;
+Maybe Facility -&gt; Text -&gt; Verbosity -&gt; Item a -&gt; JournalFields
+</span><a href="Cardano.BM.Scribe.Systemd.html#itemToJournalFields"><span class="hs-identifier hs-var">itemToJournalFields</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Facility
+</span><a href="#local-6989586621679078340"><span class="hs-identifier hs-var">facility</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078342"><span class="hs-identifier hs-var">identifier</span></a></span><span> </span><span class="annot"><span class="annottext">Verbosity
+</span><a href="#local-6989586621679078343"><span class="hs-identifier hs-var">verbosity</span></a></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078358"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="#local-6989586621679078348"><span class="hs-identifier hs-type">scribeFinalizer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>    </span><span id="local-6989586621679078348"><span class="annot"><span class="annottext">scribeFinalizer :: IO ()
+</span><a href="#local-6989586621679078348"><span class="hs-identifier hs-var hs-var">scribeFinalizer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-92"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-glyph">\</span><span class="hs-identifier">subsubsection</span><span class="hs-special">{</span><span class="hs-identifier">Conversion</span><span> </span><span class="hs-identifier">utilities</span><span class="hs-special">}</span><span>
+</span><span id="line-95"></span><span class="hs-identifier">Converts</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">Katip</span><span> </span><span class="hs-identifier">Item</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">into</span><span> </span><span class="hs-identifier">a</span><span> </span><span class="hs-identifier">libsystemd</span><span class="hs-glyph">-</span><span class="hs-identifier">journal</span><span> </span><span class="hs-glyph">|</span><span class="hs-identifier">JournalFields</span><span class="hs-glyph">|</span><span> </span><span class="hs-identifier">map</span><span class="hs-operator">.</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-glyph">\</span><span class="hs-identifier">begin</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span class="hs-cpp">
+#ifdef LINUX
+</span><span id="local-6989586621679078253"><span class="annot"><a href="Cardano.BM.Scribe.Systemd.html#itemToJournalFields"><span class="hs-identifier hs-type">itemToJournalFields</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.LogItem</span></span><span> </span><span class="annot"><a href="#local-6989586621679078253"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-100"></span><span>                    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Facility</span></span><span>
+</span><span id="line-101"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">T.Text</span></a></span><span>
+</span><span id="line-102"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Verbosity</span></span><span>
+</span><span id="line-103"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">K.Item</span></span><span> </span><span class="annot"><a href="#local-6989586621679078253"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-104"></span><span>                    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">JournalFields</span></span></span><span>
+</span><span id="line-105"></span><span id="itemToJournalFields"><span class="annot"><span class="annottext">itemToJournalFields :: forall a.
+LogItem a =&gt;
+Maybe Facility -&gt; Text -&gt; Verbosity -&gt; Item a -&gt; JournalFields
+</span><a href="Cardano.BM.Scribe.Systemd.html#itemToJournalFields"><span class="hs-identifier hs-var hs-var">itemToJournalFields</span></a></span></span><span> </span><span id="local-6989586621679078370"><span class="annot"><span class="annottext">Maybe Facility
+</span><a href="#local-6989586621679078370"><span class="hs-identifier hs-var">facility</span></a></span></span><span> </span><span id="local-6989586621679078371"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078371"><span class="hs-identifier hs-var">identifier</span></a></span></span><span> </span><span id="local-6989586621679078372"><span class="annot"><span class="annottext">Verbosity
+</span><a href="#local-6989586621679078372"><span class="hs-identifier hs-var">verbosity</span></a></span></span><span> </span><span id="local-6989586621679078373"><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078373"><span class="hs-identifier hs-var">item</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><span class="annottext">[JournalFields] -&gt; JournalFields
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Item a -&gt; JournalFields
+forall {a}. LogItem a =&gt; Item a -&gt; JournalFields
+</span><a href="#local-6989586621679078374"><span class="hs-identifier hs-var">defaultFields</span></a></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078373"><span class="hs-identifier hs-var">item</span></a></span><span>
+</span><span id="line-107"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">JournalFields
+-&gt; (Facility -&gt; JournalFields) -&gt; Maybe Facility -&gt; JournalFields
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">JournalFields
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">HM.empty</span></span><span> </span><span class="annot"><span class="annottext">Facility -&gt; JournalFields
+</span><a href="#local-6989586621679078377"><span class="hs-identifier hs-var">facilityFields</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Facility
+</span><a href="#local-6989586621679078370"><span class="hs-identifier hs-var">facility</span></a></span><span>
+</span><span id="line-108"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">JournalFields
+-&gt; (Loc -&gt; JournalFields) -&gt; Maybe Loc -&gt; JournalFields
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">JournalFields
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">HM.empty</span></span><span> </span><span class="annot"><span class="annottext">Loc -&gt; JournalFields
+</span><a href="#local-6989586621679078378"><span class="hs-identifier hs-var">locFields</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; Maybe Loc
+forall a. Item a -&gt; Maybe Loc
+</span><span class="hs-identifier hs-var">K._itemLoc</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078373"><span class="hs-identifier hs-var">item</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>    </span><span id="local-6989586621679078374"><span class="annot"><span class="annottext">defaultFields :: Item a -&gt; JournalFields
+</span><a href="#local-6989586621679078374"><span class="hs-identifier hs-var hs-var">defaultFields</span></a></span></span><span> </span><span id="local-6989586621679078394"><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">[JournalFields] -&gt; JournalFields
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalFields
+</span><span class="hs-identifier hs-var">message</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Lazy.html#toStrict"><span class="hs-identifier hs-var">TL.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier hs-var">toLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Text) -&gt; Builder -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LogStr -&gt; Builder
+</span><span class="hs-identifier hs-var">KC.unLogStr</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; LogStr
+forall a. Item a -&gt; LogStr
+</span><span class="hs-identifier hs-var">KC._itemMessage</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Priority -&gt; JournalFields
+</span><span class="hs-identifier hs-var">priority</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Severity -&gt; Priority
+</span><a href="#local-6989586621679078398"><span class="hs-identifier hs-var">mapSeverity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; Severity
+forall a. Item a -&gt; Severity
+</span><span class="hs-identifier hs-var">KC._itemSeverity</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalFields
+</span><span class="hs-identifier hs-var">syslogIdentifier</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078371"><span class="hs-identifier hs-var">identifier</span></a></span><span>
+</span><span id="line-115"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(JournalField, ByteString)] -&gt; JournalFields
+forall k v. (Eq k, Hashable k) =&gt; [(k, v)] -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">HM.fromList</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JournalField
+</span><a href="#local-6989586621679078401"><span class="hs-identifier hs-var">environment</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">T.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; Text -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Environment -&gt; Text
+</span><span class="hs-identifier hs-var">KC.getEnvironment</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; Environment
+forall a. Item a -&gt; Environment
+</span><span class="hs-identifier hs-var">KC._itemEnv</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>                              </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JournalField
+</span><a href="#local-6989586621679078404"><span class="hs-identifier hs-var">namespace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">T.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; Text -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace -&gt; Text
+</span><a href="#local-6989586621679078405"><span class="hs-identifier hs-var">unNS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; Namespace
+forall a. Item a -&gt; Namespace
+</span><span class="hs-identifier hs-var">KC._itemNamespace</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>                              </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JournalField
+</span><a href="#local-6989586621679078407"><span class="hs-identifier hs-var">payload</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">BL.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">(Object -&gt; ByteString) -&gt; Object -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Verbosity -&gt; a -&gt; Object
+forall a. LogItem a =&gt; Verbosity -&gt; a -&gt; Object
+</span><span class="hs-identifier hs-var">KC.payloadObject</span></span><span> </span><span class="annot"><span class="annottext">Verbosity
+</span><a href="#local-6989586621679078372"><span class="hs-identifier hs-var">verbosity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; a
+forall a. Item a -&gt; a
+</span><span class="hs-identifier hs-var">KC._itemPayload</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                              </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JournalField
+</span><a href="#local-6989586621679078410"><span class="hs-identifier hs-var">thread</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">T.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; Text -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadIdText -&gt; Text
+</span><span class="hs-identifier hs-var">KC.getThreadIdText</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; ThreadIdText
+forall a. Item a -&gt; ThreadIdText
+</span><span class="hs-identifier hs-var">KC._itemThread</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>                              </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JournalField
+</span><a href="#local-6989586621679078413"><span class="hs-identifier hs-var">time</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">T.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; Text -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Text
+</span><span class="hs-identifier hs-var">formatAsIso8601</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Item a -&gt; UTCTime
+forall a. Item a -&gt; UTCTime
+</span><span class="hs-identifier hs-var">KC._itemTime</span></span><span> </span><span class="annot"><span class="annottext">Item a
+</span><a href="#local-6989586621679078394"><span class="hs-identifier hs-var">kItem</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>                              </span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621679078377"><span class="annot"><span class="annottext">facilityFields :: Facility -&gt; JournalFields
+</span><a href="#local-6989586621679078377"><span class="hs-identifier hs-var hs-var">facilityFields</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Facility -&gt; JournalFields
+</span><span class="hs-identifier hs-var">syslogFacility</span></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679078378"><span class="annot"><span class="annottext">locFields :: Loc -&gt; JournalFields
+</span><a href="#local-6989586621679078378"><span class="hs-identifier hs-var hs-var">locFields</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#Loc"><span class="hs-identifier hs-type">Loc</span></a></span><span class="hs-special">{</span><span id="local-6989586621679078418"><span id="local-6989586621679078419"><span class="annot"><span class="annottext">String
+CharPos
+loc_filename :: Loc -&gt; String
+loc_start :: Loc -&gt; CharPos
+loc_filename :: String
+loc_start :: CharPos
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/template-haskell-2.20.0.0/src/Language.Haskell.TH.Syntax.html#loc_filename"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[JournalFields] -&gt; JournalFields
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; JournalFields
+</span><span class="hs-identifier hs-var">codeFile</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679078418"><span class="hs-identifier hs-var">loc_filename</span></a></span><span>
+</span><span id="line-124"></span><span>                                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; JournalFields
+</span><span class="hs-identifier hs-var">codeLine</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CharPos -&gt; Int
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">CharPos
+</span><a href="#local-6989586621679078419"><span class="hs-identifier hs-var">loc_start</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>                                </span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679078405"><span class="annot"><span class="annottext">unNS :: Namespace -&gt; Text
+</span><a href="#local-6989586621679078405"><span class="hs-identifier hs-var hs-var">unNS</span></a></span></span><span> </span><span id="local-6989586621679078422"><span class="annot"><span class="annottext">Namespace
+</span><a href="#local-6989586621679078422"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Namespace -&gt; [Text]
+</span><span class="hs-identifier hs-var">K.unNamespace</span></span><span> </span><span class="annot"><span class="annottext">Namespace
+</span><a href="#local-6989586621679078422"><span class="hs-identifier hs-var">ns</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-127"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#empty"><span class="hs-identifier hs-var">T.empty</span></a></span><span>
+</span><span id="line-128"></span><span>        </span><span class="hs-special">[</span><span id="local-6989586621679078425"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078425"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679078425"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-129"></span><span>        </span><span id="local-6989586621679078426"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679078426"><span class="hs-identifier hs-var">parts</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">T.intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679078426"><span class="hs-identifier hs-var">parts</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679078401"><span class="annot"><span class="annottext">environment :: JournalField
+</span><a href="#local-6989586621679078401"><span class="hs-identifier hs-var hs-var">environment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalField
+</span><span class="hs-identifier hs-var">mkJournalField</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;environment&quot;</span></span><span>
+</span><span id="line-132"></span><span>    </span><span id="local-6989586621679078404"><span class="annot"><span class="annottext">namespace :: JournalField
+</span><a href="#local-6989586621679078404"><span class="hs-identifier hs-var hs-var">namespace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalField
+</span><span class="hs-identifier hs-var">mkJournalField</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;namespace&quot;</span></span><span>
+</span><span id="line-133"></span><span>    </span><span id="local-6989586621679078407"><span class="annot"><span class="annottext">payload :: JournalField
+</span><a href="#local-6989586621679078407"><span class="hs-identifier hs-var hs-var">payload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalField
+</span><span class="hs-identifier hs-var">mkJournalField</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;payload&quot;</span></span><span>
+</span><span id="line-134"></span><span>    </span><span id="local-6989586621679078410"><span class="annot"><span class="annottext">thread :: JournalField
+</span><a href="#local-6989586621679078410"><span class="hs-identifier hs-var hs-var">thread</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalField
+</span><span class="hs-identifier hs-var">mkJournalField</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;thread&quot;</span></span><span>
+</span><span id="line-135"></span><span>    </span><span id="local-6989586621679078413"><span class="annot"><span class="annottext">time :: JournalField
+</span><a href="#local-6989586621679078413"><span class="hs-identifier hs-var hs-var">time</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; JournalField
+</span><span class="hs-identifier hs-var">mkJournalField</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;time&quot;</span></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679078398"><span class="annot"><span class="annottext">mapSeverity :: Severity -&gt; Priority
+</span><a href="#local-6989586621679078398"><span class="hs-identifier hs-var hs-var">mapSeverity</span></a></span></span><span> </span><span id="local-6989586621679078433"><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679078433"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Severity
+</span><a href="#local-6989586621679078433"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.DebugS</span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Debug</span></span><span>
+</span><span id="line-139"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.InfoS</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Info</span></span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.NoticeS</span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Notice</span></span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.WarningS</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Warning</span></span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.ErrorS</span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Error</span></span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.CriticalS</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Critical</span></span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.AlertS</span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Alert</span></span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="annottext">Severity
+</span><span class="hs-identifier hs-var">K.EmergencyS</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><span class="hs-identifier hs-var">J.Emergency</span></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-148"></span><span class="hs-glyph">\</span><span class="hs-identifier">end</span><span class="hs-special">{</span><span class="hs-identifier">code</span><span class="hs-special">}</span><span>
+</span><span id="line-149"></span></pre></body></html>

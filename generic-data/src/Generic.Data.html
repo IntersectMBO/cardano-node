@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Generic combinators to derive type class instances.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- == Orphans</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- The 'Data.Generic.Orphans' module should be imported to derive the following</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- classes using this library:</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- - 'Eq1' and 'Ord1'</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- - 'Semigroup' and 'Monoid' on GHC 8.4 or older (base &lt;= 4.11)</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- == __Minor discrepancies__</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- Here are documented some corner cases of deriving, both by GHC and</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- generic-data. They are all minor and unlikely to cause problems in</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- practice.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- === Empty types</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- - Some of the derived methods are lazy, which might result in errors</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   being silenced, though unlikely.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- - The only generic-data implementation which differs from GHC stock</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   instances is 'gfoldMap'.</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | Class method     | GHC stock | generic-data | Comment               |</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | @('==')@         | lazy      | lazy         | 'True'                |</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- | 'compare'        | lazy      | lazy         | 'EQ'                  |</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- | 'fmap'           | strict    | strict       | must be bottom anyway |</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | 'foldMap'        | lazy      | strict       | 'mempty' if lazy      |</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | 'foldr'          | lazy      | lazy         | returns accumulator   |</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | 'traverse'       | strict    | strict       |                       |</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | 'sequenceA'      | strict    | strict       |                       |</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- +------------------+-----------+--------------+-----------------------+</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- === Single-constructor single-field types</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- @data@ types with one constructor and one field are extremely rare.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- @newtype@ is almost always more appropriate (for which there is no issue).</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- That said, for @data@ types both strict and lazy, all generic-data</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- implementations are lazy (they don't even force the constructor),</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- whereas GHC stock implementations, when they exist, are strict.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- === Functor composition</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- Fields of functors involving the composition of two or more functors</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @f (g (h a))@ result in some overhead using &quot;GHC.Generics.Generic1&quot;.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- This is due to a particular encoding choice of @GHC.Generics@, where</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- composition are nested to the right instead of to the left. @f (g (h _))@ is</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- represented by the functor @f 'GHC.Generics.:.:' (g 'GHC.Generics.:.:' 'GHC.Generics.Rec1' h)@, so one must use</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- 'fmap' on @f@ to convert that back to @f (g (h _))@. A better choice would</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- have been to encode it as @('GHC.Generics.Rec1' f 'GHC.Generics.:.:' g) 'GHC.Generics.:.:' h@, because that is</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- coercible back to @f (g (h _))@.</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Generic.Data</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Newtypes for Deriving Via</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generically"><span class="hs-identifier">Generically</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Generically.html#GenericProduct"><span class="hs-identifier">GenericProduct</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Generically.html#FiniteEnumeration"><span class="hs-identifier">FiniteEnumeration</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generically1"><span class="hs-identifier">Generically1</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Regular classes</span></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- | Default implementations for classes indexed by types</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- (kind @Type@).</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Semigroup'</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gmappend"><span class="hs-identifier">gmappend</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Monoid'</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gmempty"><span class="hs-identifier">gmempty</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gmappend%27"><span class="hs-identifier">gmappend'</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Eq'</span></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#geq"><span class="hs-identifier">geq</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Ord'</span></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gcompare"><span class="hs-identifier">gcompare</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Read'</span></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Read.html#greadPrec"><span class="hs-identifier">greadPrec</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Read.html#GRead0"><span class="hs-identifier">GRead0</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Show'</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html#gshowsPrec"><span class="hs-identifier">gshowsPrec</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html#GShow0"><span class="hs-identifier">GShow0</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Enum'</span></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#GEnum"><span class="hs-identifier">GEnum</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** 'StandardEnum' option</span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#StandardEnum"><span class="hs-identifier">StandardEnum</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gtoEnum"><span class="hs-identifier">gtoEnum</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfromEnum"><span class="hs-identifier">gfromEnum</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#genumFrom"><span class="hs-identifier">genumFrom</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#genumFromThen"><span class="hs-identifier">genumFromThen</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#genumFromTo"><span class="hs-identifier">genumFromTo</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#genumFromThenTo"><span class="hs-identifier">genumFromThenTo</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** 'FiniteEnum' option</span></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#FiniteEnum"><span class="hs-identifier">FiniteEnum</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gtoFiniteEnum"><span class="hs-identifier">gtoFiniteEnum</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfromFiniteEnum"><span class="hs-identifier">gfromFiniteEnum</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfiniteEnumFrom"><span class="hs-identifier">gfiniteEnumFrom</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfiniteEnumFromThen"><span class="hs-identifier">gfiniteEnumFromThen</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfiniteEnumFromTo"><span class="hs-identifier">gfiniteEnumFromTo</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gfiniteEnumFromThenTo"><span class="hs-identifier">gfiniteEnumFromThenTo</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Bounded'</span></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gminBound"><span class="hs-identifier">gminBound</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gmaxBound"><span class="hs-identifier">gmaxBound</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#GBounded"><span class="hs-identifier">GBounded</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Ix'</span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC as part of the standard.</span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#grange"><span class="hs-identifier">grange</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gindex"><span class="hs-identifier">gindex</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#ginRange"><span class="hs-identifier">ginRange</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#GIx"><span class="hs-identifier">GIx</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html#gunsafeIndex"><span class="hs-identifier">gunsafeIndex</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Higher-kinded classes</span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- | Default implementations for classes indexed by type constructors</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- (kind @Type -&gt; Type@).</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Functor'</span></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC (@DeriveFunctor@ extension).</span></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gfmap"><span class="hs-identifier">gfmap</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gconstmap"><span class="hs-identifier">gconstmap</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Foldable'</span></span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC (@DeriveFoldable@ extension).</span></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html#gfoldMap"><span class="hs-identifier">gfoldMap</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gfoldr"><span class="hs-identifier">gfoldr</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html#GFoldable"><span class="hs-identifier">GFoldable</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Traversable'</span></span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Can also be derived by GHC (@DeriveTraversable@ extension).</span></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html#gtraverse"><span class="hs-identifier">gtraverse</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html#gsequenceA"><span class="hs-identifier">gsequenceA</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html#GTraversable"><span class="hs-identifier">GTraversable</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Applicative'</span></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gpure"><span class="hs-identifier">gpure</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gap"><span class="hs-identifier">gap</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gliftA2"><span class="hs-identifier">gliftA2</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Alternative'</span></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gempty"><span class="hs-identifier">gempty</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#galt"><span class="hs-identifier">galt</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Eq1'</span></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gliftEq"><span class="hs-identifier">gliftEq</span></a></span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Ord1'</span></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gliftCompare"><span class="hs-identifier">gliftCompare</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Read1'</span></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Read.html#gliftReadPrec"><span class="hs-identifier">gliftReadPrec</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Read.html#GRead1"><span class="hs-identifier">GRead1</span></a></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** 'Show1'</span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html#gliftShowsPrec"><span class="hs-identifier">gliftShowsPrec</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html#GShow1"><span class="hs-identifier">GShow1</span></a></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Fields wrappers for deriving</span></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Id1"><span class="hs-identifier">Id1</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque"><span class="hs-identifier">Opaque</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html#Opaque1"><span class="hs-identifier">Opaque1</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Newtype</span></span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Generic pack/unpack.</span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Newtype.html#Newtype"><span class="hs-identifier">Newtype</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Newtype.html#Old"><span class="hs-identifier">Old</span></a></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Newtype.html#pack"><span class="hs-identifier">pack</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Newtype.html#unpack"><span class="hs-identifier">unpack</span></a></span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Generic coercions</span></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Utils.html#gcoerce"><span class="hs-identifier">gcoerce</span></a></span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Utils.html#gcoerceBinop"><span class="hs-identifier">gcoerceBinop</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Accessing metadata</span></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Using @TypeApplications@.</span></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Datatype</span></span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gdatatypeName"><span class="hs-identifier">gdatatypeName</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gmoduleName"><span class="hs-identifier">gmoduleName</span></a></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gpackageName"><span class="hs-identifier">gpackageName</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gisNewtype"><span class="hs-identifier">gisNewtype</span></a></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#GDatatype"><span class="hs-identifier">GDatatype</span></a></span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Constructor</span></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gconName"><span class="hs-identifier">gconName</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gconFixity"><span class="hs-identifier">gconFixity</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gconIsRecord"><span class="hs-identifier">gconIsRecord</span></a></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gconNum"><span class="hs-identifier">gconNum</span></a></span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#gconIndex"><span class="hs-identifier">gconIndex</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#Constructors"><span class="hs-identifier">Constructors</span></a></span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#GConstructors"><span class="hs-identifier">GConstructors</span></a></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Constructor tags</span></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#ConId"><span class="hs-identifier">ConId</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conId"><span class="hs-identifier">conId</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdToInt"><span class="hs-identifier">conIdToInt</span></a></span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdToString"><span class="hs-identifier">conIdToString</span></a></span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdEnum"><span class="hs-identifier">conIdEnum</span></a></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdNamed"><span class="hs-identifier">conIdNamed</span></a></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#ConIdNamed"><span class="hs-identifier">ConIdNamed</span></a></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdMin"><span class="hs-identifier">conIdMin</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#conIdMax"><span class="hs-identifier">conIdMax</span></a></span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#NonEmptyType"><span class="hs-identifier">NonEmptyType</span></a></span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#IsEmptyType"><span class="hs-identifier">IsEmptyType</span></a></span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Using type families</span></span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaOf"><span class="hs-identifier">MetaOf</span></a></span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaDataName"><span class="hs-identifier">MetaDataName</span></a></span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaDataModule"><span class="hs-identifier">MetaDataModule</span></a></span><span>
+</span><span id="line-233"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaDataPackage"><span class="hs-identifier">MetaDataPackage</span></a></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaDataNewtype"><span class="hs-identifier">MetaDataNewtype</span></a></span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaConsName"><span class="hs-identifier">MetaConsName</span></a></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaConsFixity"><span class="hs-identifier">MetaConsFixity</span></a></span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaConsRecord"><span class="hs-identifier">MetaConsRecord</span></a></span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaSelNameM"><span class="hs-identifier">MetaSelNameM</span></a></span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaSelName"><span class="hs-identifier">MetaSelName</span></a></span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaSelUnpack"><span class="hs-identifier">MetaSelUnpack</span></a></span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaSelSourceStrictness"><span class="hs-identifier">MetaSelSourceStrictness</span></a></span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html#MetaSelStrictness"><span class="hs-identifier">MetaSelStrictness</span></a></span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The @Generic@ class</span></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Reexported from &quot;GHC.Generics&quot;.</span></span><span>
+</span><span id="line-247"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic1"><span class="hs-identifier">Generic1</span></a></span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html"><span class="hs-identifier">Generic.Data.Internal.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gfoldMap"><span class="hs-identifier">gfoldMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gtraverse"><span class="hs-identifier">gtraverse</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Prelude.html#gsequenceA"><span class="hs-identifier">gsequenceA</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-252"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Enum.html"><span class="hs-identifier">Generic.Data.Internal.Enum</span></a></span><span>
+</span><span id="line-253"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Generically.html"><span class="hs-identifier">Generic.Data.Internal.Generically</span></a></span><span>
+</span><span id="line-254"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Meta.html"><span class="hs-identifier">Generic.Data.Internal.Meta</span></a></span><span>
+</span><span id="line-255"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Read.html"><span class="hs-identifier">Generic.Data.Internal.Read</span></a></span><span>
+</span><span id="line-256"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Show.html"><span class="hs-identifier">Generic.Data.Internal.Show</span></a></span><span>
+</span><span id="line-257"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Traversable.html"><span class="hs-identifier">Generic.Data.Internal.Traversable</span></a></span><span>
+</span><span id="line-258"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Newtype.html"><span class="hs-identifier">Generic.Data.Internal.Newtype</span></a></span><span>
+</span><span id="line-259"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Resolvers.html"><span class="hs-identifier">Generic.Data.Internal.Resolvers</span></a></span><span>
+</span><span id="line-260"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Generic.Data.Internal.Utils.html"><span class="hs-identifier">Generic.Data.Internal.Utils</span></a></span><span>
+</span><span id="line-261"></span><span>
+</span><span id="line-262"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic1"><span class="hs-identifier">Generic1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Orphans</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- Eq and Ord of Generically1</span><span>
+</span><span id="line-264"></span></pre></body></html>

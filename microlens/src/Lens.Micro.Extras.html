@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE Trustworthy #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">{- |
+Module      :  Lens.Micro.Extras
+Copyright   :  (C) 2013-2016 Edward Kmett, 2015-2016 Artyom Kazak, 2018 Monadfix
+License     :  BSD-style (see the file LICENSE)
+-}</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Lens.Micro.Extras</span><span>
+</span><span id="line-10"></span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Lens.Micro.Extras.html#view"><span class="hs-identifier">view</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Lens.Micro.Extras.html#preview"><span class="hs-identifier">preview</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Lens.Micro.Internal.html"><span class="hs-identifier">Lens.Micro.Internal</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><span class="hs-comment">{- |
+'view' is a synonym for ('^.'):
+
+&gt;&gt;&gt; view _1 (1, 2)
+1
+
+The reason it's not in &quot;Lens.Micro&quot; is that @view@ in lens has a more general signature:
+
+@
+view :: MonadReader s m =&gt; Getting a s a -&gt; m a
+@
+
+So, you would be able to use this 'view' with functions, but not in various reader monads. For most people this shouldn't be an issue; if it is for you, use @view@ from &lt;http://hackage.haskell.org/package/microlens-mtl microlens-mtl&gt;.
+-}</span></span><span>
+</span><span id="line-38"></span><span id="local-6989586621679041151"><span id="local-6989586621679041152"><span class="annot"><a href="Lens.Micro.Extras.html#view"><span class="hs-identifier hs-type">view</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Lens.Micro.Type.html#Getting"><span class="hs-identifier hs-type">Getting</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041151"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041152"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041151"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679041152"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679041151"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-39"></span><span id="view"><span class="annot"><span class="annottext">view :: forall a s. Getting a s a -&gt; s -&gt; a
+</span><a href="Lens.Micro.Extras.html#view"><span class="hs-identifier hs-var hs-var">view</span></a></span></span><span> </span><span id="local-6989586621679041183"><span class="annot"><span class="annottext">Getting a s a
+</span><a href="#local-6989586621679041183"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Const a s -&gt; a
+forall {k} a (b :: k). Const a b -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Const.html#getConst"><span class="hs-identifier hs-var">getConst</span></a></span><span> </span><span class="annot"><span class="annottext">(Const a s -&gt; a) -&gt; (s -&gt; Const a s) -&gt; s -&gt; a
+forall c b a. Coercible c b =&gt; (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="Lens.Micro.Internal.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting a s a
+</span><a href="#local-6989586621679041183"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Const a a
+forall {k} a (b :: k). a -&gt; Const a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.Const.html#Const"><span class="hs-identifier hs-var">Const</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Lens.Micro.Extras.html#view"><span class="hs-pragma hs-type">view</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">{- |
+'preview' is a synonym for ('^?'):
+
+&gt;&gt;&gt; preview _head [1,2,3]
+Just 1
+
+The reason it's not in &quot;Lens.Micro&quot; is that @preview@ in lens has a more general signature:
+
+@
+preview :: MonadReader s m =&gt; Getting (First a) s a -&gt; m (Maybe a)
+@
+
+Just like with 'view', you would be able to use this 'preview' with functions, but not in reader monads; if this is an issue for you, use @preview@ from &lt;http://hackage.haskell.org/package/microlens-mtl microlens-mtl&gt;.
+-}</span></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679041169"><span id="local-6989586621679041171"><span class="annot"><a href="Lens.Micro.Extras.html#preview"><span class="hs-identifier hs-type">preview</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Lens.Micro.Type.html#Getting"><span class="hs-identifier hs-type">Getting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#First"><span class="hs-identifier hs-type">First</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041169"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679041171"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041169"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679041171"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679041169"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-57"></span><span id="preview"><span class="annot"><span class="annottext">preview :: forall a s. Getting (First a) s a -&gt; s -&gt; Maybe a
+</span><a href="Lens.Micro.Extras.html#preview"><span class="hs-identifier hs-var hs-var">preview</span></a></span></span><span> </span><span id="local-6989586621679041190"><span class="annot"><span class="annottext">Getting (First a) s a
+</span><a href="#local-6989586621679041190"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">First a -&gt; Maybe a
+forall a. First a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#getFirst"><span class="hs-identifier hs-var">getFirst</span></a></span><span> </span><span class="annot"><span class="annottext">(First a -&gt; Maybe a) -&gt; (s -&gt; First a) -&gt; s -&gt; Maybe a
+forall c b a. Coercible c b =&gt; (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="Lens.Micro.Internal.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (First a) s a -&gt; (a -&gt; First a) -&gt; s -&gt; First a
+forall r s a. Getting r s a -&gt; (a -&gt; r) -&gt; s -&gt; r
+</span><a href="Lens.Micro.Internal.html#foldMapOf"><span class="hs-identifier hs-var">foldMapOf</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (First a) s a
+</span><a href="#local-6989586621679041190"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a -&gt; First a
+forall a. Maybe a -&gt; First a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Monoid.html#First"><span class="hs-identifier hs-var">First</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; First a) -&gt; (a -&gt; Maybe a) -&gt; a -&gt; First a
+forall c b a. Coercible c b =&gt; (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="Lens.Micro.Internal.html#%23."><span class="hs-operator hs-var">#.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Lens.Micro.Extras.html#preview"><span class="hs-pragma hs-type">preview</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-59"></span></pre></body></html>

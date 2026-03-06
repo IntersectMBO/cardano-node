@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# Language DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# Language DeriveAnyClass #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Types.NodeStartupInfo</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.NodeStartupInfo.html#NodeStartupInfo"><span class="hs-identifier">NodeStartupInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.html"><span class="hs-identifier">Data.Time</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier">NominalDiffTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><span class="hs-comment">-- | NodeStartupInfo</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | This information is taken from 'BasicInfoShelleyBased'. It is required for</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   'cardano-tracer' service (particularly, for RTView).</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">data</span><span> </span><span id="NodeStartupInfo"><span class="annot"><a href="Cardano.Logging.Types.NodeStartupInfo.html#NodeStartupInfo"><span class="hs-identifier hs-var">NodeStartupInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeStartupInfo"><span class="annot"><a href="Cardano.Logging.Types.NodeStartupInfo.html#NodeStartupInfo"><span class="hs-identifier hs-var">NodeStartupInfo</span></a></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="suiEra"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; Text
+</span><a href="Cardano.Logging.Types.NodeStartupInfo.html#suiEra"><span class="hs-identifier hs-var hs-var">suiEra</span></a></span></span><span>               </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="suiSlotLength"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; NominalDiffTime
+</span><a href="Cardano.Logging.Types.NodeStartupInfo.html#suiSlotLength"><span class="hs-identifier hs-var hs-var">suiSlotLength</span></a></span></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier hs-type">NominalDiffTime</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="suiEpochLength"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; Word64
+</span><a href="Cardano.Logging.Types.NodeStartupInfo.html#suiEpochLength"><span class="hs-identifier hs-var hs-var">suiEpochLength</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="suiSlotsPerKESPeriod"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; Word64
+</span><a href="Cardano.Logging.Types.NodeStartupInfo.html#suiSlotsPerKESPeriod"><span class="hs-identifier hs-var hs-var">suiSlotsPerKESPeriod</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679138191"><span id="local-6989586621679138200"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool
+(NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool)
+-&gt; (NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool)
+-&gt; Eq NodeStartupInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool
+== :: NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool
+$c/= :: NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool
+/= :: NodeStartupInfo -&gt; NodeStartupInfo -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138205"><span id="local-6989586621679138216"><span id="local-6989586621679138220"><span class="annot"><span class="annottext">Int -&gt; NodeStartupInfo -&gt; ShowS
+[NodeStartupInfo] -&gt; ShowS
+NodeStartupInfo -&gt; String
+(Int -&gt; NodeStartupInfo -&gt; ShowS)
+-&gt; (NodeStartupInfo -&gt; String)
+-&gt; ([NodeStartupInfo] -&gt; ShowS)
+-&gt; Show NodeStartupInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeStartupInfo -&gt; ShowS
+showsPrec :: Int -&gt; NodeStartupInfo -&gt; ShowS
+$cshow :: NodeStartupInfo -&gt; String
+show :: NodeStartupInfo -&gt; String
+$cshowList :: [NodeStartupInfo] -&gt; ShowS
+showList :: [NodeStartupInfo] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138224"><span id="local-6989586621679138226"><span class="annot"><span class="annottext">(forall x. NodeStartupInfo -&gt; Rep NodeStartupInfo x)
+-&gt; (forall x. Rep NodeStartupInfo x -&gt; NodeStartupInfo)
+-&gt; Generic NodeStartupInfo
+forall x. Rep NodeStartupInfo x -&gt; NodeStartupInfo
+forall x. NodeStartupInfo -&gt; Rep NodeStartupInfo x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. NodeStartupInfo -&gt; Rep NodeStartupInfo x
+from :: forall x. NodeStartupInfo -&gt; Rep NodeStartupInfo x
+$cto :: forall x. Rep NodeStartupInfo x -&gt; NodeStartupInfo
+to :: forall x. Rep NodeStartupInfo x -&gt; NodeStartupInfo
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679138230"><span class="annot"><span class="annottext">NodeStartupInfo -&gt; ()
+(NodeStartupInfo -&gt; ()) -&gt; NFData NodeStartupInfo
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: NodeStartupInfo -&gt; ()
+rnf :: NodeStartupInfo -&gt; ()
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138258"><span id="local-6989586621679138265"><span id="local-6989586621679138268"><span id="local-6989586621679138271"><span id="local-6989586621679138274"><span class="annot"><span class="annottext">[NodeStartupInfo] -&gt; Value
+[NodeStartupInfo] -&gt; Encoding
+NodeStartupInfo -&gt; Bool
+NodeStartupInfo -&gt; Value
+NodeStartupInfo -&gt; Encoding
+(NodeStartupInfo -&gt; Value)
+-&gt; (NodeStartupInfo -&gt; Encoding)
+-&gt; ([NodeStartupInfo] -&gt; Value)
+-&gt; ([NodeStartupInfo] -&gt; Encoding)
+-&gt; (NodeStartupInfo -&gt; Bool)
+-&gt; ToJSON NodeStartupInfo
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: NodeStartupInfo -&gt; Value
+toJSON :: NodeStartupInfo -&gt; Value
+$ctoEncoding :: NodeStartupInfo -&gt; Encoding
+toEncoding :: NodeStartupInfo -&gt; Encoding
+$ctoJSONList :: [NodeStartupInfo] -&gt; Value
+toJSONList :: [NodeStartupInfo] -&gt; Value
+$ctoEncodingList :: [NodeStartupInfo] -&gt; Encoding
+toEncodingList :: [NodeStartupInfo] -&gt; Encoding
+$comitField :: NodeStartupInfo -&gt; Bool
+omitField :: NodeStartupInfo -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679138409"><span id="local-6989586621679138416"><span id="local-6989586621679138419"><span class="annot"><span class="annottext">Maybe NodeStartupInfo
+Value -&gt; Parser [NodeStartupInfo]
+Value -&gt; Parser NodeStartupInfo
+(Value -&gt; Parser NodeStartupInfo)
+-&gt; (Value -&gt; Parser [NodeStartupInfo])
+-&gt; Maybe NodeStartupInfo
+-&gt; FromJSON NodeStartupInfo
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser NodeStartupInfo
+parseJSON :: Value -&gt; Parser NodeStartupInfo
+$cparseJSONList :: Value -&gt; Parser [NodeStartupInfo]
+parseJSONList :: Value -&gt; Parser [NodeStartupInfo]
+$comittedField :: Maybe NodeStartupInfo
+omittedField :: Maybe NodeStartupInfo
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span></pre></body></html>

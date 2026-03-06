@@ -1,0 +1,618 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-name-shadowing #-}</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-----------------------------------------------------------------------------</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- Module      :  Text.Regex</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Copyright   :  (c) Chris Kuklewicz 2006, derived from (c) The University of Glasgow 2001</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- License     :  BSD-style (see the file LICENSE)</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- Maintainer  :  hvr@gnu.org</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Stability   :  experimental</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Portability :  non-portable (regex-base needs MPTC+FD)</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Regular expression matching.  Uses the POSIX regular expression</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- interface in &quot;Text.Regex.Posix&quot;.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">---------------------------------------------------------------------------</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- Modified by Chris Kuklewicz to be a thin layer over the regex-posix</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- package, and moved into a regex-compat package.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Text.Regex</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Regular expressions</span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-identifier">Regex</span></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Text.Regex.html#mkRegex"><span class="hs-identifier">mkRegex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Text.Regex.html#mkRegexWithOpts"><span class="hs-identifier">mkRegexWithOpts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Text.Regex.html#matchRegex"><span class="hs-identifier">matchRegex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Text.Regex.html#matchRegexAll"><span class="hs-identifier">matchRegexAll</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Text.Regex.html#subRegex"><span class="hs-identifier">subRegex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Text.Regex.html#splitRegex"><span class="hs-identifier">splitRegex</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier">Bool</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier">Maybe</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier">String</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator">($)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier">id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier">fst</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier">snd</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-identifier">seq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Read.html#read"><span class="hs-identifier">read</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator">(+)</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator">(++)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier">drop</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier">fmap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier">map</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier">null</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#take"><span class="hs-identifier">take</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/array-0.5.8.0/src/Data.Array.html"><span class="hs-identifier">Data.Array</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator">(!)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#.%7C."><span class="hs-operator">(.|.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Text.Regex.Base</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">RegexMaker</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">makeRegexOpts</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">defaultExecOpt</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">RegexLike</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">matchAll</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">matchAllText</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">RegexContext</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">matchM</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">MatchText</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Text.Regex.Posix</span></span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Regex</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">compNewline</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">compIgnoreCase</span></span><span class="hs-special">,</span><span class="annot"><span class="hs-identifier">compExtended</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Makes a regular expression with the default options (multi-line,</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- case-sensitive).  The syntax of regular expressions is</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- otherwise that of @egrep@ (i.e. POSIX \&quot;extended\&quot; regular</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- expressions).</span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Text.Regex.html#mkRegex"><span class="hs-identifier hs-type">mkRegex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span>
+</span><span id="line-50"></span><span id="mkRegex"><span class="annot"><span class="annottext">mkRegex :: String -&gt; Regex
+</span><a href="Text.Regex.html#mkRegex"><span class="hs-identifier hs-var hs-var">mkRegex</span></a></span></span><span> </span><span id="local-6989586621679041324"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041324"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; ExecOption -&gt; String -&gt; Regex
+forall regex compOpt execOpt source.
+RegexMaker regex compOpt execOpt source =&gt;
+compOpt -&gt; execOpt -&gt; source -&gt; regex
+</span><span class="hs-identifier hs-var">makeRegexOpts</span></span><span> </span><span class="annot"><span class="annottext">CompOption
+</span><a href="#local-6989586621679041325"><span class="hs-identifier hs-var">opt</span></a></span><span> </span><span class="annot"><span class="annottext">ExecOption
+forall regex compOpt execOpt.
+RegexOptions regex compOpt execOpt =&gt;
+execOpt
+</span><span class="hs-identifier hs-var">defaultExecOpt</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041324"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679041325"><span class="annot"><span class="annottext">opt :: CompOption
+</span><a href="#local-6989586621679041325"><span class="hs-identifier hs-var hs-var">opt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompOption
+</span><span class="hs-identifier hs-var">compExtended</span></span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; CompOption -&gt; CompOption
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#.%7C."><span class="hs-operator hs-var">.|.</span></a></span><span> </span><span class="annot"><span class="annottext">CompOption
+</span><span class="hs-identifier hs-var">compNewline</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Makes a regular expression, where the multi-line and</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- case-sensitive options can be changed from the default settings.</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Text.Regex.html#mkRegexWithOpts"><span class="hs-identifier hs-type">mkRegexWithOpts</span></a></span><span>
+</span><span id="line-56"></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The regular expression to compile.</span></span><span>
+</span><span id="line-57"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>    </span><span class="hs-comment">-- ^ 'True' iff @\'^\'@ and @\'$\'@ match the beginning and</span><span>
+</span><span id="line-58"></span><span>              </span><span class="hs-comment">-- end of individual lines respectively, and @\'.\'@ does /not/</span><span>
+</span><span id="line-59"></span><span>              </span><span class="hs-comment">-- match the newline character.</span><span>
+</span><span id="line-60"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ 'True' iff matching is case-sensitive.</span></span><span>
+</span><span id="line-61"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span>   </span><span class="annot"><span class="hs-comment">-- ^ Returns: the compiled regular expression.</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="mkRegexWithOpts"><span class="annot"><span class="annottext">mkRegexWithOpts :: String -&gt; Bool -&gt; Bool -&gt; Regex
+</span><a href="Text.Regex.html#mkRegexWithOpts"><span class="hs-identifier hs-var hs-var">mkRegexWithOpts</span></a></span></span><span> </span><span id="local-6989586621679041328"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041328"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679041329"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679041329"><span class="hs-identifier hs-var">single_line</span></a></span></span><span> </span><span id="local-6989586621679041330"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679041330"><span class="hs-identifier hs-var">case_sensitive</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041333"><span class="annot"><span class="annottext">opt :: CompOption
+</span><a href="#local-6989586621679041333"><span class="hs-identifier hs-var hs-var">opt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679041329"><span class="hs-identifier hs-var">single_line</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompOption
+</span><span class="hs-identifier hs-var">compNewline</span></span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; CompOption -&gt; CompOption
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#.%7C."><span class="hs-operator hs-var">.|.</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; CompOption
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(CompOption -&gt; CompOption)
+-&gt; (CompOption -&gt; CompOption) -&gt; CompOption -&gt; CompOption
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span>
+</span><span id="line-65"></span><span>              </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679041330"><span class="hs-identifier hs-var">case_sensitive</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; CompOption
+forall a. a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompOption
+</span><span class="hs-identifier hs-var">compIgnoreCase</span></span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; CompOption -&gt; CompOption
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Bits.html#.%7C."><span class="hs-operator hs-var">.|.</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(CompOption -&gt; CompOption) -&gt; CompOption -&gt; CompOption
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-66"></span><span>              </span><span class="annot"><span class="annottext">CompOption
+</span><span class="hs-identifier hs-var">compExtended</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">CompOption -&gt; ExecOption -&gt; String -&gt; Regex
+forall regex compOpt execOpt source.
+RegexMaker regex compOpt execOpt source =&gt;
+compOpt -&gt; execOpt -&gt; source -&gt; regex
+</span><span class="hs-identifier hs-var">makeRegexOpts</span></span><span> </span><span class="annot"><span class="annottext">CompOption
+</span><a href="#local-6989586621679041333"><span class="hs-identifier hs-var">opt</span></a></span><span> </span><span class="annot"><span class="annottext">ExecOption
+forall regex compOpt execOpt.
+RegexOptions regex compOpt execOpt =&gt;
+execOpt
+</span><span class="hs-identifier hs-var">defaultExecOpt</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041328"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><span class="hs-comment">-- | Match a regular expression against a string.</span></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Text.Regex.html#matchRegex"><span class="hs-identifier hs-type">matchRegex</span></a></span><span>
+</span><span id="line-71"></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ The regular expression.</span></span><span>
+</span><span id="line-72"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The string to match against.</span></span><span>
+</span><span id="line-73"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>    </span><span class="hs-comment">-- ^ Returns: @'Just' strs@ if the match succeeded</span><span>
+</span><span id="line-74"></span><span>                        </span><span class="hs-comment">-- (and @strs@ is the list of subexpression matches),</span><span>
+</span><span id="line-75"></span><span>                        </span><span class="hs-comment">-- or 'Nothing' otherwise.</span><span>
+</span><span id="line-76"></span><span id="matchRegex"><span class="annot"><span class="annottext">matchRegex :: Regex -&gt; String -&gt; Maybe [String]
+</span><a href="Text.Regex.html#matchRegex"><span class="hs-identifier hs-var hs-var">matchRegex</span></a></span></span><span> </span><span id="local-6989586621679041334"><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041334"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679041335"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041335"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((String, String, String, [String]) -&gt; [String])
+-&gt; Maybe (String, String, String, [String]) -&gt; Maybe [String]
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span id="local-6989586621679041336"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679041336"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679041336"><span class="hs-identifier hs-var">str</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Regex -&gt; String -&gt; Maybe (String, String, String, [String])
+</span><a href="Text.Regex.html#matchRegexAll"><span class="hs-identifier hs-var">matchRegexAll</span></a></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041334"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041335"><span class="hs-identifier hs-var">str</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- | Match a regular expression against a string, returning more information</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- about the match.</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Text.Regex.html#matchRegexAll"><span class="hs-identifier hs-type">matchRegexAll</span></a></span><span>
+</span><span id="line-81"></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span>     </span><span class="annot"><span class="hs-comment">-- ^ The regular expression.</span></span><span>
+</span><span id="line-82"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ The string to match against.</span></span><span>
+</span><span id="line-83"></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>                </span><span class="hs-comment">-- ^ Returns: 'Nothing' if the match failed, or:</span><span>
+</span><span id="line-85"></span><span>                </span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span>                </span><span class="hs-comment">-- &gt;  Just ( everything before match,</span><span>
+</span><span id="line-87"></span><span>                </span><span class="hs-comment">-- &gt;         portion matched,</span><span>
+</span><span id="line-88"></span><span>                </span><span class="hs-comment">-- &gt;         everything after the match,</span><span>
+</span><span id="line-89"></span><span>                </span><span class="hs-comment">-- &gt;         subexpression matches )</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="matchRegexAll"><span class="annot"><span class="annottext">matchRegexAll :: Regex -&gt; String -&gt; Maybe (String, String, String, [String])
+</span><a href="Text.Regex.html#matchRegexAll"><span class="hs-identifier hs-var hs-var">matchRegexAll</span></a></span></span><span> </span><span id="local-6989586621679041337"><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041337"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679041338"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041338"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Regex -&gt; String -&gt; Maybe (String, String, String, [String])
+forall regex source target (m :: * -&gt; *).
+(RegexContext regex source target, MonadFail m) =&gt;
+regex -&gt; source -&gt; m target
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Regex -&gt; String -&gt; m (String, String, String, [String])
+</span><span class="hs-identifier hs-var">matchM</span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041337"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041338"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="annot"><span class="hs-comment">{- | Replaces every occurrence of the given regexp with the replacement string.
+
+In the replacement string, @\&quot;\\1\&quot;@ refers to the first substring;
+@\&quot;\\2\&quot;@ to the second, etc; and @\&quot;\\0\&quot;@ to the entire match.
+@\&quot;\\\\\\\\\&quot;@ will insert a literal backslash.
+
+This does not advance if the regex matches an empty string.  This
+misfeature is here to match the behavior of the original
+@Text.Regex@ API.
+-}</span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Text.Regex.html#subRegex"><span class="hs-identifier hs-type">subRegex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span>                          </span><span class="annot"><span class="hs-comment">-- ^ Search pattern</span></span><span>
+</span><span id="line-105"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>                         </span><span class="annot"><span class="hs-comment">-- ^ Input string</span></span><span>
+</span><span id="line-106"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>                         </span><span class="annot"><span class="hs-comment">-- ^ Replacement text</span></span><span>
+</span><span id="line-107"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>                         </span><span class="annot"><span class="hs-comment">-- ^ Output string</span></span><span>
+</span><span id="line-108"></span><span id="subRegex"><span class="annot"><span class="annottext">subRegex :: Regex -&gt; String -&gt; String -&gt; String
+</span><a href="Text.Regex.html#subRegex"><span class="hs-identifier hs-var hs-var">subRegex</span></a></span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Text.Regex.html#subRegex"><span class="hs-identifier hs-var">subRegex</span></a></span><span> </span><span id="local-6989586621679041339"><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041339"><span class="hs-identifier hs-var">regexp</span></a></span></span><span> </span><span id="local-6989586621679041340"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041340"><span class="hs-identifier hs-var">inp</span></a></span></span><span> </span><span id="local-6989586621679041341"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041341"><span class="hs-identifier hs-var">repl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041355"><span class="annot"><span class="annottext">compile :: Int
+-&gt; String
+-&gt; [(String, (Int, Int))]
+-&gt; Array i (String, b)
+-&gt; String
+-&gt; String
+</span><a href="#local-6989586621679041355"><span class="hs-identifier hs-var hs-var">compile</span></a></span></span><span> </span><span id="local-6989586621679041356"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041356"><span class="hs-identifier hs-var">_i</span></a></span></span><span> </span><span id="local-6989586621679041357"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041357"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679041358"><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041358"><span class="hs-identifier hs-var">_m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041357"><span class="hs-identifier hs-var">str</span></a></span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><a href="#local-6989586621679041355"><span class="hs-identifier hs-var">compile</span></a></span><span> </span><span id="local-6989586621679041359"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041359"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679041360"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041360"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\&quot;</span></span><span class="hs-special">,</span><span class="hs-special">(</span><span id="local-6989586621679041361"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041361"><span class="hs-identifier hs-var">off</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679041362"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041362"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679041363"><span class="annot"><span class="annottext">[(String, (Int, Int))]
+</span><a href="#local-6989586621679041363"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041366"><span class="annot"><span class="annottext">i' :: Int
+</span><a href="#local-6989586621679041366"><span class="hs-identifier hs-var hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041361"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041362"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-113"></span><span>            </span><span id="local-6989586621679041368"><span class="annot"><span class="annottext">pre :: String
+</span><a href="#local-6989586621679041368"><span class="hs-identifier hs-var hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041361"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041359"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041360"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-114"></span><span>            </span><span id="local-6989586621679041370"><span class="annot"><span class="annottext">str' :: String
+</span><a href="#local-6989586621679041370"><span class="hs-identifier hs-var hs-var">str'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-var">drop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041366"><span class="hs-identifier hs-var">i'</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041359"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041360"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041370"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679041371"><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041371"><span class="hs-identifier hs-var">_m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041368"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="hs-glyph">\</span><span>  </span><span id="local-6989586621679041372"><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041372"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041368"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\\'</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; String -&gt; String
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; String
+-&gt; [(String, (Int, Int))]
+-&gt; Array i (String, b)
+-&gt; String
+-&gt; String
+</span><a href="#local-6989586621679041355"><span class="hs-identifier hs-var">compile</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041366"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041370"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, (Int, Int))]
+</span><a href="#local-6989586621679041363"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041372"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><a href="#local-6989586621679041355"><span class="hs-identifier hs-var">compile</span></a></span><span> </span><span id="local-6989586621679041373"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041373"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679041374"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041374"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679041375"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041375"><span class="hs-identifier hs-var">xstr</span></a></span></span><span class="hs-special">,</span><span class="hs-special">(</span><span id="local-6989586621679041376"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041376"><span class="hs-identifier hs-var">off</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679041377"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041377"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679041378"><span class="annot"><span class="annottext">[(String, (Int, Int))]
+</span><a href="#local-6989586621679041378"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041380"><span class="annot"><span class="annottext">i' :: Int
+</span><a href="#local-6989586621679041380"><span class="hs-identifier hs-var hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041376"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041377"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-119"></span><span>            </span><span id="local-6989586621679041382"><span class="annot"><span class="annottext">pre :: String
+</span><a href="#local-6989586621679041382"><span class="hs-identifier hs-var hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041376"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041373"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041374"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-120"></span><span>            </span><span id="local-6989586621679041384"><span class="annot"><span class="annottext">str' :: String
+</span><a href="#local-6989586621679041384"><span class="hs-identifier hs-var hs-var">str'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-var">drop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041380"><span class="hs-identifier hs-var">i'</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041373"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041374"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-121"></span><span>            </span><span id="local-6989586621679041386"><span class="annot"><span class="annottext">x :: i
+</span><a href="#local-6989586621679041386"><span class="hs-identifier hs-var hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; i
+forall a. Read a =&gt; String -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Text.Read.html#read"><span class="hs-identifier hs-var">read</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041375"><span class="hs-identifier hs-var">xstr</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041384"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679041387"><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041387"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041382"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(String, b) -&gt; String
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041387"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Array i (String, b) -&gt; i -&gt; (String, b)
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">i
+</span><a href="#local-6989586621679041386"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679041388"><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041388"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041382"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(String, b) -&gt; String
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041388"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Array i (String, b) -&gt; i -&gt; (String, b)
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">i
+</span><a href="#local-6989586621679041386"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; String) -&gt; (String -&gt; String) -&gt; String -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; String
+-&gt; [(String, (Int, Int))]
+-&gt; Array i (String, b)
+-&gt; String
+-&gt; String
+</span><a href="#local-6989586621679041355"><span class="hs-identifier hs-var">compile</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041380"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041384"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, (Int, Int))]
+</span><a href="#local-6989586621679041378"><span class="hs-identifier hs-var">rest</span></a></span><span> </span><span class="annot"><span class="annottext">Array i (String, b)
+</span><a href="#local-6989586621679041388"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><a href="#local-6989586621679041389"><span class="hs-identifier hs-type">compiled</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MatchText</span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-125"></span><span>      </span><span id="local-6989586621679041389"><span class="annot"><span class="annottext">compiled :: MatchText String -&gt; String -&gt; String
+</span><a href="#local-6989586621679041389"><span class="hs-identifier hs-var hs-var">compiled</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; String
+-&gt; [(String, (Int, Int))]
+-&gt; MatchText String
+-&gt; String
+-&gt; String
+forall {i} {b}.
+(Ix i, Read i) =&gt;
+Int
+-&gt; String
+-&gt; [(String, (Int, Int))]
+-&gt; Array i (String, b)
+-&gt; String
+-&gt; String
+</span><a href="#local-6989586621679041355"><span class="hs-identifier hs-var">compile</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041341"><span class="hs-identifier hs-var">repl</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, (Int, Int))]
+</span><a href="#local-6989586621679041390"><span class="hs-identifier hs-var">findrefs</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>        </span><span class="hs-comment">-- bre matches a backslash then capture either a backslash or some digits</span><span>
+</span><span id="line-127"></span><span>        </span><span id="local-6989586621679041391"><span class="annot"><span class="annottext">bre :: Regex
+</span><a href="#local-6989586621679041391"><span class="hs-identifier hs-var hs-var">bre</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Regex
+</span><a href="Text.Regex.html#mkRegex"><span class="hs-identifier hs-var">mkRegex</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\\\\(\\\\|[0-9]+)&quot;</span></span><span>
+</span><span id="line-128"></span><span>        </span><span id="local-6989586621679041390"><span class="annot"><span class="annottext">findrefs :: [(String, (Int, Int))]
+</span><a href="#local-6989586621679041390"><span class="hs-identifier hs-var hs-var">findrefs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(MatchText String -&gt; (String, (Int, Int)))
+-&gt; [MatchText String] -&gt; [(String, (Int, Int))]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679041397"><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041397"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(String, (Int, Int)) -&gt; String
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041397"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">MatchText String -&gt; Int -&gt; (String, (Int, Int))
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(String, (Int, Int)) -&gt; (Int, Int)
+forall a b. (a, b) -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Tuple.html#snd"><span class="hs-identifier hs-var">snd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041397"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">MatchText String -&gt; Int -&gt; (String, (Int, Int))
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Regex -&gt; String -&gt; [MatchText String]
+forall regex source.
+RegexLike regex source =&gt;
+regex -&gt; source -&gt; [MatchText source]
+</span><span class="hs-identifier hs-var">matchAllText</span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041391"><span class="hs-identifier hs-var">bre</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041341"><span class="hs-identifier hs-var">repl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>      </span><span id="local-6989586621679041399"><span class="annot"><span class="annottext">go :: Int -&gt; String -&gt; [MatchText String] -&gt; String
+</span><a href="#local-6989586621679041399"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679041400"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041400"><span class="hs-identifier hs-var">_i</span></a></span></span><span> </span><span id="local-6989586621679041401"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041401"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041401"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><a href="#local-6989586621679041399"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679041402"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041402"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679041403"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041403"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679041404"><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041404"><span class="hs-identifier hs-var">m</span></a></span></span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679041405"><span class="annot"><span class="annottext">[MatchText String]
+</span><a href="#local-6989586621679041405"><span class="hs-identifier hs-var">ms</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-131"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679041412"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041412"><span class="hs-identifier hs-var">off</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679041413"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041413"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041404"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">MatchText String -&gt; Int -&gt; (String, (Int, Int))
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-132"></span><span>            </span><span id="local-6989586621679041415"><span class="annot"><span class="annottext">i' :: Int
+</span><a href="#local-6989586621679041415"><span class="hs-identifier hs-var hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041412"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041413"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-133"></span><span>            </span><span id="local-6989586621679041417"><span class="annot"><span class="annottext">pre :: String
+</span><a href="#local-6989586621679041417"><span class="hs-identifier hs-var hs-var">pre</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041412"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041402"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041403"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-134"></span><span>            </span><span id="local-6989586621679041419"><span class="annot"><span class="annottext">str' :: String
+</span><a href="#local-6989586621679041419"><span class="hs-identifier hs-var hs-var">str'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-var">drop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041415"><span class="hs-identifier hs-var">i'</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041402"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041403"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-135"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041419"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041417"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MatchText String -&gt; String -&gt; String
+</span><a href="#local-6989586621679041389"><span class="hs-identifier hs-var">compiled</span></a></span><span> </span><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041404"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041417"><span class="hs-identifier hs-var">pre</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MatchText String -&gt; String -&gt; String
+</span><a href="#local-6989586621679041389"><span class="hs-identifier hs-var">compiled</span></a></span><span> </span><span class="annot"><span class="annottext">MatchText String
+</span><a href="#local-6989586621679041404"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; String -&gt; [MatchText String] -&gt; String
+</span><a href="#local-6989586621679041399"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041415"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041419"><span class="hs-identifier hs-var">str'</span></a></span><span> </span><span class="annot"><span class="annottext">[MatchText String]
+</span><a href="#local-6989586621679041405"><span class="hs-identifier hs-var">ms</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; [MatchText String] -&gt; String
+</span><a href="#local-6989586621679041399"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041340"><span class="hs-identifier hs-var">inp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Regex -&gt; String -&gt; [MatchText String]
+forall regex source.
+RegexLike regex source =&gt;
+regex -&gt; source -&gt; [MatchText source]
+</span><span class="hs-identifier hs-var">matchAllText</span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041339"><span class="hs-identifier hs-var">regexp</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041340"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><span class="hs-comment">{- | Splits a string based on a regular expression.  The regular expression
+should identify one delimiter.
+
+This does not advance and produces an infinite list of @[]@ if the regex
+matches an empty string.  This misfeature is here to match the
+behavior of the original @Text.Regex@ API.
+-}</span></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Text.Regex.html#splitRegex"><span class="hs-identifier hs-type">splitRegex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Regex</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-148"></span><span id="splitRegex"><span class="annot"><span class="annottext">splitRegex :: Regex -&gt; String -&gt; [String]
+</span><a href="Text.Regex.html#splitRegex"><span class="hs-identifier hs-var hs-var">splitRegex</span></a></span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Text.Regex.html#splitRegex"><span class="hs-identifier hs-var">splitRegex</span></a></span><span> </span><span id="local-6989586621679041420"><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041420"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span id="local-6989586621679041421"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041421"><span class="hs-identifier hs-var">strIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041425"><span class="annot"><span class="annottext">matches :: [(Int, Int)]
+</span><a href="#local-6989586621679041425"><span class="hs-identifier hs-var hs-var">matches</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Array Int (Int, Int) -&gt; (Int, Int))
+-&gt; [Array Int (Int, Int)] -&gt; [(Int, Int)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Array Int (Int, Int) -&gt; Int -&gt; (Int, Int)
+forall i e. Ix i =&gt; Array i e -&gt; i -&gt; e
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Arr.html#%21"><span class="hs-operator hs-var">!</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Regex -&gt; String -&gt; [Array Int (Int, Int)]
+forall regex source.
+RegexLike regex source =&gt;
+regex -&gt; source -&gt; [Array Int (Int, Int)]
+</span><span class="hs-identifier hs-var">matchAll</span></span><span> </span><span class="annot"><span class="annottext">Regex
+</span><a href="#local-6989586621679041420"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041421"><span class="hs-identifier hs-var">strIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>      </span><span id="local-6989586621679041427"><span class="annot"><span class="annottext">go :: Int -&gt; String -&gt; [(Int, Int)] -&gt; [String]
+</span><a href="#local-6989586621679041427"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679041428"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041428"><span class="hs-identifier hs-var">_i</span></a></span></span><span> </span><span id="local-6989586621679041429"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041429"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041429"><span class="hs-identifier hs-var">str</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-152"></span><span>      </span><span class="annot"><a href="#local-6989586621679041427"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679041430"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041430"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679041431"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041431"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679041432"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041432"><span class="hs-identifier hs-var">off</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679041433"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041433"><span class="hs-identifier hs-var">len</span></a></span></span><span class="hs-special">)</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span id="local-6989586621679041434"><span class="annot"><span class="annottext">[(Int, Int)]
+</span><a href="#local-6989586621679041434"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679041436"><span class="annot"><span class="annottext">i' :: Int
+</span><a href="#local-6989586621679041436"><span class="hs-identifier hs-var hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041432"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041433"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-154"></span><span>            </span><span id="local-6989586621679041438"><span class="annot"><span class="annottext">firstline :: String
+</span><a href="#local-6989586621679041438"><span class="hs-identifier hs-var hs-var">firstline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#take"><span class="hs-identifier hs-var">take</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041432"><span class="hs-identifier hs-var">off</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041430"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041431"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-155"></span><span>            </span><span id="local-6989586621679041440"><span class="annot"><span class="annottext">remainder :: String
+</span><a href="#local-6989586621679041440"><span class="hs-identifier hs-var hs-var">remainder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+forall a. Int -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.List.html#drop"><span class="hs-identifier hs-var">drop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041436"><span class="hs-identifier hs-var">i'</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041430"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041431"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-156"></span><span>        </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [String] -&gt; [String]
+forall a b. a -&gt; b -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Prim.html#seq"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041436"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; [String]) -&gt; [String] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-157"></span><span>           </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041440"><span class="hs-identifier hs-var">remainder</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041438"><span class="hs-identifier hs-var">firstline</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-158"></span><span>             </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041438"><span class="hs-identifier hs-var">firstline</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; [String]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; [(Int, Int)] -&gt; [String]
+</span><a href="#local-6989586621679041427"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679041436"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041440"><span class="hs-identifier hs-var">remainder</span></a></span><span> </span><span class="annot"><span class="annottext">[(Int, Int)]
+</span><a href="#local-6989586621679041434"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; [(Int, Int)] -&gt; [String]
+</span><a href="#local-6989586621679041427"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679041421"><span class="hs-identifier hs-var">strIn</span></a></span><span> </span><span class="annot"><span class="annottext">[(Int, Int)]
+</span><a href="#local-6989586621679041425"><span class="hs-identifier hs-var">matches</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-comment">{-
+
+-- These are the older versions which failed on (correct answer:)
+-- let r = mkRegex &quot;^(.)&quot; in subRegex2 r &quot;abc\ndef&quot; &quot;|\\1&quot;
+-- &quot;|abc\n|def&quot;
+
+subRegex :: Regex                          -- ^ Search pattern
+      -&gt; String                         -- ^ Input string
+      -&gt; String                         -- ^ Replacement text
+      -&gt; String                         -- ^ Output string
+subRegex _ &quot;&quot; _ = &quot;&quot;
+subRegex regexp inp repl =
+  let -- bre matches a backslash then capture either a backslash or some digits
+      bre = mkRegex &quot;\\\\(\\\\|[0-9]+)&quot;
+      lookup _ [] _ = []
+      lookup [] _ _ = []
+      lookup match repl groups =
+        case matchRegexAll bre repl of
+          Nothing -&gt; repl
+          Just (lead, _, trail, bgroups) -&gt;
+            let newval =
+                 if (head bgroups) == &quot;\\&quot;
+                   then &quot;\\&quot;
+                   else let index :: Int
+                            index = (read (head bgroups)) - 1
+                        in if index == -1
+                             then match
+                             else groups !! index
+            in lead ++ newval ++ lookup match trail groups
+  in case matchRegexAll regexp inp of
+       Nothing -&gt; inp
+       Just (lead, match, trail, groups) -&gt;
+         lead ++ lookup match repl groups ++ (subRegex regexp trail repl)
+
+splitRegex :: Regex -&gt; String -&gt; [String]
+splitRegex _ [] = []
+splitRegex delim strIn = loop strIn where
+  loop str = case matchOnceText delim str of
+                Nothing -&gt; [str]
+                Just (firstline, _, remainder) -&gt;
+                  if null remainder
+                    then [firstline,&quot;&quot;]
+                    else firstline : loop remainder
+
+-}</span><span>
+</span><span id="line-206"></span></pre></body></html>

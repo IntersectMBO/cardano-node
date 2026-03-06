@@ -1,0 +1,382 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | An 'Annotation' is attached to an 'Control.Exception.Annotated.AnnotatedException'. They're</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- essentially a dynamically typed value with a convenient 'IsString'</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- instance.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- When integrating into your own application, you will likely want to do more</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- than just have the 'String' you get from 'show'ing the 'Annotation'. You can</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- do this by creating a special wrapper type that carries a class constraint.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- This allows you to also pluck out the 'Annotation's from your library or</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- executable independently and treat them differently from unknonwn</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- annotations.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- As an example, here's one that requires a 'Data.Aeson.ToJSON' constraint on the</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- underlying value. This means that you can convert any annotated value to</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- JSON, and then use that JSON in bug reports or logging.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- data JsonAnnotation where</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--   JsonAnnotation :: (ToJSON a, Typeable a) =&gt; a -&gt; JsonAnnotation</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- instance Show JsonANnotation where</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--   show (JsonAnnotation a) = concat</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--      [ &quot;(JsonAnnotation (&quot;</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--      , show (toJSON a)</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--      , &quot;))&quot;</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--      ]</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- jsonCheckpoint :: (Typeable a, ToJSON a, 'HasCallStack', MonadCatch m) =&gt; a -&gt; m a -&gt; m a</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- jsonCheckpoint val = 'withFrozenCallStack' checkpoint (JsonAnnotation val)</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- When handling the @['Annotation']@ carried on the</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- 'Control.Exception.Annotated.AnnotatedException', you can use</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- 'tryAnnotations' to pick out the JSON annotations.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- jsonAnnotations :: [Annotation] -&gt; ([JsonAnnotation], [Annotation])</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- jsonAnnotations = tryAnnotations</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- and handle them however you please.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Annotation</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Data.Annotation.html"><span class="hs-identifier">Data.Annotation</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html"><span class="hs-identifier">Data.Either</span></a></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Proxy.html"><span class="hs-identifier">Data.Proxy</span></a></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | The constraints that the value inside an 'Annotation' must have.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- We want 'Typeable' so we can do 'cast' and potentially get more useful</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- information out of it.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">type</span><span> </span><span id="AnnC"><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-var">AnnC</span></a></span></span><span> </span><span id="local-6989586621679052714"><span class="annot"><a href="#local-6989586621679052714"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052714"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052714"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- | An 'Annotation' is a wrapper around a value that includes a 'Typeable'</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- constraint so we can later unpack it. It is essentially a 'Data.Dynamic.Dynamic', but</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- we also include 'Show' so that you can always fall back to simply 'show'ing</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- the 'Annotation' if it is otherwise unrecognized.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-81"></span><span class="hs-keyword">data</span><span> </span><span id="Annotation"><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679052715"><span id="Annotation"><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052715"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679052715"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679052718"><span id="local-6989586621679052722"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679052725"><span class="annot"><span class="annottext">showsPrec :: Int -&gt; Annotation -&gt; ShowS
+</span><a href="#local-6989586621679052725"><span class="hs-identifier hs-var hs-var hs-var hs-var">showsPrec</span></a></span></span><span> </span><span id="local-6989586621679052727"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679052727"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span id="local-6989586621679052739"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052739"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; ShowS -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showParen"><span class="hs-identifier hs-var">showParen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679052727"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; ShowS) -&gt; ShowS -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-93"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Annotation @&quot;</span></span><span>
+</span><span id="line-94"></span><span>            </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; TypeRep -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">11</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; TypeRep
+forall a. Typeable a =&gt; a -&gt; TypeRep
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#typeOf"><span class="hs-identifier hs-var">typeOf</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052739"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>            </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; &quot;</span></span><span>
+</span><span id="line-96"></span><span>            </span><span class="annot"><span class="annottext">ShowS -&gt; ShowS -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; a -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#showsPrec"><span class="hs-identifier hs-var">showsPrec</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">11</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052739"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>    </span><span id="local-6989586621679052752"><span class="annot"><span class="annottext">fromString :: String -&gt; Annotation
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Annotation
+forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Annotation) -&gt; (String -&gt; Text) -&gt; String -&gt; Annotation
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Wrap a value in an 'Annotation'.</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-107"></span><span id="local-6989586621679052754"><span class="annot"><a href="Data.Annotation.html#toAnnotation"><span class="hs-identifier hs-type">toAnnotation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052754"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679052754"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span></span><span>
+</span><span id="line-108"></span><span id="toAnnotation"><span class="annot"><span class="annottext">toAnnotation :: forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#toAnnotation"><span class="hs-identifier hs-var hs-var">toAnnotation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Annotation
+forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Attempt to 'cast' the underlying value out of an 'Annotation'.</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Data.Annotation.html#castAnnotation"><span class="hs-identifier hs-type">castAnnotation</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679052659"><span class="annot"><a href="#local-6989586621679052659"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052659"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052659"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-117"></span><span id="castAnnotation"><span class="annot"><span class="annottext">castAnnotation :: forall a. Typeable a =&gt; Annotation -&gt; Maybe a
+</span><a href="Data.Annotation.html#castAnnotation"><span class="hs-identifier hs-var hs-var">castAnnotation</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span id="local-6989586621679052764"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052764"><span class="hs-identifier hs-var">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a b. (Typeable a, Typeable b) =&gt; a -&gt; Maybe b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#cast"><span class="hs-identifier hs-var">cast</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052764"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- | Attempt to 'cast' the underlying value out of an 'Annotation'.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- Returns the original 'Annotation' if the cast isn't right.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Data.Annotation.html#tryAnnotation"><span class="hs-identifier hs-type">tryAnnotation</span></a></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679052664"><span class="annot"><a href="#local-6989586621679052664"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052664"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052664"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-128"></span><span id="tryAnnotation"><span class="annot"><span class="annottext">tryAnnotation :: forall a. Typeable a =&gt; Annotation -&gt; Either a Annotation
+</span><a href="Data.Annotation.html#tryAnnotation"><span class="hs-identifier hs-var hs-var">tryAnnotation</span></a></span></span><span> </span><span id="local-6989586621679052767"><span class="annot"><span class="annottext">a :: Annotation
+</span><a href="#local-6989586621679052767"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span id="local-6989586621679052772"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052772"><span class="hs-identifier hs-var">val</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a b. (Typeable a, Typeable b) =&gt; a -&gt; Maybe b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#cast"><span class="hs-identifier hs-var">cast</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052772"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679052773"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052773"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>            </span><span class="annot"><span class="annottext">a -&gt; Either a Annotation
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052773"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>            </span><span class="annot"><span class="annottext">Annotation -&gt; Either a Annotation
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679052767"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- | Attempt to 'cast' list of 'Annotation' into the given type. Any</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- 'Annotation' that is not in that form is left untouched.</span><span>
+</span><span id="line-137"></span><span class="hs-comment">--</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Data.Annotation.html#tryAnnotations"><span class="hs-identifier hs-type">tryAnnotations</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679052669"><span class="annot"><a href="#local-6989586621679052669"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.Internal.html#Typeable"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052669"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679052669"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span id="tryAnnotations"><span class="annot"><span class="annottext">tryAnnotations :: forall a. Typeable a =&gt; [Annotation] -&gt; ([a], [Annotation])
+</span><a href="Data.Annotation.html#tryAnnotations"><span class="hs-identifier hs-var hs-var">tryAnnotations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Either a Annotation] -&gt; ([a], [Annotation])
+forall a b. [Either a b] -&gt; ([a], [b])
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Either.html#partitionEithers"><span class="hs-identifier hs-var">partitionEithers</span></a></span><span> </span><span class="annot"><span class="annottext">([Either a Annotation] -&gt; ([a], [Annotation]))
+-&gt; ([Annotation] -&gt; [Either a Annotation])
+-&gt; [Annotation]
+-&gt; ([a], [Annotation])
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotation -&gt; Either a Annotation)
+-&gt; [Annotation] -&gt; [Either a Annotation]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Annotation -&gt; Either a Annotation
+forall a. Typeable a =&gt; Annotation -&gt; Either a Annotation
+</span><a href="Data.Annotation.html#tryAnnotation"><span class="hs-identifier hs-var">tryAnnotation</span></a></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- | Returns the 'Set' of types that are in the given annotations.</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Data.Annotation.html#annotationTypes"><span class="hs-identifier hs-type">annotationTypes</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#TypeRep"><span class="hs-identifier hs-type">TypeRep</span></a></span><span>
+</span><span id="line-151"></span><span id="annotationTypes"><span class="annot"><span class="annottext">annotationTypes :: [Annotation] -&gt; Set TypeRep
+</span><a href="Data.Annotation.html#annotationTypes"><span class="hs-identifier hs-var hs-var">annotationTypes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TypeRep] -&gt; Set TypeRep
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#fromList"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([TypeRep] -&gt; Set TypeRep)
+-&gt; ([Annotation] -&gt; [TypeRep]) -&gt; [Annotation] -&gt; Set TypeRep
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotation -&gt; TypeRep) -&gt; [Annotation] -&gt; [TypeRep]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span id="local-6989586621679052782"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052782"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; TypeRep
+forall a. Typeable a =&gt; a -&gt; TypeRep
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#typeOf"><span class="hs-identifier hs-var">typeOf</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052782"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- | Map a function over the given 'Annotation'. If the types don't match</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- up, then the whole thing returns 'Nothing'.</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-157"></span><span id="local-6989586621679052678"><span id="local-6989586621679052679"><span class="annot"><a href="Data.Annotation.html#mapAnnotation"><span class="hs-identifier hs-type">mapAnnotation</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052678"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052679"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679052678"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679052679"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span></span></span><span>
+</span><span id="line-162"></span><span id="mapAnnotation"><span class="annot"><span class="annottext">mapAnnotation :: forall a b.
+(AnnC a, AnnC b) =&gt;
+(a -&gt; b) -&gt; Annotation -&gt; Maybe Annotation
+</span><a href="Data.Annotation.html#mapAnnotation"><span class="hs-identifier hs-var hs-var">mapAnnotation</span></a></span></span><span> </span><span id="local-6989586621679052787"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679052787"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span> </span><span id="local-6989586621679052795"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052795"><span class="hs-identifier hs-var">ann</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">b -&gt; Annotation
+forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Annotation) -&gt; (a -&gt; b) -&gt; a -&gt; Annotation
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679052787"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Annotation) -&gt; Maybe a -&gt; Maybe Annotation
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a b. (Typeable a, Typeable b) =&gt; a -&gt; Maybe b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Typeable.html#cast"><span class="hs-identifier hs-var">cast</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679052795"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | Map a function over the 'Annotation', leaving it unchanged if the</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- types don't match.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-169"></span><span id="local-6989586621679052686"><span id="local-6989586621679052687"><span class="annot"><a href="Data.Annotation.html#mapMaybeAnnotation"><span class="hs-identifier hs-type">mapMaybeAnnotation</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052686"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Annotation.html#AnnC"><span class="hs-identifier hs-type">AnnC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679052687"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679052686"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679052687"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span></span></span><span>
+</span><span id="line-174"></span><span id="mapMaybeAnnotation"><span class="annot"><span class="annottext">mapMaybeAnnotation :: forall a b.
+(AnnC a, AnnC b) =&gt;
+(a -&gt; b) -&gt; Annotation -&gt; Annotation
+</span><a href="Data.Annotation.html#mapMaybeAnnotation"><span class="hs-identifier hs-var hs-var">mapMaybeAnnotation</span></a></span></span><span> </span><span id="local-6989586621679052802"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679052802"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679052803"><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679052803"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">Annotation -&gt; Maybe Annotation -&gt; Annotation
+forall a. a -&gt; Maybe a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/Data.Maybe.html#fromMaybe"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679052803"><span class="hs-identifier hs-var">ann</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Annotation -&gt; Maybe Annotation
+forall a b.
+(AnnC a, AnnC b) =&gt;
+(a -&gt; b) -&gt; Annotation -&gt; Maybe Annotation
+</span><a href="Data.Annotation.html#mapAnnotation"><span class="hs-identifier hs-var">mapAnnotation</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679052802"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Annotation
+</span><a href="#local-6989586621679052803"><span class="hs-identifier hs-var">ann</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- | A wrapper type for putting a 'CallStack' into an 'Annotation'. We need</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- this because 'CallStack' does not have an 'Eq' instance.</span><span>
+</span><span id="line-179"></span><span class="hs-comment">--</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- Deprecated in 0.2.0.0 since you can just put a 'CallStack' directly in an</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- 'Annotation' now that we have no need for an 'Eq' constraint on it.</span><span>
+</span><span id="line-182"></span><span class="hs-comment">--</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-184"></span><span class="hs-keyword">newtype</span><span> </span><span id="CallStackAnnotation"><span class="annot"><a href="Data.Annotation.html#CallStackAnnotation"><span class="hs-identifier hs-var">CallStackAnnotation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CallStackAnnotation"><span class="annot"><a href="Data.Annotation.html#CallStackAnnotation"><span class="hs-identifier hs-var">CallStackAnnotation</span></a></span></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="unCallStackAnnotation"><span class="annot"><span class="annottext">CallStackAnnotation -&gt; [(String, SrcLoc)]
+</span><a href="Data.Annotation.html#unCallStackAnnotation"><span class="hs-identifier hs-var hs-var">unCallStackAnnotation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#SrcLoc"><span class="hs-identifier hs-type">SrcLoc</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679052808"><span id="local-6989586621679052814"><span class="annot"><span class="annottext">CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool
+(CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool)
+-&gt; (CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool)
+-&gt; Eq CallStackAnnotation
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool
+== :: CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool
+$c/= :: CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool
+/= :: CallStackAnnotation -&gt; CallStackAnnotation -&gt; Bool
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679052830"><span id="local-6989586621679052836"><span id="local-6989586621679052840"><span class="annot"><span class="annottext">Int -&gt; CallStackAnnotation -&gt; ShowS
+[CallStackAnnotation] -&gt; ShowS
+CallStackAnnotation -&gt; String
+(Int -&gt; CallStackAnnotation -&gt; ShowS)
+-&gt; (CallStackAnnotation -&gt; String)
+-&gt; ([CallStackAnnotation] -&gt; ShowS)
+-&gt; Show CallStackAnnotation
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CallStackAnnotation -&gt; ShowS
+showsPrec :: Int -&gt; CallStackAnnotation -&gt; ShowS
+$cshow :: CallStackAnnotation -&gt; String
+show :: CallStackAnnotation -&gt; String
+$cshowList :: [CallStackAnnotation] -&gt; ShowS
+showList :: [CallStackAnnotation] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">CallStackAnnotation</span><span> </span><span class="hs-pragma">&quot;You can just use `CallStack` directly now.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- | Grab an 'Annotation' corresponding to the 'CallStack' that is</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- currently in scope.</span><span>
+</span><span id="line-193"></span><span class="hs-comment">--</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-195"></span><span class="annot"><a href="Data.Annotation.html#callStackAnnotation"><span class="hs-identifier hs-type">callStackAnnotation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-196"></span><span id="callStackAnnotation"><span class="annot"><span class="annottext">callStackAnnotation :: HasCallStack =&gt; Annotation
+</span><a href="Data.Annotation.html#callStackAnnotation"><span class="hs-identifier hs-var hs-var">callStackAnnotation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CallStack -&gt; Annotation
+forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span><span> </span><span class="annot"><span class="annottext">CallStack
+HasCallStack =&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.html#callStack"><span class="hs-identifier hs-var">callStack</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- | Stuff a 'CallStack' into an 'Annotation' via the 'CallStackAnnotation'</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- newtype wrapper.</span><span>
+</span><span id="line-200"></span><span class="hs-comment">--</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-202"></span><span class="annot"><a href="Data.Annotation.html#callStackToAnnotation"><span class="hs-identifier hs-type">callStackToAnnotation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span>
+</span><span id="line-203"></span><span id="callStackToAnnotation"><span class="annot"><span class="annottext">callStackToAnnotation :: CallStack -&gt; Annotation
+</span><a href="Data.Annotation.html#callStackToAnnotation"><span class="hs-identifier hs-var hs-var">callStackToAnnotation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CallStack -&gt; Annotation
+forall a. AnnC a =&gt; a -&gt; Annotation
+</span><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-var">Annotation</span></a></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- | Convert the legacy 'CallStackAnnotation' into a 'CallStack'.</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- Deprecated in 0.2.0.0 since you can use 'CallStack' directly.</span><span>
+</span><span id="line-208"></span><span class="hs-comment">--</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-210"></span><span class="annot"><a href="Data.Annotation.html#callStackFromAnnotation"><span class="hs-identifier hs-type">callStackFromAnnotation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Annotation.html#CallStackAnnotation"><span class="hs-identifier hs-type">CallStackAnnotation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span>
+</span><span id="line-211"></span><span id="callStackFromAnnotation"><span class="annot"><span class="annottext">callStackFromAnnotation :: CallStackAnnotation -&gt; CallStack
+</span><a href="Data.Annotation.html#callStackFromAnnotation"><span class="hs-identifier hs-var hs-var">callStackFromAnnotation</span></a></span></span><span> </span><span id="local-6989586621679052856"><span class="annot"><span class="annottext">CallStackAnnotation
+</span><a href="#local-6989586621679052856"><span class="hs-identifier hs-var">ann</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><span class="annottext">[(String, SrcLoc)] -&gt; CallStack
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#fromCallSiteList"><span class="hs-identifier hs-var">fromCallSiteList</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, SrcLoc)] -&gt; CallStack)
+-&gt; [(String, SrcLoc)] -&gt; CallStack
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CallStackAnnotation -&gt; [(String, SrcLoc)]
+</span><a href="Data.Annotation.html#unCallStackAnnotation"><span class="hs-identifier hs-var">unCallStackAnnotation</span></a></span><span> </span><span class="annot"><span class="annottext">CallStackAnnotation
+</span><a href="#local-6989586621679052856"><span class="hs-identifier hs-var">ann</span></a></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">callStackFromAnnotation</span><span> </span><span class="hs-pragma">&quot;You can use 'CallStack' directly in annotations as of 0.2.0.0.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- | Extract the 'CallStack's from the @['Annotation']@. Any 'Annotation'</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- not corresponding to a 'CallStack' will be in the second element of the</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- tuple.</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- @since 0.1.0.0</span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Data.Annotation.html#callStackInAnnotations"><span class="hs-identifier hs-type">callStackInAnnotations</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Stack.Types.html#CallStack"><span class="hs-identifier hs-type">CallStack</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Annotation.html#Annotation"><span class="hs-identifier hs-type">Annotation</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span id="callStackInAnnotations"><span class="annot"><span class="annottext">callStackInAnnotations :: [Annotation] -&gt; ([CallStack], [Annotation])
+</span><a href="Data.Annotation.html#callStackInAnnotations"><span class="hs-identifier hs-var hs-var">callStackInAnnotations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><span class="annottext">[Annotation] -&gt; ([CallStack], [Annotation])
+forall a. Typeable a =&gt; [Annotation] -&gt; ([a], [Annotation])
+</span><a href="Data.Annotation.html#tryAnnotations"><span class="hs-identifier hs-var">tryAnnotations</span></a></span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">callStackInAnnotations</span><span> </span><span class="hs-pragma">&quot;You can just use 'tryAnnotations' directly as of 0.2.0.0.&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-226"></span></pre></body></html>

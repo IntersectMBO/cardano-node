@@ -1,0 +1,734 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.TraceDispatcherMessage</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespaceKind"><span class="hs-identifier">UnknownNamespaceKind</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TraceDispatcherMessage"><span class="hs-identifier">TraceDispatcherMessage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.ConfigurationParser.html"><span class="hs-identifier">Cardano.Logging.ConfigurationParser</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Error</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier">toStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="UnknownNamespaceKind"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespaceKind"><span class="hs-identifier hs-var">UnknownNamespaceKind</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-18"></span><span>    </span><span id="UKFSeverity"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFSeverity"><span class="hs-identifier hs-var">UKFSeverity</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UKFPrivacy"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFPrivacy"><span class="hs-identifier hs-var">UKFPrivacy</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UKFDetails"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFDetails"><span class="hs-identifier hs-var">UKFDetails</span></a></span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144279"><span id="local-6989586621679144284"><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespaceKind"><span class="hs-identifier hs-type">UnknownNamespaceKind</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679144287"><span class="annot"><span class="annottext">show :: UnknownNamespaceKind -&gt; String
+</span><a href="#local-6989586621679144287"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFSeverity"><span class="hs-identifier hs-var">UKFSeverity</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;severity&quot;</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFPrivacy"><span class="hs-identifier hs-var">UKFPrivacy</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;privacy&quot;</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#UKFDetails"><span class="hs-identifier hs-var">UKFDetails</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;details&quot;</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="TraceDispatcherMessage"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TraceDispatcherMessage"><span class="hs-identifier hs-var">TraceDispatcherMessage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>    </span><span id="StartLimiting"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-var">StartLimiting</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ This message indicates the start of frequency limiting</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="StopLimiting"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-var">StopLimiting</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- ^ This message indicates the stop of frequency limiting,</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">-- and gives the number of messages that has been suppressed</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="RememberLimiting"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-var">RememberLimiting</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- ^ This message remembers of ongoing frequency limiting,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- and gives the number of messages that has been suppressed</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UnknownNamespace"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespace"><span class="hs-identifier hs-var">UnknownNamespace</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespaceKind"><span class="hs-identifier hs-type">UnknownNamespaceKind</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ An internal error was detected</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TracerInfo"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfo"><span class="hs-identifier hs-var">TracerInfo</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- ^  The first array signifies the namespace of silent tracers</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">--    The second array signifies the namespace tracers without metrics</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">--    The third array gives the names of all tracers</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MetricsInfo"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#MetricsInfo"><span class="hs-identifier hs-var">MetricsInfo</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^  Outputs optional statistics about metrics frequency</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TracerConsistencyWarnings"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerConsistencyWarnings"><span class="hs-identifier hs-var">TracerConsistencyWarnings</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^  Consistency check found warnings</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TracerInfoConfig"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfoConfig"><span class="hs-identifier hs-var">TracerInfoConfig</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceConfig"><span class="hs-identifier hs-type">TraceConfig</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^  Trace the effective configuration as JSON</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679144298"><span id="local-6989586621679144328"><span id="local-6989586621679144332"><span class="annot"><span class="annottext">Int -&gt; TraceDispatcherMessage -&gt; ShowS
+[TraceDispatcherMessage] -&gt; ShowS
+TraceDispatcherMessage -&gt; String
+(Int -&gt; TraceDispatcherMessage -&gt; ShowS)
+-&gt; (TraceDispatcherMessage -&gt; String)
+-&gt; ([TraceDispatcherMessage] -&gt; ShowS)
+-&gt; Show TraceDispatcherMessage
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TraceDispatcherMessage -&gt; ShowS
+showsPrec :: Int -&gt; TraceDispatcherMessage -&gt; ShowS
+$cshow :: TraceDispatcherMessage -&gt; String
+show :: TraceDispatcherMessage -&gt; String
+$cshowList :: [TraceDispatcherMessage] -&gt; ShowS
+showList :: [TraceDispatcherMessage] -&gt; ShowS
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LogFormatting"><span class="hs-identifier hs-type">LogFormatting</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TraceDispatcherMessage"><span class="hs-identifier hs-type">TraceDispatcherMessage</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679144389"><span class="annot"><span class="annottext">forHuman :: TraceDispatcherMessage -&gt; Text
+</span><a href="#local-6989586621679144389"><span class="hs-identifier hs-var hs-var hs-var hs-var">forHuman</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-type">StartLimiting</span></a></span><span> </span><span id="local-6989586621679144391"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144391"><span class="hs-identifier hs-var">txt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Start of frequency limiting for &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144391"><span class="hs-identifier hs-var">txt</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-type">StopLimiting</span></a></span><span> </span><span id="local-6989586621679144392"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144392"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span id="local-6989586621679144393"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144393"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Stop of frequency limiting for &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144392"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. Suppressed &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144393"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; messages.&quot;</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-type">RememberLimiting</span></a></span><span> </span><span id="local-6989586621679144395"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144395"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span id="local-6989586621679144396"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144396"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Frequency limiting still active for &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144395"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. Suppressed so far &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144396"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; messages.&quot;</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespace"><span class="hs-identifier hs-type">UnknownNamespace</span></a></span><span> </span><span id="local-6989586621679144397"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144397"><span class="hs-identifier hs-var">nsPrefixNS</span></a></span></span><span> </span><span id="local-6989586621679144398"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144398"><span class="hs-identifier hs-var">nsInnerNS</span></a></span></span><span> </span><span id="local-6989586621679144399"><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="#local-6989586621679144399"><span class="hs-identifier hs-var">qk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unknown namespace detected &quot;</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144397"><span class="hs-identifier hs-var">nsPrefixNS</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144398"><span class="hs-identifier hs-var">nsInnerNS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. Used for querying &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="#local-6989586621679144399"><span class="hs-identifier hs-var">qk</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfo"><span class="hs-identifier hs-type">TracerInfo</span></a></span><span> </span><span id="local-6989586621679144402"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144402"><span class="hs-identifier hs-var">silent</span></a></span></span><span> </span><span id="local-6989586621679144403"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144403"><span class="hs-identifier hs-var">noMetrics</span></a></span></span><span> </span><span id="local-6989586621679144404"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144404"><span class="hs-identifier hs-var">allTracers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The tracing system has silent the following tracer,&quot;</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; as they will never have any output according to the current config: &quot;</span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144402"><span class="hs-identifier hs-var">silent</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. The following tracers will not emit metrics &quot;</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144403"><span class="hs-identifier hs-var">noMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;. Here is a complete list of all tracers: &quot;</span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144404"><span class="hs-identifier hs-var">allTracers</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#MetricsInfo"><span class="hs-identifier hs-type">MetricsInfo</span></a></span><span> </span><span id="local-6989586621679144405"><span class="annot"><span class="annottext">Map Text Int
+</span><a href="#local-6989586621679144405"><span class="hs-identifier hs-var">mmap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Number of metrics delivered, &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Int
+</span><a href="#local-6989586621679144405"><span class="hs-identifier hs-var">mmap</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerConsistencyWarnings"><span class="hs-identifier hs-type">TracerConsistencyWarnings</span></a></span><span> </span><span id="local-6989586621679144406"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144406"><span class="hs-identifier hs-var">errs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Consistency check found warnings:  &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144406"><span class="hs-identifier hs-var">errs</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forHuman"><span class="hs-identifier hs-var">forHuman</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfoConfig"><span class="hs-identifier hs-type">TracerInfoConfig</span></a></span><span> </span><span id="local-6989586621679144407"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144407"><span class="hs-identifier hs-var">tc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Effective Tracer config is:  &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Encoding.html#decodeUtf8"><span class="hs-identifier hs-var">Text.decodeUtf8</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/bytestring-0.11.5.4/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">toStrict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceConfig -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">encode</span></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144407"><span class="hs-identifier hs-var">tc</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679144496"><span class="annot"><span class="annottext">forMachine :: DetailLevel -&gt; TraceDispatcherMessage -&gt; Object
+</span><a href="#local-6989586621679144496"><span class="hs-identifier hs-var hs-var hs-var hs-var">forMachine</span></a></span></span><span> </span><span id="local-6989586621679144498"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144498"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-type">StartLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144501"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144501"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-type">StopLimiting</span></a></span><span> </span><span id="local-6989586621679144502"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144502"><span class="hs-identifier hs-var">_txt</span></a></span></span><span> </span><span id="local-6989586621679144503"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144503"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StopLimiting&quot;</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;numSuppressed&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">Number</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144503"><span class="hs-identifier hs-var">num</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144505"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144505"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-type">RememberLimiting</span></a></span><span> </span><span id="local-6989586621679144506"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144506"><span class="hs-identifier hs-var">_txt</span></a></span></span><span> </span><span id="local-6989586621679144507"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144507"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RememberLimiting&quot;</span></span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;numSuppressed&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Value
+</span><span class="hs-identifier hs-var">Number</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Scientific
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144507"><span class="hs-identifier hs-var">num</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144508"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144508"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespace"><span class="hs-identifier hs-type">UnknownNamespace</span></a></span><span> </span><span id="local-6989586621679144509"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144509"><span class="hs-identifier hs-var">nsun</span></a></span></span><span> </span><span id="local-6989586621679144510"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144510"><span class="hs-identifier hs-var">nsleg</span></a></span></span><span> </span><span id="local-6989586621679144511"><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="#local-6989586621679144511"><span class="hs-identifier hs-var">query</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnknownNamespace&quot;</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;unknownNamespace&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144509"><span class="hs-identifier hs-var">nsun</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;legalNamespace&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'.'</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144510"><span class="hs-identifier hs-var">nsleg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;querying&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnknownNamespaceKind -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">UnknownNamespaceKind
+</span><a href="#local-6989586621679144511"><span class="hs-identifier hs-var">query</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144512"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144512"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfo"><span class="hs-identifier hs-type">TracerInfo</span></a></span><span> </span><span id="local-6989586621679144513"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144513"><span class="hs-identifier hs-var">silent</span></a></span></span><span> </span><span id="local-6989586621679144514"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144514"><span class="hs-identifier hs-var">noMetrics</span></a></span></span><span> </span><span id="local-6989586621679144515"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144515"><span class="hs-identifier hs-var">allTracers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerMeta&quot;</span></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;silentTracers&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144513"><span class="hs-identifier hs-var">silent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;noMetrics&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144514"><span class="hs-identifier hs-var">noMetrics</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;allTracers&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144515"><span class="hs-identifier hs-var">allTracers</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144516"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144516"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#MetricsInfo"><span class="hs-identifier hs-type">MetricsInfo</span></a></span><span> </span><span id="local-6989586621679144517"><span class="annot"><span class="annottext">Map Text Int
+</span><a href="#local-6989586621679144517"><span class="hs-identifier hs-var">mmap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;MetricsInfo&quot;</span></span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;metrics count&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Text Int -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Int
+</span><a href="#local-6989586621679144517"><span class="hs-identifier hs-var">mmap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144518"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144518"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerConsistencyWarnings"><span class="hs-identifier hs-type">TracerConsistencyWarnings</span></a></span><span> </span><span id="local-6989586621679144519"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144519"><span class="hs-identifier hs-var">errs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;kind&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConsistencyWarnings&quot;</span></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;errors&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679144519"><span class="hs-identifier hs-var">errs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#forMachine"><span class="hs-identifier hs-var">forMachine</span></a></span><span> </span><span id="local-6989586621679144520"><span class="annot"><span class="annottext">DetailLevel
+</span><a href="#local-6989586621679144520"><span class="hs-identifier hs-var">_dtl</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfoConfig"><span class="hs-identifier hs-type">TracerInfoConfig</span></a></span><span> </span><span id="local-6989586621679144521"><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144521"><span class="hs-identifier hs-var">tc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Object] -&gt; Object
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;conf&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Object
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Object
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">TraceConfig -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">TraceConfig
+</span><a href="#local-6989586621679144521"><span class="hs-identifier hs-var">tc</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679144528"><span class="annot"><span class="annottext">asMetrics :: TraceDispatcherMessage -&gt; [Metric]
+</span><a href="#local-6989586621679144528"><span class="hs-identifier hs-var hs-var hs-var hs-var">asMetrics</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-type">StartLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-type">StopLimiting</span></a></span><span> </span><span id="local-6989586621679144530"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144530"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span id="local-6989586621679144531"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144531"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text -&gt; Integer -&gt; Metric
+</span><a href="Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-var">IntM</span></a></span><span>
+</span><span id="line-107"></span><span>                                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SuppressedMessages &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679144530"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>                                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679144531"><span class="hs-identifier hs-var">num</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-type">RememberLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespace"><span class="hs-identifier hs-type">UnknownNamespace</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfo"><span class="hs-identifier hs-type">TracerInfo</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#MetricsInfo"><span class="hs-identifier hs-type">MetricsInfo</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerConsistencyWarnings"><span class="hs-identifier hs-type">TracerConsistencyWarnings</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Types.html#asMetrics"><span class="hs-identifier hs-var">asMetrics</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfoConfig"><span class="hs-identifier hs-type">TracerInfoConfig</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-type">internalRestriction</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-117"></span><span id="internalRestriction"><span class="annot"><span class="annottext">internalRestriction :: Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var hs-var">internalRestriction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\nThis internal message can't be filtered by the current configuration&quot;</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679144537"><span id="local-6989586621679144541"><span class="annot"><a href="Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TraceDispatcherMessage"><span class="hs-identifier hs-type">TraceDispatcherMessage</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679144555"><span class="annot"><span class="annottext">namespaceFor :: TraceDispatcherMessage -&gt; Namespace TraceDispatcherMessage
+</span><a href="#local-6989586621679144555"><span class="hs-identifier hs-var hs-var hs-var hs-var">namespaceFor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StartLimiting"><span class="hs-identifier hs-type">StartLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#StopLimiting"><span class="hs-identifier hs-type">StopLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StopLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#RememberLimiting"><span class="hs-identifier hs-type">RememberLimiting</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RememberLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#UnknownNamespace"><span class="hs-identifier hs-type">UnknownNamespace</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnknownNamespace&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfo"><span class="hs-identifier hs-type">TracerInfo</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#MetricsInfo"><span class="hs-identifier hs-type">MetricsInfo</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;MetricsInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerConsistencyWarnings"><span class="hs-identifier hs-type">TracerConsistencyWarnings</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConsistencyWarnings&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#namespaceFor"><span class="hs-identifier hs-var">namespaceFor</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#TracerInfoConfig"><span class="hs-identifier hs-type">TracerInfoConfig</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConfigInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>    </span><span id="local-6989586621679144575"><span class="annot"><span class="annottext">severityFor :: Namespace TraceDispatcherMessage
+-&gt; Maybe TraceDispatcherMessage -&gt; Maybe SeverityS
+</span><a href="#local-6989586621679144575"><span class="hs-identifier hs-var hs-var hs-var hs-var">severityFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Notice"><span class="hs-identifier hs-var">Notice</span></a></span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StopLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Notice"><span class="hs-identifier hs-var">Notice</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RememberLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Notice"><span class="hs-identifier hs-var">Notice</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnknownNamespace&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Error"><span class="hs-identifier hs-var">Error</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Notice"><span class="hs-identifier hs-var">Notice</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;MetricsInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConsistencyWarnings&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Warning"><span class="hs-identifier hs-var">Warning</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConfigInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SeverityS -&gt; Maybe SeverityS
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="Cardano.Logging.Types.html#Notice"><span class="hs-identifier hs-var">Notice</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#severityFor"><span class="hs-identifier hs-var">severityFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span>                                  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679144624"><span class="annot"><span class="annottext">documentFor :: Namespace TraceDispatcherMessage -&gt; Maybe Text
+</span><a href="#local-6989586621679144624"><span class="hs-identifier hs-var hs-var hs-var hs-var">documentFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;This message indicates the start of frequency limiting&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StopLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;This message indicates the stop of frequency limiting,&quot;</span></span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; and gives the number of messages that has been suppressed&quot;</span></span><span>
+</span><span id="line-146"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RememberLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;^ This message remembers of ongoing frequency limiting,&quot;</span></span><span>
+</span><span id="line-149"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; and gives the number of messages that has been suppressed&quot;</span></span><span>
+</span><span id="line-150"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnknownNamespace&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-152"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;A value was queried for a namespaces from a tracer,&quot;</span></span><span>
+</span><span id="line-153"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;which is unknown. This indicates a bug in the tracer implementation.&quot;</span></span><span>
+</span><span id="line-154"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-156"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Writes out tracers with metrics and silent tracers.&quot;</span></span><span>
+</span><span id="line-157"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;MetricsInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-159"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Writes out numbers for metrics delivered.&quot;</span></span><span>
+</span><span id="line-160"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConsistencyWarnings&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-162"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Tracer consistency check found errors.&quot;</span></span><span>
+</span><span id="line-163"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConfigInfo&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text) -&gt; Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Trace the tracer configuration which is effectively used.&quot;</span></span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#internalRestriction"><span class="hs-identifier hs-var">internalRestriction</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#documentFor"><span class="hs-identifier hs-var">documentFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span>    </span><span id="local-6989586621679144630"><span class="annot"><span class="annottext">metricsDocFor :: Namespace TraceDispatcherMessage -&gt; [(Text, Text)]
+</span><a href="#local-6989586621679144630"><span class="hs-identifier hs-var hs-var hs-var hs-var">metricsDocFor</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-type">Namespace</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>    </span><span class="hs-glyph">=</span><span>
+</span><span id="line-170"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;SuppressedMessages...&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Number of suppressed messages of a certain kind&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Types.html#metricsDocFor"><span class="hs-identifier hs-var">metricsDocFor</span></a></span><span> </span><span class="annot"><span class="annottext">Namespace TraceDispatcherMessage
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679144640"><span class="annot"><span class="annottext">allNamespaces :: [Namespace TraceDispatcherMessage]
+</span><a href="#local-6989586621679144640"><span class="hs-identifier hs-var hs-var hs-var hs-var">allNamespaces</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StartLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-176"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;StopLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-177"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RememberLimiting&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;UnknownNamespace&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-179"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-180"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;MetricsInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConsistencyWarnings&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-182"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; Namespace TraceDispatcherMessage
+forall a. [Text] -&gt; [Text] -&gt; Namespace a
+</span><a href="Cardano.Logging.Types.html#Namespace"><span class="hs-identifier hs-var">Namespace</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TracerConfigInfo&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- `text-2.1.2` provides `Text.show` which can replace this when</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- the lower bound for `text` is high enough.</span><span>
+</span><span id="line-187"></span><span id="local-6989586621679144236"><span class="annot"><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-type">textShow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144236"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144236"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span></span><span>
+</span><span id="line-188"></span><span id="textShow"><span class="annot"><span class="annottext">textShow :: forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Logging.TraceDispatcherMessage.html#textShow"><span class="hs-identifier hs-var hs-var">textShow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">Text.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (a -&gt; String) -&gt; a -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/q5s037f3dqgwfpccw3qcagm27malqb1y-ghc-9.6.7-doc/share/doc/ghc-9.6.7/html/libraries/base-4.18.3.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span>
+</span><span id="line-189"></span></pre></body></html>
