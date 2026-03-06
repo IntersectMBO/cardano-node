@@ -18,6 +18,7 @@ import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
 
 import           Data.Maybe (fromJust)
+import           Data.Maybe.Strict
 import           GHC.Stack
 
 
@@ -76,7 +77,7 @@ mkTxFee = TxFeeExplicit shelleyBasedEra
 -- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
 mkTxValidityUpperBound slotNo =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
+  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (SJust slotNo)
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.

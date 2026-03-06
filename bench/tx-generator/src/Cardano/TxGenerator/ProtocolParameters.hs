@@ -48,6 +48,7 @@ import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Plutus.Language as Plutus
+import qualified Cardano.Ledger.Compactible as L
 
 import           Data.Aeson ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -379,8 +380,8 @@ toShelleyCommonPParams
     protVer <- mkProtVer protocolParamProtocolVersion
     let ppCommon =
           emptyPParams
-            & ppMinFeeAL .~ protocolParamTxFeePerByte
-            & ppMinFeeBL .~ protocolParamTxFeeFixed
+            & ppTxFeePerByteL .~ (CoinPerByte . L.compactCoinOrError $ protocolParamTxFeePerByte)
+            & ppTxFeeFixedL .~ protocolParamTxFeeFixed
             & ppMaxBBSizeL .~ fromIntegral protocolParamMaxBlockBodySize
             & ppMaxTxSizeL .~ fromIntegral protocolParamMaxTxSize
             & ppMaxBHSizeL .~ fromIntegral protocolParamMaxBlockHeaderSize
@@ -457,9 +458,9 @@ toAlonzoCommonPParams
             & ppPricesL .~ prices
             & ppMaxTxExUnitsL .~ toAlonzoExUnits maxTxExUnits
             & ppMaxBlockExUnitsL .~ toAlonzoExUnits maxBlockExUnits
-            & ppMaxValSizeL .~ maxValueSize
-            & ppCollateralPercentageL .~ collateralPercent
-            & ppMaxCollateralInputsL .~ maxCollateralInputs
+            & ppMaxValSizeL .~ (fromIntegral maxValueSize)
+            & ppCollateralPercentageL .~ (fromIntegral collateralPercent)
+            & ppMaxCollateralInputsL .~ (fromIntegral maxCollateralInputs)
     pure ppAlonzoCommon
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
@@ -495,7 +496,7 @@ toBabbagePParams
       requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
     let ppBabbage =
           ppAlonzoCommon
-            & ppCoinsPerUTxOByteL .~ CoinPerByte utxoCostPerByte
+            & ppCoinsPerUTxOByteL .~ CoinPerByte (L.compactCoinOrError utxoCostPerByte)
     pure ppBabbage
 
 -- Was removed in "cardano-api" module "Cardano.Api.Internal.ProtocolParameters"
@@ -531,8 +532,8 @@ fromShelleyCommonPParams pp =
     , protocolParamMaxBlockHeaderSize = fromIntegral $ pp ^. ppMaxBHSizeL
     , protocolParamMaxBlockBodySize = fromIntegral $ pp ^. ppMaxBBSizeL
     , protocolParamMaxTxSize = fromIntegral $ pp ^. ppMaxTxSizeL
-    , protocolParamTxFeeFixed = pp ^. ppMinFeeBL
-    , protocolParamTxFeePerByte = pp ^. ppMinFeeAL
+    , protocolParamTxFeeFixed = pp ^. ppTxFeeFixedL
+    , protocolParamTxFeePerByte = L.fromCompact . L.unCoinPerByte $ pp ^. ppTxFeePerByteL
     , protocolParamStakeAddressDeposit = pp ^. ppKeyDepositL
     , protocolParamStakePoolDeposit = pp ^. ppPoolDepositL
     , protocolParamMinPoolCost = pp ^. ppMinPoolCostL
@@ -579,9 +580,9 @@ fromAlonzoPParams pp =
     , protocolParamPrices = Just . fromAlonzoPrices $ pp ^. ppPricesL
     , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
     , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
-    , protocolParamMaxValueSize = Just $ pp ^. ppMaxValSizeL
-    , protocolParamCollateralPercent = Just $ pp ^. ppCollateralPercentageL
-    , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
+    , protocolParamMaxValueSize = Just $ fromIntegral (pp ^. ppMaxValSizeL)
+    , protocolParamCollateralPercent = Just $ fromIntegral (pp ^. ppCollateralPercentageL)
+    , protocolParamMaxCollateralInputs = Just $ fromIntegral (pp ^. ppMaxCollateralInputsL)
     }
 
 fromExactlyAlonzoPParams
@@ -599,7 +600,7 @@ fromBabbagePParams
   -> ProtocolParameters
 fromBabbagePParams pp =
   (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
+    { protocolParamUTxOCostPerByte = Just . L.fromCompact . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
     , protocolParamDecentralization = Nothing
     }
 

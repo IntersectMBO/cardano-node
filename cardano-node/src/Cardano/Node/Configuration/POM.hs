@@ -28,7 +28,8 @@ where
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import qualified Cardano.Network.Diffusion.Configuration as Cardano
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.ConsensusMode (ConsensusMode(..), defaultConsensusMode)
 import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -49,6 +50,7 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionLogicVersion(..), TxSubmissionInitDelay(..))
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -196,6 +198,9 @@ data NodeConfiguration
        , ncGenesisConfig :: GenesisConfig
 
        , ncResponderCoreAffinityPolicy :: ResponderCoreAffinityPolicy
+
+       , ncTxSubmissionLogicVersion :: TxSubmissionLogicVersion
+       , ncTxSubmissionInitDelay :: TxSubmissionInitDelay
        } deriving (Eq, Show)
 
 -- | We expose the `Ouroboros.Network.Mux.ForkPolicy` as a `NodeConfiguration` field.
@@ -296,6 +301,9 @@ data PartialNodeConfiguration
        , pncGenesisConfigFlags :: !(Last GenesisConfigFlags)
 
        , pncResponderCoreAffinityPolicy :: !(Last ResponderCoreAffinityPolicy)
+
+       , pncTxSubmissionLogicVersion :: !(Last TxSubmissionLogicVersion)
+       , pncTxSubmissionInitDelay :: !(Last TxSubmissionInitDelay)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -412,6 +420,13 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
+      pncTxSubmissionLogicVersion <- undefined -- TODO(10.7)
+      -- the following needs FromJSON TxSubmissionLogicVersion
+      -- pncTxSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
+      pncTxSubmissionInitDelay <- undefined -- TODO(10.7)
+      -- the following needs FromJSON TxSubmissionInitDelay
+      -- pncTxSubmissionInitDelay <- Last <$> v .:? "TxSubmissionInitDelay"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -459,6 +474,8 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
+           , pncTxSubmissionLogicVersion
+           , pncTxSubmissionInitDelay
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -500,9 +517,6 @@ instance FromJSON PartialNodeConfiguration where
              qsize           <- (fmap RequestedQueryBatchSize <$> o .:? "QueryBatchSize") .!= DefaultQueryBatchSize
              backend         <- o .:? "Backend" .!= "V2InMemory"
              selector        <- case backend of
-               "V1InMemory" -> do
-                 flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
-                 return $ V1InMemory flush
                "V1LMDB"     -> do
                  flush <- (fmap RequestedFlushFrequency <$> o .:? "FlushFrequency")       .!= DefaultFlushFrequency
                  mapSize :: Maybe Gigabytes <- o .:? "MapSize"
@@ -510,6 +524,9 @@ instance FromJSON PartialNodeConfiguration where
                  mxReaders :: Maybe Int <- o .:? "MaxReaders"
                  return $ V1LMDB flush lmdbPath mapSize mxReaders
                "V2InMemory" -> return V2InMemory
+               "V2LSM" -> do
+                 lsmPath :: Maybe FilePath <- o .:? "LSMDatabasePath"
+                 pure $ V2LSM lsmPath
                _ -> fail $ "Malformed LedgerDB Backend: " <> backend
              pure $ Just $ LedgerDbConfiguration ldbSnapNum ldbSnapInterval qsize selector deprecatedOpts
 
@@ -717,13 +734,16 @@ defaultPartialNodeConfiguration =
 
     , pncMinBigLedgerPeersForTrustedState = Last (Just Cardano.defaultNumberOfBigLedgerPeers)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/cardano-diffusion/Cardano-Network-Diffusion-Configuration.html#v:defaultNumberOfBigLedgerPeers
-    , pncConsensusMode = Last (Just Ouroboros.defaultConsensusMode)
+    , pncConsensusMode = Last (Just defaultConsensusMode)
       -- https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-Diffusion-Configuration.html#v:defaultConsensusMode
     , pncPeerSharing   = mempty
       -- the default is defined in `makeNodeConfiguration`
     , pncGenesisConfigFlags = Last (Just defaultGenesisConfigFlags)
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
+
+    , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1 -- TODO(10.7)
+    , pncTxSubmissionInitDelay = Last $ Just NoTxSubmissionInitDelay -- TODO(10.7)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -821,7 +841,7 @@ makeNodeConfiguration pnc = do
                         , getLast (pncMempoolTimeoutHard pnc)
                         , getLast (pncMempoolTimeoutCapacity pnc)
                         )
-  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <- 
+  (ncMempoolTimeoutSoft, ncMempoolTimeoutHard, ncMempoolTimeoutCapacity) <-
     case mempoolTimeouts of
       (Just s, Just h, Just c) -> pure (s, h, c)
       (Nothing, Nothing, Nothing) -> pure (1, 1.5, 5)
@@ -844,6 +864,9 @@ makeNodeConfiguration pnc = do
   let ncGenesisConfig = mkGenesisConfig mGenesisConfigFlags
 
   ncResponderCoreAffinityPolicy <- lastToEither "Missing ResponderCoreAffinityPolicy" $ pncResponderCoreAffinityPolicy pnc
+
+  ncTxSubmissionLogicVersion <- lastToEither "Missing TxSubmissionLogicVersion" $ pncTxSubmissionLogicVersion pnc
+  ncTxSubmissionInitDelay <- lastToEither "Missing TxSubmissionInitDelay" $ pncTxSubmissionInitDelay pnc
 
   let deadlineTargets =
         PeerSelectionTargets {
@@ -922,6 +945,8 @@ makeNodeConfiguration pnc = do
              , ncConsensusMode
              , ncGenesisConfig
              , ncResponderCoreAffinityPolicy
+             , ncTxSubmissionLogicVersion
+             , ncTxSubmissionInitDelay
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

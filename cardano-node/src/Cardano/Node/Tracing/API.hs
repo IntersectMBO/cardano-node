@@ -1,3 +1,4 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
@@ -32,8 +33,8 @@ import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.NodeToClient (LocalAddress, withIOManager)
-import           Ouroboros.Network.NodeToNode (RemoteAddress)
+import           Cardano.Network.NodeToClient (LocalAddress, withIOManager)
+import           Cardano.Network.NodeToNode (RemoteAddress)
 
 import           Prelude
 
