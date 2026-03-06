@@ -1,16 +1,17 @@
 #!/bin/env bash
+set -euo pipefail
 
-[[ -n $DEBUG ]] && set -x
+[[ -n ${DEBUG:-} ]] && set -x
 
 # If the NETWORK env var is set to a valid cardano network, pre-defined
 # configuration will be used.
-if [[ -n $NETWORK ]]; then
+if [[ -n ${NETWORK:-} ]]; then
 
   # If CARDANO_CONFIG_JSON_MERGE env var is set, iohk-nix
   # pre-defined NETWORK configuration will be used as a starting point and
   # merged with custom configuration provided as json in the environment
   # variable(s).
-  if [[ -n $CARDANO_CONFIG_JSON_MERGE ]]; then
+  if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
 
     CFG="/opt/cardano/config"
     if ! [[ -f $CFG/$NETWORK/tracer-config.json ]]; then
@@ -27,7 +28,9 @@ if [[ -n $NETWORK ]]; then
     # In a jq deep merge, arrays are replaced, primitive values in the second
     # object override the first, different types for the same key result in
     # full replacement and null values persist.
-    if [[ -n $CARDANO_CONFIG_JSON_MERGE ]]; then
+    #
+    # jq -S sorts output keys alphabetically for deterministic diffs.
+    if [[ -n ${CARDANO_CONFIG_JSON_MERGE:-} ]]; then
       jq -S \
         --argjson deepMerge "$CARDANO_CONFIG_JSON_MERGE" \
         '. * $deepMerge' \
@@ -38,7 +41,7 @@ if [[ -n $NETWORK ]]; then
       export CARDANO_CONFIG="$CFG/$NETWORK/tracer-config.json"
     fi
 
-    if [[ -n $DEBUG ]]; then
+    if [[ -n ${DEBUG:-} ]]; then
       echo "Cardano config in merge mode is:"
       cat "$CARDANO_CONFIG"
       echo
@@ -47,7 +50,7 @@ if [[ -n $NETWORK ]]; then
     # Run cardano-tracer using iohk-nix base config merged with provided custom
     # config for the requested NETWORK.
     unset NETWORK
-    if [[ $1 == "run" ]]; then
+    if [[ ${1:-} == "run" ]]; then
       exec /usr/local/bin/run-tracer "$@"
     else
       exec /usr/local/bin/run-tracer run "$@"
@@ -58,12 +61,11 @@ if [[ -n $NETWORK ]]; then
     exec /usr/local/bin/run-network "$@"
   fi
 
-elif [[ $1 == "run" ]]; then
+elif [[ ${1:-} == "run" ]]; then
   # Run cardano-tracer using "custom" mode.
   exec /usr/local/bin/run-tracer "$@"
 
 else
-
   echo "Nothing to do!  Available modes of operation are:"
   echo
   echo "Scripts mode:"
