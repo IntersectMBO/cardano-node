@@ -1,14 +1,15 @@
 #!/bin/env bash
+set -euo pipefail
 
-[[ -n $DEBUG ]] && set -x
+[[ -n ${DEBUG:-} ]] && set -x
 
-# Shift the first option by one index
+# Discard the leading subcommand argument (e.g. "cli") passed by the entrypoint
 shift
 
-if [[ -z $CARDANO_NODE_SOCKET_PATH ]]; then
+if [[ -z ${CARDANO_NODE_SOCKET_PATH:-} ]]; then
   # Breaking change from the historical default of: /opt/cardano/ipc/socket
   # in order to align both the "scripts" and "custom" modes of image operation.
   export CARDANO_NODE_SOCKET_PATH="/ipc/node.socket"
 fi
 
-/usr/local/bin/cardano-cli "$@"
+exec /usr/local/bin/cardano-cli "$@"
