@@ -120,7 +120,7 @@ let
             // optionalAttrs (cfg.withUtxoHdLsmt i){
               LedgerDB = {
                 Backend = "V2LSM";
-                LSMDatabasePath = cfg.lmdbDatabasePath i;
+                LSMDatabasePath = cfg.lsmDatabasePath i;
               };
             }
             // optionalAttrs (cfg.withUtxoHdLmdb i){
@@ -434,7 +434,17 @@ in {
         default = null;
         apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
         description = ''
-          A node UTxO-HD on-disk (LMDB or LSM-trees) path for performant disk I/O, for each instance.
+          A node UTxO-HD on-disk LMDB path for performant disk I/O, for each instance.
+          This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
+      };
+
+      lsmDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if lib.isFunction x then x else if x == null then _: null else _: x;
+        description = ''
+          A node UTxO-HD on-disk LSM-trees path for performant disk I/O, for each instance.
           This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
         '';
       };
@@ -904,6 +914,7 @@ in {
 
   config = mkIf cfg.enable ( let
     lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (genList trivial.id cfg.instances));
+    lsmPaths = filter (x: x != null) (map (e: cfg.lsmDatabasePath e) (genList trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
       else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in mkMerge [
@@ -1004,8 +1015,7 @@ in {
     {
       assertions = [
         {
-          assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i))
-                                   (genList trivial.id cfg.instances);
+          assertion = all (i: hasPrefix cfg.stateDirBase (cfg.stateDir i)) (genList trivial.id cfg.instances);
           message = "The option services.cardano-node.stateDir should have ${cfg.stateDirBase}
                      as a prefix, for each instance!";
         }
@@ -1020,6 +1030,14 @@ in {
         {
           assertion = (length lmdbPaths) == (length (lists.unique lmdbPaths));
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
+        }
+        {
+          assertion = (length lsmPaths) == (length (lists.unique lsmPaths));
+          message   = "When configuring multiple LSM enabled nodes on one instance, lsmDatabasePath must be unique.";
+        }
+        {
+          assertion = all (i: !(cfg.withUtxoHdLmdb i && cfg.withUtxoHdLsmt i)) (genList trivial.id cfg.instances);
+          message = "Each instance can only declare either withUtxoHdLmdb or withUtxoHdLsmt";
         }
         {
           assertion = count (o: o != null) (with cfg; [
