@@ -75,6 +75,8 @@ printRunEnv () {
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]] && echo "CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT"
+  [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_CONNECT:-} ]] && echo "CARDANO_TRACER_SOCKET_NETWORK_CONNECT=$CARDANO_TRACER_SOCKET_NETWORK_CONNECT"
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]] && echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=$CARDANO_TRACER_SOCKET_PATH_ACCEPT"
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]] && echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=$CARDANO_TRACER_SOCKET_PATH_CONNECT"
 
@@ -96,6 +98,16 @@ cat << EOF > /usr/local/bin/env
 
 # Docker run ENV vars
 EOF
+
+if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]]; then
+  echo "CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=\"$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT\"" \
+    >> /usr/local/bin/env
+fi
+
+if [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_CONNECT:-} ]]; then
+  echo "CARDANO_TRACER_SOCKET_NETWORK_CONNECT=\"$CARDANO_TRACER_SOCKET_NETWORK_CONNECT\"" \
+    >> /usr/local/bin/env
+fi
 
 if [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=\"$CARDANO_TRACER_SOCKET_PATH_ACCEPT\"" \
@@ -156,6 +168,8 @@ runNode () {
     )
   fi
 
+  [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_ACCEPT:-} ]] && effopts+=("--tracer-socket-network-accept" "$CARDANO_TRACER_SOCKET_NETWORK_ACCEPT")
+  [[ -n ${CARDANO_TRACER_SOCKET_NETWORK_CONNECT:-} ]] && effopts+=("--tracer-socket-network-connect" "$CARDANO_TRACER_SOCKET_NETWORK_CONNECT")
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
   [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
 
@@ -190,6 +204,8 @@ do
       --shelley-kes-key) CARDANO_SHELLEY_KES_KEY=${val}; found=true;;
       --shelley-vrf-key) CARDANO_SHELLEY_VRF_KEY=${val}; found=true;;
       --shelley-operational-certificate) CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=${val}; found=true;;
+      --tracer-socket-network-accept) CARDANO_TRACER_SOCKET_NETWORK_ACCEPT=${val}; found=true;;
+      --tracer-socket-network-connect) CARDANO_TRACER_SOCKET_NETWORK_CONNECT=${val}; found=true;;
       --tracer-socket-path-accept) CARDANO_TRACER_SOCKET_PATH_ACCEPT=${val}; found=true;;
       --tracer-socket-path-connect) CARDANO_TRACER_SOCKET_PATH_CONNECT=${val}; found=true;;
     esac
