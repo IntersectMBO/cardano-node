@@ -1,50 +1,64 @@
 #!/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 echo "Running cardano node ..."
 
-[[ -n $DEBUG ]] && set -x
+[[ -n ${DEBUG:-} ]] && set -x
 
 # Define a few defaults
 CARDANO_CONFIG_BASE="/opt/cardano/config"
 
-if [[ -z $CARDANO_CONFIG ]]; then
+if [[ -z ${CARDANO_CONFIG:-} ]]; then
   CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet/config.json"
 fi
 
-if [[ -z $CARDANO_TOPOLOGY ]]; then
+if [[ -z ${CARDANO_TOPOLOGY:-} ]]; then
   CARDANO_TOPOLOGY="$CARDANO_CONFIG_BASE/mainnet/topology.json"
 fi
 
 # Breaking change from the historical default of: /opt/cardano/data
 # in order to align both the "scripts" and "custom" modes of image operation.
 # Prefer root mountpoints for consistency via symlink /opt/cardano/data -> /data
-if [[ -z $CARDANO_DATABASE_PATH ]]; then
+if [[ -z ${CARDANO_DATABASE_PATH:-} ]]; then
   CARDANO_DATABASE_PATH="/data/db"
 fi
 
 # Breaking change from the historical default of: /opt/cardano/ipc/socket
 # in order to align both the "scripts" and "custom" modes of image operation.
 # Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
-if [[ -z $CARDANO_SOCKET_PATH ]]; then
+if [[ -z ${CARDANO_SOCKET_PATH:-} ]]; then
   CARDANO_SOCKET_PATH="/ipc/node.socket"
 fi
 
-# Prefer root mountpoints for consistency via symlink /opt/cardano/ipc -> /ipc
-if [[ -z $CARDANO_LOG_DIR ]]; then
+if [[ -z ${CARDANO_LOG_DIR:-} ]]; then
   CARDANO_LOG_DIR="/opt/cardano/logs"
 fi
 
-if [[ -z $CARDANO_BIND_ADDR ]]; then
+if [[ -z ${CARDANO_BIND_ADDR:-} ]]; then
   CARDANO_BIND_ADDR="0.0.0.0"
 fi
 
-if [[ -z $CARDANO_PORT ]]; then
+if [[ -z ${CARDANO_PORT:-} ]]; then
   CARDANO_PORT=3001
 fi
 
-if [[ -z $CARDANO_BLOCK_PRODUCER ]]; then
+if [[ -z ${CARDANO_BLOCK_PRODUCER:-} ]]; then
   CARDANO_BLOCK_PRODUCER=false
+fi
+
+# Block producer key defaults -- only relevant when CARDANO_BLOCK_PRODUCER=true
+if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
+  if [[ -z ${CARDANO_SHELLEY_KES_KEY:-} ]]; then
+    CARDANO_SHELLEY_KES_KEY="$CARDANO_CONFIG_BASE/keys/kes.skey"
+  fi
+
+  if [[ -z ${CARDANO_SHELLEY_VRF_KEY:-} ]]; then
+    CARDANO_SHELLEY_VRF_KEY="$CARDANO_CONFIG_BASE/keys/vrf.skey"
+  fi
+
+  if [[ -z ${CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE:-} ]]; then
+    CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="$CARDANO_CONFIG_BASE/keys/node.cert"
+  fi
 fi
 
 #####################################################################
@@ -61,23 +75,10 @@ printRunEnv () {
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=$CARDANO_TRACER_SOCKET_PATH_ACCEPT"
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=$CARDANO_TRACER_SOCKET_PATH_CONNECT"
+  [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]] && echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=$CARDANO_TRACER_SOCKET_PATH_ACCEPT"
+  [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]] && echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=$CARDANO_TRACER_SOCKET_PATH_CONNECT"
 
   if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
-
-    if [[ -z ${CARDANO_SHELLEY_KES_KEY} ]]; then
-      CARDANO_SHELLEY_KES_KEY="$CARDANO_CONFIG_BASE/keys/kes.skey"
-    fi
-
-    if [[ -z ${CARDANO_SHELLEY_VRF_KEY} ]]; then
-      CARDANO_SHELLEY_VRF_KEY="$CARDANO_CONFIG_BASE/keys/vrf.skey"
-    fi
-
-    if [[ -z ${CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE} ]]; then
-      CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="$CARDANO_CONFIG_BASE/keys/node.cert"
-    fi
-
     echo "CARDANO_SHELLEY_KES_KEY=$CARDANO_SHELLEY_KES_KEY"
     echo "CARDANO_SHELLEY_VRF_KEY=$CARDANO_SHELLEY_VRF_KEY"
     echo "CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
@@ -96,12 +97,12 @@ cat << EOF > /usr/local/bin/env
 # Docker run ENV vars
 EOF
 
-if [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]]; then
+if [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_PATH_ACCEPT=\"$CARDANO_TRACER_SOCKET_PATH_ACCEPT\"" \
     >> /usr/local/bin/env
 fi
 
-if [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]]; then
+if [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]]; then
   echo "CARDANO_TRACER_SOCKET_PATH_CONNECT=\"$CARDANO_TRACER_SOCKET_PATH_CONNECT\"" \
     >> /usr/local/bin/env
 fi
@@ -116,18 +117,16 @@ CARDANO_PORT=$CARDANO_PORT
 CARDANO_SOCKET_PATH="$CARDANO_SOCKET_PATH"
 CARDANO_TOPOLOGY="$CARDANO_TOPOLOGY"
 
-CARDANO_PUBLIC_IP="$CARDANO_PUBLIC_IP"
-CARDANO_CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
+CARDANO_PUBLIC_IP="${CARDANO_PUBLIC_IP:-}"
+CARDANO_CUSTOM_PEERS="${CARDANO_CUSTOM_PEERS:-}"
 
 # Mapping for topologyUpdater
-CNODE_HOSTNAME="$CARDANO_PUBLIC_IP"
+CNODE_HOSTNAME="${CARDANO_PUBLIC_IP:-}"
 CNODE_PORT=$CARDANO_PORT
-CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
+CUSTOM_PEERS="${CARDANO_CUSTOM_PEERS:-}"
 
-# Breaking change from the historical default of:
-# $CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json in order to align
-# with network organized configuration files.
-GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet/shelley-genesis.json"
+# Derived from CARDANO_CONFIG to support non-mainnet deployments
+GENESIS_JSON="$(dirname "$CARDANO_CONFIG")/shelley-genesis.json"
 
 TOPOLOGY="$CARDANO_TOPOLOGY"
 LOG_DIR="$CARDANO_LOG_DIR"
@@ -136,21 +135,29 @@ EOF
 
 #####################################################################
 #
-# Run the relay node in the background
+# Run the node (relay or block producer depending on CARDANO_BLOCK_PRODUCER)
 #
-runRelayNode () {
+runNode () {
 
   effopts=(
-    "--config" "$CARDANO_CONFIG" \
-    "--topology" "$CARDANO_TOPOLOGY" \
-    "--database-path" "$CARDANO_DATABASE_PATH" \
-    "--socket-path" "$CARDANO_SOCKET_PATH" \
-    "--host-addr" "$CARDANO_BIND_ADDR" \
+    "--config" "$CARDANO_CONFIG"
+    "--topology" "$CARDANO_TOPOLOGY"
+    "--database-path" "$CARDANO_DATABASE_PATH"
+    "--socket-path" "$CARDANO_SOCKET_PATH"
+    "--host-addr" "$CARDANO_BIND_ADDR"
     "--port" "$CARDANO_PORT"
   )
 
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
+  if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
+    effopts+=(
+      "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY"
+      "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY"
+      "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
+    )
+  fi
+
+  [[ -n ${CARDANO_TRACER_SOCKET_PATH_ACCEPT:-} ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
+  [[ -n ${CARDANO_TRACER_SOCKET_PATH_CONNECT:-} ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
 
   effopts+=("${filteredOpts[@]}")
 
@@ -158,34 +165,7 @@ runRelayNode () {
   exec /usr/local/bin/cardano-node run "${effopts[@]}"
 }
 
-#####################################################################
-#
-# Run the block producer in the background
-#
-runBlockProducerNode () {
-
-  effopts=(
-    "--config" "$CARDANO_CONFIG" \
-    "--topology" "$CARDANO_TOPOLOGY" \
-    "--database-path" "$CARDANO_DATABASE_PATH" \
-    "--socket-path" "$CARDANO_SOCKET_PATH" \
-    "--host-addr" "$CARDANO_BIND_ADDR" \
-    "--port" "$CARDANO_PORT" \
-    "--shelley-kes-key" "$CARDANO_SHELLEY_KES_KEY" \
-    "--shelley-vrf-key" "$CARDANO_SHELLEY_VRF_KEY" \
-    "--shelley-operational-certificate" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
-  )
-
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_ACCEPT ]] && effopts+=("--tracer-socket-path-accept" "$CARDANO_TRACER_SOCKET_PATH_ACCEPT")
-  [[ -n $CARDANO_TRACER_SOCKET_PATH_CONNECT ]] && effopts+=("--tracer-socket-path-connect" "$CARDANO_TRACER_SOCKET_PATH_CONNECT")
-
-  effopts+=("${filteredOpts[@]}")
-
-  echo "cardano-node run ${effopts[*]}"
-  exec /usr/local/bin/cardano-node run "${effopts[@]}"
-}
-
-# Shift the first option by one index
+# Discard the leading subcommand argument (e.g. "run") passed by the entrypoint
 shift
 
 # Override default values with explicit options
@@ -195,7 +175,7 @@ for i in "${!options[@]}"
 do
     j=$((i + 1))
     key=${options[i]}
-    val=${options[j]}
+    val=${options[j]:-}
     found=false
 
     # echo "$i/$j: ${key} ${val}"
@@ -229,11 +209,17 @@ done
 printRunEnv
 writeRootEnv
 
+# Verify required files exist before launching
+for f in "$CARDANO_CONFIG" "$CARDANO_TOPOLOGY"; do
+  [[ -f $f ]] || { echo "ERROR: required file not found: $f"; exit 1; }
+done
+if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
+  for f in "$CARDANO_SHELLEY_KES_KEY" "$CARDANO_SHELLEY_VRF_KEY" "$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"; do
+    [[ -f $f ]] || { echo "ERROR: required block producer key file not found: $f"; exit 1; }
+  done
+fi
+
 # The IPC socket dir is not created on demand
 mkdir -p "$(dirname "$CARDANO_SOCKET_PATH")"
 
-if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
-  runBlockProducerNode
-else
-  runRelayNode
-fi
+runNode
