@@ -1,15 +1,20 @@
 #!/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 echo "Running cardano tracer ..."
 
-[[ -n $DEBUG ]] && set -x
+[[ -n ${DEBUG:-} ]] && set -x
 
 # Define a few defaults
 CARDANO_CONFIG_BASE="/opt/cardano/config"
 
-if [[ -z $CARDANO_CONFIG ]]; then
+if [[ -z ${CARDANO_CONFIG:-} ]]; then
   CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet/tracer-config.json"
+fi
+
+# Prefer root mountpoints for consistency via symlink /opt/cardano/data -> /data
+if [[ -z ${CARDANO_STATE_DIR:-} ]]; then
+  CARDANO_STATE_DIR="/data/tracer"
 fi
 
 #####################################################################
@@ -19,8 +24,8 @@ fi
 printRunEnv () {
 
   echo "CARDANO_CONFIG=$CARDANO_CONFIG"
-  echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
   echo "CARDANO_STATE_DIR=$CARDANO_STATE_DIR"
+  [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]] && echo "CARDANO_MIN_LOG_SEVERITY=$CARDANO_MIN_LOG_SEVERITY"
 }
 
 #####################################################################
@@ -34,14 +39,18 @@ cat << EOF > /usr/local/bin/env
 
 # Docker run ENV vars
 CARDANO_CONFIG="$CARDANO_CONFIG"
-CARDANO_MIN_LOG_SEVERITY="$CARDANO_MIN_LOG_SEVERITY"
 CARDANO_STATE_DIR="$CARDANO_STATE_DIR"
 EOF
+
+if [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]]; then
+  echo "CARDANO_MIN_LOG_SEVERITY=\"$CARDANO_MIN_LOG_SEVERITY\"" \
+    >> /usr/local/bin/env
+fi
 }
 
 #####################################################################
 #
-# Run the relay node in the background
+# Run the tracer
 #
 runTracer () {
 
@@ -50,13 +59,15 @@ runTracer () {
     "--state-dir" "$CARDANO_STATE_DIR"
   )
 
+  [[ -n ${CARDANO_MIN_LOG_SEVERITY:-} ]] && effopts+=("--min-log-severity" "$CARDANO_MIN_LOG_SEVERITY")
+
   effopts+=("${filteredOpts[@]}")
 
   echo "cardano-tracer ${effopts[*]}"
   exec /usr/local/bin/cardano-tracer "${effopts[@]}"
 }
 
-# Shift the first option by one index
+# Discard the leading subcommand argument (e.g. "run") passed by the entrypoint
 shift
 
 # Override default values with explicit options
@@ -67,7 +78,7 @@ for i in "${!options[@]}"
 do
     j=$((i + 1))
     key=${options[i]}
-    val=${options[j]}
+    val=${options[j]:-}
     found=false
 
     # echo "$i/$j: ${key} ${val}"
@@ -92,5 +103,8 @@ done
 
 printRunEnv
 writeRootEnv
+
+# Verify required files exist before launching
+[[ -f $CARDANO_CONFIG ]] || { echo "ERROR: required file not found: $CARDANO_CONFIG"; exit 1; }
 
 runTracer
