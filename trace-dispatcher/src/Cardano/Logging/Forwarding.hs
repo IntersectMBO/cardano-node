@@ -250,7 +250,8 @@ doConnectToAcceptor magic snocket makeBearer configureSocket address timeLimits
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
+                                                     burst = Nothing }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols
@@ -314,7 +315,8 @@ doListenToAcceptor magic snocket makeBearer configureSocket address timeLimits
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
+                                                     burst = Nothing }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols

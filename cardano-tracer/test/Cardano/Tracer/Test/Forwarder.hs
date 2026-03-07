@@ -197,7 +197,8 @@ doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfi
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
+                                                     burst = Nothing }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols
@@ -259,7 +260,8 @@ doListenToAcceptor TestSetup{..}
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
+                                                     burst = Nothing }
          , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols

@@ -84,7 +84,8 @@ runAcceptorsServer tracerEnv tracerEnvRTView p ( ekgConfig, tfConfig, dpfConfig)
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolStart  = Mux.StartEagerly
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound,
+                                                     burst = Nothing}
          , miniProtocolRun    = protocol
          }
       | (protocol, num) <- protocolsWithNums
