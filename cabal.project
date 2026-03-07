@@ -101,8 +101,8 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: f93c731d665326481cbd846b91c19e7f3b7a8fde
-  --sha256: sha256-nCYHfLPAGFNop6OuPpte05yAjGnezWN20fCbDdE5Vmk=
+  tag: 3bd81eeb755319d18da63dfa0cd06737d4c538ee
+  --sha256: sha256-wDtQhq17wv3YxfEc4SndasHyTheY8K8Xq97dz9dqtY4=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -116,8 +116,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: fb5f16f48af84950db0c2ecefd8cbda532c77d1a
-  --sha256: sha256-0LWD1zwOzhdcPJtBuw7pRDVcBd9CKJOFjm9o4BvsIMM=
+  tag: fcdd140379cf1c9c04e2b0ee45653c792094b932
+  --sha256: sha256-0mcZ6HBjHNvoODPioNhE79febGhI8NlKXtg+zmtAayg=
   subdir:
     cardano-ping
     monoidal-synchronisation
