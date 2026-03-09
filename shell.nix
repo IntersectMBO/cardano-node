@@ -181,6 +181,10 @@ let
 
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
+  workbench = import ./nix/workbench/default.nix
+                { inherit pkgs; haskellProject = project; }
+  ;
+
   workbench-shell =
     with customConfig.localCluster;
       import ./nix/workbench/shell.nix
@@ -188,21 +192,26 @@ let
           inherit setLocale haveGlibcLocales;
           inherit workbenchDevMode;
           inherit withHoogle;
-          workbench-runner = pkgs.workbench-runner
+          workbench-runner = workbench.runner
             { inherit profiling;
-              inherit profileName backendName useCabalRun;
+              inherit profileName backendName;
+              inherit useCabalRun;
+              inherit workbenchStartArgs cardano-node-rev;
+              inherit (customConfig.localCluster) stateDir basePort batchName;
             };
         };
 
   devops =
     let profileName = "devops-bage";
-        workbench-runner = pkgs.workbench-runner
+        workbench-runner = workbench.runner
           { inherit profiling;
             inherit profileName;
             backendName = "supervisor";
             useCabalRun = false;
+            inherit workbenchStartArgs cardano-node-rev;
+            inherit (customConfig.localCluster) stateDir basePort batchName;
           };
-        devopsShell = with customConfig.localCluster;
+        devopsShell = 
           import ./nix/workbench/shell.nix
             { inherit pkgs lib haskellLib project;
               inherit setLocale haveGlibcLocales;
