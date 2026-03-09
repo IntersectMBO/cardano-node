@@ -56,13 +56,14 @@ let
           lmdb
           nix-prefetch-git
           pkg-config
+          git
           hlint
           ghcid
           haskell-language-server
           cabal
           actionlint
           shellcheck
-          # scriv # TODO broken - reenable
+          scriv
           stylish-haskell
         ];
 
