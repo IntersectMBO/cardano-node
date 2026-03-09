@@ -62,7 +62,7 @@ let
           cabal
           actionlint
           shellcheck
-          scriv
+          # scriv # TODO broken - reenable
           stylish-haskell
         ];
 

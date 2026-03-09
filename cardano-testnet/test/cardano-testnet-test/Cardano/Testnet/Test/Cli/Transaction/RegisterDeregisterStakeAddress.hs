@@ -28,7 +28,7 @@ import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO (createStakeKeyDeregistrationCertificate,
                    createStakeKeyRegistrationCertificate)
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -40,7 +40,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/register deregister stake address in transaction build/"'@
 hprop_tx_register_deregister_stake_address :: Property
-hprop_tx_register_deregister_stake_address = integrationWorkspace "register-deregister-stake-addr" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_tx_register_deregister_stake_address = integrationRetryWorkspace 2 "register-deregister-stake-addr" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

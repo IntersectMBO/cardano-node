@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2154  # global_basedir is set externally by the sourcing script (wb)
 
 global_genesis_format_version=October-13-2025
 
