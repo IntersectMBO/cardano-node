@@ -349,19 +349,16 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
--- TODO(10.7): what the resulting LedgerPeersKind should be?
--- Probably we need to use the LedgerPeerSnapshotWithBlock type
 readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text (LedgerPeerSnapshot BigLedgerPeers))
 readPeerSnapshotFile (PeerSnapshotFile file) = do
-  _content <- first renderException <$> try (BS.readFile file)
-  -- return $ first handler $ content >>= eitherDecodeStrict
-  undefined -- TODO(10.7)
+  content <- first renderException <$> try (BS.readFile file)
+  return $ first handler $ content >>= eitherDecodeStrict
   where
     renderException :: IOException -> String
     renderException = displayException
 
-    _handler :: String -> Text
-    _handler msg =
+    handler :: String -> Text
+    handler msg =
       Text.pack
         $ "Cardano.Node.Configuration.TopologyP2P.readPeerSnapshotFile: " <> msg
 
