@@ -79,9 +79,14 @@ import           Testnet.TxGenRuntime (startTxGenRuntime)
 import           Testnet.Types as TR hiding (shelleyGenesis)
 
 import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import           Hedgehog.Extras.Stock (sprocketSystemName)
 import           Hedgehog.Internal.Property (failException)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
+import Hedgehog.Extras.Stock (sprocketSystemName)
 
 import           RIO (MonadUnliftIO, RIO (..), runRIO, throwString, timeout)
 import           RIO.Orphans (ResourceMap)
@@ -307,7 +312,7 @@ cardanoTestnet
   -- have to manually set up the start times themselves.
   when (updateTimestamps == UpdateTimestamps) $ do
     currentTime <- liftIOAnnotated DTC.getCurrentTime
-    let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
+    let startTime = DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
     -- Update start time in Byron genesis file
     eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
@@ -346,8 +351,8 @@ cardanoTestnet
         UseKESSocket -> do
           -- wait startTimeOffsetSeconds so that the startTime from shelly-jenesis.json is not in the future,
           -- as otherwise we will trigger an underflow in kes-agent with a negative time difference.
-          H.threadDelay (startTimeOffsetSeconds * 1_000_000)
-          H.noteShowIO_ DTC.getCurrentTime
+          liftIOAnnotated $ threadDelay (startTimeOffsetSeconds * 1_000_000)
+          liftIOAnnotated DTC.getCurrentTime
           kesAgent <- runExceptT $
             initAndStartKESAgent (TmpAbsolutePath tmpAbsPath) nodeName
               TestnetKESAgentArgs{ tkaaShelleyGenesisFile = shelleyGenesisFile

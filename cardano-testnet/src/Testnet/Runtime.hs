@@ -54,11 +54,13 @@ import           System.Process (waitForProcess)
 
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
-import           Testnet.Process.Run (ProcessError (..), initiateProcess)
+import           Testnet.Process.Run (ProcessError (..), initiateProcess, procKESAgent, execKESAgentControl_, execCli_)
 import           Testnet.Process.RunIO (liftIOAnnotated, procNode)
 import           Testnet.Types (TestnetNode (..), TestnetRuntime (configurationFile),
                    showIpv4Address, testnetSprockets, TestnetKESAgent(..))
 
+import           Hedgehog (MonadTest)
+import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
@@ -223,13 +225,6 @@ startNode tp node ipv4 port _testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       , nodeStderr = nodeStderrFile
       , nodeProcessHandle = hProcess
       }
-  where
-    -- close provided list of handles when 'ExceptT' throws an error
-    closeHandlesOnError :: MonadIO m => [IO.Handle] -> ExceptT e m a -> ExceptT e m a
-    closeHandlesOnError handles action =
-      catchE action $ \e -> do
-        liftIOAnnotated $ mapM_ IO.hClose handles
-        throwE e
 
 -- | Start a kes-agent for a particular node
 startKESAgent
@@ -237,7 +232,6 @@ startKESAgent
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => MonadTest m
   => TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
@@ -251,7 +245,7 @@ startKESAgent tp node args = GHC.withFrozenCallStack $ do
       logDir = makeLogDir tp
       kesAgentStr= "kes-agent"
 
-  liftIO $ createDirectoryIfMissingNew_ $ logDir </> node </> kesAgentStr
+  _ <- liftIO $ createDirectoryIfMissingNew $ logDir </> node </> kesAgentStr
   void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node </> kesAgentStr)
 
   let nodeStdoutFile = logDir </> node </> kesAgentStr </>  "stdout.log"
@@ -364,7 +358,6 @@ initAndStartKESAgent
   => MonadResource m
   => MonadCatch m
   => MonadFail m
-  => MonadTest m
   =>
   TmpAbsolutePath
   -- ^ The temporary absolute path
