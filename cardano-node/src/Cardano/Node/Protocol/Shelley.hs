@@ -1,9 +1,13 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+-- TODO(10.7): remove once the HasTextEnvelope instance is in the right place
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Protocol.Shelley
   ( mkSomeConsensusProtocolShelley
@@ -30,13 +34,14 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import qualified Cardano.Crypto.KES.Class as Crypto
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.ChainDB ()
 import           Cardano.Node.Types
-import           Cardano.Protocol.Crypto (StandardCrypto)
+import           Cardano.Protocol.Crypto (StandardCrypto, KES)
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -45,6 +50,7 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShe
                    ShelleyLeaderCredentials (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras ()
 
+import Data.String (IsString (..))
 import           Control.Exception (IOException)
 import           Control.Monad
 import qualified Data.Aeson as Aeson
@@ -227,6 +233,26 @@ data ShelleyCredentials
     , scKes  :: (TextEnvelope, FilePath)
     }
 
+instance HasTypeProxy (PraosCredentialsSource StandardCrypto) where
+   data AsType (PraosCredentialsSource StandardCrypto) = AsPraosCredentialsSource
+   proxyToAsType _ = AsPraosCredentialsSource
+
+instance ToCBOR (PraosCredentialsSource StandardCrypto) where
+   toCBOR = \case
+     PraosCredentialsUnsound ocert kesKey -> toCBOR (ocert, kesKey)
+     PraosCredentialsAgent _path ->
+       error "PraosCredentialsAgent cannot be serialized to CBOR"
+instance FromCBOR (PraosCredentialsSource StandardCrypto) where
+   fromCBOR = do
+     (ocert, kesKey) <- fromCBOR
+     pure $ PraosCredentialsUnsound ocert kesKey
+instance SerialiseAsCBOR (PraosCredentialsSource StandardCrypto)
+
+instance HasTextEnvelope (PraosCredentialsSource StandardCrypto) where
+  textEnvelopeType _ =
+    "PraosCredentialsSource_"
+      <> fromString (Crypto.algorithmNameKES (Proxy @(KES StandardCrypto)))
+
 readLeaderCredentialsBulk
   :: ProtocolFilepaths
   -> ExceptT PraosLeaderCredentialsError IO [ShelleyLeaderCredentials StandardCrypto]
@@ -238,9 +264,9 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
      -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
      mkPraosLeaderCredentials
-       <$> undefined scCert -- parseEnvelope scCert
-       <*> undefined scVrf -- parseEnvelope scVrf
-       <*> undefined scKes -- parseEnvelope scKes
+       <$> parseEnvelope scCert -- TODO(10.7)
+       <*> parseEnvelope scVrf -- TODO(10.7)
+       <*> parseEnvelope scKes -- TODO(10.7)
 
    readBulkFile
      :: Maybe FilePath
@@ -280,11 +306,11 @@ mkPraosLeaderCredentials
       shelleyLeaderCredentialsLabel = "Shelley"
     }
 
-_parseEnvelope ::
+parseEnvelope ::
      HasTextEnvelope a
   => (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
-_parseEnvelope (te, loc) =
+parseEnvelope (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
     deserialiseFromTextEnvelope te
 
