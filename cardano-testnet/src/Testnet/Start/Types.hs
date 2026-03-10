@@ -256,7 +256,7 @@ instance Default GenesisOptions where
   def = GenesisOptions
     { genesisTestnetMagic = defaultTestnetMagic
     , genesisEpochLength = 500
-    , genesisSlotLength = 1 -- 0.1
+    , genesisSlotLength = 0.1
     , genesisActiveSlotsCoeff = 0.05
     }
 
