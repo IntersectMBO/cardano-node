@@ -100,8 +100,8 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 51fec3a759646bcc33236ecf1d2d3ae26bc7ef4d
-  --sha256: sha256-VDLDkookDhJuMX9sJEsRaCIyLouw4pvPIKU2pVh4l0o=
+  tag: 9a44a3486ecb2746558016cfaebebfde1729059b
+  --sha256: sha256-rDyBLMNxL2JyPvljFYbI0A4UaZwEbVbyyN7P6F+ao/g=
   subdir:
     cardano-client
     cardano-ping
