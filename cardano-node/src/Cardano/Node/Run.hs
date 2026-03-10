@@ -119,6 +119,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSna
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig (..), WarmValency)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
@@ -957,7 +958,7 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
                              diffusionMode = rootDiffusionMode lrp,
                              peerAdvertise,
                              extraLocalRootFlags = trustable lrp,
-                             localProvenance = undefined -- TODO(10.7) -- ask Network
+                             localProvenance = Outbound -- TODO(10.7) check this makes sense
                            }
                          )
                        )
