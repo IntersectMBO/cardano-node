@@ -838,10 +838,10 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
               TraceLabelPeer _ TraceTxInboundTerminated -> return ()
               TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
               TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
-              TraceLabelPeer _ (TraceTxInboundAddedToMempool _ _) -> undefined -- TODO(10.7) -- ask Network
-              TraceLabelPeer _ (TraceTxInboundRejectedFromMempool _ _) -> undefined -- TODO(10.7)  -- ask Network
-              TraceLabelPeer _ (TraceTxInboundError _) -> undefined -- TODO(10.7) -- ask Network
-              TraceLabelPeer _ (TraceTxInboundDecision _) -> undefined -- TODO(10.7) -- ask Network
+              TraceLabelPeer _ (TraceTxInboundAddedToMempool _ _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundRejectedFromMempool _ _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundError _) -> return ()
+              TraceLabelPeer _ (TraceTxInboundDecision _) -> return ()
 
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
