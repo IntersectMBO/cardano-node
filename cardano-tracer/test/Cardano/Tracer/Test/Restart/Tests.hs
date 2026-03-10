@@ -94,6 +94,7 @@ mkConfig TestSetup{..} rootDir p = TracerConfig
   , hasEKG           = Nothing
   , hasPrometheus    = Nothing
   , hasRTView        = Nothing
+  , hasTimeseries    = Nothing
   , tlsCertificate   = Nothing
   , logging          = NE.fromList [LoggingParams rootDir FileMode ForMachine]
   , rotation         = Nothing

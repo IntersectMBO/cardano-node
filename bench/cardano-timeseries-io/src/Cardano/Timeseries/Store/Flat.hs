@@ -34,6 +34,9 @@ instance Store (Flat a) a where
   insert :: Flat a -> MetricIdentifier -> Instant a -> Flat a
   insert store metric instant = Point metric instant : store
 
+  truncate store cutoff = filter f store where
+    f Point{instant} = instant.timestamp >= cutoff
+
   evaluate :: Flat a -> MetricIdentifier -> Timestamp -> InstantVector a
   evaluate store targetMetric targetTime = updateTime $ foldl' choose [] store where
 

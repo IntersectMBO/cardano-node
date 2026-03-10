@@ -145,6 +145,8 @@ library
                         Cardano.Tracer.Types
                         Cardano.Tracer.Utils
 
+                        Cardano.Tracer.Timeseries
+
   other-modules:        Cardano.Tracer.Handlers.Logs.Journal.NoSystemd
                         Cardano.Tracer.Handlers.Notifications.Timer
                         Paths_cardano_tracer
@@ -202,6 +204,7 @@ library
                       , warp ^>= 3.4
                       , warp-tls
                       , yaml
+                      , cardano-timeseries-io
 
   if os(windows)
     build-depends:    Win32

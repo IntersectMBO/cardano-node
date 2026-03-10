@@ -33,7 +33,7 @@ import           Trace.Forward.Utils.DataPoint (DataPointRequestor)
 
 -- | Unique identifier of connected node, based on 'remoteAddress' from
 --   'ConnectionId', please see 'ouroboros-network'.
-newtype NodeId = NodeId Text
+newtype NodeId = NodeId {text :: Text}
   deriving stock (Eq, Ord, Show)
   deriving newtype (ToJSON)
 

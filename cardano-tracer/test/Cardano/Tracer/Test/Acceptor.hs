@@ -82,6 +82,7 @@ launchAcceptorsSimple mode localSock dpName = do
         , teRegistry              = registry
         , teStateDir              = Nothing
         , teMetricsHelp           = []
+        , teTimeseriesHandle      = Nothing
         }
 
       tracerEnvRTView :: TracerEnvRTView
@@ -111,6 +112,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , hasEKG           = Nothing
     , hasPrometheus    = Nothing
     , hasRTView        = Nothing
+    , hasTimeseries    = Nothing
     , tlsCertificate   = Nothing
     , logging          = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
     , rotation         = Nothing

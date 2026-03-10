@@ -2,6 +2,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
@@ -37,10 +38,12 @@ import           Control.Exception (SomeException, try)
 import           Control.Monad
 import           Data.Aeson (decodeFileStrict')
 import           Data.Foldable (for_)
+import           Data.Traversable (for)
 import           Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as M (Map, empty, filter, toList)
 import           Data.Text as T (Text, null)
 import           Data.Text.Lazy.Builder as TB (Builder, fromText)
+import qualified Cardano.Tracer.Timeseries as Timeseries
 
 
 -- | Top-level run function, called by 'cardano-tracer' app.
@@ -119,6 +122,8 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   registry <- newRegistry
 
+  !timeseriesHandle <- for (hasTimeseries config) (const $ Timeseries.create Nothing)
+
   -- Environment for all following functions.
   let tracerEnv :: TracerEnv
       tracerEnv = TracerEnv
@@ -135,6 +140,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
         , teRegistry              = registry
         , teStateDir              = rtViewStateDir
         , teMetricsHelp           = mHelp
+        , teTimeseriesHandle      = timeseriesHandle
         }
 
       tracerEnvRTView :: TracerEnvRTView

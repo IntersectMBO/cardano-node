@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {- HLINT ignore "Use print" -}
 
-module Cardano.Timeseries.Common(readStore, repl, execute) where
+module Cardano.Timeseries.Common(readStore, repl, printQueryResult) where
 
 import           Cardano.Logging.Resources (ResourceStats, Resources (..))
 import           Cardano.Timeseries.AsText
+import           Cardano.Timeseries.Domain.Types (Timestamp)
 import           Cardano.Timeseries.Elab (elab, initialSt)
 import           Cardano.Timeseries.Import.PlainCBOR
 import           Cardano.Timeseries.Interp (interp)
@@ -25,7 +26,6 @@ import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (evalState)
 import           Data.Foldable (traverse_)
 import           Data.Functor (void)
-import           Data.Text (Text, unpack)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           System.Exit (die)
@@ -33,9 +33,6 @@ import           System.FilePath (takeExtension)
 import           System.IO (hFlush, stdout)
 import           Text.Megaparsec hiding (count)
 import           Text.Megaparsec.Char (newline, space, space1)
-
-interpConfig :: Config
-interpConfig = Config {defaultRangeSamplingRateMillis = 15 * 1000}
 
 _printStore :: Flat Double -> IO ()
 _printStore = traverse_ print
@@ -51,8 +48,8 @@ printQueryResult :: Either QueryError Value -> IO ()
 printQueryResult (Left err) = Text.putStrLn $ asText err
 printQueryResult (Right ok) = print ok
 
-repl :: Store s Double => s -> IO ()
-repl store = forever $ do
+repl :: Store s Double => s -> Config -> Timestamp -> IO ()
+repl store interpCfg now = forever $ do
  -- Just stats <- readResourceStats
  -- putStrLn "----------"
  -- printStats stats
@@ -69,7 +66,10 @@ repl store = forever $ do
        Left err   -> Text.putStrLn err
        Right query -> do
          Text.putStrLn (showT query)
-         printQueryResult (evalState (runExceptT $ interp interpConfig store mempty query 0) 0)
+         printQueryResult (evalState (runExceptT $ interp interpCfg store mempty query now) 0)
+
+whitespace :: Parser ()
+whitespace = skipMany (try space1 <|> void newline)
 
 readStore :: FilePath -> IO (Tree Double)
 readStore path | takeExtension path == ".cbor" = do
@@ -84,19 +84,3 @@ readStore path | takeExtension path == ".txt" = do
     Left err -> die (errorBundlePretty err)
     Right store -> pure $ fromFlat store
 readStore path = die $ "Unknown extension: " <> takeExtension path
-
-whitespace :: Parser ()
-whitespace = skipMany (try space1 <|> void newline)
-
-execute :: Store s Double => s -> Text -> IO ()
-execute store stringQuery = do
- case parse (Surface.Parser.expr <* space <* eof) "input" stringQuery of
-   Left err -> putStrLn (errorBundlePretty err)
-   Right surfaceQuery -> do
-     putStrLn ("Expr: " <> show surfaceQuery)
-     putStrLn "-----------"
-     case evalState (runExceptT (elab surfaceQuery)) initialSt of
-       Left err   -> die (unpack err)
-       Right query -> do
-         Text.putStrLn (showT query)
-         printQueryResult (evalState (runExceptT $ interp interpConfig store mempty query 0) 0)

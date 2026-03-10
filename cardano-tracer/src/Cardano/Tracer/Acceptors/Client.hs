@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Acceptors.Client
   ( runAcceptorsClient
@@ -195,7 +197,8 @@ runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
   acceptEKGMetricsInit
     ekgConfig
     (prepareMetricsStores tracerEnv . micConnectionId)
-    (errorHandler . micConnectionId)
+    (store tracerEnv . connIdToNodeId . micConnectionId)
+    (errorHandler . micConnectionId) where
 
 runTraceObjectsAcceptorInit
   :: Show addr

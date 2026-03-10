@@ -73,7 +73,9 @@ library
       Cardano.Timeseries.Domain.Interval,
       Cardano.Timeseries.Domain.Timeseries,
       Cardano.Timeseries.Domain.Types,
+      Cardano.Timeseries.Elab,
       Cardano.Timeseries.Import.PlainCBOR,
+      Cardano.Timeseries.Interface,
       Cardano.Timeseries.Interp,
       Cardano.Timeseries.Interp.Config,
       Cardano.Timeseries.Interp.Types,
@@ -83,7 +85,6 @@ library
       Cardano.Timeseries.Store.Flat,
       Cardano.Timeseries.Store.Flat.Parser,
       Cardano.Timeseries.Store.Tree,
-      Cardano.Timeseries.Elab,
       Cardano.Timeseries.Surface.Expr,
       Cardano.Timeseries.Surface.Expr.Parser,
 
@@ -93,10 +94,10 @@ library
       Cardano.Timeseries.Query.BinaryArithmeticOp,
       Cardano.Timeseries.Query.BinaryRelation,
       Cardano.Timeseries.Resolve,
-      Cardano.Timeseries.Util,
+      Cardano.Timeseries.Surface.Expr.Head,
       Cardano.Timeseries.Typing,
       Cardano.Timeseries.Unify,
-      Cardano.Timeseries.Surface.Expr.Head,
+      Cardano.Timeseries.Util,
 
 executable cardano-timeseries-io
     import: common

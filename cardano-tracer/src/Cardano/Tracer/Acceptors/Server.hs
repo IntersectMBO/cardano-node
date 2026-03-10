@@ -183,6 +183,7 @@ runEKGAcceptor tracerEnv ekgConfig errorHandler =
   acceptEKGMetricsResp
     ekgConfig
     (prepareMetricsStores tracerEnv . rcConnectionId)
+    (store tracerEnv . connIdToNodeId . rcConnectionId)
     (errorHandler . rcConnectionId)
 
 runTraceObjectsAcceptor

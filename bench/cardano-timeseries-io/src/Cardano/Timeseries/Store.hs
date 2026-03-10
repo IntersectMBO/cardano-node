@@ -16,6 +16,10 @@ stalenessConstant = 5 * 60 * 1000
 class Store s a | s -> a where
   -- | Insert an instant into the store under a metric name.
   insert :: s -> MetricIdentifier -> Instant a -> s
+
+  -- | Delete all entries older than the specified `Timestamp` from the store
+  truncate :: s -> Timestamp -> s
+
   -- | Compute a point vector of type `a` such that the timestamp of every point in the vector
   -- | lies within the staleness window of the target timestamp and is the most recent of all
   -- | points in the store sharing a series.

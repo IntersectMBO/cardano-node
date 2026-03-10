@@ -15,6 +15,7 @@ import           Cardano.Tracer.Handlers.State.TraceObjects
 #endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Timeseries (TimeseriesHandle)
 
 import           Control.Concurrent.Extra (Lock)
 import           Data.Text (Text)
@@ -36,6 +37,7 @@ data TracerEnv = TracerEnv
   , teRegistry              :: !HandleRegistry
   , teStateDir              :: !(Maybe FilePath)
   , teMetricsHelp           :: ![(Text, Builder)]
+  , teTimeseriesHandle      :: !(Maybe TimeseriesHandle)
   }
 
 #if RTVIEW

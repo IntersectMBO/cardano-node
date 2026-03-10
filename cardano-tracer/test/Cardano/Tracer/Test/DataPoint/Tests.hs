@@ -88,6 +88,7 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , hasEKG          = Nothing
     , hasPrometheus   = Nothing
     , hasRTView       = Nothing
+    , hasTimeseries   = Nothing
     , tlsCertificate = Nothing
     , logging        = NE.fromList [LoggingParams rootDir FileMode ForHuman]
     , rotation       = Nothing

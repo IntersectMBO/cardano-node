@@ -42,6 +42,8 @@ instance Store (Tree a) a where
       Nothing    -> ([Point ls v], Map.empty)
       Just inner -> (Point ls v : fromMaybe [] (Map.lookup t inner), inner)
 
+  truncate store cutoff = fmap (Map.dropWhileAntitone (< cutoff)) store
+
   evaluate :: Tree a -> MetricIdentifier -> Timestamp -> InstantVector a
   evaluate store x t = case Map.lookup x store of
     Just inner ->
