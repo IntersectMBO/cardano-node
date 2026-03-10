@@ -420,12 +420,11 @@ instance FromJSON PartialNodeConfiguration where
         <$> v .:? "ResponderCoreAffinityPolicy"
         <*> v .:? "ForkPolicy" -- deprecated
 
-      pncTxSubmissionLogicVersion <- undefined -- TODO(10.7)
-      -- the following needs FromJSON TxSubmissionLogicVersion
-      -- pncTxSubmissionLogicVersion <- Last <$> v .:? "TxSubmissionLogicVersion"
-      pncTxSubmissionInitDelay <- undefined -- TODO(10.7)
-      -- the following needs FromJSON TxSubmissionInitDelay
-      -- pncTxSubmissionInitDelay <- Last <$> v .:? "TxSubmissionInitDelay"
+      let txSubmissionLogicVersion = pncTxSubmissionLogicVersion defaultPartialNodeConfiguration -- TODO(10.7) actually parse the configuration
+      let parseInitDelay =
+            maybe (pncTxSubmissionInitDelay defaultPartialNodeConfiguration) (fmap TxSubmissionInitDelay)
+              <$> v .:? "TxSubmissionInitDelay"
+      pncTxSubmissionInitDelay <- parseInitDelay
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -474,7 +473,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncPeerSharing
            , pncGenesisConfigFlags
            , pncResponderCoreAffinityPolicy
-           , pncTxSubmissionLogicVersion
+           , pncTxSubmissionLogicVersion = txSubmissionLogicVersion
            , pncTxSubmissionInitDelay
            }
     where
