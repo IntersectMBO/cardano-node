@@ -13,13 +13,11 @@ jobs:
       # We want to install Nix to provision shellcheck, so that actionlint doesn't install
       # its own shellcheck. This will also make sure that this pipeline runs using
       # the same shellcheck as the ones in Nix shells of developers.
-      - name: Install Nix with good defaults
+      - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
-            substituters = https://cache.nixos.org/ https://cache.iog.io/
-          nix_path: nixpkgs=channel:nixos-unstable
+            accept-flake-config = true
       # Make the Nix environment available to next steps
       - uses: rrbutani/use-nix-shell-action@v1
 
