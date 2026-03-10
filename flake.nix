@@ -108,6 +108,13 @@
           // final.cardanoLib
           // import ./nix/svclib.nix {inherit (final) pkgs;};
       })
+      (final: prev: {
+        # For musl builds, make sure the static `liburing.a` file is not deleted in `postInstall`
+        # ex: https://github.com/NixOS/nixpkgs/blob/f84a9816b2d5f7caade4b2fab16a66486abb7038/pkgs/by-name/li/liburing/package.nix#L43-L45
+        liburing = prev.liburing.overrideAttrs (attrs: final.lib.optionalAttrs final.stdenv.hostPlatform.isMusl {
+          postInstall = builtins.replaceStrings [ "rm $out/lib/liburing*.a" ] [ "" ] attrs.postInstall;
+        });
+      })
       (import ./nix/pkgs.nix)
       self.overlay
     ];
