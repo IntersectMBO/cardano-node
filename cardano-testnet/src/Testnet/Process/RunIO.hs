@@ -10,6 +10,9 @@ module Testnet.Process.RunIO
   , execCli_
   , mkExecConfig
   , procNode
+  , procKesAgent
+  , execKesAgentControl_
+  , procFlex
   , liftIOAnnotated
   ) where
 
@@ -268,6 +271,24 @@ procNode
   -> RIO env CreateProcess
   -- ^ Captured stdout
 procNode = GHC.withFrozenCallStack $ procFlex "cardano-node" "CARDANO_NODE"
+
+-- | Create a 'CreateProcess' describing how to start the kes-agent process
+-- and an argument list.
+procKesAgent
+  :: (HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> RIO env CreateProcess
+  -- ^ Captured stdout
+procKesAgent = GHC.withFrozenCallStack $ procFlex "kes-agent" "KES_AGENT"
+
+-- | Run kes-agent-control, discarding return value
+execKesAgentControl_
+  :: HasCallStack
+  => MonadIO m
+  => [String]
+  -> m ()
+execKesAgentControl_ = GHC.withFrozenCallStack $ void . execFlex' defaultExecConfig "kes-agent-control" "KES_AGENT_CONTROL"
 
 
 -- | Create a 'CreateProcess' describing how to start a process given the Cabal package name

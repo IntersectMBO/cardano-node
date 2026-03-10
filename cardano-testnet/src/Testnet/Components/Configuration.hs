@@ -132,7 +132,7 @@ getDefaultShelleyGenesis :: ()
   -> m ShelleyGenesis
 getDefaultShelleyGenesis asbe maxSupply opts = do
   currentTime <- liftIOAnnotated DTC.getCurrentTime
-  let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
+  let startTime = DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
   return $ Defaults.defaultShelleyGenesis asbe startTime maxSupply opts
 
 -- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
@@ -198,7 +198,7 @@ createSPOGenesisAndFiles
   let era = toCardanoEra sbe
 
   currentTime <- liftIOAnnotated DTC.getCurrentTime
-  let startTime = DTC.addUTCTime startTimeOffsetSeconds currentTime
+  let startTime = DTC.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
   execCli_ $
     [ eraToString sbe, "genesis", "create-testnet-data" ]

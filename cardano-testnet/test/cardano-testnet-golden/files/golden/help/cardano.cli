@@ -6,6 +6,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--generate-tx-generator-config]
   [--output-dir DIRECTORY]
   [--enable-grpc]
+  [--use-kes-agent]
   [--testnet-magic INT]
   [--epoch-length SLOTS]
   [--slot-length SECONDS]
@@ -40,6 +41,8 @@ Available options:
   --enable-grpc            [EXPERIMENTAL] Enable gRPC endpoint on all of testnet
                            nodes. The listening socket file will be the same
                            directory as node's N2C socket.
+  --use-kes-agent          Get Praos block forging credentials from kes-agent
+                           via the default socket path
   --testnet-magic INT      Specify a testnet magic id. (default: 42)
   --epoch-length SLOTS     Epoch length, in number of slots. Ignored if a node
                            environment is passed. (default: 500)
