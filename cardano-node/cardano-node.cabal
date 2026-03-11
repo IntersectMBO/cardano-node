@@ -248,6 +248,7 @@ test-suite cardano-node-test
                       , cardano-crypto-wrapper
                       , cardano-api
                       , cardano-rpc
+                      , cardano-diffusion:{api, cardano-diffusion}
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
