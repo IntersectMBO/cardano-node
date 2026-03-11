@@ -104,7 +104,6 @@ library
                         Cardano.Node.Tracing.Tracers.ChainDB
                         Cardano.Node.Tracing.Tracers.Consensus
                         Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                        Cardano.Node.Tracing.Tracers.Diffusion
                         Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
