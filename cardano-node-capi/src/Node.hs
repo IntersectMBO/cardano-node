@@ -13,7 +13,7 @@ import           Foreign.Marshal.Array (peekArray)
 import           Foreign.Ptr (Ptr)
 
 -- | @crunNode@ is an exported C entry point to start a node.
--- We parese the same arguments as the node CLI, but allow to
+-- We parse the same arguments as the node CLI, but allow to
 -- pass the arguments as @char *argv[]@ from C.
 foreign export ccall "runNode" crunNode :: Int -> Ptr CString -> IO ()
 crunNode :: Int -> Ptr CString -> IO ()
