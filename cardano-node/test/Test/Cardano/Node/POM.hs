@@ -180,6 +180,8 @@ testPartialYamlConfig =
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
     , pncRpcConfig = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -234,6 +236,8 @@ testPartialCliConfig =
     , pncLedgerDbConfig = mempty
     , pncEgressPollInterval = mempty
     , pncRpcConfig = mempty
+    , pncTxSubmissionLogicVersion = mempty
+    , pncTxSubmissionInitDelay = mempty
     }
 
 -- | Expected final NodeConfiguration

@@ -56,7 +56,7 @@ hprop_dump_config = integrationRetryWorkspace 2 "dump-config-files" $ \tmpDir ->
   H.threadDelay $ double2Int $ realToFrac startTimeOffsetSeconds * 1_000_000 * 1.2
 
   currentTime <- H.noteShowIO Time.getCurrentTime
-  startTime <- H.noteShow $ Time.addUTCTime startTimeOffsetSeconds currentTime
+  startTime <- H.noteShow $ Time.addUTCTime (fromIntegral startTimeOffsetSeconds) currentTime
 
   -- Update start time in Byron genesis file
   eByron <- runExceptT $ Byron.readGenesisData byronGenesisFile
