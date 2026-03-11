@@ -50,7 +50,8 @@ import           Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.Configuration as Ouroboros
 import qualified Ouroboros.Network.Mux as Mux
 import qualified Ouroboros.Network.PeerSelection.Governor as PeerSelection
-import           Ouroboros.Network.TxSubmission.Inbound.V2.Types (TxSubmissionLogicVersion(..), TxSubmissionInitDelay(..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
+                     (TxSubmissionInitDelay(..), TxSubmissionLogicVersion(..), defaultTxSubmissionInitDelay)
 
 import           Control.Concurrent (getNumCapabilities)
 import           Control.Monad (unless, void, when)
@@ -741,8 +742,8 @@ defaultPartialNodeConfiguration =
       -- https://ouroboros-consensus.cardano.intersectmbo.org/haddocks/ouroboros-consensus-diffusion/Ouroboros-Consensus-Node-Genesis.html#v:defaultGenesisConfigFlags
     , pncResponderCoreAffinityPolicy = Last $ Just NoResponderCoreAffinity
 
-    , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1 -- TODO(10.7)
-    , pncTxSubmissionInitDelay = Last $ Just NoTxSubmissionInitDelay -- TODO(10.7)
+    , pncTxSubmissionLogicVersion = Last $ Just TxSubmissionLogicV1
+    , pncTxSubmissionInitDelay = Last $ Just defaultTxSubmissionInitDelay
     }
 
 lastOption :: Parser a -> Parser (Last a)

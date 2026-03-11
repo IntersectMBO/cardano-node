@@ -216,31 +216,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "network configuration update" ]
-  forMachine _dtal (LedgerPeerSnapshotLoaded wOrigin) =
+  forMachine _dtal (LedgerPeerSnapshotLoaded slotNo) =
       mconcat [ "kind" .= String "LedgerPeerSnapshot"
-              , "message" .= String ("loaded input recorded " <> showT wOrigin)]
-  forMachine _dtal (LedgerPeerSnapshotIgnored useLedgerAfterSlot snapshotSlotNo (PeerSnapshotFile snapshotFile)) =
-      mconcat [ "kind" .= String "LedgerPeerSnapshot"
-              , "message" .= String (
-                  mconcat [ "Topology file misconfiguration: ignoring ledger peer snapshot recorded for "
-                          , showT snapshotSlotNo
-                          , " since topology file specifies to use ledger after "
-                          , showT useLedgerAfterSlot
-                          , ".\nPossible fix: update ledger peer snapshot at "
-                          , showT snapshotFile
-                          ]
-              )]
-  forMachine _dtal (LedgerPeerSnapshotError useLedgerAfterSlot snapshotSlotNo (PeerSnapshotFile snapshotFile)) =
-      mconcat [ "kind" .= String "LedgerPeerSnapshot"
-              , "message" .= String (
-                  mconcat [ "Topology file misconfiguration: ignoring ledger peer snapshot recorded for "
-                          , showT snapshotSlotNo
-                          , " since topology file specifies to use ledger peers after "
-                          , showT useLedgerAfterSlot
-                          , ".\nPossible fix: update ledger peer snapshot at "
-                          , showT snapshotFile
-                          ]
-              )]
+              , "message" .= String ("loaded input recorded " <> showT slotNo)]
   forMachine _dtal NetworkConfigUpdateUnsupported =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
               , "message" .= String "network topology reconfiguration is not supported in non-p2p mode" ]
@@ -345,10 +323,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigUpdate"]
   namespaceFor (LedgerPeerSnapshotLoaded {}) =
     Namespace [] ["LedgerPeerSnapshot"]
-  namespaceFor (LedgerPeerSnapshotIgnored {}) =
-    Namespace [] ["LedgerPeerSnapshot", "Incompatible"]
-  namespaceFor (LedgerPeerSnapshotError {}) =
-    Namespace [] ["LedgerPeerSnapshot", "Error"]
   namespaceFor NetworkConfigUpdateUnsupported {}  =
     Namespace [] ["NetworkConfigUpdateUnsupported"]
   namespaceFor NetworkConfigUpdateError {}  =
@@ -599,26 +573,8 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnap
                 <> show (unPeerSnapshotFile p)
   ]
 
-ppStartupInfoTrace (LedgerPeerSnapshotLoaded wOrigin) =
-    "Topology: Peer snapshot containing ledger peers " <> showT wOrigin <> " loaded."
-ppStartupInfoTrace (LedgerPeerSnapshotIgnored useLedgerAfterSlot snapshotSlotNo (PeerSnapshotFile snapshotFile)) =
-      mconcat
-      [ "Topology file misconfiguration: ignoring ledger peer snapshot recorded for "
-      , showT snapshotSlotNo
-      , " since topology file specifies to use ledger after "
-      , showT useLedgerAfterSlot
-      , ".\nPossible fix: update ledger peer snapshot at "
-      , showT snapshotFile
-      ]
-ppStartupInfoTrace (LedgerPeerSnapshotError useLedgerAfterSlot snapshotSlotNo (PeerSnapshotFile snapshotFile)) =
-      mconcat
-      [ "Topology file misconfiguration: ignoring ledger peer snapshot recorded for "
-      , showT snapshotSlotNo
-      , " since topology file specifies to use ledger after "
-      , showT useLedgerAfterSlot
-      , ".\nPossible fix: update ledger peer snapshot at "
-      , showT snapshotFile
-      ]
+ppStartupInfoTrace (LedgerPeerSnapshotLoaded slotNo) =
+    "Topology: Peer snapshot containing ledger peers " <> showT slotNo <> " loaded."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 

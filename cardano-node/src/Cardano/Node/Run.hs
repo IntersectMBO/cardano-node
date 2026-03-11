@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -103,11 +104,12 @@ import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
 import qualified Cardano.Network.PeerSelection.Churn as Cardano.Churn
 import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 
-import           Ouroboros.Network.Block (HeaderHash)
+import           Ouroboros.Network.Block (pattern BlockPoint, pattern GenesisPoint, HeaderHash, atSlot, withHash)
 import           Ouroboros.Network.BlockFetch (FetchMode)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Types as Diffusion
 import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
+import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (noBindForkPolicy, responderForkPolicy, ForkPolicy)
 import           Cardano.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
@@ -264,7 +266,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
                                       then DisabledBlockForging
                                       else EnabledBlockForging))
 
-      handleSimpleNode blockType runP tracers nc
+      handleSimpleNode blockType runP tracers nc networkMagic
         (\nk -> do
             setNodeKernel nodeKernelData nk
             traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -310,7 +312,7 @@ handleNodeWithTracers cmdPc nc p@(SomeConsensusProtocol blockType runP) = do
 
       -- We ignore peer logging thread if it dies, but it will be killed
       -- when 'handleSimpleNode' terminates.
-      handleSimpleNode blockType runP tracers nc
+      handleSimpleNode blockType runP tracers nc networkMagic
         (\nk -> do
             setNodeKernel nodeKernelData nk
             traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -383,12 +385,13 @@ handleSimpleNode
   -> Api.ProtocolInfoArgs blk
   -> Tracers RemoteAddress LocalAddress blk IO
   -> NodeConfiguration
+  -> NetworkMagic
   -> (NodeKernel IO RemoteAddress LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP tracers nc onKernel = do
+handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
   logStartupWarnings
 
   logDeprecatedLedgerDBOptions
@@ -460,6 +463,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
     ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
                                             (startupTracer tracers)
                                             nc
+                                            networkMagic
                                             (readTVar ledgerPeerSnapshotPathVar)
                                             (readTVar useLedgerVar)
                                             (const . pure $ ())
@@ -508,6 +512,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
             void $ updateLedgerPeerSnapshot
               (startupTracer tracers)
               nc
+              networkMagic
               (readTVar ledgerPeerSnapshotPathVar)
               (readTVar useLedgerVar)
               (writeTVar ledgerPeerSnapshotVar)
@@ -553,9 +558,9 @@ handleSimpleNode blockType runP tracers nc onKernel = do
         nodeArgs {
             rnNodeKernelHook = \registry nodeKernel -> do
               -- reinstall `SIGHUP` handler
-              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
-                                   localRootsVar publicRootsVar useLedgerVar useBootstrapVar
-                                   ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers)
+                                   blockType nc networkMagic nodeKernel localRootsVar publicRootsVar useLedgerVar
+                                   useBootstrapVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
               rnNodeKernelHook nodeArgs registry nodeKernel
         }
         StdRunNodeArgs
@@ -649,6 +654,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> Tracer IO KESAgentClientTrace
                      -> Api.BlockType blk
                      -> NodeConfiguration
+                     -> NetworkMagic
                      -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
                      -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
                      -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
@@ -658,10 +664,10 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
                      -> IO ()
 #ifndef UNIX
-installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ = return ()
+installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ _ = return ()
 #else
-installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
-                        useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar =
+installSigHUPHandler startupTracer kesAgentTracer blockType nc networkMagic nodeKernel localRootsVar
+                     publicRootsVar useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
@@ -671,6 +677,7 @@ installSigHUPHandler startupTracer kesAgentTracer blockType nc nodeKernel localR
       void $ updateLedgerPeerSnapshot
                startupTracer
                nc
+               networkMagic
                (readTVar ledgerPeerSnapshotPathVar)
                (readTVar useLedgerVar)
                (writeTVar ledgerPeerSnapshotVar)
@@ -766,11 +773,14 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
 
 updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> NodeConfiguration
+                         -> NetworkMagic
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
                          -> (Maybe (LedgerPeerSnapshot BigLedgerPeers) -> STM IO ())
                          -> IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
-updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
+updateLedgerPeerSnapshot startupTracer
+                         (NodeConfiguration {ncConsensusMode})
+                         networkMagic readLedgerPeerPath readUseLedgerVar writeVar = do
   (mPeerSnapshotFile, useLedgerPeers)
     <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
 
@@ -784,30 +794,37 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
         snapshotFile <- hoistMaybe mPeerSnapshotFile
         eSnapshot
           <- liftIO $ readPeerSnapshotFile snapshotFile
-        lps@(LedgerPeerSnapshotV2 (wOrigin, _)) <-
-          case ncConsensusMode of
-            GenesisMode ->
-              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateError)
-            PraosMode  ->
-              MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateWarning)
+        lps <- case eSnapshot of
+          Left e -> do
+            traceL $ NetworkConfigUpdateError e
+            case ncConsensusMode of
+              GenesisMode -> error "updateLedgerPeerSnapshot error"
+              PraosMode   -> empty
+          Right lps -> pure lps
+        fileSlot <- case lps of
+          LedgerBigPeerSnapshotV23 pt magic _pools
+            | networkMagic == magic, BlockPoint { atSlot } <- pt -> pure atSlot
+            | GenesisPoint <- pt -> do
+                traceL $ NetworkConfigUpdateError "Invalid peer snapshot file"
+                error "updateLedgerPeerSnapshot error"
+            | otherwise -> do
+                traceL . NetworkConfigUpdateError . pack $
+                  "NetworkMagic " <> show networkMagic <> " doesn't match "
+                  <> "peer snapshot NetworkMagic " <> show magic
+                error "updateLedgerPeerSnapshot error"
+          LedgerPeerSnapshotV2 {} -> do
+            traceL $ NetworkConfigUpdateError "Unsupported legacy peer snapshot version."
+            error "updateLedgerPeerSnapshot error"
         case afterSlot of
           Always -> do
-            traceL $ LedgerPeerSnapshotLoaded wOrigin
+            traceL $ LedgerPeerSnapshotLoaded fileSlot
             return lps
           After ledgerSlotNo
             | fileSlot >= ledgerSlotNo -> do
-                traceL $ LedgerPeerSnapshotLoaded wOrigin
+                traceL $ LedgerPeerSnapshotLoaded fileSlot
                 pure lps
             | otherwise -> do
-                case ncConsensusMode of
-                  GenesisMode -> do
-                    traceL $ LedgerPeerSnapshotError ledgerSlotNo fileSlot snapshotFile
-                    liftIO $ throwIO (LedgerPeerSnapshotTooOld ledgerSlotNo fileSlot snapshotFile)
-                  PraosMode -> do
-                    traceL $ LedgerPeerSnapshotIgnored ledgerSlotNo fileSlot snapshotFile
-                    empty
-            where
-              fileSlot = case wOrigin of; Origin -> 0; At slot -> slot
+                liftIO . throwIO $ LedgerPeerSnapshotTooOld ledgerSlotNo fileSlot snapshotFile
 
   mLedgerPeerSnapshot <$ atomically (writeVar mLedgerPeerSnapshot)
 
