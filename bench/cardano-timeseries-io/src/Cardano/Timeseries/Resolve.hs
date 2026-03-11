@@ -22,6 +22,7 @@ resolveTy _ Scalar = Scalar
 resolveTy _ Timestamp = Timestamp
 resolveTy _ Duration = Duration
 resolveTy _ Bool = Bool
+resolveTy _ Text = Text
 
 -- | Computes the head-normal form of `Binding` w.r.t. hole resolution
 --   (i.e. unfolds holes recursively up to the head expression in type of the binding).
@@ -39,6 +40,7 @@ resolveContext defs = fmap (resolveBinding defs)
 
 -- | Computes the normal form of `Expr` w.r.t. hole resolution (i.e. resolves *all* holes in the expression).
 resolveExpr' :: Defs -> Expr -> Expr
+resolveExpr' _ Metrics = Metrics
 resolveExpr' _ (Number f) = Number f
 resolveExpr' _ (Str s) = Str s
 resolveExpr' defs (AddInstantVectorScalar a b) = AddInstantVectorScalar (resolveExpr' defs a) (resolveExpr' defs b)

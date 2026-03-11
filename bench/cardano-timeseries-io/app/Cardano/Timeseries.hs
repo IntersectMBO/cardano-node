@@ -31,7 +31,7 @@ main = do
     Text.putStrLn ("  — " <> k <> "[" <> showMaybe (earliest store k) <> "ms; " <> showMaybe (latest store k) <> "ms]")
   case cmd.mode of
     Interactive -> repl store interpConfig now
-    Execute query -> printQueryResult $ execute store interpConfig now query
+    Execute query -> printExecutionResult $ execute store interpConfig now query
   where
    showMaybe :: Show a => Maybe a -> Text
    showMaybe Nothing  = "N/A"

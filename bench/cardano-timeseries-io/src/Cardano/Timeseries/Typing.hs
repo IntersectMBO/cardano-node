@@ -30,6 +30,7 @@ import qualified Data.Text as Text
 data Ty = InstantVector Ty
         | RangeVector Ty
         | Scalar
+        | Text
         | Bool
         | Pair Ty Ty
         | Timestamp
@@ -56,6 +57,7 @@ prettyTy _ Scalar = "Scalar"
 prettyTy _ Bool = "Bool"
 prettyTy _ Timestamp = "Timestamp"
 prettyTy _ Duration = "Duration"
+prettyTy _ Text = "Text"
 prettyTy _ (Hole idx) = "?" <> showT idx
 
 -- | A context entry of a typing context.

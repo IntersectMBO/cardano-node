@@ -163,6 +163,7 @@ data Expr =
   | QuantileBy Loc (Set Label) Expr Expr
   | Earliest Loc Identifier
   | Latest Loc Identifier
+  | Metrics Loc
   | ToScalar Loc Expr
   | Variable Loc Identifier
   | Str Loc Text
@@ -215,6 +216,7 @@ getLoc (Unless l _ _) = l
 getLoc (QuantileBy l _ _ _) = l
 getLoc (Earliest l _) = l
 getLoc (Latest l _) = l
+getLoc (Metrics l) = l
 getLoc (ToScalar l _) = l
 getLoc (Variable l _) = l
 getLoc (Str l _) = l

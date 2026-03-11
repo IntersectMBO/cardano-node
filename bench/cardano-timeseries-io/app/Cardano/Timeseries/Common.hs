@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {- HLINT ignore "Use print" -}
 
-module Cardano.Timeseries.Common(readStore, repl, printQueryResult) where
+module Cardano.Timeseries.Common(readStore, repl, printInterpResult, printExecutionResult) where
 
 import           Cardano.Logging.Resources (ResourceStats, Resources (..))
 import           Cardano.Timeseries.AsText
@@ -10,7 +10,7 @@ import           Cardano.Timeseries.Elab (elab, initialSt)
 import           Cardano.Timeseries.Import.PlainCBOR
 import           Cardano.Timeseries.Interp (interp)
 import           Cardano.Timeseries.Interp.Config (Config (..))
-import           Cardano.Timeseries.Interp.Types (QueryError)
+import           Cardano.Timeseries.Interp.Types (InterpError)
 import           Cardano.Timeseries.Interp.Value (Value)
 import           Cardano.Timeseries.Store
 import           Cardano.Timeseries.Store.Flat (Flat)
@@ -33,6 +33,7 @@ import           System.FilePath (takeExtension)
 import           System.IO (hFlush, stdout)
 import           Text.Megaparsec hiding (count)
 import           Text.Megaparsec.Char (newline, space, space1)
+import Cardano.Timeseries.Interface (ExecutionError)
 
 _printStore :: Flat Double -> IO ()
 _printStore = traverse_ print
@@ -44,9 +45,13 @@ _printStats stats =
           <> "Heap: " <> show ((fromIntegral (rHeap stats) :: Double) / 1024 / 1024) <> "MB\n"
           <> "RSS: " <> show ((fromIntegral (rRSS stats) :: Double) / 1024 / 1024) <> "MB"
 
-printQueryResult :: Either QueryError Value -> IO ()
-printQueryResult (Left err) = Text.putStrLn $ asText err
-printQueryResult (Right ok) = print ok
+printInterpResult :: Either InterpError Value -> IO ()
+printInterpResult (Left err) = Text.putStrLn $ asText err
+printInterpResult (Right ok) = print ok
+
+printExecutionResult :: Either ExecutionError Value -> IO ()
+printExecutionResult (Left err) = Text.putStrLn $ asText err
+printExecutionResult (Right ok) = print ok
 
 repl :: Store s Double => s -> Config -> Timestamp -> IO ()
 repl store interpCfg now = forever $ do
@@ -66,7 +71,7 @@ repl store interpCfg now = forever $ do
        Left err   -> Text.putStrLn err
        Right query -> do
          Text.putStrLn (showT query)
-         printQueryResult (evalState (runExceptT $ interp interpCfg store mempty query now) 0)
+         printInterpResult (evalState (runExceptT $ interp interpCfg store mempty query now) 0)
 
 whitespace :: Parser ()
 whitespace = skipMany (try space1 <|> void newline)

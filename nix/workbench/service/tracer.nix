@@ -27,6 +27,10 @@ let
           networkMagic = profile.genesis.network_magic;
           configFile     = "config.json";
           metricsHelp    = "../../../cardano-tracer/configuration/metrics_help.json";
+          hasTimeseries = { # FIXME: (@russoul) for testing only
+            epHost    = "127.0.0.1";
+            epPort    = 3300;
+          };
         # Decide where the executable comes from:
         #########################################
         } // optionalAttrs (!backend.useCabalRun) {

@@ -32,7 +32,7 @@ keywords :: [Text]
 keywords = ["let", "in", "true", "false", "epoch", "now", "fst", "snd",
             "min", "max", "avg", "filter", "join", "map", "abs", "increase",
             "rate", "avg_over_time", "sum_over_time", "quantile_over_time", "unless",
-            "quantile_by", "earliest", "latest", "to_scalar"]
+            "quantile_by", "earliest", "latest", "to_scalar", "metrics"]
 
 unescapedVariableIdentifierNextChar :: Parser Char
 unescapedVariableIdentifierNextChar = satisfy (\x -> isAlphaNum x || x == '_')
@@ -211,6 +211,7 @@ headParse = (
     <|> Head.Earliest <$> (string "earliest" *> space1 *> variableIdentifier)
     <|> Head.Latest <$> (string "latest" *> space1 *> variableIdentifier)
     <|> Head.ToScalar <$ string "to_scalar"
+    <|> Head.Metrics <$ string "metrics"
        ) <* notFollowedBy unescapedVariableIdentifierNextChar
 
 wrongNumberOfArguments :: Int -> String -> Parser a
@@ -237,6 +238,7 @@ applyBuiltin l (Head.QuantileBy ls) [k, xs] = pure $ QuantileBy l ls k xs
 applyBuiltin l (Head.Earliest x) [] = pure $ Earliest l x
 applyBuiltin l (Head.Latest x) [] = pure $ Latest l x
 applyBuiltin l Head.ToScalar [t] = pure $ ToScalar l t
+applyBuiltin l Head.Metrics [] = pure $ Metrics l
 applyBuiltin _ h args = wrongNumberOfArguments (length args) (show h)
 
 apply :: Loc -> Either Head Expr -> [Expr] -> Parser Expr

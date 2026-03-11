@@ -8,65 +8,65 @@ import           Cardano.Timeseries.Interp.Value as Value
 
 import           Data.Word (Word64)
 
-expectInstantVector :: Value -> QueryM (InstantVector Value)
+expectInstantVector :: Value -> InterpM (InstantVector Value)
 expectInstantVector (Value.InstantVector v) = pure v
-expectInstantVector _ = throwQueryError "Unexpected expression type: expected an instant vector"
+expectInstantVector _ = throwInterpError "Unexpected expression type: expected an instant vector"
 
-expectRangeVector :: Value -> QueryM (TimeseriesVector Value)
+expectRangeVector :: Value -> InterpM (TimeseriesVector Value)
 expectRangeVector (Value.RangeVector v) = pure v
-expectRangeVector _ = throwQueryError "Unexpected expression type: expected a range vector"
+expectRangeVector _ = throwInterpError "Unexpected expression type: expected a range vector"
 
-expectTimeseriesScalar :: Timeseries Value -> QueryM (Timeseries Double)
+expectTimeseriesScalar :: Timeseries Value -> InterpM (Timeseries Double)
 expectTimeseriesScalar = traverse expectScalar
 
-expectRangeVectorScalar :: Value -> QueryM (TimeseriesVector Double)
+expectRangeVectorScalar :: Value -> InterpM (TimeseriesVector Double)
 expectRangeVectorScalar v = expectRangeVector v >>= traverse expectTimeseriesScalar
 
-expectInstantScalar :: Instant Value -> QueryM (Instant Double)
+expectInstantScalar :: Instant Value -> InterpM (Instant Double)
 expectInstantScalar = traverse expectScalar
 
-expectInstantBool :: Instant Value -> QueryM (Instant Bool)
+expectInstantBool :: Instant Value -> InterpM (Instant Bool)
 expectInstantBool = traverse expectBool
 
-expectInstantVectorScalar :: Value -> QueryM (InstantVector Double)
+expectInstantVectorScalar :: Value -> InterpM (InstantVector Double)
 expectInstantVectorScalar v = expectInstantVector v >>= traverse expectInstantScalar
 
-expectInstantVectorBool :: Value -> QueryM (InstantVector Bool)
+expectInstantVectorBool :: Value -> InterpM (InstantVector Bool)
 expectInstantVectorBool v = expectInstantVector v >>= traverse expectInstantBool
 
-expectPair :: Value -> QueryM (Value, Value)
+expectPair :: Value -> InterpM (Value, Value)
 expectPair (Value.Pair a b) = pure (a, b)
-expectPair _ = throwQueryError "Unexpected expression type: expected a pair"
+expectPair _ = throwInterpError "Unexpected expression type: expected a pair"
 
-expectScalar :: Value -> QueryM Double
+expectScalar :: Value -> InterpM Double
 expectScalar (Value.Scalar x) = pure x
-expectScalar _ = throwQueryError "Unexpected expression type: expected a scalar"
+expectScalar _ = throwInterpError "Unexpected expression type: expected a scalar"
 
-expectBool :: Value -> QueryM Bool
+expectBool :: Value -> InterpM Bool
 expectBool Value.Truth = pure Prelude.True
 expectBool Value.Falsity = pure Prelude.False
-expectBool _ = throwQueryError "Unexpected expression type: expected a bool"
+expectBool _ = throwInterpError "Unexpected expression type: expected a bool"
 
-expectBoolean :: Value -> QueryM Bool
+expectBoolean :: Value -> InterpM Bool
 expectBoolean Truth = pure Prelude.True
 expectBoolean Falsity = pure Prelude.False
-expectBoolean _ = throwQueryError "Unexpected expression type: expected a boolean"
+expectBoolean _ = throwInterpError "Unexpected expression type: expected a boolean"
 
-expectDuration :: Value -> QueryM Word64
+expectDuration :: Value -> InterpM Word64
 expectDuration (Value.Duration x) = pure x
-expectDuration _ = throwQueryError "Unexpected expression type: expected a duration"
+expectDuration _ = throwInterpError "Unexpected expression type: expected a duration"
 
-expectTimestamp :: Value -> QueryM Word64
+expectTimestamp :: Value -> InterpM Word64
 expectTimestamp (Value.Timestamp x) = pure x
-expectTimestamp _ = throwQueryError "Unexpected expression type: expected a timestamp"
+expectTimestamp _ = throwInterpError "Unexpected expression type: expected a timestamp"
 
-expectFunction :: Value -> QueryM FunctionValue
+expectFunction :: Value -> InterpM FunctionValue
 expectFunction (Value.Function f) = pure f
-expectFunction _ = throwQueryError "Unexpected expression type: expected a function"
+expectFunction _ = throwInterpError "Unexpected expression type: expected a function"
 
-expectWord64 :: Double -> QueryM Word64
+expectWord64 :: Double -> InterpM Word64
 expectWord64 x
   | snd pf == 0.0 = pure $ fst pf
-  | otherwise     = throwQueryError $ "Expected a whole number, got: " <> showT x
+  | otherwise     = throwInterpError $ "Expected a whole number, got: " <> showT x
   where
     pf = properFraction x

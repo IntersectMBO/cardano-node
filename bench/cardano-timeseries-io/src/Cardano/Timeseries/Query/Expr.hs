@@ -94,4 +94,6 @@ data Expr = Number Double
 
           | FilterByLabel (Set LabelConstraint) Expr
 
+          | Metrics
+
           | Hole HoleIdentifier deriving Show

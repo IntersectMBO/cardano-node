@@ -45,6 +45,7 @@ unifyNu loc (InstantVector a) (InstantVector a') = pure [UnificationProblem loc 
 unifyNu loc (RangeVector a) (RangeVector a') = pure [UnificationProblem loc a a']
 unifyNu _ Scalar Scalar = pure []
 unifyNu _ Bool Bool = pure []
+unifyNu _ Text Text = pure []
 unifyNu _ Timestamp Timestamp = pure []
 unifyNu _ Duration Duration = pure []
 unifyNu loc (Pair a b) (Pair a' b') = pure [UnificationProblem loc a a', UnificationProblem loc b b']
@@ -75,6 +76,7 @@ occursNu _ Scalar             = pure False
 occursNu _ Bool               = pure False
 occursNu _ Timestamp          = pure False
 occursNu _ Duration           = pure False
+occursNu _ Text               = pure False
 occursNu x (Hole x')          = pure (x == x')
 
 unify :: Loc -> Ty -> Ty -> UnifyM [UnificationProblem]

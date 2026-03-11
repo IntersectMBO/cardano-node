@@ -1,18 +1,16 @@
 module Cardano.Timeseries.Interp.Types where
-import           Cardano.Timeseries.AsText
-
-import           Control.Monad.Except (ExceptT, throwError)
+import           Control.Monad.Except       (ExceptT, throwError)
 import           Control.Monad.State.Strict (State)
+import           Cardano.Timeseries.AsText
 import           Data.Text (Text)
 
-newtype QueryError =
-  ErrorMessage { message :: Text }
+newtype InterpError =
+  InterpError { message :: Text }
 
-instance AsText QueryError where
-  asText ErrorMessage{message} = "Error: " <> message
+instance AsText InterpError where
+  asText InterpError{message} = "Interpretation error: " <> message
 
+type InterpM a = ExceptT InterpError (State Int) a
 
-type QueryM a = ExceptT QueryError (State Int) a
-
-throwQueryError :: Text -> QueryM a
-throwQueryError = throwError . ErrorMessage
+throwInterpError :: Text -> InterpM a
+throwInterpError = throwError . InterpError

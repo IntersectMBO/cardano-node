@@ -18,7 +18,7 @@ c ::= l = s | l != s
 c̄ ::= {c, ..., c}
 
 // Types
-A, B, C, T ::= InstantVector T | RangeVector T | Scalar | Bool | Timestamp | Duration | (T, T) | T -> T
+A, B, C, T ::= InstantVector T | RangeVector T | Scalar | Bool | Timestamp | Duration | (T, T) | T -> T | Text
 
 // Contexts
 Γ ::= ε | Γ (x ≔ t : T) | Γ (x : T)
@@ -84,6 +84,7 @@ t, f, e, a, b ::= x
                 | div_instant_vector_scalar t t
                 | instant_vector_to_scalar t
                 | quantile_by t t
+                | metrics
 
 ┌──────┐
 │A type│
@@ -120,6 +121,8 @@ Timestamp type
 
 
 Duration type
+
+Text type
 
 ┌──────┐
 │Γ ctx │
@@ -475,3 +478,7 @@ v <= bool s ≡ (\x -> x <= s) v
 Γ ⊦ v : InstantVector Scalar
 -------------------------------------------- ✔
 Γ ⊦ quantile_by q v l̄ : InstantVector Scalar
+
+Γ ctx
+------------------ ✔
+Γ ⊦ metrics : Text

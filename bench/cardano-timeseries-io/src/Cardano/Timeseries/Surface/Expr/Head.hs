@@ -23,4 +23,5 @@ data Head = Fst
           | QuantileBy (Set Label)
           | Earliest Identifier
           | Latest Identifier
-          | ToScalar deriving (Show)
+          | ToScalar
+          | Metrics deriving (Show)

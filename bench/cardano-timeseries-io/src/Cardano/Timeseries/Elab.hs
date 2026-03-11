@@ -502,6 +502,10 @@ solveGeneralElabProblem gam (mbBinaryRelation -> Just (l, a, r, b)) x typ = do
           x
           typ
   pure ([], [e1, e2, e3])
+solveGeneralElabProblem _ (Surface.Metrics l) x typ = do
+  let u = UnificationProblem l typ Types.Text
+  modify (updateDefs $ instantiateExpr x Semantic.Metrics)
+  pure ([u], [])
 solveGeneralElabProblem _ (Surface.Number l f) x typ = do
   let u = UnificationProblem l typ Scalar
   modify (updateDefs $ instantiateExpr x (Semantic.Number f))

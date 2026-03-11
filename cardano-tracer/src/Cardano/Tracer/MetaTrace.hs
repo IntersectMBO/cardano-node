@@ -58,6 +58,9 @@ data TracerTrace
   | TracerStartedPrometheus
     { ttPrometheusEndpoint   :: Endpoint
     }
+  | TracerStartedTimeseries
+    { ttTimeseriesEndpoint   :: Endpoint
+    }
   | TracerStartedMonitoring
     { ttMonitoringEndpoint   :: Endpoint
     , ttMonitoringType       :: Text
@@ -136,6 +139,10 @@ instance LogFormatting TracerTrace where
       [ "kind"     .= AE.String "TracerStartedPrometheus"
       , "endpoint" .= ttPrometheusEndpoint
       ]
+    TracerStartedTimeseries{..} -> mconcat
+      [ "kind"     .= AE.String "TracerStartedTimeseries"
+      , "endpoint" .= ttTimeseriesEndpoint
+      ]
     TracerStartedMonitoring{..} -> mconcat
       [ "kind"     .= AE.String "TracerStartedMonitoring"
       , "endpoint" .= ttMonitoringEndpoint
@@ -202,6 +209,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerAddNewNodeIdMapping {} = Namespace [] ["AddNewNodeIdMapping"]
     namespaceFor TracerStartedLogRotator = Namespace [] ["StartedLogRotator"]
     namespaceFor TracerStartedPrometheus{} = Namespace [] ["StartedPrometheus"]
+    namespaceFor TracerStartedTimeseries{} = Namespace [] ["StartedTimeseriers"]
     namespaceFor TracerStartedMonitoring{} = Namespace [] ["StartedMonitoring"]
     namespaceFor TracerStartedAcceptors {} = Namespace [] ["StartedAcceptors"]
     namespaceFor TracerStartedRTView = Namespace [] ["StartedRTView"]
@@ -227,6 +235,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["AddNewNodeIdMapping"]) _ = Just Info
     severityFor (Namespace _ ["StartedLogRotator"]) _ = Just Info
     severityFor (Namespace _ ["StartedPrometheus"]) _ = Just Info
+    severityFor (Namespace _ ["StartedTimeseries"]) _ = Just Info
     severityFor (Namespace _ ["StartedMonitoring"]) _ = Just Info
     severityFor (Namespace _ ["StartedAcceptors"]) _ = Just Info
     severityFor (Namespace _ ["StartedRTView"]) _ = Just Info
@@ -256,6 +265,7 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["AddNewNodeIdMapping"]
       , Namespace [] ["StartedLogRotator"]
       , Namespace [] ["StartedPrometheus"]
+      , Namespace [] ["StartedTimeseries"]
       , Namespace [] ["StartedMonitoring"]
       , Namespace [] ["StartedAcceptors"]
       , Namespace [] ["StartedRTView"]

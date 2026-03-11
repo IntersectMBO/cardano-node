@@ -7,7 +7,6 @@ import           Cardano.Timeseries.Domain.Instant (Instant (..))
 import           Cardano.Timeseries.Domain.Types (MetricIdentifier, Timestamp)
 import qualified Cardano.Timeseries.Interface as Interface
 import qualified Cardano.Timeseries.Interp.Config as Interp (Config (..))
-import           Cardano.Timeseries.Interp.Types (QueryError)
 import           Cardano.Timeseries.Interp.Value (Value)
 import qualified Cardano.Timeseries.Store as Store
 import           Cardano.Timeseries.Store.Tree (Tree)
@@ -22,6 +21,7 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import           Data.Word (Word64)
+import Cardano.Timeseries.Interface (ExecutionError)
 
 data TimeseriesConfig = TimeseriesConfig {
   -- | How long the store entries are retained for (ms).
@@ -62,7 +62,7 @@ insert handle nodeId t batch = atomically $
   where
     f st (k, v) = Store.insert st k (Instant (Set.singleton ("node_id", nodeId.text)) t v)
 
-execute :: TimeseriesHandle -> Timestamp -> Text -> IO (Either QueryError Value)
+execute :: TimeseriesHandle -> Timestamp -> Text -> IO (Either ExecutionError Value)
 execute handle now stringQuery = do
   (theCfg, theStore) <- atomically $ (,) <$> readTVar handle.cfg <*> readTVar handle.store
   pure $ Interface.execute theStore theCfg.interpCfg now stringQuery

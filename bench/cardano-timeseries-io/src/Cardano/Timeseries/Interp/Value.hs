@@ -6,14 +6,14 @@ module Cardano.Timeseries.Interp.Value(Value(..), FunctionValue, fromBool) where
 import           Cardano.Timeseries.AsText
 import           Cardano.Timeseries.Domain.Instant
 import           Cardano.Timeseries.Domain.Timeseries (TimeseriesVector)
-import           Cardano.Timeseries.Interp.Types (QueryM)
+import           Cardano.Timeseries.Interp.Types (InterpM)
 
 import           Control.DeepSeq (NFData)
-import           Data.Text (unpack)
+import           Data.Text (unpack, Text)
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
 
-type FunctionValue = Value -> QueryM Value
+type FunctionValue = Value -> InterpM Value
 
 -- | A model of values that queries interpret into.
 data Value where
@@ -34,7 +34,9 @@ data Value where
   -- | Timestamp (milliseconds since epoch)
   Timestamp :: Word64 -> Value
   -- | Function
-  Function :: FunctionValue -> Value deriving Generic
+  Function :: FunctionValue -> Value
+  -- | Text
+  Text :: Text -> Value deriving Generic
 
 instance NFData Value
 
@@ -48,6 +50,7 @@ instance Show Value where
   show (Duration d)      = show d <> "ms"
   show (Timestamp t)     = show t
   show (Function _)      = "<function>"
+  show (Text t)          = show t
 
 fromBool :: Bool -> Value
 fromBool Prelude.True  = Truth

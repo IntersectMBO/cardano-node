@@ -49,19 +49,20 @@ import           Data.Word (Word64)
 import           Statistics.Function (minMax)
 import           Statistics.Quantile (cadpw, quantile)
 import           Statistics.Sample (mean)
+import qualified Data.Text as Text
 
 
-interpJoin :: (a -> b -> c) -> InstantVector a -> InstantVector b -> Either QueryError (InstantVector c)
+interpJoin :: (a -> b -> c) -> InstantVector a -> InstantVector b -> Either InterpError (InstantVector c)
 interpJoin _ [] _ = Right []
 interpJoin f (inst@(Domain.Instant ls t v) : xs) other = do
-  Domain.Instant _ _ v' <- maybeToEither (ErrorMessage $ "No matching label: " <> showT ls) $ find (share inst) other
+  Domain.Instant _ _ v' <- maybeToEither (InterpError $ "No matching label: " <> showT ls) $ find (share inst) other
   rest <- interpJoin f xs other
   Right (Domain.Instant ls t (f v v') : rest)
 
-interpRange :: FunctionValue -> Interval -> Word64 -> QueryM (TimeseriesVector Value)
+interpRange :: FunctionValue -> Interval -> Word64 -> InterpM (TimeseriesVector Value)
 interpRange f Interval{..} rate = transpose <$> sample start end where
 
-  sample :: Timestamp -> Timestamp -> QueryM [InstantVector Value]
+  sample :: Timestamp -> Timestamp -> InterpM [InstantVector Value]
   sample t max | t > max = pure []
   sample t max = (:) <$> (expectInstantVector <=< f) (Value.Timestamp t) <*> sample (t + rate) max
 
@@ -76,30 +77,30 @@ interpLabelInsts ls =
     cond (_, (b, _)) = b
     extract (x, (_, y)) = (x, y)
 
-interpVariable :: Store s Double => s -> MetricIdentifier -> Value -> QueryM Value
+interpVariable :: Store s Double => s -> MetricIdentifier -> Value -> InterpM Value
 interpVariable store x t_ = do
   t <- expectTimestamp t_
   pure (Value.InstantVector (fmap (fmap Value.Scalar) (Store.evaluate store x t)))
 
-interpQuantileBy :: Set Label -> Double -> InstantVector Double -> Timestamp -> QueryM (InstantVector Double)
+interpQuantileBy :: Set Label -> Double -> InstantVector Double -> Timestamp -> InterpM (InstantVector Double)
 interpQuantileBy ls k vs now =
   let groups = groupBy (on (==) (superseries ls . (.labels))) vs
       quantiles = fmap (\g -> (superseries ls (head g).labels, quantile cadpw (floor (k * 100)) 100 (Instant.toVector g)))
                        groups in
   pure $ fmap (\(idx, v) -> Instant idx now v) quantiles
 
-interpFilter :: FunctionValue -> InstantVector Value -> QueryM (InstantVector Value)
+interpFilter :: FunctionValue -> InstantVector Value -> InterpM (InstantVector Value)
 interpFilter f = filterM pred where
-  pred :: Instant Value -> QueryM Bool
+  pred :: Instant Value -> InterpM Bool
   pred inst = (expectBoolean <=< f) inst.value
 
-interpMap :: FunctionValue -> InstantVector Value -> QueryM (InstantVector Value)
+interpMap :: FunctionValue -> InstantVector Value -> InterpM (InstantVector Value)
 interpMap f = traverse (traverse f)
 
-interpRate :: TimeseriesVector Double -> QueryM (InstantVector Double)
+interpRate :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpRate v = do
-  min <- liftEither $ maybeToEither (ErrorMessage "Can't compute rate") (eachOldest v)
-  max <- liftEither $ maybeToEither (ErrorMessage "Can't compute rate") (eachNewest v)
+  min <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachOldest v)
+  max <- liftEither $ maybeToEither (InterpError "Can't compute rate") (eachNewest v)
   pure $ zipWith compute min max where
 
   compute :: Instant Double -> Instant Double -> Instant Double
@@ -107,10 +108,10 @@ interpRate v = do
     let x = (max.value - min.value) / fromIntegral (max.timestamp - min.timestamp) in
     Instant min.labels max.timestamp x
 
-interpIncrease :: TimeseriesVector Double -> QueryM (InstantVector Double)
+interpIncrease :: TimeseriesVector Double -> InterpM (InstantVector Double)
 interpIncrease v = liftEither $ do
-  min <- maybeToEither (ErrorMessage "Can't compute rate") (eachOldest v)
-  max <- maybeToEither (ErrorMessage "Can't compute rate") (eachNewest v)
+  min <- maybeToEither (InterpError "Can't compute rate") (eachOldest v)
+  max <- maybeToEither (InterpError "Can't compute rate") (eachNewest v)
   Right $ zipWith compute min max where
 
   compute :: Instant Double -> Instant Double -> Instant Double
@@ -129,7 +130,7 @@ interpBinaryArithmeticOp :: Store s Double
                          -> BinaryArithmeticOp
                          -> Expr
                          -> Timestamp
-                         -> QueryM Value
+                         -> InterpM Value
 interpBinaryArithmeticOp cfg store env v op k now = do
   nextVarIdx <- lift get
   lift (put (1 + nextVarIdx))
@@ -155,7 +156,7 @@ interpFilterBinaryRelation :: Store s Double
                            -> BinaryRelation
                            -> Expr
                            -> Timestamp
-                           -> QueryM Value
+                           -> InterpM Value
 interpFilterBinaryRelation cfg store env v rel k now = do
   nextVarIdx <- lift get
   lift (put (1 + nextVarIdx))
@@ -172,7 +173,9 @@ interpFilterBinaryRelation cfg store env v rel k now = do
 
 -- | Given a metric store, an assignment of values to local variables, a query expression and a timestamp "now",
 --    interpret the `Expr` into a `Value`.
-interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> QueryM Value
+interp :: Store s Double => Config -> s -> Map Identifier Value -> Expr -> Timestamp -> InterpM Value
+interp _ store _ Expr.Metrics _ = do
+  pure $ Value.Text $ Text.intercalate ", " (Set.toList $ metrics store)
 interp _ _ _ (Expr.Number x) _ = do
   pure (Value.Scalar x)
 interp _ store env (Expr.Variable x) _ =
@@ -183,7 +186,7 @@ interp _ store env (Expr.Variable x) _ =
         User u | member u (metrics store) ->
           pure $ Value.Function (interpVariable store u)
         _ ->
-          throwQueryError $ "Undefined variable: " <> showT x
+          throwInterpError $ "Undefined variable: " <> showT x
 interp _ _ _ Now now = pure (Timestamp (fromIntegral now))
 interp _ _ _ Epoch _ = pure (Timestamp 0)
 interp cfg store env (Lambda x body) now = pure $ Value.Function $ \v ->
@@ -343,4 +346,4 @@ interp cfg store env (Expr.AddDuration a_ b_) now = do
   pure (Value.Duration (a + b))
 interp cfg store env (mbBinaryRelationInstantVector -> Just (v, rel, k)) now =
   interpFilterBinaryRelation cfg store env v rel k now
-interp _ _ _ expr _ = throwQueryError $ "Can't interpret expression: " <> showT expr
+interp _ _ _ expr _ = throwInterpError $ "Can't interpret expression: " <> showT expr

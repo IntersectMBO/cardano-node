@@ -46,6 +46,10 @@ let serviceConfigToJSON =
           epHost    = "127.0.0.1";
           epPort    = 3200; ## supervisord.portShiftPrometheus
         } // (cfg.prometheus or {});
+        hasTimeseries = {
+          epHost    = "127.0.0.1";
+          epPort    = 3300; ## supervisord.portShiftPrometheus
+        } // (cfg.prometheus or {});
         # Just an example for metrics compatibility mapping.
         # An entry means the first entry has the second entry as alias.
         # The Metrics is then available, both with the original and the mapped name.
@@ -80,6 +84,7 @@ in pkgs.commonLib.defServiceModule
         logRoot         = opt    str null      "Log storage root directory.";
         rotation        = opt    attrs {}      "Log rotation overrides: see cardano-tracer documentation.";
         RTView          = opt    attrs {}      "RTView config overrides: see cardano-tracer documentation.";
+        hasTimeseries   = opt    attrs {}      ""; # FIXME: (@russoul) probably shouldn't be here (provisional)
         ekgPortBase     = opt    int 3100      "EKG port base.";
         ekgRequestFreq  = opt    int 1         "EKG request frequency";
         prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";

@@ -1,6 +1,6 @@
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Cardano.Tracer.Handlers.Metrics.Servers
   ( runMetricsServers
@@ -10,17 +10,19 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Monitoring
 import           Cardano.Tracer.Handlers.Metrics.Prometheus
+import           Cardano.Tracer.Handlers.Metrics.TimeseriesServer (runTimeseriesServer)
 import qualified Cardano.Tracer.Handlers.Metrics.Utils as Utils
 import           Cardano.Tracer.Utils (sequenceConcurrently_)
 
 import           Control.AutoUpdate
-import           Data.Maybe (catMaybes)
 import           Control.Monad (unless)
+import           Data.Maybe (catMaybes)
 
 -- | Runs metrics servers if needed:
 --
 --   1. Prometheus exporter.
 --   2. EKG monitoring web-page.
+--   3. Timeseries query server.
 --
 runMetricsServers
   :: TracerEnv
@@ -44,8 +46,11 @@ runMetricsServers tracerEnv = do
   servers = catMaybes
     [ runPrometheusServer tracerEnv <$> hasPrometheus
     , runMonitoringServer tracerEnv <$> hasEKG
+    , const <$> (runTimeseriesServer teTracer cfg <$> hasTimeseries <*> teTimeseriesHandle)
     ]
 
   TracerEnv
-    { teConfig = TracerConfig { hasPrometheus, hasEKG }
+    { teConfig = cfg@TracerConfig { hasPrometheus, hasEKG, hasTimeseries },
+      teTracer,
+      teTimeseriesHandle
     } = tracerEnv
