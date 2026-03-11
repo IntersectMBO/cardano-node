@@ -28,7 +28,7 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types (PeerSnapshotFile (..))
-import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
+import           Cardano.Slotting.Slot (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -140,13 +140,7 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
-  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
-  -- | Ledger peer snapshot ignored since the peer snapshot slot is older than
-  -- `UseLedgerPeers` in the topology file.  Arguments are:
-  -- useLedgerPeersAfterSlot, peerSnapshotSlot, peerSnapshotFile.
-  | LedgerPeerSnapshotIgnored SlotNo SlotNo PeerSnapshotFile
-  -- | Like above, but in `GenesisMode` it is an error to have an old snapshot.
-  | LedgerPeerSnapshotError SlotNo SlotNo PeerSnapshotFile
+  | LedgerPeerSnapshotLoaded SlotNo
   | MovedTopLevelOption String
 
 data LedgerPeerSnapshotError = LedgerPeerSnapshotTooOld SlotNo SlotNo PeerSnapshotFile
