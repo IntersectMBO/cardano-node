@@ -71,15 +71,10 @@ pCardanoTestnetCliOptions = CardanoTestnetOptions
       <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
       <>  OA.showDefault
       )
-  <*> ( OA.flag' GenerateTemplateConfigForTxGenerator
-          (   OA.long "generate-tx-generator-config"
-          <>  OA.help "Generate a template configuration file for tx-generator."
-          )
-      <|> OA.flag' GenerateAndRunTxGenerator
-          (   OA.long "run-tx-generator"
-          <>  OA.help "Generate a configuration file for tx-generator and run it."
-          )
-      <|> pure NoTxGeneratorSupport
+  <*> OA.flag NoTxGeneratorSupport GenerateTemplateConfigForTxGenerator
+      (   OA.long "generate-tx-generator-config"
+      <>  OA.help "Generate a template configuration file for tx-generator."
+      <>  OA.showDefault
       )
   <*> (maybe NoUserProvidedEnv UserProvidedEnv <$> optional (OA.strOption
       (   OA.long "output-dir"

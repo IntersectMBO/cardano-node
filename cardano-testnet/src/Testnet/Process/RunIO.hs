@@ -10,7 +10,6 @@ module Testnet.Process.RunIO
   , execCli_
   , mkExecConfig
   , procNode
-  , procFlex
   , liftIOAnnotated
   ) where
 
@@ -38,6 +37,8 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 import           Hedgehog.Extras.Test.Process (ExecConfig (..))
 
 import           RIO
+
+
 
 defaultExecConfig :: ExecConfig
 defaultExecConfig = ExecConfig
