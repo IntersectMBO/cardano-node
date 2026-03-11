@@ -70,7 +70,6 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.Tracing ()
 
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
