@@ -1552,20 +1552,10 @@ teeTraceBlockFetchDecision verb eliding tr =
     PeerStarvedUs {} -> do
       traceWith (toLogObject' verb meTr) ev
     PeersFetch ev' -> do
-      traceWith (teeTraceBlockFetchDecision' meTr) (WithSeverity s ev')
       traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) (WithSeverity s ev')
  where
    meTr  = appendName "metrics" tr
    bfdTr = appendName "BlockFetchDecision" tr
-
-teeTraceBlockFetchDecision'
-    :: Trace IO Text
-    -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
-teeTraceBlockFetchDecision' tr =
-    Tracer $ \(WithSeverity _ peers) -> do
-      meta <- mkLOMeta Info Confidential
-      let tr' = appendName "peers" tr
-      traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer

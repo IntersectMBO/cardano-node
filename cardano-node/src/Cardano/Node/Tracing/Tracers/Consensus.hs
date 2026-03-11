@@ -683,7 +683,7 @@ instance (LogFormatting peer, Show peer) =>
     , "peers" .= toJSON
       (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
+  asMetrics _ = []
 
 instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
   namespaceFor (a : _tl) = (nsCast . namespaceFor) a
