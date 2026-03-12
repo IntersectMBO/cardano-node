@@ -502,6 +502,7 @@ handleSimpleNode blockType runP tracers nc onKernel = do
           , rnGetUseBootstrapPeers = readTVar useBootstrapVar
           , rnTxSubmissionLogicVersion = ncTxSubmissionLogicVersion nc
           , rnTxSubmissionInitDelay = ncTxSubmissionInitDelay nc
+          , rnFeatureFlags = mempty -- TODO(10.7) forward this to CLI options?
           }
 #ifdef UNIX
     -- initial `SIGHUP` handler, which only rereads the topology file but
