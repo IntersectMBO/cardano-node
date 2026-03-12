@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -37,6 +36,7 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+
 import           Cardano.Api (handleIOExceptionsLiftWith, liftEither, runExceptT, throwError)
 
 import           Cardano.Network.ConsensusMode (ConsensusMode (..))
@@ -49,7 +49,7 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Network.NodeToNode (DiffusionMode (..), PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..), RelayAccessPoint (..))
+                   UseLedgerPeers (..), RelayAccessPoint (..), LedgerPeersKind(..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
@@ -347,7 +347,7 @@ readTopologyFileOrError nc tr =
                            <> Text.unpack err)
              pure
 
-readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text LedgerPeerSnapshot)
+readPeerSnapshotFile :: PeerSnapshotFile -> IO (Either Text (LedgerPeerSnapshot BigLedgerPeers))
 readPeerSnapshotFile (PeerSnapshotFile file) = do
   content <- first renderException <$> try (BS.readFile file)
   return $ first handler $ content >>= eitherDecodeStrict
