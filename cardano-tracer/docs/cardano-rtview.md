@@ -31,7 +31,7 @@ guarantee it remains buildable and usable in its current state.
 
 For a long time, Stake Pool Operators used third-party tools for monitoring their Cardano nodes, such as [Grafana](https://grafana.com/grafana/dashboards/12469)-based installations. These third-party solutions work, but they have two main problems:
 
-1. Complex setup, especially for non-technical person.
+1. Complex setup, especially for a non-technical person.
 2. Limited kinds of displayed information. For example, metrics can be shown, but error messages cannot.
 
 RTView solves both of them:
@@ -170,7 +170,7 @@ You can specify how frequently you want to receive notifications for a specific 
 
 If you selected `Immediately`, the new email with the associated event(s) will be sent right away. It can be used for critical events: most likely, you want to know about such events as soon as possible.
 
-If you selected `Every 12 hours`, the new email with associated event(s) will be sent only two times a day. I can be used for non-critical events, like `Warnings`.
+If you selected `Every 12 hours`, the new email with associated event(s) will be sent only two times a day. It can be used for non-critical events, like `Warnings`.
 
 # UI
 
@@ -182,7 +182,7 @@ When you open the web page for the first time, you'll see a warning from your br
 
 When the node connects to `cardano-tracer` and RTView's page displays the first data from it, you may see that some other data is missing: there is `—` instead of particular value. There are following possible reasons for it:
 
-1. The node didn't provide corresponding metrics _yet_, because some information (for example, sync percent) can be displayed only after few minutes after node's start.
+1. The node didn't provide corresponding metrics _yet_, because some information (for example, sync percent) can be displayed only after a few minutes after node's start.
 2. The node _cannot_ provide corresponding metrics. For example, forging-related metrics make sense only for producer node, not for relay node.
 3. The node doesn't provide corresponding metrics because of node's configuration. For example, it can specify severity filter for particular metric, so it just filtered out.
 4. The node is incompatible with `cardano-tracer` (they were built from different branches of `cardano-node` repository). For example, particular metric may be renamed in the node, but `cardano-tracer` is still using outdated name.
@@ -192,4 +192,4 @@ When the node connects to `cardano-tracer` and RTView's page displays the first 
 If the node is configured as a _producer_ - i.e. it can forge the new blocks - you will see a hammer icon near the node's name. So, there are two possible reasons if you don't see this hammer icon:
 
 1. The node is configured as a relay, not as a producer.
-2. The node is not reported about its "producer status" yet.
+2. The node has not reported its "producer status" yet.
