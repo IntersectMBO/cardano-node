@@ -574,7 +574,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnap
   ]
 
 ppStartupInfoTrace (LedgerPeerSnapshotLoaded slotNo) =
-    "Topology: Peer snapshot containing ledger peers " <> showT slotNo <> " loaded."
+    "Topology: Peer snapshot containing ledger peers recorded at " <> showT slotNo <> " loaded."
 
 ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 

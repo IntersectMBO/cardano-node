@@ -104,7 +104,8 @@ import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionActions as 
 import qualified Cardano.Network.LedgerPeerConsensusInterface as Cardano
 import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
 import qualified Cardano.Network.PeerSelection.Churn as Cardano.Churn
-import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..), PeerAdvertise(..))
+import           Ouroboros.Network.Diffusion.Topology (NetworkTopology(..), producerAddresses)
 
 import           Ouroboros.Network.Block (pattern BlockPoint, pattern GenesisPoint, HeaderHash, atSlot, withHash)
 import           Ouroboros.Network.BlockFetch (FetchMode)
@@ -123,6 +124,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSna
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, LocalRootConfig (..), WarmValency)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
@@ -447,17 +449,17 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $ do
     traceWith (startupTracer tracers)
               (StartupP2PInfo (ncDiffusionMode nc))
-    nt@TopologyP2P.RealNodeTopology
-      { ntUseLedgerPeers
-      , ntUseBootstrapPeers
-      , ntPeerSnapshotPath
+    nt@NetworkTopology
+      { useLedgerPeers
+      , peerSnapshotPath
+      , extraConfig
       } <- TopologyP2P.readTopologyFileOrError nc (startupTracer tracers)
     let (localRoots, publicRoots) = producerAddresses nt
     traceWith (startupTracer tracers)
             $ NetworkConfig localRoots
                             publicRoots
-                            ntUseLedgerPeers
-                            ntPeerSnapshotPath
+                            useLedgerPeers
+                            (PeerSnapshotFile <$> peerSnapshotPath)
     case ncPeerSharing nc of
       PeerSharingEnabled
         | hasProtocolFile (ncProtocolFiles nc) ->
@@ -467,9 +469,9 @@ handleSimpleNode blockType runP tracers nc networkMagic onKernel = do
       _otherwise -> pure ()
     localRootsVar   <- newTVarIO localRoots
     publicRootsVar  <- newTVarIO publicRoots
-    useLedgerVar    <- newTVarIO ntUseLedgerPeers
-    useBootstrapVar <- newTVarIO ntUseBootstrapPeers
-    ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
+    useLedgerVar    <- newTVarIO useLedgerPeers
+    useBootstrapVar <- newTVarIO extraConfig
+    ledgerPeerSnapshotPathVar <- newTVarIO (PeerSnapshotFile <$> peerSnapshotPath)
     ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
                                             (startupTracer tracers)
                                             nc
@@ -809,19 +811,19 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
         traceWith startupTracer
                 $ NetworkConfigUpdateError
                 $ pack "Error reading topology configuration file:" <> err
-      Right nt@RealNodeTopology { ntUseLedgerPeers
-                                , ntUseBootstrapPeers
-                                , ntPeerSnapshotPath
+      Right nt@NetworkTopology { useLedgerPeers
+                                , peerSnapshotPath
+                                , extraConfig
                                 } -> do
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith startupTracer
-                $ NetworkConfig localRoots publicRoots ntUseLedgerPeers ntPeerSnapshotPath
+                $ NetworkConfig localRoots publicRoots useLedgerPeers (PeerSnapshotFile <$> peerSnapshotPath)
         atomically $ do
           writeTVar localRootsVar localRoots
           writeTVar publicRootsVar publicRoots
-          writeTVar useLedgerVar ntUseLedgerPeers
-          writeTVar useBootsrapPeersVar ntUseBootstrapPeers
-          writeTVar ledgerPeerSnapshotPathVar ntPeerSnapshotPath
+          writeTVar useLedgerVar useLedgerPeers
+          writeTVar useBootsrapPeersVar extraConfig
+          writeTVar ledgerPeerSnapshotPathVar (PeerSnapshotFile <$> peerSnapshotPath)
 #endif
 
 updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
@@ -849,25 +851,20 @@ updateLedgerPeerSnapshot startupTracer
           <- liftIO $ readPeerSnapshotFile snapshotFile
         lps <- case eSnapshot of
           Left e -> do
-            traceL $ NetworkConfigUpdateError e
             case ncConsensusMode of
-              GenesisMode -> error "updateLedgerPeerSnapshot error"
-              PraosMode   -> empty
+              GenesisMode -> error $ Text.unpack e
+              PraosMode   -> empty <$ traceL $ NetworkConfigUpdateError e
           Right lps -> pure lps
         fileSlot <- case lps of
           LedgerBigPeerSnapshotV23 pt magic _pools
             | networkMagic == magic, BlockPoint { atSlot } <- pt -> pure atSlot
-            | GenesisPoint <- pt -> do
-                traceL $ NetworkConfigUpdateError "Invalid peer snapshot file"
-                error "updateLedgerPeerSnapshot error"
-            | otherwise -> do
-                traceL . NetworkConfigUpdateError . pack $
-                  "NetworkMagic " <> show networkMagic <> " doesn't match "
-                  <> "peer snapshot NetworkMagic " <> show magic
-                error "updateLedgerPeerSnapshot error"
-          LedgerPeerSnapshotV2 {} -> do
-            traceL $ NetworkConfigUpdateError "Unsupported legacy peer snapshot version."
-            error "updateLedgerPeerSnapshot error"
+            | GenesisPoint <- pt ->
+                error "GenesisPoint is not a valid value in the peer snapshot file"
+            | otherwise -> error $
+                "NetworkMagic " <> show networkMagic <> " doesn't match "
+                <> "peer snapshot NetworkMagic " <> show magic
+          LedgerPeerSnapshotV2 {} ->
+            error "Unsupported legacy peer snapshot version."
         case afterSlot of
           Always -> do
             traceL $ LedgerPeerSnapshotLoaded fileSlot
@@ -1008,36 +1005,3 @@ mkDiffusionConfiguration
       targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers nc,
       targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers nc
     }
-
-
-producerAddresses
-  :: NetworkTopology RelayAccessPoint
-  -> ( [(HotValency, WarmValency, Map RelayAccessPoint (LocalRootConfig PeerTrustable))]
-     , Map RelayAccessPoint PeerAdvertise
-     )
-  -- ^ local roots & public roots
-producerAddresses RealNodeTopology { ntLocalRootPeersGroups
-                                   , ntPublicRootPeers
-                                   } =
-  ( map (\lrp -> ( hotValency lrp
-                 , warmValency lrp
-                 , Map.fromList
-                 . map (\(addr, peerAdvertise) ->
-                         ( addr
-                         , LocalRootConfig {
-                             diffusionMode = rootDiffusionMode lrp,
-                             peerAdvertise,
-                             extraLocalRootFlags = trustable lrp,
-                           }
-                         )
-                       )
-                 . rootConfigToRelayAccessPoint
-                 $ localRoots lrp
-                 )
-        )
-        (groups ntLocalRootPeersGroups)
-  , foldMap ( Map.fromList
-            . rootConfigToRelayAccessPoint
-            . publicRoots
-            ) ntPublicRootPeers
-  )
