@@ -284,7 +284,7 @@ data SeverityS
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)
--- Nothing level means show messages with severity >= level
+-- Just level means show messages with severity >= level
 newtype SeverityF = SeverityF (Maybe SeverityS)
   deriving stock Eq
 

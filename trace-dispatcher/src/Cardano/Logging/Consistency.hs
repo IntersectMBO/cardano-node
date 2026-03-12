@@ -21,13 +21,13 @@ newtype NSLookup = NSLookup (Map.Map T.Text NSLookup)
 
 
 -- | Checks if all namespaces in this configuration are legal.
---   Legal in this case means that it can be found by a hierarchcical
+--   Legal in this case means that it can be found by a hierarchical
 --   lookup in all namespaces.
 --   Warns if namespaces in all namespaces are not unique,
 --   Warns if namespaces in all namespaces are ending in the
 --   middle of another namespace.
 --   The namespaces in allNamespaces are consistent with the namespaces for the
---   severityFor, privacyFor, detailsFor, documentFor and metricsDofFor functions.
+--   severityFor, privacyFor, detailsFor, documentFor and metricsDocFor functions.
 checkTraceConfiguration ::
      FilePath
   -> TraceConfig
@@ -54,7 +54,7 @@ checkTraceConfiguration' trConfig allNamespaces' =
     in allWarnings
 
 -- | Check if a single namespace is legal. Legal in this case means that
---   it can be found by a hierarchcical lookup in all namespaces
+--   it can be found by a hierarchical lookup in all namespaces
 checkNamespace :: NSLookup -> [T.Text] -> Maybe T.Text
 checkNamespace nsLookup ns = go nsLookup ns
   where
