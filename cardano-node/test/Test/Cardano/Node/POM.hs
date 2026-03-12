@@ -28,6 +28,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.TxSubmission.Inbound.V2.Types
 
 import           Data.Bifunctor (first)
 import           Data.Monoid (Last (..))
@@ -294,6 +295,8 @@ eExpectedConfig = do
     , ncResponderCoreAffinityPolicy = NoResponderCoreAffinity
     , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory noDeprecatedOptions
     , ncRpcConfig
+    , ncTxSubmissionLogicVersion = TxSubmissionLogicV1
+    , ncTxSubmissionInitDelay = defaultTxSubmissionInitDelay
     }
 
 -- -----------------------------------------------------------------------------
