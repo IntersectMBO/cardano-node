@@ -248,7 +248,7 @@ test-suite cardano-node-test
                       , cardano-crypto-wrapper
                       , cardano-api
                       , cardano-rpc
-                      , cardano-diffusion:{api, cardano-diffusion}
+                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances}
                       , cardano-protocol-tpraos
                       , cardano-node
                       , cardano-slotting
@@ -261,7 +261,7 @@ test-suite cardano-node-test
                       , iproute
                       , mtl
                       , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
-                      , ouroboros-network:{api, ouroboros-network}
+                      , ouroboros-network:{api, framework, ouroboros-network}
                       , strict-sop-core
                       , text
                       , trace-dispatcher

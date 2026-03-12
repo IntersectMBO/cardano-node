@@ -4,8 +4,8 @@ module Test.Cardano.Node.Json
   ( tests
   ) where
 
-import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
+import           Cardano.Network.OrphanInstances ()
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 import           Data.Maybe (isJust)
@@ -44,13 +44,6 @@ prop_roundtrip_NodeHostAddress_JSON =
     Hedgehog.tripping nha toJSON fromJSON
     Hedgehog.tripping nha encode decode
 
-prop_roundtrip_NodeSetup_JSON :: Property
-prop_roundtrip_NodeSetup_JSON =
-  Hedgehog.property $ do
-    ns <- Hedgehog.forAll genNodeSetup
-    Hedgehog.tripping ns toJSON fromJSON
-    Hedgehog.tripping ns encode decode
-
 prop_roundtrip_NetworkTopology_JSON :: Property
 prop_roundtrip_NetworkTopology_JSON =
   Hedgehog.property $ do
@@ -64,7 +57,7 @@ prop_decode_NetworkTopology_JSON :: Property
 prop_decode_NetworkTopology_JSON =
   Hedgehog.property $ do
     enc <- Hedgehog.forAll genNetworkTopologyEncoding
-    let tp :: Maybe (NetworkTopology RelayAccessPoint)
+    let tp :: Maybe CardanoNetworkTopology
         tp = decode enc
     Hedgehog.assert $ isJust tp
 
