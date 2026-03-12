@@ -262,7 +262,6 @@ test-suite cardano-testnet-test
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
-                      , cardano-node
                       , cardano-prelude
                       , cardano-rpc
                       , cardano-slotting
@@ -282,6 +281,7 @@ test-suite cardano-testnet-test
                       , microlens
                       , monad-control
                       , mtl
+                      , ouroboros-network:api
                       , process
                       , resourcet
                       , regex-compat

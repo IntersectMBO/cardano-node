@@ -14,9 +14,9 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Type.Output
-import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
 

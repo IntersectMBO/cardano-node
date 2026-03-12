@@ -62,7 +62,7 @@ createEnvOptions CardanoTestnetCreateEnvOptions
   , createEnvCreateEnvOptions=ceOptions
   } = do
       conf <- mkConfigAbs outputDir
-      createTestnetEnv
+      void $ createTestnetEnv
         testnetOptions genesisOptions ceOptions
         -- Do not add hashes to the main config file, so that genesis files
         -- can be modified without having to recompute hashes every time.

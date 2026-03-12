@@ -16,8 +16,8 @@ module Cardano.Testnet.Test.Cli.LeadershipSchedule
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
-import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Testnet
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Prelude
 
