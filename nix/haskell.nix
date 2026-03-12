@@ -337,11 +337,13 @@ let
               packages.proto-lens-protobuf-types.components.library.build-tools = [ pkgs.buildPackages.protobuf ];
               packages.cardano-rpc.components.library.build-tools = [ pkgs.buildPackages.protobuf ];
           })
-          ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
+          ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin && !pkgs.stdenv.hostPlatform.isMusl) {
             # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
             # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
             # This work around currently breaks regular builds on macOS with:
             # <no location info>: error: ghc: ghc-iserv terminated (-11)
+            # Excluded for musl: ghc-iserv (musl binary) crashes with SIGILL on musl targets.
+            # Musl builds are same-arch cross-compiles so GHC can run TH in-process (glibc) instead.
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
           ({ config, lib, ... }@args: {
