@@ -149,6 +149,8 @@ nodeRunParser = do
            , pncGenesisConfigFlags = mempty
            , pncResponderCoreAffinityPolicy = mempty
            , pncRpcConfig
+           , pncTxSubmissionLogicVersion = mempty
+           , pncTxSubmissionInitDelay = mempty
            }
 
 parseSocketPath :: Text -- ^ option name
