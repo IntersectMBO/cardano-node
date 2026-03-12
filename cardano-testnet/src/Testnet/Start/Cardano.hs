@@ -36,8 +36,7 @@ import qualified Cardano.Api.Byron as Byron
 import           Cardano.CLI.Type.Common (SigningKeyFile)
 import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
-                   NodeHostIPv4Address (..))
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+                   NodeHostIPv4Address (..), PortNumber)
 import           Cardano.Prelude (NonEmpty ((:|)), canonicalEncodePretty)
 import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..), NodeDescription (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
@@ -108,6 +107,7 @@ createTestnetEnv :: ()
   => HasCallStack
   => MonadIO m
   => MonadThrow m
+  => MonadFail m
   => CardanoTestnetOptions
   -> GenesisOptions
   -> CreateEnvOptions
@@ -143,14 +143,24 @@ createTestnetEnv
 
   liftIOAnnotated . LBS.writeFile configurationFile $ A.encodePretty $ Object config
 
-  -- Create network topology, with abstract IDs in lieu of addresses
+  portNumbers <- forM (NEL.zip (1 :| [2..]) cardanoNodes)
+    (\(i, _nodeOption) -> (i,) <$> H.randomPort testnetDefaultIpv4Address)
+
+  let portNumbersMap = Map.fromList (NEL.toList portNumbers)
+
+  -- Create network topology and write port files
   let nodeIds = fst <$> NEL.zip (1 :| [2..]) cardanoNodes
   forM_ nodeIds $ \i -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
     liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
 
-    let producers = NodeId <$> NEL.filter (/= i) nodeIds
-        topology = Defaults.defaultP2PTopology producers
+    -- Write port file
+    case Map.lookup i portNumbersMap of
+      Just port -> liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show port)
+      Nothing -> throwString $ "Port not found for node " <> show i
+
+    producers <- mapM (idToRemoteAddressP2P portNumbersMap) $ NodeId <$> NEL.filter (/= i) nodeIds
+    let topology = Defaults.defaultP2PTopology producers
     liftIOAnnotated . LBS.writeFile (nodeDataDir </> "topology.json") $ A.encodePretty topology
 
 -- | Starts a number of nodes, as configured by the value of the 'cardanoNodes'
@@ -270,38 +280,23 @@ cardanoTestnet
       , paymentKeyInfoAddr = Text.pack paymentAddr
       }
 
-  portNumbersWithNodeOptions <- forM cardanoNodes
-    (\nodeOption -> (nodeOption,) <$> H.randomPort testnetDefaultIpv4Address)
-
-  let portNumbers = NEL.zip (1 :| [2..]) $ snd <$> portNumbersWithNodeOptions
-      portNumbersMap = Map.fromList (NEL.toList portNumbers)
-
-      idToRemoteAddressP2P :: ()
-        => MonadIO m
-        => HasCallStack
-        => NodeId -> m RelayAccessPoint
-      idToRemoteAddressP2P (NodeId i) = case Map.lookup i portNumbersMap of
-        Just port -> pure $ RelayAccessAddress
-            (showIpv4Address testnetDefaultIpv4Address)
-            port
-        Nothing -> do
-          throwString $ "Found node id that was unaccounted for: " ++ show i
-
-  forM_ portNumbers $ \(i, portNumber) -> do
+  -- Read port numbers from disk (written by createTestnetEnv)
+  portNumbers <- forM (NEL.zip (1 :| [2..]) cardanoNodes) $ \(i, _nodeOption) -> do
     let nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
-    liftIOAnnotated $ IO.createDirectoryIfMissing True nodeDataDir
-    liftIOAnnotated $ writeFile (nodeDataDir </> "port") (show portNumber)
-    let topologyPath = tmpAbsPath </> Defaults.defaultNodeDataDir i </> "topology.json"
+        portPath = nodeDataDir </> "port"
+    portStr <- liftIOAnnotated $ readFile portPath
+    let port = read portStr :: PortNumber
+    let topologyPath = nodeDataDir </> "topology.json"
     tBytes <- liftIOAnnotated $ LBS.readFile topologyPath
     case eitherDecode tBytes of
-      Right (abstractTopology :: P2P.NetworkTopology NodeId) -> do
-        topology <- mapM idToRemoteAddressP2P abstractTopology
-        liftIOAnnotated $ LBS.writeFile topologyPath $ encode topology
+      Right (abstractTopology :: CardanoNetworkTopology) -> do
+        liftIOAnnotated $ LBS.writeFile topologyPath $ encode abstractTopology
       Left e -> do
         -- There can be multiple reasons for why both decodings have failed.
         -- Here we assume, very optimistically, that the user has already
         -- instantiated it with a concrete topology file.
         liftIOAnnotated . putStrLn $ "Could not decode topology file: " <> topologyPath <> ". This may be okay. Reason for decoding failure is:\n" ++ e
+    pure (i, port)
 
   -- If necessary, update the time stamps in Byron and Shelley Genesis files.
   -- This is a QoL feature so that users who edit their configuration files don't
@@ -323,7 +318,12 @@ cardanoTestnet
     let shelleyGenesis' = shelleyGenesis{sgSystemStart = startTime}
     liftIOAnnotated . LBS.writeFile shelleyGenesisFile $ A.encodePretty shelleyGenesis'
 
-  eTestnetNodes <- forConcurrently (NEL.zip (1 :| [2..]) portNumbersWithNodeOptions) $ \(i, (nodeOptions, port)) -> do
+  let portNumbersMap = Map.fromList (NEL.toList portNumbers)
+
+  eTestnetNodes <- forConcurrently (NEL.zip (1 :| [2..]) cardanoNodes) $ \(i, nodeOptions) -> do
+    port <- case Map.lookup i portNumbersMap of
+      Just p -> pure p
+      Nothing -> throwString $ "Port not found for node " <> show i
     let nodeName = Defaults.defaultNodeName i
         nodeDataDir = tmpAbsPath </> Defaults.defaultNodeDataDir i
         nodePoolKeysDir = tmpAbsPath </> Defaults.defaultSpoKeysDir i
@@ -491,6 +491,17 @@ cardanoTestnet
         _ ->
           throwString $ nodeName <> " was unable to produce any blocks for " <> show timeoutSeconds <> "s"
 
+
+idToRemoteAddressP2P :: ()
+  => MonadIO m
+  => HasCallStack
+  => Map.Map Int PortNumber -> NodeId -> m RelayAccessPoint
+idToRemoteAddressP2P portNumbersMap (NodeId i) = case Map.lookup i portNumbersMap of
+  Just port -> pure $ RelayAccessAddress
+      (showIpv4Address testnetDefaultIpv4Address)
+      port
+  Nothing -> do
+    throwString $ "Found node id that was unaccounted for: " ++ show i
 
 -- | A convenience wrapper around `createTestnetEnv` and `cardanoTestnet`
 createAndRunTestnet :: ()
