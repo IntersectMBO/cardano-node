@@ -25,7 +25,7 @@ assignees: ''
 
 ## Definition of Done (DoD)
 
-- [ ] [Acceptance Criteria + User Stories & DoD](https://input-output.atlassian.net/wiki/spaces/QA/pages/3584229468/Acceptance+Criteria+DoD) created and singed-off (by PO, dev & test owners)
+- [ ] [Acceptance Criteria + User Stories & DoD](https://input-output.atlassian.net/wiki/spaces/QA/pages/3584229468/Acceptance+Criteria+DoD) created and signed-off (by PO, dev & test owners)
 - [ ] Builds successfully on CI
 - [ ] Code & Test review (as per Acceptance Criteria)
 - [ ] There is documentation and/or examples for the new functionality (usage/response)
@@ -54,6 +54,6 @@ assignees: ''
 
 ## Acceptance Criteria
 
-Acceptance Criteria & User Stories define here (or in a separate file (linked here) for a big feature)
+Acceptance Criteria & User Stories defined here (or in a separate file (linked here) for a big feature)
 
 Example - https://github.com/intersectmbo/cardano-node/issues/4453

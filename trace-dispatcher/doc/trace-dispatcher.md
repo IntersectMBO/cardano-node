@@ -1,6 +1,6 @@
 # trace-dispatcher: efficient, simple and flexible program tracing
 
-`trace-dispatcher` is a library that enables definition of __tracing systems__ -- systems that collect and manages traces -- as evidence of program execution.
+`trace-dispatcher` is a library that enables definition of __tracing systems__ -- systems that collect and manage traces -- as evidence of program execution.
 
 - [trace-dispatcher: efficient, simple and flexible program tracing](#trace-dispatcher-efficient-simple-and-flexible-program-tracing)
 - [Introduction](#introduction)
@@ -343,7 +343,7 @@ TraceOptions:
 TraceOptionForwarder: # Configure the forwarder
     maxReconnectDelay: 20
 
-# Any metrics emittted will get this prefix
+# Any metrics emitted will get this prefix
 TraceOptionMetricsPrefix: "cardano.node.metrics."
 ```
 
@@ -746,7 +746,7 @@ The following document is periodically regenerated to provide comprehensive docu
 
 [Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/tracers_doc_generated)
 
-For a quick start for administrators transitioning to new the new tracing system, refer to the following document:
+For a quick start for administrators transitioning to the new tracing system, refer to the following document:
 
 [New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 

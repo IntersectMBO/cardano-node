@@ -43,7 +43,7 @@ This is the release process for node release hot fixes:
 
 # Rotating Release Engineer Role
 
-All sprints are aligned across the node and it's components. At the end of a sprint cycle the new rotating Release Engineer is decided on by the leadership team.
+All sprints are aligned across the node and its components. At the end of a sprint cycle the new rotating Release Engineer is decided on by the leadership team.
 This person's primary duties are integration of new releases of dependencies up the stack to the node. They serve this role until the release is finalized
 according to the above release process (ideally 1 sprint cycle).
 The Release Engineer works with the Dev Leads to decide which changes should be included in their component, including any in-flight PRs that haven't been merged yet.

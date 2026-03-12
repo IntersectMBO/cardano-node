@@ -87,7 +87,7 @@
 
 ## 2.0.0 -- May 2023
 
-* First version that diverges from caradno-node versioning scheme
+* First version that diverges from cardano-node versioning scheme
 
 * GHC-9.2 support
 
