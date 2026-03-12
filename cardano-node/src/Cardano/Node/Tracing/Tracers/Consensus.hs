@@ -772,6 +772,8 @@ instance (HasHeader header, ConvertRawHash header) =>
                                   (renderHeaderHash (Proxy @header))
                                   (AF.headHash af))
               , "length" .= toJSON (fragmentLength' af)]
+              ++
+              [ "deltaq" .= toJSON gsv | dtal >= DDetailed ]
         where
           -- NOTE: this ignores the Byron era with its EBB complication:
           -- the length would be underestimated by 1, if the AF is anchored
