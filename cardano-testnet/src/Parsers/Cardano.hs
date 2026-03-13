@@ -33,6 +33,7 @@ optsTestnet = CardanoTestnetCliOptions
   <*> pGenesisOptions
   <*> pNodeEnvironment
   <*> pUpdateTimestamps
+  <*> pOnChainParams
 
 optsCreateTestnet :: Parser CardanoTestnetCreateEnvOptions
 optsCreateTestnet = CardanoTestnetCreateEnvOptions
