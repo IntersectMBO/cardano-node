@@ -7,7 +7,7 @@ import           Cardano.Logging
 import           Cardano.Logging.Prometheus.TCPServer (TracePrometheusSimple (..),
                    runPrometheusSimple)
 import           Cardano.Logging.Types.TraceMessage (TraceMessage (..))
-import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts)
+import           Cardano.ReCon.Cli (CliOptions (..), Mode (..), opts, timeunitToMicrosecond)
 import           Cardano.ReCon.Common (extractProps)
 import           Cardano.ReCon.LTL.Check (checkFormula, prettyError)
 import           Cardano.ReCon.LTL.Lang.Formula
@@ -37,13 +37,13 @@ import           Data.Maybe (fromMaybe, isJust, listToMaybe)
 import           Data.Text (Text, unpack)
 import qualified Data.Text as Text
 import           Data.Traversable (for)
+import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Network.HostName (HostName)
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (Success)
 import           System.Exit (die)
 import qualified System.Metrics as EKG
 
-import           GHC.IO.Encoding (setLocaleEncoding, utf8)
 import           Streaming
 
 
@@ -107,10 +107,6 @@ checkOffline tr eventDuration file phis = do
     check idx tr phi events
   threadDelay 200_000 -- Give the tracer a grace period to output the logs to whatever backend
 
--- | Convert time unit used in the yaml (currently second) input to μs.
-unitToMicrosecond :: Word -> Word
-unitToMicrosecond = (1_000_000 *)
-
 setupTraceDispatcher :: Maybe FilePath -> IO (Trace IO App.TraceMessage)
 setupTraceDispatcher optTraceDispatcherConfigFile = do
   stdTr <- standardTracer
@@ -164,7 +160,7 @@ main = do
         <> " is syntactically invalid:\n"
         <> Text.unlines (fmap (("— " <>) . prettyError) (e : es))
     (_, []) -> pure ()
-  let formulas' = fmap (interpTimeunit (\u -> unitToMicrosecond u `div` fromIntegral options.duration)) formulas
+  let formulas' = fmap (interpTimeunit (\u -> timeunitToMicrosecond options.timeunit u `div` fromIntegral options.duration)) formulas
   tr <- setupTraceDispatcher options.traceDispatcherCfg
   case options.mode of
     Offline -> do
