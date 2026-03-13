@@ -29,4 +29,4 @@
 
 ## 8.1.0
 
-- [Paramaterize default node configuration on era](https://github.com/intersectmbo/cardano-node/pull/5211)
+- [Parameterize default node configuration on era](https://github.com/intersectmbo/cardano-node/pull/5211)

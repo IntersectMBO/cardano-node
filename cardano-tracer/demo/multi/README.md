@@ -4,7 +4,7 @@ Run `./run.sh PASS FMODE`, where `FMODE` is forwarders' mode: `Responder` or `In
 
 As a result, 3 `demo-forwarder`s and one `cardano-tracer` will be launched. It imitates the real-world situation when `N` nodes work with one `cardano-tracer`.
 
-Please note that if you run the script with `Responder` mode, `demo-forwarder`s work as a servers, and `cardano-tracer` works as a client:
+Please note that if you run the script with `Responder` mode, `demo-forwarder`s work as servers, and `cardano-tracer` works as a client:
 
 ```
 +------------------+
