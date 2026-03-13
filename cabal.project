@@ -81,7 +81,7 @@ if impl (ghc >= 9.12)
 source-repository-package
    type: git
    location: https://github.com/input-output-hk/ekg-forward.git
-   tag: d06caa8f53d945b9d252c9c7a719983767926140
-   --sha256: sha256-sQj2B5a9OwgLAIVoyGxSFww7aJ81Vf0DVUkYJepA4yo=
+   tag: c72c9a29045431df7484b665bed33c12ea71d0ac
+   --sha256: sha256-b87qt8RMI4gNPF8QTrRjfS5KK2/JhbxUp5ijscn2Vf8=
    subdir:
      .

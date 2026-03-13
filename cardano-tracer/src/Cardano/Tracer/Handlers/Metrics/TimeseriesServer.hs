@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,7 +17,7 @@ import           Cardano.Tracer.Timeseries
 import           Control.Monad (guard)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8Lenient)
 import qualified Data.Text.Encoding as T
 import           Network.HTTP.Types
 import           Network.Wai
@@ -26,16 +25,16 @@ import           Network.Wai.Handler.Warp hiding (run)
 import           Network.Wai.Handler.WarpTLS
 import           System.Time.Extra (sleep)
 
-parseTimeseriesQuery :: Request -> Maybe Text
+-- | GET timeseries/query
+parseTimeseriesQuery :: Request -> Maybe ()
 parseTimeseriesQuery request = do
   guard (request.pathInfo == ["timeseries", "query"])
-  case queryToQueryText request.queryString of
-    [("query", Just str)] -> pure str
-    _ -> Nothing
+  guard (request.requestMethod == methodPost)
 
--- | timeseries/query?query=...
 timeseriesApp :: TimeseriesHandle -> Application
-timeseriesApp handle (parseTimeseriesQuery -> Just query) send = do
+timeseriesApp handle request@(parseTimeseriesQuery -> Just ()) send = do
+  bs <- consumeRequestBodyStrict request
+  let query = decodeUtf8Lenient (BL.toStrict bs)
   now <- getTimeMs
   execute handle (fromIntegral now) query >>= \case
     Left err -> send $
@@ -57,6 +56,7 @@ runTimeseriesServer tr tracerConfig endpoint handle = do
   traceWith tr TracerStartedTimeseries
     { ttTimeseriesEndpoint = endpoint
     }
+
 
   let
     settings :: Settings

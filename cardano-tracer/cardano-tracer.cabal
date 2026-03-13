@@ -122,8 +122,8 @@ library
 
                         Cardano.Tracer.Handlers.Metrics.Monitoring
                         Cardano.Tracer.Handlers.Metrics.Prometheus
-                        Cardano.Tracer.Handlers.Metrics.TimeseriesServer
                         Cardano.Tracer.Handlers.Metrics.Servers
+                        Cardano.Tracer.Handlers.Metrics.TimeseriesServer
                         Cardano.Tracer.Handlers.Metrics.Utils
 
                         Cardano.Tracer.Handlers.Notifications.Check
