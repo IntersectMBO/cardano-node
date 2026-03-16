@@ -10,6 +10,7 @@ import           Cardano.Timeseries.Interface (ExecutionError (..))
 import           Cardano.Tracer.Acceptors.Utils (getTimeMs)
 import           Cardano.Tracer.Configuration (Certificate (..), Endpoint, TracerConfig (..),
                    epForceSSL, setEndpoint)
+import           Cardano.Tracer.Handlers.Metrics.DDoSProtectionMiddleware
 import           Cardano.Tracer.Handlers.Metrics.Utils (contentHdrUtf8Text)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Timeseries
@@ -24,6 +25,14 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp hiding (run)
 import           Network.Wai.Handler.WarpTLS
 import           System.Time.Extra (sleep)
+
+ddosProtectionMiddlewareConfig :: DDoSProtectionMiddlewareConfig
+ddosProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
+  requestBodySizeLimitKB = 2 * 1024,
+  requestRateWindowSec = 60,
+  requestRateLimitSec = 30,
+  responseTimeLimitSec = 5
+}
 
 -- | GET timeseries/query
 parseTimeseriesQuery :: Request -> Maybe ()
@@ -57,6 +66,7 @@ runTimeseriesServer tr tracerConfig endpoint handle = do
     { ttTimeseriesEndpoint = endpoint
     }
 
+  middleware <- mkDDoSProtectionMiddleware ddosProtectionMiddlewareConfig
 
   let
     settings :: Settings
@@ -67,7 +77,7 @@ runTimeseriesServer tr tracerConfig endpoint handle = do
       tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
 
     application :: Application
-    application = timeseriesApp handle
+    application = middleware $ timeseriesApp handle
 
     run :: IO ()
     run | Just True <- epForceSSL endpoint , Just cert <- tlsCertificate tracerConfig

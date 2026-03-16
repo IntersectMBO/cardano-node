@@ -120,6 +120,7 @@ library
                         Cardano.Tracer.Handlers.Logs.TraceObjects
                         Cardano.Tracer.Handlers.Logs.Utils
 
+                        Cardano.Tracer.Handlers.Metrics.DDoSProtectionMiddleware
                         Cardano.Tracer.Handlers.Metrics.Monitoring
                         Cardano.Tracer.Handlers.Metrics.Prometheus
                         Cardano.Tracer.Handlers.Metrics.Servers
@@ -202,6 +203,8 @@ library
                       , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2
+                      , wai-extra
+                      , wai-rate-limit
                       , warp ^>= 3.4
                       , warp-tls
                       , yaml
