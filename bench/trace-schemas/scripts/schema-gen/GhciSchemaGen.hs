@@ -24,6 +24,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Char8 as BL8
 import Control.Monad (forM)
 
 --------------------------------------------------------------------------------
@@ -608,7 +609,7 @@ buildDataFromFieldMap typeOutDir ctor fieldVarMap varTypes lvl base = do
   case Map.lookup ctor fieldVarMap >>= Map.lookup lvl of
     Nothing -> pure base
     Just m -> do
-      props <- KM.fromList <$> mapM (buildProp typeOutDir ctor varTypes) (Map.toList m)
+      props <- KM.fromList <$> mapM (buildProp typeOutDir ctor fieldVarMap varTypes) (Map.toList m)
       let base' =
             KM.insert (K.fromString "type") (A.String "object") $
             KM.insert (K.fromString "additionalProperties") (A.Bool True) base
@@ -616,16 +617,17 @@ buildDataFromFieldMap typeOutDir ctor fieldVarMap varTypes lvl base = do
 
 buildProp :: FilePath
           -> ConstructorName
+          -> FieldVarMap
           -> VarTypes
           -> (String, String)
           -> IO (A.Key, A.Value)
-buildProp typeOutDir ctor varTypes (k, v)
+buildProp typeOutDir ctor fieldVarMap varTypes (k, v)
   | v == literalStringVar = pure (K.fromString k, A.object ["type" A..= ("string" :: String)])
   | otherwise =
       case Map.lookup ctor varTypes >>= Map.lookup v of
         Nothing -> pure (K.fromString k, A.object ["type" A..= ("string" :: String)])
         Just ty -> do
-          schema <- typeToSchema typeOutDir ty
+          schema <- typeToSchema typeOutDir fieldVarMap varTypes Set.empty ty
           pure (K.fromString k, schema)
 
 updateProp :: FilePath
@@ -642,7 +644,7 @@ updateProp typeOutDir ctor fieldVarMap varTypes lvl key old =
     Just v ->
       case Map.lookup ctor varTypes >>= Map.lookup v of
         Nothing -> pure old
-        Just ty -> typeToSchema typeOutDir ty
+        Just ty -> typeToSchema typeOutDir fieldVarMap varTypes Set.empty ty
 
 -- Namespace matching uses suffix match, so full path or tail matches work.
 splitDot :: String -> [String]
@@ -666,13 +668,13 @@ isListSuffixOf xs ys = xs == drop (length ys - length xs) ys
 
 -- Type mapping
 
-typeToSchema :: FilePath -> String -> IO A.Value
-typeToSchema typeOutDir ty
+typeToSchema :: FilePath -> FieldVarMap -> VarTypes -> Set.Set String -> String -> IO A.Value
+typeToSchema typeOutDir fieldVarMap varTypes seen ty
   | isList ty = do
-      item <- typeToSchema typeOutDir (listElem ty)
+      item <- typeToSchema typeOutDir fieldVarMap varTypes seen (listElem ty)
       pure (A.object ["type" A..= ("array" :: String), "items" A..= item])
   | isMaybe ty = do
-      item <- typeToSchema typeOutDir (maybeElem ty)
+      item <- typeToSchema typeOutDir fieldVarMap varTypes seen (maybeElem ty)
       pure (A.object ["anyOf" A..= [A.object ["type" A..= ("null" :: String)], item]])
   | baseTypeName ty `elem` ["Text","String","ByteString","ShortByteString","ShortText"] = pure (A.object ["type" A..= ("string" :: String)])
   | baseTypeName ty == "Bool" = pure (A.object ["type" A..= ("boolean" :: String)])
@@ -685,7 +687,9 @@ typeToSchema typeOutDir ty
         _ -> do
           let ref = "types/" ++ name ++ ".schema.json"
           let out = typeOutDir </> name ++ ".schema.json"
-          ensureTypeStub out name
+          if Set.member name seen
+            then pure ()
+            else ensureTypeSchema out name fieldVarMap varTypes (Set.insert name seen)
           pure (A.object ["$ref" A..= ref])
 
 isList :: String -> Bool
@@ -716,17 +720,106 @@ baseTypeName s =
 stripPrefix :: String -> String -> Maybe String
 stripPrefix pre s = if pre `isPrefixOf` s then Just (drop (length pre) s) else Nothing
 
-ensureTypeStub :: FilePath -> String -> IO ()
-ensureTypeStub out name = do
-  exists <- doesFileExist out
-  if exists
-    then pure ()
-    else do
-      createDirectoryIfMissing True (takeDirectory out)
-      let v = A.object
-            [ "$schema" A..= ("https://json-schema.org/draft/2020-12/schema" :: String)
-            , "title" A..= name
-            , "type" A..= ("object" :: String)
-            , "additionalProperties" A..= True
+ensureTypeSchema :: FilePath -> String -> FieldVarMap -> VarTypes -> Set.Set String -> IO ()
+ensureTypeSchema out name fieldVarMap varTypes seen = do
+  createDirectoryIfMissing True (takeDirectory out)
+  schema <- namedTypeSchema fieldVarMap varTypes seen name
+  BL.writeFile out (AP.encodePretty schema)
+
+namedTypeSchema :: FieldVarMap -> VarTypes -> Set.Set String -> String -> IO A.Value
+namedTypeSchema fieldVarMap varTypes seen name = do
+  structural <- structuralTypeSchema fieldVarMap varTypes seen name
+  pure $
+    case structural of
+      A.Object o ->
+        A.Object $
+          KM.insert (K.fromString "$schema") (A.String "https://json-schema.org/draft/2020-12/schema") $
+          KM.insert (K.fromString "title") (A.String (T.pack name)) o
+      v -> v
+
+structuralTypeSchema :: FieldVarMap -> VarTypes -> Set.Set String -> String -> IO A.Value
+structuralTypeSchema fieldVarMap varTypes seen name
+  | isNamedStringType name = pure (A.object ["type" A..= ("string" :: String)])
+  | isNamedIntegerType name = pure (A.object ["type" A..= ("integer" :: String)])
+  | isNamedNumberType name = pure (A.object ["type" A..= ("number" :: String)])
+  | isNamedBooleanType name = pure (A.object ["type" A..= ("boolean" :: String)])
+  | isNamedNonEmptyType name =
+      pure (A.object ["type" A..= ("array" :: String), "minItems" A..= (1 :: Int)])
+  | isNamedWithOriginType name =
+      pure (A.object
+        [ "oneOf" A..=
+            [ A.object
+                [ "type" A..= ("object" :: String)
+                , "properties" A..= A.object
+                    [ "tag" A..= A.object ["type" A..= ("string" :: String)] ]
+                , "required" A..= ["tag" :: String]
+                , "additionalProperties" A..= True
+                ]
+            , A.object ["type" A..= ("string" :: String)]
             ]
-      BL.writeFile out (AP.encodePretty v)
+        ])
+  | otherwise =
+      case Map.lookup name fieldVarMap of
+        Just byLevel | not (Map.null byLevel) -> do
+          props <- mergedPropsForType fieldVarMap varTypes seen name byLevel
+          pure (A.object
+            [ "type" A..= ("object" :: String)
+            , "additionalProperties" A..= True
+            , "properties" A..= A.Object props
+            ])
+        _ ->
+          pure (A.object
+            [ "type" A..= ("object" :: String)
+            , "additionalProperties" A..= True
+            ])
+
+mergedPropsForType
+  :: FieldVarMap
+  -> VarTypes
+  -> Set.Set String
+  -> String
+  -> Map.Map DetailLevel (Map.Map String String)
+  -> IO A.Object
+mergedPropsForType fieldVarMap varTypes seen ctor byLevel = do
+  let fieldVars =
+        foldl' (Map.unionWith (++)) Map.empty
+          [ Map.map (:[]) lvlMap
+          | lvlMap <- Map.elems byLevel
+          ]
+  props <- mapM buildMergedProp (Map.toList fieldVars)
+  pure (KM.fromList props)
+ where
+  buildMergedProp (fieldName, vars) = do
+    schemas <- mapM schemaForVar vars
+    pure (K.fromString fieldName, mergeSchemas schemas)
+
+  schemaForVar var
+    | var == literalStringVar = pure (A.object ["type" A..= ("string" :: String)])
+    | otherwise =
+        case Map.lookup ctor varTypes >>= Map.lookup var of
+          Nothing -> pure (A.object [])
+          Just ty -> typeToSchema "bench/trace-schemas/types" fieldVarMap varTypes seen ty
+
+mergeSchemas :: [A.Value] -> A.Value
+mergeSchemas [] = A.object []
+mergeSchemas [x] = x
+mergeSchemas xs =
+  let unique = dedupeValues xs
+  in if length unique == 1 then head unique else A.object ["anyOf" A..= unique]
+
+dedupeValues :: [A.Value] -> [A.Value]
+dedupeValues = reverse . foldl' step []
+ where
+  step acc v =
+    let key = BL8.unpack (A.encode v)
+    in if any (\existing -> BL8.unpack (A.encode existing) == key) acc
+         then acc
+         else v : acc
+
+isNamedStringType, isNamedIntegerType, isNamedNumberType, isNamedBooleanType, isNamedNonEmptyType, isNamedWithOriginType :: String -> Bool
+isNamedStringType name = name `elem` ["Text", "String", "ByteString", "ShortByteString", "ShortText", "HeaderHash"]
+isNamedIntegerType name = name `elem` ["Int", "Integer", "Word", "Word8", "Word16", "Word32", "Word64", "Natural", "SlotNo", "EpochNo", "BlockNo"]
+isNamedNumberType name = name `elem` ["Double", "Float", "NominalDiffTime", "DiffTime"]
+isNamedBooleanType name = name == "Bool"
+isNamedNonEmptyType name = name == "NonEmpty" || ".NonEmpty" `isSuffixOf` name
+isNamedWithOriginType name = name == "WithOrigin" || ".WithOrigin" `isSuffixOf` name

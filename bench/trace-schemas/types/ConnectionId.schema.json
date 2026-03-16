@@ -1,6 +1,9 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "additionalProperties": true,
+    "properties": {
+        "connectionId": {}
+    },
     "title": "ConnectionId",
     "type": "object"
 }

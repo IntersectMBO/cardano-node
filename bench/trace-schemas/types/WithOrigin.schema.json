@@ -1,6 +1,21 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "additionalProperties": true,
-    "title": "WithOrigin",
-    "type": "object"
+    "oneOf": [
+        {
+            "additionalProperties": true,
+            "properties": {
+                "tag": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "tag"
+            ],
+            "type": "object"
+        },
+        {
+            "type": "string"
+        }
+    ],
+    "title": "WithOrigin"
 }
