@@ -16,6 +16,7 @@ module Testnet.Process.Cli.SPO
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Api.Experimental.Certificate (PoolId)
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Shelley.LedgerState as L

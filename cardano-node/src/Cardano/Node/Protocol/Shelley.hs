@@ -26,6 +26,7 @@ module Cardano.Node.Protocol.Shelley
 
 import           Cardano.Api hiding (FileError)
 import qualified Cardano.Api as Api
+import           Cardano.Api.Experimental.Certificate (OperationalCertificate (..), getHotKey)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
