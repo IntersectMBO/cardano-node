@@ -29,15 +29,19 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Exception
+import           Control.Monad
 import qualified Data.ByteString.Short as SBS
 import           Data.Default.Class
 import qualified Data.Map.Strict as M
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import           Data.Word (Word64)
 import           Lens.Micro
 
 import           Testnet.Components.Query
 import           Testnet.Process.Run
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types
+import           Testnet.Types (nodeConnectionInfo)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -56,7 +60,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
       eraName = eraToString sbe
       options = def{cardanoNodeEra = AnyShelleyBasedEra sbe, cardanoEnableRpc = RpcEnabled}
 
-  TestnetRuntime
+  tr@TestnetRuntime
     { testnetMagic
     , configurationFile
     , testnetNodes = node0@TestnetNode{nodeSprocket} : _
@@ -79,6 +83,20 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
     ChainTipAtGenesis -> H.failure -- impossible
     ChainTip (SlotNo slot) (HeaderHash hash) (BlockNo blockNo) -> pure (slot, SBS.fromShort hash, blockNo)
 
+  -----------------------------------
+  -- Compute expected tip timestamp
+  -----------------------------------
+  connectionInfo <- nodeConnectionInfo tr 0
+  (systemStart, eraHistory) <-
+    (H.leftFail <=< H.leftFailM) . H.evalIO $
+      executeLocalStateQueryExpr connectionInfo VolatileTip $ do
+        ss <- querySystemStart
+        eh <- queryEraHistory
+        pure $ (,) <$> ss <*> eh
+  expectedTimestamp :: Word64 <- H.leftFail $ do
+    utcTime <- slotToUTCTime systemStart eraHistory (SlotNo slot)
+    pure (round $ utcTimeToPOSIXSeconds utcTime * 1000)
+
   --------------
   -- RPC queries
   --------------
@@ -99,7 +117,7 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   pparamsResponse ^. U5c.ledgerTip . U5c.slot === slot
   pparamsResponse ^. U5c.ledgerTip . U5c.hash === blockHash
   pparamsResponse ^. U5c.ledgerTip . U5c.height === blockNo
-  pparamsResponse ^. U5c.ledgerTip . U5c.timestamp === 0 -- not possible to implement at this moment
+  pparamsResponse ^. U5c.ledgerTip . U5c.timestamp === expectedTimestamp
 
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
   let chainParams = pparamsResponse ^. U5c.values . U5c.cardano
