@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.Metrics.Monitoring
@@ -9,6 +9,7 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.DDoSProtectionMiddleware
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
@@ -22,10 +23,18 @@ import qualified Data.Text as T
 import           Network.HTTP.Types
 import           Network.Wai
 import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
-import           Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
+import           Network.Wai.Handler.WarpTLS (TLSSettings, runTLS, tlsSettingsChain)
 import qualified System.Metrics as EKG
 import           System.Remote.Monitoring.Wai
 import           System.Time.Extra (sleep)
+
+ddosProtectionMiddlewareConfig :: DDoSProtectionMiddlewareConfig
+ddosProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
+  requestBodySizeLimitKB = 2 * 1024,
+  requestRateWindowSec = 60,
+  requestRateLimitSec = 120,
+  responseTimeLimitSec = 5
+}
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -43,7 +52,7 @@ runMonitoringServer
   -> IO RouteDictionary
   -> IO ()
 runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
-  let TracerEnv 
+  let TracerEnv
         { teConfig = TracerConfig
           { tlsCertificate }
         , teTracer
@@ -57,6 +66,8 @@ runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
     }
   dummyStore <- EKG.newStore
 
+  middleware <- mkDDoSProtectionMiddleware ddosProtectionMiddlewareConfig
+
   let
     settings :: Settings
     settings = setEndpoint endpoint defaultSettings
@@ -66,7 +77,7 @@ runMonitoringServer tracerEnv endpoint computeRoutes_autoUpdate = do
       tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
 
     application :: Application
-    application = renderEkg dummyStore computeRoutes_autoUpdate
+    application = middleware $ renderEkg dummyStore computeRoutes_autoUpdate
 
     run :: IO ()
     run | Just True <- epForceSSL endpoint

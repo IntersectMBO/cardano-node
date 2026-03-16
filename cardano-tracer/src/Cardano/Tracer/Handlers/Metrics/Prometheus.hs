@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -11,6 +11,7 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 import           Cardano.Logging.Prometheus.Exposition (renderExpositionFromSampleWith)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.DDoSProtectionMiddleware
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.MetaTrace
 
@@ -30,9 +31,17 @@ import qualified Data.Text.Lazy.Encoding as TL
 import           Network.HTTP.Types
 import           Network.Wai
 import           Network.Wai.Handler.Warp (Settings, defaultSettings, runSettings)
-import           Network.Wai.Handler.WarpTLS (runTLS, tlsSettingsChain, TLSSettings)
+import           Network.Wai.Handler.WarpTLS (TLSSettings, runTLS, tlsSettingsChain)
 import           System.Metrics as EKG (Store, sampleAll)
 import           System.Time.Extra (sleep)
+
+ddosProtectionMiddlewareConfig :: DDoSProtectionMiddlewareConfig
+ddosProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
+  requestBodySizeLimitKB = 2 * 1024,
+  requestRateWindowSec = 60,
+  requestRateLimitSec = 120,
+  responseTimeLimitSec = 5
+}
 
 -- | Runs a simple HTTP server that listens on @endpoint@.
 --
@@ -103,6 +112,9 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
   traceWith teTracer TracerStartedPrometheus
     { ttPrometheusEndpoint = endpoint
     }
+
+  middleware <- mkDDoSProtectionMiddleware ddosProtectionMiddlewareConfig
+
   let
     settings :: Settings
     settings = setEndpoint endpoint defaultSettings
@@ -112,7 +124,7 @@ runPrometheusServer tracerEnv endpoint computeRoutes_autoUpdate = do
       tlsSettingsChain certificateFile (fromMaybe [] certificateChain) certificateKeyFile
 
     application :: Application
-    application = renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
+    application = middleware $ renderPrometheus computeRoutes_autoUpdate noSuffix teMetricsHelp promLabels
 
     run :: IO ()
     run | Just True <- epForceSSL endpoint
