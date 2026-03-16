@@ -1,0 +1,15 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Local.Bearer.RecvHeaderStart"
+}

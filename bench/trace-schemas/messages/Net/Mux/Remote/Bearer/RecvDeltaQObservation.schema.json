@@ -1,0 +1,24 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "length": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            },
+            "timeLocal": {
+                "type": "string"
+            },
+            "timeRemote": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Remote.Bearer.RecvDeltaQObservation"
+}

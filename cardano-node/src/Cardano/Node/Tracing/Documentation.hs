@@ -85,6 +85,10 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.Driver.Stateful as Stateful (TraceSendRecv)
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
+import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.Churn (ChurnCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
@@ -339,7 +343,7 @@ docTracersFirstPhase condConfigFileName = do
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge"]
+                ["Forge", "StateInfo"]
     configureTracers configReflection trConfig [forgeKESInfoTr]
     forgeKESInfoTrDoc <- documentTracer (forgeKESInfoTr ::
       Logging.Trace IO (Consensus.TraceLabelCreds HotKey.KESInfo))
@@ -552,12 +556,54 @@ docTracersFirstPhase condConfigFileName = do
     dtMuxTrDoc <- documentTracer (dtMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.Trace))
 
+    dtChannelTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Remote", "Channel"]
+    configureTracers configReflection trConfig [dtChannelTracer]
+    dtChannelTrDoc <- documentTracer (dtChannelTracer ::
+      Logging.Trace IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.ChannelTrace))
+
+    dtBearerTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Remote", "Bearer"]
+    configureTracers configReflection trConfig [dtBearerTracer]
+    dtBearerTrDoc <- documentTracer (dtBearerTracer ::
+      Logging.Trace IO (Mux.WithBearer (ConnectionId RemoteAddress) Mux.BearerTrace))
+
+    dtHandshakeTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Handshake", "Remote"]
+    configureTracers configReflection trConfig [dtHandshakeTracer]
+    dtHandshakeTrDoc <- documentTracer (dtHandshakeTracer ::
+      Logging.Trace IO (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion))
+
     dtLocalMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Net", "Mux", "Local"]
     configureTracers configReflection trConfig [dtLocalMuxTr]
     dtLocalMuxTrDoc <- documentTracer (dtLocalMuxTr ::
       Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.Trace))
+
+    dtLocalChannelTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Local", "Channel"]
+    configureTracers configReflection trConfig [dtLocalChannelTracer]
+    dtLocalChannelTrDoc <- documentTracer (dtLocalChannelTracer ::
+      Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.ChannelTrace))
+
+    dtLocalBearerTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Mux", "Local", "Bearer"]
+    configureTracers configReflection trConfig [dtLocalBearerTracer]
+    dtLocalBearerTrDoc <- documentTracer (dtLocalBearerTracer ::
+      Logging.Trace IO (Mux.WithBearer (ConnectionId LocalAddress) Mux.BearerTrace))
+
+    dtLocalHandshakeTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Handshake", "Local"]
+    configureTracers configReflection trConfig [dtLocalHandshakeTracer]
+    dtLocalHandshakeTrDoc <- documentTracer (dtLocalHandshakeTracer ::
+      Logging.Trace IO (NtC.HandshakeTr LocalAddress NtC.NodeToClientVersion))
 
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -611,7 +657,7 @@ docTracersFirstPhase condConfigFileName = do
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      ["Net", "PeerSelection", "Counters"]
+      ["Net", "PeerSelection"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
       Logging.Trace IO (PeerSelectionCounters (Cardano.ViewExtraPeers (Cardano.PublicRootPeers.ExtraPeers Socket.SockAddr))))
@@ -751,7 +797,13 @@ docTracersFirstPhase condConfigFileName = do
             <> txSubmission2TrDoc
 -- Diffusion
             <> dtMuxTrDoc
+            <> dtChannelTrDoc
+            <> dtBearerTrDoc
+            <> dtHandshakeTrDoc
             <> dtLocalMuxTrDoc
+            <> dtLocalChannelTrDoc
+            <> dtLocalBearerTrDoc
+            <> dtLocalHandshakeTrDoc
             <> dtDiffusionInitializationTrDoc
             <> dtLedgerPeersTrDoc
 -- DiffusionTracersExtra P2P

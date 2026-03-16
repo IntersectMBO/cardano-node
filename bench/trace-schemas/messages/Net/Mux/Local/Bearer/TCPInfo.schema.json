@@ -1,0 +1,18 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "len": {
+                "$ref": "types/GHC.Word.Word16.schema.json"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Local.Bearer.TCPInfo"
+}

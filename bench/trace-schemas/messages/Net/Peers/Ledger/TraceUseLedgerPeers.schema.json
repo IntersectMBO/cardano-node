@@ -1,0 +1,15 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "useLedgerPeers": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Peers.Ledger.TraceUseLedgerPeers"
+}

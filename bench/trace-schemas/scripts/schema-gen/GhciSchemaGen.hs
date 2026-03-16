@@ -24,6 +24,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Lazy as BL
+import Control.Monad (forM)
 
 --------------------------------------------------------------------------------
 -- Entry point / high-level flow
@@ -47,18 +48,30 @@ detailLevels = ["Minimal", "Normal", "Detailed", "Maximum"]
 main :: IO ()
 main = do
   let nsFile = "bench/trace-schemas/newNamespaces.txt"
+  putStrLn $ "Reading namespaces from " <> nsFile
   namespaces <- filter (not . null) . map T.unpack . T.lines <$> T.readFile nsFile
+  putStrLn $ "Loaded " <> show (length namespaces) <> " namespace(s)"
+
+  putStrLn "Collecting Haskell source files..."
   hsFiles <- collectTargets rootDirs
+  putStrLn $ "Found " <> show (length hsFiles) <> " candidate source file(s)"
 
   -- Build constructor -> namespace map from namespaceFor clauses
+  putStrLn "Building namespace map..."
   let nsMap = foldl' mergeNs Map.empty (map parseNamespaceMap (map readFileSafe hsFiles))
   -- Parse forMachine clauses and map their field bindings to variables
+  putStrLn "Parsing forMachine clauses..."
   let clausesByFile = map (\fp -> (fp, parseForMachineClauses (readFileSafe fp))) hsFiles
 
   let fieldVarMap = foldl' (Map.unionWith (Map.unionWith Map.union)) Map.empty (map (parseFieldVarMap . snd) clausesByFile)
 
   -- Ask GHCi for variable types used in forMachine patterns
-  varTypesMaps <- mapM (\(fp, clauses) -> ghciTypesForFile fp clauses) clausesByFile
+  putStrLn "Querying GHCi for field types..."
+  varTypesMaps <- forM (zip [1 :: Int ..] clausesByFile) $ \(idx, (fp, clauses)) -> do
+    putStrLn $
+      "[ghci " <> show idx <> "/" <> show (length clausesByFile) <> "] "
+        <> fp
+    ghciTypesForFile fp clauses
   let varTypes = foldl' (Map.unionWith Map.union) Map.empty varTypesMaps
 
   let msgOutDir = "bench/trace-schemas/messages"
@@ -66,7 +79,15 @@ main = do
   createDirectoryIfMissing True msgOutDir
   createDirectoryIfMissing True typeOutDir
 
-  mapM_ (updateSchemaForNamespace msgOutDir typeOutDir nsMap fieldVarMap varTypes) namespaces
+  putStrLn "Generating schema files..."
+  mapM_
+    (\(idx, ns) -> do
+        putStrLn $
+          "[schema " <> show idx <> "/" <> show (length namespaces) <> "] "
+            <> ns
+        updateSchemaForNamespace msgOutDir typeOutDir nsMap fieldVarMap varTypes ns)
+    (zip [1 :: Int ..] namespaces)
+  putStrLn "Schema generation complete."
 
 -- Utilities
 

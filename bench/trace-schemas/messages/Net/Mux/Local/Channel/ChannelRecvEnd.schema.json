@@ -1,0 +1,21 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "length": {
+                "type": "integer"
+            },
+            "miniProtocolNum": {
+                "$ref": "types/Mux.MiniProtocolNum.schema.json"
+            },
+            "msg": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Local.Channel.ChannelRecvEnd"
+}

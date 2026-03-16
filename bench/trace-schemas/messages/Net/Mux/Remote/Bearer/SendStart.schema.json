@@ -1,0 +1,27 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "kind": {
+                "type": "string"
+            },
+            "length": {
+                "type": "string"
+            },
+            "miniProtocolDir": {
+                "type": "string"
+            },
+            "miniProtocolNum": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            },
+            "timestamp": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Remote.Bearer.SendStart"
+}

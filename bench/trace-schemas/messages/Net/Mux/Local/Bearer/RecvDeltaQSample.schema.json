@@ -1,0 +1,39 @@
+{
+    "data": {
+        "additionalProperties": true,
+        "properties": {
+            "DeltaQ_S": {
+                "type": "string"
+            },
+            "DeltaQ_VMean": {
+                "type": "string"
+            },
+            "DeltaQ_VVar": {
+                "type": "string"
+            },
+            "DeltaQ_estR": {
+                "type": "string"
+            },
+            "duration": {
+                "$ref": "types/Mux.BearerTrace.schema.json"
+            },
+            "kind": {
+                "type": "string"
+            },
+            "msg": {
+                "type": "string"
+            },
+            "packets": {
+                "type": "string"
+            },
+            "sizeDist": {
+                "type": "string"
+            },
+            "sumBytes": {
+                "type": "string"
+            }
+        },
+        "type": "object"
+    },
+    "ns": "Net.Mux.Local.Bearer.RecvDeltaQSample"
+}

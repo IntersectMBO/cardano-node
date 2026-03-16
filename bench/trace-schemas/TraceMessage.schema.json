@@ -29,13 +29,14 @@
       "enum": [
         "Debug",
         "Info",
+        "Notice",
         "Warning",
         "Error",
         "Critical"
       ]
     },
     "thread": {
-      "type": "integer",
+      "type": "string",
       "description": "Thread identifier."
     },
     "host": {

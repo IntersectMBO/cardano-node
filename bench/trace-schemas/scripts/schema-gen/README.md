@@ -1,10 +1,17 @@
 # GhciSchemaGen overview
 
-'nix develop -c bash -lc "GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/Main.hs"'
+'nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.json --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md'
+
+'nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'
+
+'nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"'
+
+'nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceLog.hs --log-file run/.../stdout"'
 
 ## What it does
 
 - Generates JSON schemas for trace messages in `bench/trace-schemas/messages` and type schemas in `bench/trace-schemas/types`.
+- Uses the trace-documentation command to generate `bench/trace-schemas/newNamespaces.txt` from `MetaTrace` namespaces.
 - Parses `namespaceFor` and `forMachine` clauses in source files, then asks `cabal repl` (GHCi) for types of variables used in those `forMachine` patterns.
 
 ## High-level flow
@@ -50,3 +57,10 @@
 - forMachine parsing: `parseForMachineClauses`, `parseFieldVarMap`, `parseFieldLine`
 - GHCi type extraction: `ghciTypesForFile`, `runGhci`
 - Schema update: `updateSchemaForNamespace`, `updateData`, `buildDataFromFieldMap`
+
+## Validation
+
+- `ValidateTraceSchemas.hs` checks `meta.schema.json` with `check-jsonschema`, then validates every file in `bench/trace-schemas/messages` against that meta-schema.
+- The Haskell script controls discovery and execution; the actual JSON Schema validation is delegated to `check-jsonschema` via `nix run nixpkgs#check-jsonschema`.
+- Run it with `runghc -package-env - ...` so the standalone script does not inherit the repo's package environment.
+- `ValidateTraceLog.hs` validates a real cardano-node log file: it skips the non-JSON preamble, validates the common envelope against `TraceMessage.schema.json`, validates known namespaces against the matching schema in `bench/trace-schemas/messages`, and reports namespaces that do not have a corresponding message schema.
