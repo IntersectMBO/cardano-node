@@ -13,7 +13,6 @@ where
 import           Cardano.Api hiding (txId)
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Network as Net
-import qualified Cardano.Api.Network as Net.Tx
 import qualified Cardano.Api.UTxO as Utxo
 
 import           Cardano.Testnet
@@ -298,8 +297,9 @@ submitTx
 submitTx sbe connectionInfo tx =
   withFrozenCallStack $
     H.evalIO (submitTxToNodeLocal connectionInfo (TxInMode sbe tx)) >>= \case
-      Net.Tx.SubmitFail reason -> pure . Left $ reason
-      Net.Tx.SubmitSuccess -> pure $ Right ()
+      TxSubmitFail reason -> pure . Left $ reason
+      TxSubmitSuccess -> pure $ Right ()
+      TxSubmitError err -> error $ "submitTxToNodeLocal connection error: " <> show err
 
 
 expectTxSubmissionSuccess :: HasCallStack
