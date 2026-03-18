@@ -17,8 +17,10 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType 
                    IsCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    NetworkId, SerialiseAsCBOR (..), ShelleyBasedEra (..), ShelleyEra, SocketPath,
-                   ToJSON, Tx, TxId (..), TxInMode (TxInMode), TxValidationErrorInCardanoMode (..),
+                   ToJSON, Tx, TxId (..), TxInMode (TxInMode),
+                   TxValidationErrorInCardanoMode (..),
                    getTxBody, getTxId, submitTxToNodeLocal)
+import qualified Cardano.Api
 
 import           Cardano.Binary (DecoderError (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -28,7 +30,8 @@ import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Tracing.TraceSubmitApi (TraceSubmitApi (..))
 import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
                    TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
-                   TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
+                   TxSubmitWebApiError, renderTxCmdError)
+import qualified Cardano.TxSubmit.Types as Types
 import           Cardano.TxSubmit.Util (logException)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
@@ -140,11 +143,13 @@ txSubmitPost trace p@(CardanoModeParams cModeParams) networkId socketPath txByte
 
     res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode
     case res of
-      Net.Tx.SubmitSuccess -> do
+      Cardano.Api.TxSubmitSuccess -> do
         liftIO $ T.putStrLn "Transaction successfully submitted."
         return $ getTxId (getTxBody tx)
-      Net.Tx.SubmitFail e ->
+      Cardano.Api.TxSubmitFail e ->
         left $ TxCmdTxSubmitValidationError e
+      Cardano.Api.TxSubmitError e ->
+        left $ TxCmdTxSubmitConnectionError (T.pack (show e))
     where
       handle :: ExceptT TxCmdError IO TxId -> Handler TxId
       handle f = do
@@ -161,7 +166,7 @@ txSubmitPost trace p@(CardanoModeParams cModeParams) networkId socketPath txByte
         case res of
           Left err -> do
             liftIO $ traceWith trace $ EndpointFailedToSubmitTransaction err
-            errorResponse (TxSubmitFail err)
+            errorResponse (Types.TxSubmitFail err)
           Right txid -> do
             liftIO $ traceWith trace $ EndpointSubmittedTransaction txid
             pure txid
