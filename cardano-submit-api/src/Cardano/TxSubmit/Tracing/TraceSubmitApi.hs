@@ -52,6 +52,8 @@ renderTxCmdError (TxCmdTxSubmitValidationError e) =
       "transaction submit error " <> textShow validationErr
     TxValidationEraMismatch eraMismatch ->
       "transaction submit era mismatch" <> textShow eraMismatch
+renderTxCmdError (TxCmdTxSubmitConnectionError e) =
+  "transaction connection error " <> textShow e
 
 instance LogFormatting TraceSubmitApi where
   forMachine _ ApplicationStopping = mempty
