@@ -96,9 +96,9 @@ LedgerDB:
 
 ##### Version Information #####
 
-# Min is currently 10.6.2 for proper default handling of mempool timeout
-# parameters.
-MinNodeVersion: 10.6.2
+# Min is currently 10.7.0 due to change of config bundled peer-snapshot
+# version.
+MinNodeVersion: 10.7.0
 
 ##### Logging configuration #####
 
