@@ -15,7 +15,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile,
+import           Cardano.Node.Types (ConfigYamlFilePath (..), GenesisFile, KESSource (..),
                    NodeProtocolConfiguration (..), NodeShelleyProtocolConfiguration (..),
                    ProtocolFilepaths (..))
 import           Cardano.TxGenerator.Types

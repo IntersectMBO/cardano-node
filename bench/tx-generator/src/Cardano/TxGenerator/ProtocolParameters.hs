@@ -1,8 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DataKinds #-}
 
 {--
 Due to the changes to "cardano-api" listed below it was decided to move
@@ -33,9 +33,9 @@ where
 
 import           Cardano.Api (AnyPlutusScriptVersion (..), CostModel, ExecutionUnitPrices (..),
                    ExecutionUnits, LedgerProtocolParameters (..),
-                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3, PlutusScriptV4), PraosNonce,
-                   ProtocolParametersConversionError (..),
-                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraMary, ShelleyBasedEraShelley, ShelleyBasedEraDijkstra),
+                   PlutusScriptVersion (PlutusScriptV1, PlutusScriptV2, PlutusScriptV3, PlutusScriptV4),
+                   PraosNonce, ProtocolParametersConversionError (..),
+                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraBabbage, ShelleyBasedEraConway, ShelleyBasedEraDijkstra, ShelleyBasedEraMary, ShelleyBasedEraShelley),
                    ShelleyLedgerEra, fromAlonzoCostModels, fromAlonzoExUnits, fromAlonzoPrices,
                    makePraosNonce, toAlonzoCostModels, toAlonzoExUnits, toAlonzoPrices,
                    toLedgerNonce)

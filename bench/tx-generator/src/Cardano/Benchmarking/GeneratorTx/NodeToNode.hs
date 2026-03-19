@@ -13,23 +13,13 @@ module Cardano.Benchmarking.GeneratorTx.NodeToNode
   , benchmarkConnectTxSubmit
   ) where
 
+import           Cardano.Benchmarking.LogTypes (EnvConsts (..), SendRecvConnect,
+                   SendRecvTxSubmission2)
+import           Cardano.Network.NodeToClient (chainSyncPeerNull)
+import           Cardano.Network.NodeToNode (NetworkConnectTracers (..))
+import qualified Cardano.Network.NodeToNode as NtN
 import           Cardano.Prelude (forever, liftIO, throwIO)
-import           Prelude
-
-import           "contra-tracer" Control.Tracer (Tracer (..))
-
-import           Codec.Serialise (DeserialiseFailure)
-import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
-import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Data.ByteString.Lazy (ByteString)
-import           Data.Foldable (fold)
-import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void, absurd)
-import qualified Network.Mux as Mux
-import           Network.Socket (AddrInfo (..))
-import           System.Random (newStdGen)
-
+import           Cardano.TxGenerator.Setup.NixService (defaultKeepaliveTimeout, getKeepaliveTimeout)
 import           Ouroboros.Consensus.Block.Abstract
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
@@ -38,7 +28,6 @@ import           Ouroboros.Consensus.Network.NodeToNode (Codecs (..), defaultCod
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
 import           Ouroboros.Network.Channel (Channel (..))
 import           Ouroboros.Network.Context
 import           Ouroboros.Network.ControlMessage (continueForever)
@@ -46,11 +35,8 @@ import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeer, runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MiniProtocolCb (..),
-                   OuroborosApplication (..), OuroborosBundle, RunMiniProtocol (..))
-import           Ouroboros.Network.NodeToClient (chainSyncPeerNull)
-import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
-import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..),
+                   OuroborosBundle, RunMiniProtocol (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing.Codec (decodeRemoteAddress,
                    encodeRemoteAddress)
@@ -59,15 +45,26 @@ import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient 
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
-import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                   txSubmissionClientPeer)
 import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
                    peerSharingClientPeer)
-
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
+                   txSubmissionClientPeer)
 import           Ouroboros.Network.Snocket (socketSnocket)
 
-import           Cardano.Benchmarking.LogTypes (EnvConsts (..), SendRecvConnect, SendRecvTxSubmission2)
-import           Cardano.TxGenerator.Setup.NixService (defaultKeepaliveTimeout, getKeepaliveTimeout)
+import           Prelude
+
+import           Codec.Serialise (DeserialiseFailure)
+import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
+import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
+import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Data.ByteString.Lazy (ByteString)
+import           Data.Foldable (fold)
+import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy (..))
+import           Data.Void (Void, absurd)
+import qualified Network.Mux as Mux
+import           Network.Socket (AddrInfo (..))
+import           System.Random (newStdGen)
 
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 type ConnectClient = AddrInfo -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) IO () -> IO ()

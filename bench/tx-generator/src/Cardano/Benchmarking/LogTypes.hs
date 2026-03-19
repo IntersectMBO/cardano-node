@@ -28,6 +28,7 @@ import           Cardano.Benchmarking.OuroborosImports
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
+import           Cardano.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
@@ -39,7 +40,6 @@ import           Cardano.TxGenerator.Types (TPSRate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
 import           Ouroboros.Network.IOManager (IOManager)
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 

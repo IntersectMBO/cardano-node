@@ -72,11 +72,11 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Logging
+import           Cardano.Network.NodeToClient (IOManager)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Setup.NixService as Nix (NixServiceOptions)
 import           Cardano.TxGenerator.Types (TxGenError (..))
-import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
