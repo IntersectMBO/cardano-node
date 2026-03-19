@@ -3,8 +3,7 @@
 module Cardano.Tracer.Handlers.Metrics.DDoSProtectionMiddleware(DDoSProtectionMiddlewareConfig(..), mkDDoSProtectionMiddleware) where
 import           Control.Concurrent (forkIO)
 import           Control.Concurrent.Extra (threadDelay)
-import           Control.Concurrent.STM (atomically, modifyTVar', newTVarIO, readTVar, readTVarIO,
-                   writeTVar)
+import           Control.Concurrent.STM (atomically, newTVarIO, readTVarIO, stateTVar, writeTVar)
 import           Control.Monad (void)
 import           Network.Wai
 import           Network.Wai.Middleware.RequestSizeLimit
@@ -20,6 +19,10 @@ data DDoSProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
   , responseTimeLimitSec   :: Word
 }
 
+-- COMMENT: (@russoul) do we have a good place for this function (named after the diagonal functor)?
+diag :: a -> (a, a)
+diag x = (x, x)
+
 -- | Simple request rate limiter backend that limits the rate of
 --   requests based on the total number of requests.
 totalRequestRateLimiterBackend :: IO (Backend ())
@@ -31,7 +34,7 @@ totalRequestRateLimiterBackend = do
     backendGetUsage _ = readTVarIO usage
 
     backendIncAndGetUsage :: () -> Integer -> IO Integer
-    backendIncAndGetUsage _ k = atomically $ modifyTVar' usage (+ k) >> readTVar usage
+    backendIncAndGetUsage _ k = atomically $ stateTVar usage (diag . (+ k))
 
     backendExpireIn :: () -> Integer -> IO ()
     backendExpireIn _ s = void $ forkIO $ do
