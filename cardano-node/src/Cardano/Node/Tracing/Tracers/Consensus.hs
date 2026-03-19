@@ -69,10 +69,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.BlockFetch.Decision.Trace (TraceDecisionEvent (..))
-import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
-import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Control.Monad (guard)
 import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
@@ -86,15 +83,6 @@ import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime)
 import           Data.Word (Word32, Word64)
 import           Network.TypedProtocol.Core
-
-instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
-  forMachine _dtal (ConnectionId local' remote) =
-    mconcat [ "connectionId" .= String (showT local'
-                                          <> " "
-                                          <> showT remote)
-    ]
-  forHuman (ConnectionId local' remote) =
-    "ConnectionId " <>  showT local' <> " " <> showT remote
 
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
@@ -669,7 +657,7 @@ instance MetaTrace (TraceDecisionEvent peer (Header blk)) where
   allNamespaces =
     [ Namespace [] ["PeersFetch"], Namespace [] ["PeerStarvedUs"] ]
 
-instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk)
+instance (Show peer, ToJSON peer, ConvertRawHash (Header blk), HasHeader blk, ToJSON (HeaderHash blk))
       => LogFormatting (TraceDecisionEvent peer (Header blk)) where
   forHuman = Text.pack . show
 
@@ -694,7 +682,7 @@ instance (LogFormatting peer, Show peer) =>
     , "peers" .= toJSON
       (List.foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
+  asMetrics _ = []
 
 instance MetaTrace [TraceLabelPeer peer (FetchDecision [Point header])] where
   namespaceFor (a : _tl) = (nsCast . namespaceFor) a
@@ -1062,157 +1050,6 @@ instance LogFormatting SanityCheckIssue where
             ]
   forHuman (InconsistentSecurityParam e) =
     "Configuration contains multiple security parameters: " <> Text.pack (show e)
-
-
-
---------------------------------------------------------------------------------
--- TxInbound Tracer
---------------------------------------------------------------------------------
-
-instance LogFormatting (TraceTxSubmissionInbound txid tx) where
-  forMachine _dtal (TraceTxSubmissionCollected count) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionCollected"
-      , "count" .= toJSON count
-      ]
-  forMachine _dtal (TraceTxSubmissionProcessed processed) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionProcessed"
-      , "accepted" .= toJSON (ptxcAccepted processed)
-      , "rejected" .= toJSON (ptxcRejected processed)
-      ]
-  forMachine _dtal TraceTxInboundTerminated =
-    mconcat
-      [ "kind" .= String "TraceTxInboundTerminated"
-      ]
-  forMachine _dtal (TraceTxInboundCanRequestMoreTxs count) =
-    mconcat
-      [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
-      , "count" .= toJSON count
-      ]
-  forMachine _dtal (TraceTxInboundCannotRequestMoreTxs count) =
-    mconcat
-      [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
-      , "count" .= toJSON count
-      ]
-
-  asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM "submissions.submitted" (Just count)]
-  asMetrics (TraceTxSubmissionProcessed processed) =
-    [ CounterM "submissions.accepted"
-        (Just (ptxcAccepted processed))
-    , CounterM "submissions.rejected"
-        (Just (ptxcRejected processed))
-    ]
-  asMetrics _ = []
-
-instance MetaTrace (TraceTxSubmissionInbound txid tx) where
-    namespaceFor TraceTxSubmissionCollected {} = Namespace [] ["Collected"]
-    namespaceFor TraceTxSubmissionProcessed {} = Namespace [] ["Processed"]
-    namespaceFor TraceTxInboundTerminated {} = Namespace [] ["Terminated"]
-    namespaceFor TraceTxInboundCanRequestMoreTxs {} = Namespace [] ["CanRequestMoreTxs"]
-    namespaceFor TraceTxInboundCannotRequestMoreTxs {} = Namespace [] ["CannotRequestMoreTxs"]
-
-    severityFor (Namespace _ ["Collected"]) _ = Just Debug
-    severityFor (Namespace _ ["Processed"]) _ = Just Debug
-    severityFor (Namespace _ ["Terminated"]) _ = Just Notice
-    severityFor (Namespace _ ["CanRequestMoreTxs"]) _ = Just Debug
-    severityFor (Namespace _ ["CannotRequestMoreTxs"]) _ = Just Debug
-    severityFor _ _ = Nothing
-
-    metricsDocFor (Namespace _ ["Collected"]) =
-      [ ("submissions.submitted", "")]
-    metricsDocFor (Namespace _ ["Processed"]) =
-      [ ("submissions.accepted", "")
-      , ("submissions.rejected", "")
-      ]
-    metricsDocFor _ = []
-
-    documentFor (Namespace _ ["Collected"]) = Just
-      "Number of transactions just about to be inserted."
-    documentFor (Namespace _ ["Processed"]) = Just
-      "Just processed transaction pass/fail breakdown."
-    documentFor (Namespace _ ["Terminated"]) = Just
-      "Server received 'MsgDone'."
-    documentFor (Namespace _ ["CanRequestMoreTxs"]) = Just $ mconcat
-      [ "There are no replies in flight, but we do know some more txs we"
-      , " can ask for, so lets ask for them and more txids."
-      ]
-    documentFor (Namespace _ ["CannotRequestMoreTxs"]) = Just $ mconcat
-      [ "There's no replies in flight, and we have no more txs we can"
-      , " ask for so the only remaining thing to do is to ask for more"
-      , " txids. Since this is the only thing to do now, we make this a"
-      , " blocking call."
-      ]
-    documentFor _ = Nothing
-
-    allNamespaces = [
-          Namespace [] ["Collected"]
-        , Namespace [] ["Processed"]
-        , Namespace [] ["Terminated"]
-        , Namespace [] ["CanRequestMoreTxs"]
-        , Namespace [] ["CannotRequestMoreTxs"]
-        ]
-
---------------------------------------------------------------------------------
--- TxOutbound Tracer
---------------------------------------------------------------------------------
-
-instance (Show txid, Show tx)
-      => LogFormatting (TraceTxSubmissionOutbound txid tx) where
-  forMachine DDetailed (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      , "txIds" .= String (Text.pack $ show txids)
-      ]
-  forMachine _dtal (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      ]
-  forMachine DDetailed (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      , "txs" .= String (Text.pack $ show txs)
-      ]
-  forMachine _dtal (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
-    mconcat
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      ]
-  forMachine _dtal (TraceControlMessage _msg) =
-    mconcat
-      [ "kind" .= String "TraceControlMessage"
-      ]
-
-instance MetaTrace (TraceTxSubmissionOutbound txid tx) where
-    namespaceFor TraceTxSubmissionOutboundRecvMsgRequestTxs {} =
-      Namespace [] ["RecvMsgRequest"]
-    namespaceFor TraceTxSubmissionOutboundSendMsgReplyTxs {} =
-      Namespace [] ["SendMsgReply"]
-    namespaceFor TraceControlMessage {} =
-      Namespace [] ["ControlMessage"]
-
-    severityFor (Namespace _ ["RecvMsgRequest"]) _ =
-      Just Info
-    severityFor (Namespace _ ["SendMsgReply"]) _ =
-      Just Info
-    severityFor (Namespace _ ["ControlMessage"]) _ =
-      Just Info
-    severityFor _ _ = Nothing
-
-    documentFor (Namespace _ ["RecvMsgRequest"]) = Just
-      "The IDs of the transactions requested."
-    documentFor (Namespace _ ["SendMsgReply"]) = Just
-      "The transactions to be sent in the response."
-    documentFor (Namespace _ ["ControlMessage"]) = Just
-      ""
-    documentFor _ = Nothing
-
-    allNamespaces =
-      [ Namespace [] ["RecvMsgRequest"]
-      , Namespace [] ["SendMsgReply"]
-      , Namespace [] ["ControlMessage"]
-      ]
-
 
 --------------------------------------------------------------------------------
 -- TxSubmissionServer Tracer

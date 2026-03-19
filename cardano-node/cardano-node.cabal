@@ -104,14 +104,12 @@ library
                         Cardano.Node.Tracing.Tracers.ChainDB
                         Cardano.Node.Tracing.Tracers.Consensus
                         Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                        Cardano.Node.Tracing.Tracers.Diffusion
                         Cardano.Node.Tracing.Tracers.ForgingStats
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.LedgerMetrics
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
                         Cardano.Node.Tracing.Tracers.NodeVersion
-                        Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Resources
                         Cardano.Node.Tracing.Tracers.Rpc
                         Cardano.Node.Tracing.Tracers.Shutdown
@@ -168,7 +166,6 @@ library
                       , ekg-wai
                       , ekg-core
                       , filepath
-                      , formatting
                       , generic-data
                       , hashable
                       , hostname
