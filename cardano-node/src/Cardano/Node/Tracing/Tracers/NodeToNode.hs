@@ -26,7 +26,6 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Me
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.KeepAlive.Type as KA
 import qualified Ouroboros.Network.Protocol.PeerSharing.Type as PS
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
 import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Data.Aeson (ToJSON (..), Value (String), (.=))
@@ -86,9 +85,6 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              ]
 
-
-instance ToJSON SizeInBytes where
-    toJSON (SizeInBytes s) = toJSON s
 
 instance MetaTrace (AnyMessage (BlockFetch blk1 (Point blk2))) where
     namespaceFor (AnyMessageAndAgency _stok MsgRequestRange{}) =

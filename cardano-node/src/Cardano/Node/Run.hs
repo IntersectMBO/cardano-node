@@ -1,3 +1,4 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
@@ -66,11 +67,12 @@ import           Cardano.Prelude (ExitCode (..), FatalError (..), bool, (:~:) (.
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Tracers
+import           Cardano.Logging.Types (LogFormatting)
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (SnapshotPolicyArgs (..),
-                   NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
+                   NodeDatabasePaths (..), nonImmutableDbPath, RunNodeArgs (..), StdRunNodeArgs (..))
 import           Ouroboros.Consensus.Protocol.Praos.AgentClient (KESAgentClientTrace)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Node (RunNodeArgs (..),
@@ -81,7 +83,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Args as LDBArgs
-import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
 import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -102,8 +103,9 @@ import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionActions as 
 import qualified Cardano.Network.LedgerPeerConsensusInterface as Cardano
 import qualified Cardano.Network.PeerSelection.PeerSelectionActions as Cardano
 import qualified Cardano.Network.PeerSelection.Churn as Cardano.Churn
-import           Cardano.Network.Types (NumberOfBigLedgerPeers (..))
+import           Cardano.Network.PeerSelection (NumberOfBigLedgerPeers (..))
 
+import           Ouroboros.Network.Block (HeaderHash)
 import           Ouroboros.Network.BlockFetch (FetchMode)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.Types as Diffusion
@@ -115,7 +117,7 @@ import           Cardano.Network.NodeToNode (AcceptedConnectionsLimit (..), Conn
 import           Ouroboros.Network.PeerSelection.Governor.Types (PeerSelectionState,
                    PublicPeerSelectionState, makePublicPeerSelectionStateVar, BootstrapPeersCriticalTimeoutError)
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..),
-                   UseLedgerPeers (..), AfterSlot (..))
+                   UseLedgerPeers (..), AfterSlot (..), LedgerPeersKind(..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers (TracePublicRootPeers)
@@ -522,21 +524,62 @@ handleSimpleNode blockType runP tracers nc onKernel = do
 #endif
     nForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
     cForkPolicy <- getForkPolicy $ ncResponderCoreAffinityPolicy nc
-    let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
-        diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
-            Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
-            Cardano.Diffusion.genesisPeerTargets =
-              PeerSelectionTargets {
-                targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
-                targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
-                targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
-                targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
-                targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
-                targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
-                targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
-              },
-            Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
-            Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
+    void $
+      let diffusionNodeArguments :: Cardano.Diffusion.CardanoNodeArguments IO
+          diffusionNodeArguments = Cardano.Diffusion.CardanoNodeArguments {
+              Cardano.Diffusion.consensusMode      = ncConsensusMode nc,
+              Cardano.Diffusion.genesisPeerSelectionTargets =
+                PeerSelectionTargets {
+                  targetNumberOfRootPeers                 = ncSyncTargetOfRootPeers nc,
+                  targetNumberOfKnownPeers                = ncSyncTargetOfKnownPeers nc,
+                  targetNumberOfEstablishedPeers          = ncSyncTargetOfEstablishedPeers nc,
+                  targetNumberOfActivePeers               = ncSyncTargetOfActivePeers nc,
+                  targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers nc,
+                  targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers nc,
+                  targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers nc
+                },
+              Cardano.Diffusion.minNumOfBigLedgerPeers  = ncMinBigLedgerPeersForTrustedState nc,
+              Cardano.Diffusion.tracerChurnMode         = churnModeTracer tracers
+            }
+
+          diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
+          diffusionConfiguration =
+            mkDiffusionConfiguration
+              publicIPv4SocketOrAddr
+              publicIPv6SocketOrAddr
+              localSocketOrPath
+              publicPeerSelectionVar
+              nForkPolicy cForkPolicy
+              (readTVar localRootsVar)
+              (readTVar publicRootsVar)
+              (readTVar useLedgerVar)
+              (readTVar ledgerPeerSnapshotVar)
+              nc
+      in
+      Node.run
+        nodeArgs {
+            rnNodeKernelHook = \registry nodeKernel -> do
+              -- reinstall `SIGHUP` handler
+              installSigHUPHandler (startupTracer tracers) (Consensus.kesAgentTracer $ consensusTracers tracers) blockType nc nodeKernel
+                                   localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                                   ledgerPeerSnapshotPathVar ledgerPeerSnapshotVar
+              rnNodeKernelHook nodeArgs registry nodeKernel
+        }
+        StdRunNodeArgs
+          { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+          , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+          , srnChainDbValidateOverride      = ncValidateDB nc
+          , srnDatabasePath                 = dbPath
+          , srnDiffusionConfiguration       = diffusionConfiguration
+          , srnDiffusionArguments           = diffusionNodeArguments
+          , srnDiffusionTracers             = diffusionTracers tracers
+          , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
+          , srnTraceChainDB                 = chainDBTracer tracers
+          , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+          , srnChainSyncIdleTimeout         = customizeChainSyncTimeout
+          , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+          , srnQueryBatchSize               = queryBatchSize
+          , srnLedgerDbBackendArgs          = selectorToArgs ldbBackend (nonImmutableDbPath dbPath)
           }
 
         diffusionConfiguration :: Cardano.Diffusion.CardanoConfiguration IO
@@ -662,7 +705,7 @@ installSigHUPHandler :: Tracer IO (StartupTrace blk)
                      -> StrictTVar IO UseLedgerPeers
                      -> StrictTVar IO UseBootstrapPeers
                      -> StrictTVar IO (Maybe PeerSnapshotFile)
-                     -> StrictTVar IO (Maybe LedgerPeerSnapshot)
+                     -> StrictTVar IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
                      -> IO ()
 #ifndef UNIX
 installSigHUPHandler _ _ _ _ _ _ _ _ _ _ _ = return ()
@@ -775,8 +818,8 @@ updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> NodeConfiguration
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> STM IO UseLedgerPeers
-                         -> (Maybe LedgerPeerSnapshot -> STM IO ())
-                         -> IO (Maybe LedgerPeerSnapshot)
+                         -> (Maybe (LedgerPeerSnapshot BigLedgerPeers) -> STM IO ())
+                         -> IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
 updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) readLedgerPeerPath readUseLedgerVar writeVar = do
   (mPeerSnapshotFile, useLedgerPeers)
     <- atomically $ (,) <$> readLedgerPeerPath <*> readUseLedgerVar
@@ -791,7 +834,7 @@ updateLedgerPeerSnapshot startupTracer (NodeConfiguration {ncConsensusMode}) rea
         snapshotFile <- hoistMaybe mPeerSnapshotFile
         eSnapshot
           <- liftIO $ readPeerSnapshotFile snapshotFile
-        lps@(LedgerPeerSnapshot (wOrigin, _)) <-
+        lps@(LedgerPeerSnapshotV2 (wOrigin, _)) <-
           case ncConsensusMode of
             GenesisMode ->
               MaybeT $ hushM eSnapshot (trace . NetworkConfigUpdateError)
@@ -887,7 +930,7 @@ mkDiffusionConfiguration
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
-  -> STM IO (Maybe LedgerPeerSnapshot)
+  -> STM IO (Maybe (LedgerPeerSnapshot BigLedgerPeers))
   -> NodeConfiguration
   -> Cardano.Diffusion.CardanoConfiguration IO
 mkDiffusionConfiguration
@@ -964,7 +1007,7 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
                          , LocalRootConfig {
                              diffusionMode = rootDiffusionMode lrp,
                              peerAdvertise,
-                             extraFlags = trustable lrp
+                             extraLocalRootFlags = trustable lrp,
                            }
                          )
                        )
