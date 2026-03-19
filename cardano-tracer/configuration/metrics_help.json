@@ -29,7 +29,6 @@
   "cardano_version_major": "Cardano node version information",
   "cardano_version_minor": "Cardano node version information",
   "cardano_version_patch": "Cardano node version information",
-  "connectedPeers": "Number of connected peers",
   "density": "The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.",
   "epoch": "In which epoch is the tip of the current chain.",
   "forgedSlotLast": "Slot number of the last forged block",
