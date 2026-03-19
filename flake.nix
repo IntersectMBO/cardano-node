@@ -120,7 +120,7 @@
       // (with project.hsPkgs; {
         # Add some executables from other relevant packages
         inherit (bech32.components.exes) bech32;
-        inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
+        inherit (ouroboros-consensus.components.exes) db-analyser db-synthesizer db-truncater snapshot-converter;
         # Add cardano-node, cardano-cli and tx-generator with their git revision stamp.
         # Keep available an alternative without the git revision, like the other
         # passthru (profiled and asserted in nix/haskell.nix) that
