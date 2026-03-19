@@ -188,14 +188,9 @@ library
                       , network-mux >= 0.8
                       , nothunks
                       , optparse-applicative
-                      , ouroboros-consensus >=0.30.0.1 && <0.31
-                      , ouroboros-consensus-cardano ^>= 0.26
-                      , ouroboros-consensus-diffusion ^>= 0.26
-                      , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.16
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion, orphan-instances} ^>= 0.22.6
-                      , ouroboros-network-framework ^>= 0.19.3
-                      , ouroboros-network-protocols ^>= 0.15.2
+                      , ouroboros-consensus:{ouroboros-consensus, lmdb, lsm, cardano, diffusion, protocol} ^>= 1.0
+                      , ouroboros-network:{api, ouroboros-network, orphan-instances, framework, protocols, framework-tracing, tracing} ^>= 1.1
+                      , cardano-diffusion:{api, cardano-diffusion, orphan-instances, tracing} ^>=1.0
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -267,11 +262,8 @@ test-suite cardano-node-test
                       , hedgehog-extras ^>= 0.10
                       , iproute
                       , mtl
-                      , ouroboros-consensus
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
-                      , ouroboros-network:{ouroboros-network, cardano-diffusion}
-                      , ouroboros-network-api
+                      , ouroboros-consensus:{ouroboros-consensus, cardano, diffusion}
+                      , ouroboros-network:{api, ouroboros-network}
                       , strict-sop-core
                       , text
                       , trace-dispatcher
