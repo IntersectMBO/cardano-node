@@ -37,10 +37,10 @@ import           System.Time.Extra (sleep)
 
 ddosProtectionMiddlewareConfig :: DDoSProtectionMiddlewareConfig
 ddosProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
-  requestBodySizeLimitKB = 2 * 1024,
+  requestBodySizeLimitKB = 4,
   requestRateWindowSec = 60,
   requestRateLimitSec = 120,
-  responseTimeLimitSec = 5
+  responseTimeLimitSec = 2
 }
 
 -- | Runs a simple HTTP server that listens on @endpoint@.

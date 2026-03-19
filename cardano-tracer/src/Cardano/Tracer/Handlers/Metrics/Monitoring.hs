@@ -32,7 +32,7 @@ ddosProtectionMiddlewareConfig :: DDoSProtectionMiddlewareConfig
 ddosProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
   requestBodySizeLimitKB = 2 * 1024,
   requestRateWindowSec = 60,
-  requestRateLimitSec = 120,
+  requestRateLimitSec = 600,
   responseTimeLimitSec = 5
 }
 
