@@ -207,14 +207,18 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-localSubmitTx :: TxInMode -> ActionM (SubmitResult TxValidationErrorInCardanoMode)
+localSubmitTx :: TxInMode -> ActionM TxSubmitResult
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
   case ret of
-    SubmitSuccess -> return ret
-    SubmitFail e -> do
+    TxSubmitSuccess -> return ret
+    TxSubmitFail e -> do
       let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
+      traceDebug msg
+      return ret
+    TxSubmitError e -> do
+      let msg = concat [ "local submit error: " , show e , " (" , show tx , ")" ]
       traceDebug msg
       return ret
 --      throwE $ ApiError msg
