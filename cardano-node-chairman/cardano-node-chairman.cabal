@@ -49,7 +49,7 @@ executable cardano-node-chairman
                       , cardano-prelude
                       , containers
                       , contra-tracer
-                      , io-classes:{io-classes, strict-stm, si-timers}
+                      , io-classes:{io-classes, strict-stm, si-timers} ^>= 1.8
                       , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
