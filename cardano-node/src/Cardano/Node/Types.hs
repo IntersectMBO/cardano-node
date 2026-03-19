@@ -48,7 +48,7 @@ import           Cardano.Network.ConsensusMode (ConsensusMode (..))
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Orphans ()
 import           Cardano.Rpc.Server.Config (RpcConfigF (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 
 import           Control.Exception
 import           Data.Aeson
