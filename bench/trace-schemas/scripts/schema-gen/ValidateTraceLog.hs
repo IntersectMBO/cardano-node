@@ -284,7 +284,19 @@ validateBatches :: String -> [String] -> [FilePath] -> IO Bool
 validateBatches _ _ [] = pure True
 validateBatches header baseArgs files = do
   putStrLn header
-  results <- forM (chunksOf 200 files) $ \batch -> runValidator (baseArgs <> batch)
+  let batches = chunksOf 200 files
+      totalBatches = length batches
+  results <-
+    forM (zip [1 :: Int ..] batches) $ \(batchNo, batch) -> do
+      putStrLn $
+        "  validating batch "
+          <> show batchNo
+          <> " of "
+          <> show totalBatches
+          <> " ("
+          <> show (length batch)
+          <> " message(s))..."
+      runValidator (baseArgs <> batch)
   pure (and results)
 
 runValidator :: [String] -> IO Bool

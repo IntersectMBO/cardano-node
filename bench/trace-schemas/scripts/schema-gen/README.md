@@ -2,7 +2,7 @@
 
 'nix develop -c cabal run cardano-node -- trace-documentation --config configuration/cardano/mainnet-config.json --output-namespace-list bench/trace-schemas/newNamespaces.txt --output-file bench/trace-schemas/trace-documentation.md'
 
-'nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs'
+'nix develop -c bash -lc 'GHC_LIBDIR=$(ghc --print-libdir) runghc bench/trace-schemas/scripts/schema-gen/GhciSchemaGen.hs''
 
 'nix develop -c bash -lc "runghc -package-env - bench/trace-schemas/scripts/schema-gen/ValidateTraceSchemas.hs"'
 
