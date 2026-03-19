@@ -14,10 +14,10 @@ import           Network.Wai.RateLimit.Backend (Backend (MkBackend))
 import           Network.Wai.RateLimit.Strategy
 
 data DDoSProtectionMiddlewareConfig = DDoSProtectionMiddlewareConfig {
-  requestBodySizeLimitKB :: Word,
-  requestRateWindowSec :: Word,
-  requestRateLimitSec :: Word,
-  responseTimeLimitSec :: Word
+    requestBodySizeLimitKB :: Word
+  , requestRateWindowSec   :: Word
+  , requestRateLimitSec    :: Word
+  , responseTimeLimitSec   :: Word
 }
 
 -- | Simple request rate limiter backend that limits the rate of
