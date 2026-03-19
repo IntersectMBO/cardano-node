@@ -34,6 +34,7 @@ import           Cardano.Api.Byron (GenesisData (..))
 import qualified Cardano.Api.Byron as Byron
 
 import           Cardano.CLI.Type.Common (SigningKeyFile)
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
                    NodeHostIPv4Address (..))
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P

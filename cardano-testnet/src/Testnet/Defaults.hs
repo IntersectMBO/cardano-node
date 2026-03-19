@@ -63,6 +63,8 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
+import           Cardano.Network.Diffusion.Topology (CardanoNetworkTopology)
+import           Cardano.Network.NodeToNode (DiffusionMode (..))
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
@@ -71,7 +73,10 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Cardano.Node.Configuration.TopologyP2P as Topology
 import           Cardano.Tracing.Config
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Network.ConnectionManager.Types (Provenance (..))
+import           Ouroboros.Network.Diffusion.Topology (LocalRootPeersGroup (..),
+                   LocalRootPeersGroups (..), LocalRoots (..), NetworkTopology (..),
+                   PublicRootPeers (..), RootConfig (..))
 import           Ouroboros.Network.PeerSelection (AfterSlot (..), PeerAdvertise (..),
                    RelayAccessPoint (..), UseLedgerPeers (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
