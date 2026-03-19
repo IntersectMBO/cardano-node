@@ -432,7 +432,6 @@ project.appendOverlays (with haskellLib.projectOverlays; [
           packages = final.pkgs.lib.genAttrs
             [ "cardano-node"
               "cardano-tracer"
-              "trace-dispatcher"
               "trace-forward"
               "trace-resources"
             ]

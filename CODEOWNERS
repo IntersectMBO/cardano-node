@@ -8,7 +8,6 @@
 # Perf/Tracing
 bench/                                                        @intersectmbo/performance-and-tracing
 nix/workbench/                                                @intersectmbo/performance-and-tracing
-trace-dispatcher/                                             @intersectmbo/performance-and-tracing
 trace-forward/                                                @intersectmbo/performance-and-tracing
 trace-resources/                                              @intersectmbo/performance-and-tracing
 Makefile                                                      @intersectmbo/performance-and-tracing
@@ -22,4 +21,3 @@ flake.lock                                                    @intersectmbo/core
 ci/                                                           @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
 configuration/                                                @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
 docker-compose.yml                                            @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
-
