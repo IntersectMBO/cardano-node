@@ -33,7 +33,6 @@ packages:
   bench/plutus-scripts-bench
   bench/tx-generator
   bench/cardano-recon-framework
-  trace-dispatcher
   trace-resources
   trace-forward
 
