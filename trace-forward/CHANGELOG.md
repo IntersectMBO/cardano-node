@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 2.4.1 - Mar 2026
+
+* Increase robustness of evaluating trace objects to be forwarded
+* Updated to `ekg-forward-1.2`, `ouroboros-network-1.1` and `typed-protocols-1.2`
+
+
 ## 2.4.0 - Nov 2025
 
 * Refactor `writeToSink` and `readFromSink` to simplify STM usage

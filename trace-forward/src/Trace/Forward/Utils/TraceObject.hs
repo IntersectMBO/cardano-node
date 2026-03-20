@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 --------------------------------------------------------------------------------
 
@@ -13,19 +15,16 @@ module Trace.Forward.Utils.TraceObject
 
 --------------------------------------------------------------------------------
 
+import           Cardano.Logging.Utils
+
 import           Control.Concurrent.STM (STM, atomically, retry)
 import           Control.Concurrent.STM.TBQueue
-  ( TBQueue
-  , newTBQueue
-  , isFullTBQueue
-  , lengthTBQueue
-  , readTBQueue
-  , writeTBQueue
-  , flushTBQueue
-  )
+import           Control.Exception (SomeException, displayException)
+import           Control.DeepSeq (NFData)
 import           Control.Monad (replicateM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
+import           System.IO (hPutStrLn, stderr)
 
 import           Trace.Forward.Configuration.TraceObject
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
@@ -72,25 +71,35 @@ writeToSinkSTM queue traceObject = do
 --------------------------------------------------------------------------------
 
 readFromSink
-  :: ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
+  :: forall lo. NFData lo
+  => ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
   -> Forwarder.TraceObjectForwarder lo IO ()
 readFromSink ForwardSink{forwardQueue} =
   Forwarder.TraceObjectForwarder
-    { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
-        -- Handle response format outside of `atomically`.
-        res <- atomically $ readFromSinkSTM forwardQueue blocking n
-        pure $ case blocking of
-                 TokBlocking    -> BlockingReply $
-                                     -- Convert to a non-empty list.
-                                     case res of
-                                       (x:xs) -> x NE.:| xs
-                                        -- Either GHC-impossible or impossible
-                                        -- to create a non-empty list with zero
-                                        -- items or less.
-                                       [] -> error $ "impossible: requested = " ++ show n
-                 TokNonBlocking -> NonBlockingReply res
+    { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) ->
+        let
+          popAllAndEval = do
+            res <- goTryEvalM =<< atomically (readFromSinkSTM forwardQueue blocking n)
+            -- Handle response format outside of `atomically`.
+            case blocking of
+              TokBlocking    -> case res of
+                                  (x:xs) -> pure $ BlockingReply $ x NE.:| xs
+                                  -- If all retrieved TraceObjects were filtered out by goTryEvalM,
+                                  -- we re-run when there's new data (guaranteed by the STM action).
+                                  [] -> popAllAndEval
+              TokNonBlocking -> pure $ NonBlockingReply res
+        in popAllAndEval
     , Forwarder.recvMsgDone = return ()
     }
+  where
+    goTryEvalM :: [lo] -> IO [lo]
+    goTryEvalM []       = pure []
+    goTryEvalM (lo:los) = tryEvalNF lo >>= \case
+      Right lo' -> 
+        (lo' :) <$> goTryEvalM los
+      Left (ex :: SomeException) -> do
+        hPutStrLn stderr $ "Error rendering trace object: " ++ displayException ex
+        goTryEvalM los
 
 readFromSinkSTM :: TBQueue lo
                 -- If queue is empty, block or not?
