@@ -95,10 +95,6 @@ import Control.Concurrent.STM qualified as STM
 ------------------
 import Control.Monad.Trans.Except (runExceptT)
 ------------------
--- tx-generator --
-------------------
-import Cardano.TxGenerator.ProtocolParameters qualified as PP
-------------------
 -- pull-fiction --
 ------------------
 import Cardano.Benchmarking.PullFiction.Config.Raw qualified as Raw
@@ -123,7 +119,7 @@ main = do
   -- Config.
   ----------
 
-  (runtime, codecConfig, networkId, networkMagic, ledgerPP, tracers) <- loadConfig
+  (runtime, codecConfig, networkId, networkMagic, tracers) <- loadConfig
 
   -- Launch.
   ----------
@@ -148,7 +144,7 @@ main = do
                 replicateM
                   (fromIntegral (inputsPerTx vb))
                   (STM.readTQueue fundQueue)
-              case Tx.buildTx ledgerPP signingAddr signingKey
+              case Tx.buildTx signingAddr signingKey
                            inputFunds (outputsPerTx vb) (L.Coin (fee vb)) of
                 Left err -> die $ "Tx.buildTx: " ++ err
                 Right ans@(tx, outputFunds) -> do
@@ -375,6 +371,23 @@ createSigningKeyAndAddress networkId n
           in (signingKey, signingAddr)
 
 --------------------------------------------------------------------------------
+-- Cardano parameters
+--------------------------------------------------------------------------------
+
+{-- TODO: Construct a minimal protocol parameters, see Tx.hs last line.
+data ProtocolParameters = ProtocolParameters
+  { epochLength :: Integer
+  , minFeeA     :: Integer
+  , minFeeB     :: Integer
+  } 
+
+instance Aeson.FromJSON ProtocolParameters where
+  parseJSON = Aeson.withObject "ProtocolParameters" $ \o -> do
+    pp <- o .: "params"
+    ProtocolParameters <$> pp .: "epoch_length" <*> pp .: "min_fee_a" <*> pp .: "min_fee_b"
+--}
+
+--------------------------------------------------------------------------------
 -- Initialization
 --------------------------------------------------------------------------------
 
@@ -392,8 +405,6 @@ loadConfig
         , Api.NetworkId
           -- | Network magic for the handshake with cardano-node.
         , Api.NetworkMagic
-          -- | Ledger protocol parameters for transaction building.
-        , Api.LedgerProtocolParameters Api.ConwayEra
           -- | Logging / metrics tracers.
         , Tracing.Tracers
         )
@@ -417,7 +428,6 @@ loadConfig = do
           Left err -> die $ "Config: " ++ err
           Right v  -> pure v
   nodeConfigPath <- parseField "nodeConfig"
-  ppPath         <- parseField "protocolParametersFile"
   raw <- case Aeson.fromJSON rawValue of
     Aeson.Error err   -> die $ "JSON: " ++ err
     Aeson.Success cfg -> pure cfg
@@ -450,19 +460,10 @@ loadConfig = do
       networkId    = protocolToNetworkId protocol
       networkMagic = protocolToNetworkMagic protocol
 
-  -- Load protocol parameters.
-  hPutStrLn stderr $ "Loading protocol parameters from: " ++ ppPath
-  protocolParameters <-
-    Aeson.eitherDecodeFileStrict' ppPath >>= either die pure
-  ledgerPP <- case PP.convertToLedgerProtocolParameters
-                     Api.ShelleyBasedEraConway protocolParameters of
-    Left err -> die $ "convertToLedgerProtocolParameters: " ++ show err
-    Right pp -> pure pp
-
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
 
-  pure ( runtime, codecConfig, networkId, networkMagic, ledgerPP, tracers )
+  pure ( runtime, codecConfig, networkId, networkMagic, tracers )
 
 --------------------------------------------------------------------------------
 -- Protocol helpers (inlined from NodeConfig.hs and OuroborosImports.hs)

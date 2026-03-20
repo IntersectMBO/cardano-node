@@ -58,10 +58,10 @@ import Paths_tx_centrifuge qualified as Paths
 txTests :: Tasty.TestTree
 txTests = Tasty.testGroup "node"
   [ HUnit.testCase "buildTx: simple 1-in-1-out transaction" $ do
-      (ledgerPP, signKey, addr) <- testSetup
+      (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case Tx.buildTx ledgerPP addr signKey [fund] 1 fee of
+      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
         Right (tx, outFunds) -> do
@@ -75,11 +75,11 @@ txTests = Tasty.testGroup "node"
             @?= Api.TxIn txId (Api.TxIx 0)
 
   , HUnit.testCase "buildTx: 2-in-3-out transaction" $ do
-      (ledgerPP, signKey, addr) <- testSetup
+      (_ledgerPP, signKey, addr) <- testSetup
       let fund1 = mkDummyFund signKey 0 5_000_000
           fund2 = mkDummyFund signKey 1 5_000_000
           fee   = L.Coin 200_000
-      case Tx.buildTx ledgerPP addr signKey
+      case Tx.buildTx {-- ledgerPP --} addr signKey
              [fund1, fund2] 3 fee of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
@@ -91,29 +91,29 @@ txTests = Tasty.testGroup "node"
           totalOut @?= (10_000_000 - 200_000)
 
   , HUnit.testCase "buildTx: insufficient funds" $ do
-      (ledgerPP, signKey, addr) <- testSetup
+      (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 100_000
           fee  = L.Coin 200_000
-      case Tx.buildTx ledgerPP addr signKey [fund] 1 fee of
+      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
             "buildTx should fail when funds < fee"
 
   , HUnit.testCase "buildTx: no input funds" $ do
-      (ledgerPP, signKey, addr) <- testSetup
+      (_ledgerPP, signKey, addr) <- testSetup
       let fee = L.Coin 200_000
-      case Tx.buildTx ledgerPP addr signKey [] 1 fee of
+      case Tx.buildTx {-- ledgerPP --} addr signKey [] 1 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
             "buildTx should fail with no inputs"
 
   , HUnit.testCase "buildTx: zero outputs" $ do
-      (ledgerPP, signKey, addr) <- testSetup
+      (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case Tx.buildTx ledgerPP addr signKey [fund] 0 fee of
+      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 0 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -162,7 +162,7 @@ txTests = Tasty.testGroup "node"
        -> Api.SigningKey Api.PaymentKey -> L.Coin -> IO ()
     go 0 _ _ _ _ _ = pure ()
     go remaining fund ledgerPP addr signKey fee =
-      case Tx.buildTx ledgerPP addr signKey [fund] 1 fee of
+      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
           error $ "throughput test: buildTx failed at iteration "
             ++ show remaining ++ ": " ++ err

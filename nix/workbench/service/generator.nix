@@ -191,7 +191,7 @@ __toJSON
           rate_limit =
             { scope = "shared";
               type = "token_bucket";
-              params = { tps = 15; };
+              params = { tps = 12; };
             }
           ;
           max_batch_size = 500;
@@ -205,8 +205,11 @@ __toJSON
                     value =
                       { targets =
                           { "${toString i}" =
-                              { addr = "127.0.0.1";
-                                port = (30000 + i);
+                            #  { addr = "127.0.0.1";
+                            #    port = (30000 + i);
+                            #  }
+                              { addr = "__addr_${toString i}__";
+                                port = "__port_${toString i}__";
                               }
                             ;
                           }
@@ -221,7 +224,12 @@ __toJSON
           # tx-centrifuge parameters.
           ###########################
           nodeConfig = "../${runningNode}/config.json";
-          protocolParametersFile = "/tmp/protocol-parameters-queried.json";
+          protocol_parameters =
+            { epoch_length = profile.genesis.shelley.epochLength;
+              min_fee_a = profile.genesis.shelley.protocolParams.minFeeA;
+              min_fee_b = profile.genesis.shelley.protocolParams.minFeeB;
+            }
+          ;
           # Tracing parameters.
           #####################
           TraceOptions =

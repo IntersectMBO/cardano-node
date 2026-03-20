@@ -39,10 +39,8 @@ import Cardano.Benchmarking.TxCentrifuge.Fund ( Fund(..) )
 --
 -- Fixed to ConwayEra. No Plutus, no metadata, fixed fee.
 buildTx
-  -- | Ledger protocol parameters.
-  :: Api.LedgerProtocolParameters Api.ConwayEra
   -- | Destination address for outputs (embeds the network identifier).
-  -> Api.AddressInEra Api.ConwayEra
+  :: Api.AddressInEra Api.ConwayEra
   -- | Signing key for recycled output funds.
   -> Api.SigningKey Api.PaymentKey
   -- | Input funds.
@@ -52,7 +50,7 @@ buildTx
   -- | Fee.
   -> L.Coin
   -> Either String (Api.Tx Api.ConwayEra, [Fund])
-buildTx ledgerPP destAddr outKey inFunds numOutputs fee
+buildTx destAddr outKey inFunds numOutputs fee
   | null inFunds = Left "buildTx: no input funds"
   | numOutputs == 0 = Left "buildTx: outputs_per_tx must be >= 1"
   | feeLovelace < 0 = Left "buildTx: fee must be >= 0"
@@ -165,4 +163,7 @@ buildTx ledgerPP destAddr outKey inFunds numOutputs fee
               Api.ShelleyBasedEraConway
           )
       & Api.setTxMetadata Api.TxMetadataNone
-      & Api.setTxProtocolParams (Api.BuildTxWith (Just ledgerPP))
+      -- We are using an explicit fee!
+      -- Using `Nothing` instead of `ledgerPP :: Api.LedgerProtocolParameters Api.ConwayEra`.
+      -- TODO: Will need something else for plutus scripts!
+      & Api.setTxProtocolParams (Api.BuildTxWith Nothing)
