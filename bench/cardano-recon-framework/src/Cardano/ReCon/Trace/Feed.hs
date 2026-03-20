@@ -21,9 +21,6 @@ import           Streaming
 utcToMicroseconds :: UTCTime -> Word64
 utcToMicroseconds utcTime = round $ utcTimeToPOSIXSeconds utcTime * 1000000
 
-deriving instance Eq TraceMessage
-deriving instance Ord TraceMessage
-
 -- | Temporal event represents multiple trace messages spanning some duration of time together with an index of the event.
 data TemporalEvent = TemporalEvent {
   -- | Microseconds since epoch when the event begins.
