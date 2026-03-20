@@ -183,6 +183,16 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgInit"
       , "agency" .= String (pack $ show stok)
       ]
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
+    mconcat
+      [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
+    mconcat
+      [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
@@ -195,16 +205,6 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
     mconcat
       [ "kind" .= String "MsgDone"
@@ -214,13 +214,13 @@ instance (Show txid, Show tx)
 instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgInit {}) =
       Namespace [] ["MsgInit"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
-      Namespace [] ["RequestTxIds"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
-      Namespace [] ["ReplyTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxIds {}) =
-      Namespace [] ["RequestTxs"]
+      Namespace [] ["RequestTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxIds {}) =
+      Namespace [] ["ReplyTxIds"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
+      Namespace [] ["RequestTxs"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
       Namespace [] ["ReplyTxs"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgDone {}) =
       Namespace [] ["Done"]
@@ -239,7 +239,7 @@ instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
       [ "Request a non-empty list of transaction identifiers from the client, "
       , "and confirm a number of outstanding transaction identifiers. "
       , "\n "
-      , "With 'TokBlocking' this is a a blocking operation: the response will "
+      , "With 'TokBlocking' this is a blocking operation: the response will "
       , "always have at least one transaction identifier, and it does not expect "
       , "a prompt response: there is no timeout. This covers the case when there "
       , "is nothing else to do but wait. For example this covers leaf nodes that "
