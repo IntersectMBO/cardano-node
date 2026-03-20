@@ -194,7 +194,7 @@ library
                       , stm <2.5.2 || >=2.5.3
                       , text
                       , time
-                      , trace-dispatcher ^>= 2.11.0
+                      , trace-dispatcher ^>= 2.12.0
                       , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
                       , wai ^>= 3.2

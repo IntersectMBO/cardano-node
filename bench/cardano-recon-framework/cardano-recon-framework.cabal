@@ -89,7 +89,7 @@ library
                     , containers
                     , text
                     , directory
-                    , trace-dispatcher ^>= 2.11
+                    , trace-dispatcher ^>= 2.12
                     , serialise
                     , bytestring
                     , time
@@ -127,7 +127,7 @@ executable cardano-recon
       , text
       , containers
       , cardano-recon-framework
-      , trace-dispatcher ^>= 2.11
+      , trace-dispatcher ^>= 2.12
       , aeson
       , streaming
       , async

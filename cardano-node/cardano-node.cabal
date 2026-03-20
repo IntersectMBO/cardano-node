@@ -203,7 +203,7 @@ library
                       , sop-extras
                       , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.11.0
+                      , trace-dispatcher ^>= 2.12.0
                       , trace-forward ^>= 2.4.0
                       , trace-resources ^>= 0.2.4
                       , tracer-transformers
