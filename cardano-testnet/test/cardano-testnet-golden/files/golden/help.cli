@@ -37,10 +37,11 @@ Usage: cardano-testnet create-env [--num-pool-nodes COUNT]
 
   Create a sandbox for Cardano testnet
 
-Usage: cardano-testnet version
+Usage: cardano-testnet version 
 
   Show cardano-testnet version
 
-Usage: cardano-testnet help
+Usage: cardano-testnet help 
 
   Show cardano-testnet help
+
