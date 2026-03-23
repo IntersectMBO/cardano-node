@@ -29,10 +29,6 @@ module Cardano.Tracing.Tracers
   , traceCounter
   ) where
 
-import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
-import qualified Ouroboros.Network.PeerSelection.Governor as Governor
-import qualified Ouroboros.Network.PeerSelection.Governor.Types as Governor
-import qualified Data.List as List
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
@@ -41,7 +37,9 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 import           Cardano.Network.Diffusion (CardanoPeerSelectionCounters)
 import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
-import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
+import           Cardano.Network.NodeToClient (LocalAddress)
+import           Cardano.Network.NodeToNode (RemoteAddress)
+import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -63,8 +61,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
 import           Cardano.Tracing.Shutdown ()
 import           Cardano.Tracing.Startup ()
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
-                   ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header,
-                   HeaderHash, realPointHash, realPointSlot)
+                   ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header, HeaderHash,
+                   realPointHash, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -82,16 +80,12 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Peras.SelectView
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
-
-import qualified Network.Mux as Mux
-
-import qualified Cardano.Network.Diffusion.Types as Cardano.Diffusion
-
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
                    StandardHash, blockNo, pointSlot, unBlockNo)
@@ -106,10 +100,9 @@ import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State as InboundGovernor
-import           Cardano.Network.NodeToClient (LocalAddress)
-import           Cardano.Network.NodeToNode (RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Governor (
-                   PeerSelectionView (..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionView (..))
+import qualified Ouroboros.Network.PeerSelection.Governor as Governor
+import qualified Ouroboros.Network.PeerSelection.Governor.Types as Governor
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery, ShowQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -129,6 +122,7 @@ import           Data.Functor ((<&>))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
@@ -138,11 +132,11 @@ import           Data.Time (NominalDiffTime, UTCTime)
 import           Data.Word (Word64)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.TypeLits (KnownNat, Nat, natVal)
+import qualified Network.Mux as Mux
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring.Wai as EKG
-import Ouroboros.Consensus.Peras.SelectView
 
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}

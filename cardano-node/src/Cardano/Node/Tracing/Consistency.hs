@@ -22,6 +22,8 @@ import qualified Cardano.Network.PeerSelection.ExtraRootPeers as Cardano.PublicR
 import qualified Cardano.Network.PeerSelection.Governor.PeerSelectionState as Cardano
 import qualified Cardano.Network.PeerSelection.Governor.Types as Cardano
 import           Cardano.Network.PeerSelection.PeerTrustable (PeerTrustable)
+import           Cardano.Network.Tracing.PeerSelection ()
+import           Cardano.Network.Tracing.PeerSelectionCounters ()
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
@@ -35,7 +37,6 @@ import           Cardano.Node.Tracing.Tracers.LedgerMetrics (LedgerMetrics)
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Rpc ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
@@ -92,11 +93,9 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import qualified Ouroboros.Network.Server as Server (Trace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.Tracing.PeerSelection ()
 import           Ouroboros.Network.TxSubmission.Inbound.V2 (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
-import           Ouroboros.Network.Tracing.PeerSelection ()
-import           Cardano.Network.Tracing.PeerSelection ()
-import           Cardano.Network.Tracing.PeerSelectionCounters ()
 
 import qualified Codec.CBOR.Term as CBOR
 import qualified Data.Text as T
