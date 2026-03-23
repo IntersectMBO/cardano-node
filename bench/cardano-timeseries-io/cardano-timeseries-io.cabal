@@ -1,0 +1,168 @@
+cabal-version:      3.4
+name:               cardano-timeseries-io
+description:        Cardano Timeseries Input/Output for realtime metric storage & query.
+version:            1.0.0
+category:           Cardano
+                    Metrics
+copyright:          2026 Intersect.
+license:            Apache-2.0
+license-files:      LICENSE
+                    NOTICE
+author:             Ruslan Feizerakhmanov
+maintainer:         ruslan.feizerakhmanov@iohk.io
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+                    README.md
+                    examples/*.txt
+                    docs/*.txt
+
+flag profiling
+  description:          Enable profiling
+  default:              False
+  manual:               True
+
+common common
+    ghc-options:
+      -Wall
+
+    if impl(ghc >= 9.8)
+      ghc-options:
+        -Wno-x-partial
+
+    if flag(profiling)
+      ghc-options:
+        -fno-prof-auto
+
+    default-language: Haskell2010
+
+    default-extensions:
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+
+      -- NB.: This package is strict Haskell!
+      Strict
+
+library
+    import: common
+    hs-source-dirs: src
+
+    build-depends:
+      , aeson
+      , async
+      , base
+      , containers
+      , deepseq
+      , megaparsec
+      , mtl
+      , scientific
+      , serialise
+      , statistics
+      , stm
+      , text
+      , time
+      , trace-dispatcher >= 2.11.0 && < 3
+      , vector
+
+    exposed-modules:
+      , Cardano.Timeseries.API
+
+      , Cardano.Timeseries.AsText
+
+      , Cardano.Timeseries.Component
+      , Cardano.Timeseries.Component.Trace
+      , Cardano.Timeseries.Component.Types
+
+      , Cardano.Timeseries.Domain.Identifier
+      , Cardano.Timeseries.Domain.Instant
+      , Cardano.Timeseries.Domain.Interval
+      , Cardano.Timeseries.Domain.Timeseries
+      , Cardano.Timeseries.Domain.Types
+
+      , Cardano.Timeseries.Import.PlainCBOR
+
+      , Cardano.Timeseries.Interp
+      , Cardano.Timeseries.Interp.Config
+      , Cardano.Timeseries.Interp.Expr
+      , Cardano.Timeseries.Interp.Types
+      , Cardano.Timeseries.Interp.Value
+
+      , Cardano.Timeseries.Store
+      , Cardano.Timeseries.Store.Flat
+      , Cardano.Timeseries.Store.Flat.Parser
+      , Cardano.Timeseries.Store.Tree
+
+      , Cardano.Timeseries.Elab
+      , Cardano.Timeseries.Elab.Expr
+      , Cardano.Timeseries.Elab.Expr.Parser
+
+    other-modules:
+      , Cardano.Timeseries.Elab.Expr.Head
+      , Cardano.Timeseries.Elab.Resolve
+      , Cardano.Timeseries.Elab.Typing
+      , Cardano.Timeseries.Elab.Unify
+
+      , Cardano.Timeseries.Interp.BinaryArithmeticOp
+      , Cardano.Timeseries.Interp.BinaryRelation
+      , Cardano.Timeseries.Interp.Expect
+      , Cardano.Timeseries.Interp.Statistics
+
+      , Cardano.Timeseries.Util
+
+-- Only used by the executable
+flag stats
+  description:          Enable rendering of RTS statistics in CLI
+  default:              False
+  manual:               True
+
+executable cardano-timeseries-io
+    import: common
+    ghc-options: -rtsopts
+    hs-source-dirs: app
+    main-is: Cardano/Timeseries.hs
+
+    if flag(stats)
+      cpp-options:
+        -DSTATS
+
+    other-modules:
+      , Cardano.Timeseries.Common
+      , Cardano.Timeseries.CLI
+
+    build-depends:
+      , base
+      , cardano-timeseries-io
+      , containers
+      , deepseq
+      , filepath
+      , megaparsec
+      , mtl
+      , optparse-applicative
+      , serialise
+      , statistics
+      , text
+      , time
+      , trace-resources
+      , vector
+
+benchmark cardano-timeseries-io-bench
+    import: common
+    type: exitcode-stdio-1.0
+    hs-source-dirs: bench
+    main-is: Bench.hs
+
+    build-depends:
+      , base
+      , bytestring
+      , cardano-timeseries-io
+      , containers
+      , criterion
+      , megaparsec
+      , mtl
+      , serialise
+      , statistics
+      , text
+      , time
+      , trace-resources
+      , vector
+      , zlib
