@@ -15,10 +15,10 @@ where
 import           Cardano.Api hiding (Value)
 import           Cardano.Api.Experimental (Some (Some))
 import           Cardano.Api.Ledger (EpochInterval (..))
+
 import           Cardano.Testnet
 
 import           Prelude
-import           Testnet.Types
 
 import           Control.Monad (void)
 import           Data.Aeson (Value, encodeFile)
@@ -36,13 +36,14 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Query (findLargestUtxoForPaymentKey, getEpochStateView, getTxIx,
                    watchEpochStateUpdate)
-import qualified Testnet.Defaults  as Defaults
+import qualified Testnet.Defaults as Defaults
 import           Testnet.Process.Cli.Transaction (TxOutAddress (..), mkSpendOutputsOnlyTx,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Process.RunIO (liftIOAnnotated)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -178,9 +179,9 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
       unsignedUnlockTx
       [Some $ paymentKeyInfoPair wallet1]
 
-  submitTx execConfig cEra signedUnlockTx
-
-  -- Calculate cost of the transaction
+  -- Calculate cost of the transaction before submitting, because once the tx is
+  -- included in a block the spending input UTxOs are consumed and the online
+  -- query can no longer resolve the reference script.
   let txCostOutput = File $ refScriptUnlock </> "unsigned-tx.tx"
   H.noteM_ $
     execCli'
@@ -207,6 +208,8 @@ hprop_ref_plutus_cost_calculation = integrationRetryWorkspace 2 "ref-plutus-scri
         ]
 
   H.diffVsGoldenFile output "test/cardano-testnet-test/files/calculatePlutusScriptCost.json"
+
+  submitTx execConfig cEra signedUnlockTx
 
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Spec.hs.Spec.Ledger Events.Plutus.Cost Calc.Normal Script/"'@
 hprop_included_plutus_cost_calculation :: Property
