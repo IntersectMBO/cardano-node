@@ -19,6 +19,8 @@ index-state:
 constraints:
   -- haskell.nix patch does not work for 1.6.8
   , any.crypton-x509-system < 1.6.8
+  -- TODO move this to cardano-rpc.cabal (cardano-api repo)
+  , any.proto-lens >= 0.7.1.6
 
 packages:
   cardano-node
