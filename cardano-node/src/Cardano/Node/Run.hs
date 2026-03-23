@@ -169,6 +169,8 @@ import           Paths_cardano_node (version)
 
 import           Paths_cardano_node (version)
 
+import           LeiosDemoDb (newLeiosDBSQLiteFromEnv)
+
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
 {- HLINT ignore "Use fewer imports" -}
@@ -470,6 +472,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                          $ Proxy @blk
                          ))
 
+  leiosDB <- newLeiosDBSQLiteFromEnv
+
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
     case p2pMode of
       EnabledP2PMode -> do
@@ -520,6 +524,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnLeiosDB = leiosDB
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -618,6 +623,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnLeiosDB = leiosDB
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
