@@ -3,7 +3,7 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.TxCentrifuge.Tx
+module Cardano.Benchmarking.TxCentrifuge.TxAssembly
   ( buildTx
   ) where
 
@@ -23,9 +23,9 @@ import Cardano.Api qualified as Api
 -- cardano-ledger-core --
 -------------------------
 import Cardano.Ledger.Coin qualified as L
----------------------
+-------------------
 -- tx-centrifuge --
----------------------
+-------------------
 import Cardano.Benchmarking.TxCentrifuge.Fund ( Fund(..) )
 
 --------------------------------------------------------------------------------

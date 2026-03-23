@@ -4,34 +4,15 @@
 
 --------------------------------------------------------------------------------
 
--- | Server-side rate limiter for pull-based token dispensing.
+-- | Server-side GCRA rate limiter for pull-based token dispensing.
 --
--- In traffic control terminology, a /rate limiter/ (or /policer/) enforces a
--- maximum admission rate on incoming requests. It is /reactive/: it does not
--- initiate or schedule transmissions; it responds to each request by either
--- admitting or delaying it against a configured ceiling. This contrasts with a
--- /traffic shaper/ (or /pacer/), which sits on the sender side and proactively
--- schedules outgoing emissions (RFC 2475, s. 2.3.3.3).
+-- Computes delays but never sleeps — the caller is responsible for sleeping
+-- outside the STM transaction (keeps the critical section short and the limiter
+-- testable in pure STM).
 --
--- In a pull-based system the downstream consumer drives the conversation by
--- requesting tokens when it has capacity (e.g. Cardano's TxSubmission2
--- mini-protocol, where the node pulls transactions when its mempool has room).
--- The 'RateLimiter' enforces a tokens-per-second ceiling on dispensed tokens,
--- ensuring the generator does not exceed the configured rate regardless of how
--- aggressively or unevenly consumers poll. Because the generator never pushes,
--- sender-side shaping is not applicable; the appropriate discipline is
--- receiver-side rate limiting.
---
--- This module computes delays but never sleeps. Sleeping is the caller's
--- responsibility (the rate-limited fetcher in
--- "Cardano.Benchmarking.PullFiction.WorkloadRunner" applies the delay via
--- 'threadDelay' outside the STM transaction), keeping the STM critical section
--- short and the rate limiter testable in pure STM.
---
--- The 'TBQueue' is supplied as an explicit parameter to 'waitToken' and
--- 'tryWaitToken', so that queue reads and rate-limit accounting happen in a
--- single atomic STM transaction while keeping the limiter decoupled from any
--- particular queue.
+-- The 'TBQueue' is an explicit parameter so that queue reads and rate-limit
+-- accounting are atomic while the limiter stays decoupled from any particular
+-- queue.
 module Cardano.Benchmarking.PullFiction.Internal.RateLimiter
   ( RateLimiter, newTokenBucket, newUnlimited
   , waitToken, tryWaitToken
@@ -43,17 +24,14 @@ module Cardano.Benchmarking.PullFiction.Internal.RateLimiter
 -- stm --
 ---------
 import Control.Concurrent.STM qualified as STM
----------------------
+------------------
 -- pull-fiction --
----------------------
+------------------
 import Cardano.Benchmarking.PullFiction.Clock qualified as Clock
 
 --------------------------------------------------------------------------------
 
--- | A rate limiter for pull-based (server-side) token dispensing.
---
--- Two constructors are provided: 'TokenBucket' for a configured TPS ceiling,
--- and 'Unlimited' for unconstrained throughput.
+-- | 'TokenBucket' for a configured TPS ceiling, or 'Unlimited'.
 data RateLimiter
   = TokenBucket
       -- | Emission interval T in nanoseconds (cached).
@@ -68,23 +46,23 @@ data RateLimiter
 -- | Create a token-bucket rate limiter targeting @tps@ tokens per second.
 --
 -- Uses the Generic Cell Rate Algorithm (GCRA), also known as the virtual
--- scheduling algorithm (ITU-T I.371). Equivalent to Turner's leaky bucket as
--- a meter (Turner 1986, "New Directions in Communications", IEEE Comm. Mag.
+-- scheduling algorithm (ITU-T I.371). Equivalent to Turner's leaky bucket as a
+-- meter (Turner 1986, "New Directions in Communications", IEEE Comm. Mag.
 -- 24(10)).
 --
--- The algorithm tracks a /Theoretical Arrival Time/ (TAT), the earliest
--- time the next token is allowed:
+-- The algorithm tracks a /Theoretical Arrival Time/ (TAT), the earliest time
+-- the next token is allowed:
 --
 -- @
---   TAT(0)     = now                      -- first token, no delay
---   TAT(N+1)   = max(TAT(N), now) + T     -- T = emission interval = 1\/rate
---   allow      iff  TAT <= now + τ        -- τ = burst tolerance
+--   TAT(0)     = now                  -- first token, no delay
+--   TAT(N+1)   = max(TAT(N), now) + T -- T = emission interval = 1\/rate
+--   allow      iff  TAT <= now + τ    -- τ = burst tolerance
 -- @
 --
 -- With @τ = 0@ (the current implementation) no burst is allowed: each token
--- must wait until its scheduled time. Adding @τ > 0@ would permit up to
--- @τ / T@ tokens to arrive ahead of schedule (the dual token-bucket
--- formulation with bucket depth @τ / T@).
+-- must wait until its scheduled time. Adding @τ > 0@ would permit up to @τ / T@
+-- tokens to arrive ahead of schedule (the dual token-bucket formulation with
+-- bucket depth @τ / T@).
 --
 -- TODO: Add a @maxBurst@ parameter to the rate limit config. The burst
 -- tolerance becomes @τ = maxBurst * T@, and the admission check becomes
@@ -112,21 +90,9 @@ newUnlimited = Unlimited
 
 --------------------------------------------------------------------------------
 
--- | Compute the target time for the next token given a pre-computed
--- nanoseconds-per-token interval.
---
--- @tokensSent@ is the number of tokens already dispatched. Token 0 is handled
--- by the first-call special case in 'waitToken' (dispatched immediately at
--- @startTime@, delay 0). For all subsequent tokens, @tokensSent@ equals the
--- 0-indexed position of the next token: token 1 has @tokensSent = 1@, so its
--- target time is @startTime + 1 * T@. In general:
---
--- @
---   targetTime(N) = startTime + N * nanosPerToken
--- @
---
--- This is a single O(1) integer multiply + add; see the performance note on
--- 'TokenBucket' for the precision/performance trade-off.
+-- | @targetTime(N) = startTime + N * nanosPerToken@.
+-- Token 0 is special-cased in 'waitToken' (delay 0).
+-- O(1) integer multiply + add — no division on the hot path.
 nextTokenTargetTime :: Integer -> Clock.TimeSpec -> Integer -> Clock.TimeSpec
 nextTokenTargetTime nanosPerToken startTime tokensSent =
   let !offset = Clock.fromNanoSecs (tokensSent * nanosPerToken)
@@ -136,29 +102,14 @@ nextTokenTargetTime nanosPerToken startTime tokensSent =
 
 -- | Try to claim the next token. Runs entirely in STM, never retries.
 --
--- The 'TBQueue' is passed as a parameter so the caller controls which queue is
--- read; the rate limiter only tracks rate-limiting state.
+-- @Just (token, delay)@ when a token is available; 'Nothing' when the queue is
+-- empty (caller sleeps and retries).
 --
--- Returns @Just (token, delay)@ when a token is available, where @delay@ is how
--- long the caller should sleep to respect the TPS rate (zero when behind
--- schedule). Returns 'Nothing' when the queue is empty; the caller (typically
--- the rate-limited fetcher in
--- "Cardano.Benchmarking.PullFiction.WorkloadRunner") is responsible for
--- sleeping and retrying.
+-- __Fairness__: consume + slot-claim are one STM transaction, so concurrent
+-- threads see a strictly increasing @tokensSent@ counter — FIFO-fair.
 --
--- __Fairness property__: the token is consumed and the rate-limit slot is
--- claimed in a single atomic STM transaction. This means that once a thread
--- obtains token N, no other thread can obtain an /earlier/ slot: the delay
--- assigned to token N is always <= the delay for token N+1. Threads that enter
--- concurrently are serialised by STM; each sees a strictly increasing
--- @tokensSent@ counter. The consume-before-delay order therefore provides
--- FIFO-fair scheduling: the thread that wins the STM commit gets the earliest
--- available slot, and no later arrival can jump ahead of it.
---
--- By never blocking inside STM the @timeNow@ timestamp (captured by the caller
--- just before entering 'STM.atomically') stays accurate, which prevents
--- stale-clock TPS drift that would occur if the transaction retried while waiting
--- for a queue write.
+-- Never blocks inside STM, so the caller-captured @timeNow@ stays accurate
+-- (no stale-clock TPS drift).
 waitToken :: Clock.TimeSpec
           -> RateLimiter
           -> STM.TBQueue token
@@ -191,22 +142,11 @@ waitToken timeNow (TokenBucket nanosPerToken startTVar countTVar) queue = do
           STM.writeTVar countTVar 1
           pure (Just (token, 0))
 
--- | Non-blocking token request with rate-limit check. Runs entirely in STM.
+-- | Non-blocking variant: checks the rate limit /first/ and returns
+-- @Left delay@ without touching the queue when ahead of schedule.
 --
--- The 'TBQueue' is passed as a parameter so the caller controls which queue is
--- read; the rate limiter only tracks rate-limiting state.
---
--- Unlike 'waitToken' (which always tries to read a token), this function checks
--- the rate limit /first/ and returns @Left delay@ without touching the queue
--- when ahead of schedule. This is the primary path for non-blocking callers
--- that should not consume tokens faster than the target TPS.
---
--- Returns:
---
--- * @Left delay@ when rate-limited (ahead of schedule), where @delay@ is how
---   long until the next token slot.
--- * @Right Nothing@ when not rate-limited but the queue is empty.
--- * @Right (Just token)@ when not rate-limited and a token was claimed.
+-- @Right Nothing@: not rate-limited but queue empty.
+-- @Right (Just token)@: token claimed.
 tryWaitToken :: Clock.TimeSpec
              -> RateLimiter
              -> STM.TBQueue token

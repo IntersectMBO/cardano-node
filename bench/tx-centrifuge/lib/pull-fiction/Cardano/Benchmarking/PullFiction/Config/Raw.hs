@@ -24,8 +24,14 @@ module Cardano.Benchmarking.PullFiction.Config.Raw
     -- * Config.
     Config (..)
 
+    -- * Observer.
+  , Observer (..)
+
     -- * Builder.
   , Builder (..)
+
+    -- * Recycle strategy.
+  , RecycleStrategy (..)
 
     -- * RateLimit.
   , RateLimit (..)
@@ -74,6 +80,10 @@ data Config = Config
   { -- | Raw JSON value describing how to load initial inputs.
     -- Interpretation is left to the caller (e.g. @Main.hs@).
     initialInputs :: !Aeson.Value
+    -- | Optional @\"observers\"@ map (keyed by name).
+    -- Because Aeson decodes JSON objects into a 'Map', duplicate observer names
+    -- are silently discarded (last value wins).
+  , maybeObservers :: !(Maybe (Map String Observer))
     -- | Optional top level @\"builder\"@.
   , maybeTopLevelBuilder :: !(Maybe Builder)
     -- | Optional top-level @\"rate_limit\"@.
@@ -82,10 +92,10 @@ data Config = Config
   , maybeTopLevelMaxBatchSize :: !(Maybe Natural)
     -- | Optional top-level @\"on_exhaustion\"@.
   , maybeTopLevelOnExhaustion :: !(Maybe OnExhaustion)
-    -- | Generator workloads keyed by name. Because Aeson decodes JSON objects
-    -- into a 'Map', duplicate workload names are silently discarded (last
-    -- value wins).
-  , workloads :: !(Map String Workload)
+    -- | Optional generator workloads keyed by name.
+    -- Because Aeson decodes JSON objects into a 'Map', duplicate workload names
+    -- are silently discarded (last value wins).
+  , maybeWorkloads :: !(Maybe (Map String Workload))
   }
   deriving (Show, Eq)
 
@@ -93,11 +103,34 @@ instance Aeson.FromJSON Config where
   parseJSON = Aeson.withObject "Config" $ \o ->
     Config
       <$> o .:  "initial_inputs"
+      <*> o .:? "observers"
       <*> o .:? "builder"
-      <*> Aeson.Types.explicitParseFieldMaybe parseTopLevelRateLimit o "rate_limit"
+      <*> Aeson.Types.explicitParseFieldMaybe parseTopLevelRateLimit o
+                "rate_limit"
       <*> o .:? "max_batch_size"
       <*> o .:? "on_exhaustion"
-      <*> o .:  "workloads"
+      <*> o .:? "workloads"
+
+--------------------------------------------------------------------------------
+
+-- | Opaque observer configuration.
+--
+-- Carries a @\"type\"@ discriminator and an opaque @\"params\"@ object.
+-- Interpretation of the params is the caller's responsibility (see @Main.hs@),
+-- just like 'initialInputs' and 'Builder'.
+data Observer = Observer
+  { -- | Observer variant name (e.g. @\"nodetonode\"@). Non-empty.
+    observerType :: !String
+    -- | Opaque params object for the variant.
+  , observerParams :: !Aeson.Value
+  }
+  deriving (Show, Eq)
+
+instance Aeson.FromJSON Observer where
+  parseJSON = Aeson.withObject "Observer" $ \o -> do
+    ty <- o .: "type" :: Aeson.Types.Parser String
+    when (null ty) $ fail "Observer: \"type\" must be non-empty"
+    Observer ty <$> o .: "params"
 
 --------------------------------------------------------------------------------
 
@@ -111,14 +144,40 @@ data Builder = Builder
     builderType :: !String
     -- | Opaque params object for the variant.
   , builderParams :: !Aeson.Value
+    -- | Optional recycle strategy. 'Nothing' means no recycling.
+  , builderRecycle :: !(Maybe RecycleStrategy)
   }
   deriving (Show, Eq)
 
 instance Aeson.FromJSON Builder where
   parseJSON = Aeson.withObject "Builder" $ \o -> do
     ty <- o .: "type" :: Aeson.Types.Parser String
-    when (null ty) $ fail "Builder: type must be non-empty"
+    when (null ty) $ fail "Builder: \"type\" must be non-empty"
     Builder ty <$> o .: "params"
+               <*> o .:? "recycle"
+
+--------------------------------------------------------------------------------
+
+-- | When to recycle transaction outputs back to the input queue.
+data RecycleStrategy
+  -- | Recycle immediately after building, before entering the payload queue.
+  = RecycleOnBuild
+  -- | Recycle when a worker fetches the payload from the queue.
+  | RecycleOnPull
+  -- | Recycle when an observer confirms the payload. Carries the observer name.
+  | RecycleOnConfirm !String
+  deriving (Show, Eq)
+
+instance Aeson.FromJSON RecycleStrategy where
+  parseJSON = Aeson.withObject "RecycleStrategy" $ \o -> do
+    ty <- o .: "type" :: Aeson.Types.Parser String
+    case ty of
+      "on_build"   -> pure RecycleOnBuild
+      "on_pull"    -> pure RecycleOnPull
+      "on_confirm" ->
+        RecycleOnConfirm <$> o .: "params"
+      _ -> fail $ "RecycleStrategy: unknown \"type\" " ++ show ty
+                ++ ", expected \"on_build\", \"on_pull\", or \"on_confirm\""
 
 --------------------------------------------------------------------------------
 
@@ -186,7 +245,7 @@ parseRateLimit scopeParser = Aeson.withObject "RateLimit" $ \o -> do
       rl <- TokenBucket <$> p .: "tps"
       pure (maybeScope, rl)
     _ -> fail $
-      "RateLimit: unknown type " ++ show ty ++ ", expected \"token_bucket\""
+      "RateLimit: unknown \"type\" " ++ show ty ++ ", expected \"token_bucket\""
 
 parseTopLevelRateLimit :: Aeson.Value
                        -> Aeson.Types.Parser (Maybe TopLevelScope, RateLimit)
@@ -242,8 +301,9 @@ data Workload = Workload
   , maybeMaxBatchSize :: !(Maybe Natural)
     -- | Optional on-exhaustion behaviour.
   , maybeOnExhaustion :: !(Maybe OnExhaustion)
-    -- | Targets keyed by name. Duplicate target names are silently discarded
-    -- (last value wins) because Aeson decodes JSON objects into a 'Map'.
+    -- | Targets keyed by name.
+    -- Because Aeson decodes JSON objects into a 'Map', duplicate target names
+    -- are silently discarded (last value wins).
   , targets :: !(Map String Target)
   }
   deriving (Show, Eq)
@@ -252,7 +312,8 @@ instance Aeson.FromJSON Workload where
   parseJSON = Aeson.withObject "Workload" $ \o ->
     Workload
       <$> o .:? "builder"
-      <*> Aeson.Types.explicitParseFieldMaybe parseWorkloadRateLimit o "rate_limit"
+      <*> Aeson.Types.explicitParseFieldMaybe parseWorkloadRateLimit o
+                "rate_limit"
       <*> o .:? "max_batch_size"
       <*> o .:? "on_exhaustion"
       <*> o .:  "targets"

@@ -70,19 +70,22 @@ data FundEntry
 
 instance Aeson.FromJSON FundEntry where
   parseJSON = Aeson.withObject "Fund" $ \o -> do
-    mbTxInStr <- o .:? "tx_in"
+    -- Common fields.
     val       <- o .:  "value"
     keyPath   <- o .:  "signing_key"
+    -- If it has a "tx_in" field it is a 'FundEntryPayment'.
+    mbTxInStr <- o .:? "tx_in"
     case mbTxInStr of
       Just txInStr -> do
         txIn <- parseTxIn txInStr
         pure (FundEntryPayment txIn val keyPath)
-      Nothing -> pure (FundEntryGenesis val keyPath)
+      Nothing -> do
+        pure (FundEntryGenesis      val keyPath)
 
 -- | Parse @"txid#ix"@ format. Both parts are required.
 parseTxIn :: T.Text -> Aeson.Parser Api.TxIn
-parseTxIn s =
-  let (txIdHex, rest) = T.breakOn "#" s
+parseTxIn text =
+  let (txIdHex, rest) = T.breakOn "#" text
   in case T.uncons rest of
     Just ('#', ds) ->
       case Api.deserialiseFromRawBytesHex @Api.TxId (T.encodeUtf8 txIdHex) of
@@ -97,13 +100,13 @@ parseTxIn s =
 -- @"signingKey"@ field pointing to a @.skey@ file.
 -- Signing keys are cached by path to avoid redundant disk reads.
 --
--- For key-only entries (no @"txIn"@), the genesis UTxO pseudo-TxIn is
--- derived from the signing key using the provided 'Api.NetworkId'.
+-- For key-only entries (no @"txIn"@), the genesis UTxO pseudo-TxIn is derived
+-- from the signing key using the provided 'Api.NetworkId'.
 --
 -- NOTE: the entire JSON array is decoded into memory before returning.
--- For very large fund files a streaming parser (e.g. json-stream) could
--- yield funds incrementally so the caller can start filling queues before
--- the file is fully read.
+-- For very large fund files a streaming parser (e.g. json-stream) could yield
+-- funds incrementally so the caller can start filling queues before the file
+-- is fully read.
 loadFunds :: Api.NetworkId -> FilePath -> IO (Either String [Fund])
 loadFunds networkId path = do
   result <- Aeson.eitherDecodeFileStrict' path
@@ -140,12 +143,12 @@ entryToFund networkId cacheRef entry = do
 
     entryKeyPath :: FundEntry -> FilePath
     entryKeyPath (FundEntryPayment _ _ p) = p
-    entryKeyPath (FundEntryGenesis _ p)   = p
+    entryKeyPath (FundEntryGenesis   _ p) = p
 
     mkFund :: Api.SigningKey Api.PaymentKey -> Fund
     mkFund key = case entry of
       FundEntryPayment txIn val _ -> Fund txIn val key
-      FundEntryGenesis val _      -> Fund (genesisTxIn networkId key) val key
+      FundEntryGenesis      val _ -> Fund (genesisTxIn networkId key) val key
 
 -- | Derive the genesis UTxO pseudo-TxIn from a payment signing key.
 -- Casts to 'Api.GenesisUTxOKey' to compute the key hash expected by
@@ -159,7 +162,8 @@ genesisTxIn networkId
 
 -- | Cast a 'Api.PaymentKey' signing key to a 'Api.GenesisUTxOKey' signing key.
 -- Both key types use the same underlying ed25519 representation; this cast
--- enables computing the genesis UTxO pseudo-TxIn via 'Api.genesisUTxOPseudoTxIn'.
+-- enables computing the genesis UTxO pseudo-TxIn via
+-- 'Api.genesisUTxOPseudoTxIn'.
 castToGenesisUTxOKey
   :: Api.SigningKey Api.PaymentKey
   -> Api.SigningKey Api.GenesisUTxOKey
@@ -173,7 +177,7 @@ castToGenesisUTxOKey (Api.PaymentSigningKey skey) =
 readSigningKey :: FilePath -> IO (Either String (Api.SigningKey Api.PaymentKey))
 readSigningKey fp = do
   result <- Api.readFileTextEnvelopeAnyOf
-    [ Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)     id
+    [ Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey) id
     , Api.FromSomeType
         (Api.AsSigningKey Api.AsGenesisUTxOKey)
         Api.castSigningKey

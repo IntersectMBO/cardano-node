@@ -29,9 +29,9 @@ import Data.Map.Strict qualified as Map
 -- stm --
 ---------
 import Control.Concurrent.STM qualified as STM
----------------------
+------------------
 -- pull-fiction --
----------------------
+------------------
 import Cardano.Benchmarking.PullFiction.Config.Raw qualified as Raw
 import Cardano.Benchmarking.PullFiction.Config.Runtime qualified as Runtime
 import Cardano.Benchmarking.PullFiction.Clock qualified as Clock

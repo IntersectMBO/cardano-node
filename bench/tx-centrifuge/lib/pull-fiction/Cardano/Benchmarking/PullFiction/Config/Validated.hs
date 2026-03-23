@@ -4,10 +4,10 @@
 
 -- | Validated load-generator configuration with cascading defaults applied.
 --
--- Types mirror "Cardano.Benchmarking.PullFiction.Config.Raw" but with
--- hidden data constructors. The only way to obtain values is through
--- 'validate', which guarantees that every value has passed validation (e.g.
--- @tps > 0@, @max_batch_size >= 1@, valid names).
+-- Types mirror "Cardano.Benchmarking.PullFiction.Config.Raw" but with hidden
+-- data constructors. The only way to obtain values is through 'validate', which
+-- guarantees that every value has passed validation (e.g. @tps > 0@, 
+-- @max_batch_size >= 1@, valid names).
 --
 -- Cascading defaults are resolved here:
 --
@@ -21,8 +21,8 @@
 -- * @on_exhaustion@: target value > workload value > top-level value >
 --   default (@\"block\"@).
 --
--- After 'validate', every 'Target' has a concrete @targetMaxBatchSize@ and
--- every 'Workload' has a concrete @builder@ (no 'Maybe').
+-- After 'validate', every 'Target' has a concrete @maxBatchSize@ and every
+-- 'Workload' has a concrete @builder@ (no 'Maybe').
 --
 -- 'Workload' and 'Config' store their children in 'Map's keyed by name
 -- (alphabetical order; JSON object key order is not preserved).
@@ -34,18 +34,20 @@ module Cardano.Benchmarking.PullFiction.Config.Validated
   (
     -- * Config.
     Config
-  , initialInputs, workloads
-
-    -- * RateLimitSource.
-  , RateLimitSource (..)
+  , initialInputs, observers, workloads
 
     -- * Workload.
   , Workload
   , workloadName, builder, targets
 
+    -- * RateLimitSource.
+  , RateLimitSource (..)
+
     -- * Target.
   , Target
-  , targetName, rateLimitSource, targetMaxBatchSize, onExhaustion
+  , targetName
+  , rateLimitSource
+  , maxBatchSize, onExhaustion
   , addr, port
 
     -- * Validation.
@@ -67,9 +69,9 @@ import Numeric.Natural (Natural)
 ----------------
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
----------------------
+------------------
 -- pull-fiction --
----------------------
+------------------
 import Cardano.Benchmarking.PullFiction.Config.Raw qualified as Raw
 
 --------------------------------------------------------------------------------
@@ -102,8 +104,28 @@ defaultOnExhaustion = Raw.Block
 data Config input = Config
   { -- | Initial inputs provided by the caller and stored by 'validate'.
     initialInputs :: !(NonEmpty input)
+    -- | Observers (keyed by name).
+    -- Opaque; interpretation is the caller's responsibility.
+  , observers     :: !(Map String Raw.Observer)
     -- | Workloads keyed by name. Iteration order is alphabetical (Map order).
-  , workloads :: !(Map String Workload)
+  , workloads     :: !(Map String Workload)
+  }
+  deriving (Show, Eq)
+
+--------------------------------------------------------------------------------
+
+-- | A single workload with cascading defaults applied.
+--
+-- 'builder' is always concrete (no 'Maybe'); cascading from the top level
+-- config is performed by 'validate'.
+data Workload = Workload
+  { -- | User provided name.
+    workloadName :: !String
+    -- | Resolved builder: workload value > top level value.
+    -- Opaque; interpretation is the caller's responsibility.
+  , builder      :: !Raw.Builder
+    -- | Targets keyed by name. Iteration order is alphabetical.
+  , targets      :: !(Map String Target)
   }
   deriving (Show, Eq)
 
@@ -129,38 +151,24 @@ data RateLimitSource = RateLimitSource
 
 --------------------------------------------------------------------------------
 
--- | A single workload with cascading defaults applied.
---
--- 'builder' is always concrete (no 'Maybe'); cascading from the top level
--- config is performed by 'validate'.
-data Workload = Workload
-  { workloadName :: !String
-    -- | Resolved builder: workload value > top level value.
-    -- Opaque; interpretation is the caller's responsibility.
-  , builder :: !Raw.Builder
-    -- | Targets keyed by name. Iteration order is alphabetical.
-  , targets :: !(Map String Target)
-  }
-  deriving (Show, Eq)
-
---------------------------------------------------------------------------------
-
 -- | A target endpoint to connect to.
 --
--- 'targetMaxBatchSize' and 'onExhaustion' are concrete (no 'Maybe'). Cascading
+-- 'maxBatchSize' and 'onExhaustion' are concrete (no 'Maybe'). Cascading
 -- defaults have been applied by 'validate'.
 data Target = Target
-  { targetName :: !String
+  { -- | User provided name.
+    targetName      :: !String
     -- | Resolved rate limit source ('Nothing' means unlimited).
   , rateLimitSource :: !(Maybe RateLimitSource)
-    -- | Resolved max batch size: target value > workload value > top-level value
-    -- > default.
-  , targetMaxBatchSize :: !Natural
-    -- | Resolved on-exhaustion behaviour: target value > workload value >
-    -- top-level value > 'Raw.Block'.
-  , onExhaustion :: !Raw.OnExhaustion
-  , addr :: !String
-  , port :: !Int
+    -- | Resolved max batch size.
+    -- target value > workload value > top-level value > default (1).
+  , maxBatchSize    :: !Natural
+    -- | Resolved on-exhaustion behaviour.
+    -- target value > workload value > top-level value > default (block).
+  , onExhaustion    :: !Raw.OnExhaustion
+  -- How to connect to the target.
+  , addr            :: !String
+  , port            :: !Int
   }
   deriving (Show, Eq)
 
@@ -183,15 +191,24 @@ validate
   -> NonEmpty input
   -> Either String (Config input)
 validate raw inputs = do
-  -- Builder (opaque; passed through without interpretation).
+  -- Observers. Always top-level and by name.
+  -- (opaque; passed through without interpretation).
+  let resolvedObservers = fromMaybe
+                            Map.empty
+                            (Raw.maybeObservers raw)
+  -- Top level builder. Future iterations will have builders by name.
+  -- (opaque; passed through without interpretation).
   let maybeTopBuilder = Raw.maybeTopLevelBuilder raw
-  -- Rate limit.
-  maybeTopRateLimit <- case Raw.maybeTopLevelRateLimit raw of
-    Nothing                     -> pure Nothing
-    Just (maybeTopScope, rawRL) -> do
-      validatedRL <- validateRateLimit rawRL
-      let topScope = fromMaybe defaultTopLevelScope maybeTopScope
-      pure (Just (topScope, validatedRL))
+  -- Top level rate limit.
+  maybeTopRateLimit <-
+    case Raw.maybeTopLevelRateLimit raw of
+      Nothing                     -> pure Nothing
+      Just (maybeTopScope, rawRL) -> do
+        let topScope = fromMaybe
+                         defaultTopLevelScope
+                         maybeTopScope
+        validatedRL <- validateRateLimit rawRL
+        pure (Just (topScope, validatedRL))
   -- Max batch size.
   let topMaxBatchSize = fromMaybe
                           defaultMaxBatchSize
@@ -203,13 +220,22 @@ validate raw inputs = do
                           defaultOnExhaustion
                           (Raw.maybeTopLevelOnExhaustion raw)
   -- Workloads.
-  when (Map.null (Raw.workloads raw)) $
-    Left "Config: workloads must not be empty"
+  let rawWorkloads = fromMaybe
+                       Map.empty
+                       (Raw.maybeWorkloads raw)
+  when (Map.null rawWorkloads) $
+    Left "Config: at least one workload is required"
   workloadsMap <- Map.traverseWithKey
-    (\wName workload -> validateWorkload
-      wName maybeTopBuilder maybeTopRateLimit topMaxBatchSize topOnExhaustion workload
+    (\name workload ->
+      validateWorkload
+        name
+        maybeTopBuilder
+        maybeTopRateLimit
+        topMaxBatchSize
+        topOnExhaustion
+        workload
     )
-    (Raw.workloads raw)
+    rawWorkloads
   -- Inputs must cover all workloads: Runtime.partitionInputs splits them into
   -- contiguous chunks, so fewer inputs than workloads leaves some with zero.
   let inputCount = length inputs
@@ -219,11 +245,13 @@ validate raw inputs = do
   -- Final validated config.
   pure Config
     { initialInputs = inputs
-    , workloads    = workloadsMap
+    , observers     = resolvedObservers
+    , workloads     = workloadsMap
     }
 
 --------------------------------------------------------------------------------
 
+-- Returns 'Left' with a descriptive error message on the first violation.
 validateWorkload
   -- | Workload name (from Map key).
   :: String
@@ -235,9 +263,15 @@ validateWorkload
   -> Natural
   -- | Resolved top-level on-exhaustion behaviour.
   -> Raw.OnExhaustion
+  -- | The parsed workload from JSON.
   -> Raw.Workload
   -> Either String Workload
-validateWorkload name maybeTopBuilder maybeTopRateLimit topMaxBatchSize topOnExhaustion rawWorkload = do
+validateWorkload name
+                 maybeTopBuilder
+                 maybeTopRateLimit
+                 topMaxBatchSize
+                 topOnExhaustion
+                 rawWorkload = do
   -- Name.
   validateName "Workload" name
   -- Builder conflict: setting at both levels is ambiguous.
@@ -246,13 +280,17 @@ validateWorkload name maybeTopBuilder maybeTopRateLimit topMaxBatchSize topOnExh
       Left $ "builder set at both the top level and in workload: " ++ show name
     _ -> pure ()
   -- Resolve builder: workload level > top level > error.
-  resolvedBuilder <- case Raw.maybeBuilder rawWorkload of
-    Just parsedBuilder  -> pure parsedBuilder
-    Nothing -> case maybeTopBuilder of
-      Just topLevelBuilder  -> pure topLevelBuilder
-      Nothing -> Left $
-        "Workload " ++ show name
-          ++ ": builder is required (no workload or top level default)"
+  resolvedBuilder <- do
+    case Raw.maybeBuilder rawWorkload of
+      Just parsedBuilder -> do
+        -- The top level builder gets ignored in favor of the workload builder.
+        pure parsedBuilder
+      Nothing -> do
+        case maybeTopBuilder of
+          Just topLevelBuilder -> pure topLevelBuilder
+          Nothing -> Left $
+            "Workload " ++ show name
+              ++ ": builder is required (no workload or top level default)"
   -- Rate-limit conflict: setting at both levels is ambiguous.
   case (maybeTopRateLimit, Raw.maybeRateLimit rawWorkload) of
     (Just _, Just _) ->
@@ -262,24 +300,32 @@ validateWorkload name maybeTopBuilder maybeTopRateLimit topMaxBatchSize topOnExh
   -- Resolve effective rate limit: workload-level > top-level > unlimited.
   -- The scope and validated rate limit are cascaded to validateTarget, which
   -- computes the final RateLimitSource (including the cache key).
-  effectiveRateLimit <- case Raw.maybeRateLimit rawWorkload of
-    Just (maybeWlScope, rawRL) -> do
-      validatedRL <- validateRateLimit rawRL
-      let wlScope = fromMaybe defaultWorkloadScope maybeWlScope
-      pure (Just (Right wlScope, validatedRL))
-    Nothing -> case maybeTopRateLimit of
-      Just (topScope, topRL) ->
-        pure (Just (Left topScope, topRL))
-      Nothing ->
-        pure Nothing
+  effectiveRateLimit <- do
+    case Raw.maybeRateLimit rawWorkload of
+      -- There is a rate limit at the workload level.
+      Just (maybeWlScope, rawRL) -> do
+        validatedRL <- validateRateLimit rawRL
+        let wlScope = fromMaybe
+                        defaultWorkloadScope
+                        maybeWlScope
+        -- `Right` workload scope.
+        pure (Just (Right wlScope, validatedRL))
+      -- There is no rate limit at the workload level.
+      Nothing -> do
+        case maybeTopRateLimit of
+          Just (topScope, validatedTopRL) -> do
+            -- `Left` top level scope.
+            pure (Just (Left topScope, validatedTopRL))
+          Nothing -> do
+            pure Nothing
   -- Cascade max_batch_size: workload > top-level (always concrete).
   -- The per-target override is applied inside validateTarget.
   case Raw.maybeMaxBatchSize rawWorkload of
     Just 0 -> Left "Workload: max_batch_size must be >= 1"
     _      -> pure ()
   let workloadBatchSize = fromMaybe
-                                    topMaxBatchSize
-                                    (Raw.maybeMaxBatchSize rawWorkload)
+                            topMaxBatchSize
+                            (Raw.maybeMaxBatchSize rawWorkload)
   -- Cascade on_exhaustion: workload > top-level.
   let workloadOnExhaustion = fromMaybe
                                topOnExhaustion
@@ -299,12 +345,19 @@ validateWorkload name maybeTopBuilder maybeTopRateLimit topMaxBatchSize topOnExh
     , targets      = targetsMap
     }
 
+-- Returns 'Left' with a descriptive error message on the first violation.
 validateTarget
-  :: String   -- ^ Workload name (for cache key computation).
-  -> String   -- ^ Target name (from Map key).
+  -- | Workload name (for cache key computation).
+  :: String
+  -- | Target name (from Map key).
+  -> String
+  -- | If 'Just': 'Left' is top level scope, 'Right' is workload scope.
   -> Maybe (Either Raw.TopLevelScope Raw.WorkloadScope, Raw.RateLimit)
-  -> Natural  -- ^ Resolved max batch size.
-  -> Raw.OnExhaustion -- ^ Resolved on-exhaustion behaviour.
+  -- | Resolved max batch size.
+  -> Natural
+  -- | Resolved on-exhaustion behaviour.
+  -> Raw.OnExhaustion
+  -- The target parsed from JSON.
   -> Raw.Target
   -> Either String Target
 validateTarget wlName tgtName effectiveRateLimit workloadBatchSize workloadOnExhaustion rawTarget = do
@@ -315,35 +368,39 @@ validateTarget wlName tgtName effectiveRateLimit workloadBatchSize workloadOnExh
   --   @global              → one limiter for everything
   --   workloadName         → one per workload
   --   workloadName.target  → one per target
-  let maybeRateLimitSource = case effectiveRateLimit of
-        Nothing -> Nothing
-        Just (scope, rl) -> Just $ case scope of
-          Left  Raw.TopShared         -> RateLimitSource "@global" rl
-          Left  Raw.TopPerWorkload    -> RateLimitSource wlName rl
-          Left  Raw.TopPerTarget      -> RateLimitSource (wlName ++ "." ++ tgtName) rl
-          Right Raw.WorkloadShared    -> RateLimitSource wlName rl
-          Right Raw.WorkloadPerTarget -> RateLimitSource (wlName ++ "." ++ tgtName) rl
+  let maybeRateLimitSource =
+        case effectiveRateLimit of
+          Nothing -> Nothing
+          Just (scope, rl) -> Just $ case scope of
+            -- Using the scope set at the top level rate limit.
+            Left  Raw.TopShared         -> RateLimitSource "@global" rl
+            Left  Raw.TopPerWorkload    -> RateLimitSource wlName rl
+            Left  Raw.TopPerTarget      -> RateLimitSource (wlName++"."++tgtName) rl
+            -- Using scope set at the workload level rate limit.
+            Right Raw.WorkloadShared    -> RateLimitSource wlName rl
+            Right Raw.WorkloadPerTarget -> RateLimitSource (wlName++"."++tgtName) rl
   -- Cascade max_batch_size: target > workload (always concrete).
   case Raw.maybeTargetMaxBatchSize rawTarget of
     Just 0 -> Left $
       "Target " ++ show tgtName
         ++ ": max_batch_size must be >= 1"
     _ -> pure ()
-  let resolvedBatchSize = fromMaybe
-                            workloadBatchSize
-                            (Raw.maybeTargetMaxBatchSize rawTarget)
+  -- Cascade max_batch_size: target > workload (always concrete).
+  let resolvedMaxBatchSize = fromMaybe
+                               workloadBatchSize
+                               (Raw.maybeTargetMaxBatchSize rawTarget)
   -- Cascade on_exhaustion: target > workload (always concrete).
   let resolvedOnExhaustion = fromMaybe
                                workloadOnExhaustion
                                (Raw.maybeTargetOnExhaustion rawTarget)
   -- Final validated target.
   pure Target
-    { targetName         = tgtName
-    , rateLimitSource    = maybeRateLimitSource
-    , targetMaxBatchSize = resolvedBatchSize
-    , onExhaustion       = resolvedOnExhaustion
-    , addr               = Raw.addr rawTarget
-    , port               = Raw.port rawTarget
+    { targetName      = tgtName
+    , rateLimitSource = maybeRateLimitSource
+    , maxBatchSize    = resolvedMaxBatchSize
+    , onExhaustion    = resolvedOnExhaustion
+    , addr            = Raw.addr rawTarget
+    , port            = Raw.port rawTarget
     }
 
 --------------------------------------------------------------------------------

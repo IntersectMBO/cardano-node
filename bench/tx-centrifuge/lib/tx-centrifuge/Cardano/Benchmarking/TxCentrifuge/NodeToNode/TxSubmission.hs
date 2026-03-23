@@ -7,8 +7,9 @@
 
 --------------------------------------------------------------------------------
 
-module Cardano.Benchmarking.TxCentrifuge.Client
-  ( mkClient
+module Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxSubmission
+  ( TxSubmissionClient
+  , txSubmissionClient
   ) where
 
 --------------------------------------------------------------------------------
@@ -16,7 +17,6 @@ module Cardano.Benchmarking.TxCentrifuge.Client
 ----------
 -- base --
 ----------
-import Control.Arrow ((&&&))
 import Data.Foldable (toList)
 import Numeric.Natural (Natural)
 import Data.List.NonEmpty qualified as NE
@@ -52,26 +52,70 @@ import Ouroboros.Consensus.Shelley.Ledger.Mempool
 import Ouroboros.Network.Protocol.TxSubmission2.Client qualified as TxSub
 import Ouroboros.Network.Protocol.TxSubmission2.Type qualified as TxSub
 import Ouroboros.Network.SizeInBytes qualified as Net
----------------------
+-------------------
 -- tx-centrifuge --
----------------------
+-------------------
 import Cardano.Benchmarking.TxCentrifuge.Tracing qualified as Tracing
 
 --------------------------------------------------------------------------------
 
 type CardanoBlock = Consensus.CardanoBlock Eras.StandardCrypto
 
+-- | TxSubmission2 client for submitting transactions.
+type TxSubmissionClient =
+  TxSub.TxSubmissionClient
+    (Mempool.GenTxId CardanoBlock)
+    (Mempool.GenTx CardanoBlock)
+    IO
+    ()
+
+-- | A pre-computed entry in the unacknowledged sequence.
+--
+-- All protocol-ready values are computed once at entry time (via 'toEntry')
+-- rather than re-derived on every protocol round-trip.
+data UnAckedEntry = UnAckedEntry
+  { -- | For protocol announcement ('MsgReplyTxIds') and matching ('MsgRequestTxs').
+    uaeGenTxId :: !(Mempool.GenTxId CardanoBlock)
+    -- | For protocol body delivery ('MsgReplyTxs').
+  , uaeGenTx   :: !(Mempool.GenTx CardanoBlock)
+    -- | For protocol announcement ('MsgReplyTxIds').
+  , uaeSize    :: !Net.SizeInBytes
+  }
+
 -- | Internal state: the unacknowledged tx sequence (oldest first, matching the
 -- server's FIFO).  Acks remove elements from the front; new announcements are
 -- appended at the back.
 -- Uses 'Seq' for O(1) length and O(log n) take/drop (vs O(n) for lists).
-type UnAcked = Seq.Seq (Api.Tx Api.ConwayEra)
+type UnAcked = Seq.Seq UnAckedEntry
+
+--------------------------------------------------------------------------------
+
+-- | Convert a cardano-api Tx to an 'UnAckedEntry', pre-computing all
+-- protocol-ready values. This is the single boundary crossing: every subsequent
+-- protocol handler works with native consensus types.
+toEntry :: Api.Tx Api.ConwayEra -> UnAckedEntry
+toEntry tx =
+  let !genTx   = toGenTx tx
+      !genTxId = Mempool.txId genTx
+      !size    = Net.SizeInBytes
+                   (fromIntegral (BS.length (Api.serialiseToCBOR tx)))
+  in UnAckedEntry
+       { uaeGenTxId = genTxId
+       , uaeGenTx   = genTx
+       , uaeSize    = size
+       }
+
+-- | Extract the protocol announcement pair from a pre-computed entry.
+entryToIdSize :: UnAckedEntry -> (Mempool.GenTxId CardanoBlock, Net.SizeInBytes)
+entryToIdSize e = (uaeGenTxId e, uaeSize e)
+
+--------------------------------------------------------------------------------
 
 -- | Create a TxSubmission2 client that pulls txs from caller-supplied IO
 -- actions. No intermediate queue, the blocking action is called for the first
 -- mandatory tx, and the non-blocking action drains the rest up to the
 -- requested count, capped by @maxBatchSize@.
-mkClient
+txSubmissionClient
   -- | Tracer for structured TxSubmission2 events.
   :: Tracer IO Tracing.TxSubmission
   -- | Target name (remote node identifier).
@@ -82,12 +126,8 @@ mkClient
   -> IO (Api.Tx Api.ConwayEra)
   -- | NonBlocking: poll for a token.
   -> IO (Maybe (Api.Tx Api.ConwayEra))
-  -> TxSub.TxSubmissionClient
-       (Mempool.GenTxId CardanoBlock)
-       (Mempool.GenTx CardanoBlock)
-       IO
-       ()
-mkClient tracer targetName maxBatchSize blockingFetch nonBlockingFetch =
+  -> TxSubmissionClient
+txSubmissionClient tracer targetName maxBatchSize blockingFetch nonBlockingFetch =
   TxSub.TxSubmissionClient $ pure $ TxSub.ClientStIdle
     { TxSub.recvMsgRequestTxIds =
         requestTxIds
@@ -106,9 +146,9 @@ mkClient tracer targetName maxBatchSize blockingFetch nonBlockingFetch =
 --------------------------------------------------------------------------------
 
 -- | Drain up to @n@ tokens without blocking.
--- This is the primary token consumption path for both 'SingBlocking'
--- (after the first mandatory tx) and 'SingNonBlocking' requests.
--- Stops as soon as the callback returns 'Nothing' (rate-limited).
+-- This is the primary token consumption path for both 'SingBlocking' (after the
+-- first mandatory tx) and 'SingNonBlocking' requests. Stops as soon as the
+-- callback returns 'Nothing' (rate-limited).
 drainUpTo :: Int
           -> IO (Maybe (Api.Tx Api.ConwayEra))
           -> IO [Api.Tx Api.ConwayEra]
@@ -143,6 +183,9 @@ requestTxIds
   -> IO (Maybe (Api.Tx Api.ConwayEra))
   -- | Unacknowledged transactions (oldest first).
   -> UnAcked
+  -- | Blocking style singleton:
+  -- * 'SingBlocking':    (must return >= 1 tx).
+  -- * 'SingNonBlocking': (may return 0).
   -> TxSub.SingBlockingStyle blocking
   -- | Number of tx IDs to ACK.
   -> TxSub.NumTxIdsToAck
@@ -165,15 +208,19 @@ requestTxIds
   (TxSub.NumTxIdsToReq reqNum)
   = do
   -- Trace: node asked for tx id announcements.
-  ----------------------------------------------
+  ---------------------------------------------
   traceWith tracer $
     Tracing.RequestTxIds
       targetName
-      (map txId (toList unacked)) -- TxIds not yet acknowledged.
-      (fromIntegral ackNum)       -- how many the node is ACKing.
-      (fromIntegral reqNum)       -- how many new TxIds it wants.
+      -- TxIds not yet acknowledged.
+      (map
+        (fromGenTxId . uaeGenTxId)
+        (toList unacked)
+      )
+      (fromIntegral ackNum) -- How many the node is ACKing.
+      (fromIntegral reqNum) -- How many new TxIds it wants.
   -- Pull txs from the callbacks, capped by maxBatchSize.
-  --------------------------------------------------------
+  -------------------------------------------------------
   newTxs <- do
     let !effectiveReq = min
                           (fromIntegral reqNum)
@@ -188,22 +235,25 @@ requestTxIds
       TxSub.SingNonBlocking -> do
         -- Return whatever is available up to effectiveReq.
         drainUpTo effectiveReq nonBlockingFetch
-  -- Drop acknowledged txs.
-  --------------------------------------
-  -- Drop acknowledged txs from the front (oldest first, matching the server's
-  -- FIFO), then append new announcements at the back.
+  -- Convert to protocol-ready entries (single boundary crossing).
+  ----------------------------------------------------------------
+  let !newEntries = map toEntry newTxs
+  -- Drop acknowledged entries.
+  -----------------------------
+  -- Drop acknowledged entries from the front (oldest first, matching the
+  -- server's FIFO), then append new announcements at the back.
   let !unacked' =
         let !remaining = Seq.drop (fromIntegral ackNum) unacked
-        in  remaining Seq.>< Seq.fromList newTxs
+        in  remaining Seq.>< Seq.fromList newEntries
   -- Trace: we replied with tx id announcements.
-  -----------------------------------------------
+  ----------------------------------------------
   traceWith tracer $
     Tracing.ReplyTxIds
       targetName
-      (fromIntegral ackNum)        -- how many the node is ACKing.
-      (fromIntegral reqNum)        -- how many new TxIds it wants.
-      (map txId (toList unacked')) -- updated unacked after ACK + new.
-      (map txId newTxs)            -- TxIds we announced in this reply.
+      (fromIntegral ackNum)             -- how many the node is ACKing.
+      (fromIntegral reqNum)             -- how many new TxIds it wants.
+      (map (fromGenTxId . uaeGenTxId) (toList unacked'))   -- updated unacked after ACK + new.
+      (map (fromGenTxId . uaeGenTxId) newEntries)          -- TxIds we announced in this reply.
   -- Build the protocol continuation.
   -----------------------------------
   let nextIdle = TxSub.ClientStIdle
@@ -225,15 +275,15 @@ requestTxIds
   ---------------------------------------------------
   case blocking of
     TxSub.SingBlocking -> do
-      case NE.nonEmpty newTxs of
+      case NE.nonEmpty newEntries of
         Nothing  -> error "requestTxIds: blocking fetch returned empty list!"
-        Just txs -> do
+        Just entries -> do
           pure $ TxSub.SendMsgReplyTxIds
-                   (TxSub.BlockingReply    $ fmap txToIdSize txs   )
+                   (TxSub.BlockingReply    $ fmap entryToIdSize entries)
                    nextIdle
     TxSub.SingNonBlocking -> do
           pure $ TxSub.SendMsgReplyTxIds
-                   (TxSub.NonBlockingReply $ fmap txToIdSize newTxs)
+                   (TxSub.NonBlockingReply $ fmap entryToIdSize newEntries)
                    nextIdle
 
 -- | Handle @MsgRequestTxs@: look up requested tx ids in the unacked list and
@@ -251,6 +301,7 @@ requestTxs
   -> IO (Maybe (Api.Tx Api.ConwayEra))
   -- | Unacknowledged transactions (oldest first).
   -> UnAcked
+  -- | Transaction IDs the node is requesting full bodies for.
   -> [Mempool.GenTxId CardanoBlock]
   -> IO ( TxSub.ClientStTxs
             (Mempool.GenTxId CardanoBlock)
@@ -266,30 +317,30 @@ requestTxs
   requestedTxIds
   = do
   -- Trace: node asked for full transactions by TxId.
-  ----------------------------------------------------
+  ---------------------------------------------------
   traceWith tracer $
     Tracing.RequestTxs
       targetName
       (map fromGenTxId requestedTxIds) -- TxIds the node requested.
   -- Build response.
   ------------------
-  -- The list is converted to a Set for efficient filtering.
-  let requestedTxIdsSet = Set.fromList (map fromGenTxId requestedTxIds)
-      txIdsToSend = filter
-                      (\tx ->
-                        txId tx `Set.member` requestedTxIdsSet
-                      )
-                      (toList unacked)
+  -- Match directly on consensus GenTxId (native protocol type).
+  let requestedSet  = Set.fromList requestedTxIds
+      entriesToSend = toList $ Seq.filter
+                                 (\e -> uaeGenTxId e `Set.member` requestedSet)
+                                 unacked
   -- Trace: we replied with the matching transactions.
-  -----------------------------------------------------
+  ----------------------------------------------------
   traceWith tracer $
     Tracing.ReplyTxs
       targetName
-      (map fromGenTxId requestedTxIds) -- TxIds the node requested.
-      (map txId txIdsToSend)           -- TxIds we actually sent.
+      -- TxIds the node requested.
+      (map fromGenTxId requestedTxIds)
+      -- TxIds we actually sent.
+      (map (fromGenTxId . uaeGenTxId) entriesToSend)
   -- Response and protocol continuation.
   --------------------------------------
-  pure $ TxSub.SendMsgReplyTxs (map toGenTx txIdsToSend) $ TxSub.ClientStIdle
+  pure $ TxSub.SendMsgReplyTxs (map uaeGenTx entriesToSend) $ TxSub.ClientStIdle
     -- Continues the protocol loop with no changes to the unacked list.
     { TxSub.recvMsgRequestTxIds =
         requestTxIds tracer targetName
@@ -301,34 +352,34 @@ requestTxs
           unacked
     }
 
--- Helpers.
--------------------------------------------------------------------------------
+-- Protocol boundaries.
+--------------------------------------------------------------------------------
 
--- | Extract the cardano-api TxId from a signed transaction.
-txId :: Api.Tx Api.ConwayEra -> Api.TxId
-txId = Api.getTxId . Api.getTxBody
+-- The internal pipeline (builder, TxAssembly, fund management) uses cardano-api
+-- types ('Api.Tx', 'Api.TxId'), while the TxSubmission2 wire protocol speaks
+-- consensus types ('Mempool.GenTx', 'Mempool.GenTxId').
+-- 'toEntry' is the single boundary crossing: it converts a cardano-api 'Api.Tx'
+-- into an 'UnAckedEntry' with all protocol-ready values pre-computed, so that
+-- protocol handlers work with native consensus types without repeated
+-- conversions.
 
--- | Convert a Tx to (GenTxId, SizeInBytes) for announcement.
-txToIdSize :: Api.Tx Api.ConwayEra
-           -> (Mempool.GenTxId CardanoBlock, Net.SizeInBytes)
-txToIdSize =
-  (Mempool.txId . toGenTx)
-    &&& (Net.SizeInBytes . fromIntegral . txSize)
-  where
-    txSize :: Api.Tx Api.ConwayEra -> Int
-    txSize = BS.length . Api.serialiseToCBOR
-
--- | Convert a cardano-api Tx to a consensus GenTx.
+-- | Convert a cardano-api 'Api.Tx' to a consensus 'Mempool.GenTx'.
 toGenTx :: Api.Tx Api.ConwayEra -> Mempool.GenTx CardanoBlock
 toGenTx tx = Api.toConsensusGenTx $ Api.TxInMode Api.shelleyBasedEra tx
 
--- | Convert a consensus GenTxId back to a cardano-api TxId.
+-- | Convert a consensus 'Mempool.GenTxId' to a cardano-api 'Api.TxId'.
+-- Used only for trace rendering (the protocol handlers match on 'GenTxId'
+-- directly via 'uaeGenTxId').
 --
--- NOTE: this generator only produces Conway-era transactions.
--- If the Cardano network undergoes a hard fork to a new era while the
--- generator is running, this will fail. Update the pattern match when adding
--- support for a new era.
+-- All Shelley-based eras use the same 'Mempool.ShelleyTxId' wrapper, so a
+-- single 'Api.fromShelleyTxId' covers every post-Byron era.
 fromGenTxId :: Mempool.GenTxId CardanoBlock -> Api.TxId
-fromGenTxId (Block.GenTxIdConway (Mempool.ShelleyTxId i)) =
-  Api.fromShelleyTxId i
-fromGenTxId other = error $ "fromGenTxId: Conway only, received " ++ show other
+fromGenTxId (Block.GenTxIdShelley   (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdAllegra   (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdMary      (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdAlonzo    (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdBabbage   (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdConway    (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdDijkstra  (Mempool.ShelleyTxId i)) = Api.fromShelleyTxId i
+fromGenTxId (Block.GenTxIdByron _) =
+  error "fromGenTxId: Byron transactions not supported"

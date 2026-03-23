@@ -13,14 +13,12 @@ module Main (main) where
 ----------
 -- base --
 ----------
-import Control.Concurrent (myThreadId)
 import Control.Exception (finally)
-import Control.Monad (forever, replicateM, when)
+import Control.Monad (when)
 import Data.Bifunctor (first)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Last(..))
-import GHC.Conc (labelThread)
 import Numeric.Natural (Natural)
 import System.Environment (getArgs)
 import System.Exit (die)
@@ -75,9 +73,9 @@ import Data.Map.Strict qualified as Map
 -- network --
 -------------
 import Network.Socket qualified as Socket
---------------------------
+-------------------------
 -- ouroboros-consensus --
---------------------------
+-------------------------
 import Ouroboros.Consensus.Block.Abstract (CodecConfig)
 import Ouroboros.Consensus.Config (configBlock, configCodec)
 import Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
@@ -101,15 +99,19 @@ import Cardano.Benchmarking.PullFiction.Config.Raw qualified as Raw
 import Cardano.Benchmarking.PullFiction.Config.Runtime qualified as Runtime
 import Cardano.Benchmarking.PullFiction.Config.Validated qualified as Validated
 import Cardano.Benchmarking.PullFiction.WorkloadRunner (runWorkload)
----------------------
+-------------------
 -- tx-centrifuge --
----------------------
-import Cardano.Benchmarking.TxCentrifuge.Client (mkClient)
-import Cardano.Benchmarking.TxCentrifuge.Connection
-  (CardanoBlock, connect)
+-------------------
+import Cardano.Benchmarking.TxCentrifuge.NodeToNode qualified as N2N
+import Cardano.Benchmarking.TxCentrifuge.NodeToNode.KeepAlive
+  qualified as KeepAlive
+import Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxIdSync
+  qualified as TxIdSync
+import Cardano.Benchmarking.TxCentrifuge.NodeToNode.TxSubmission
+  qualified as TxSubmission
 import Cardano.Benchmarking.TxCentrifuge.Fund qualified as Fund
 import Cardano.Benchmarking.TxCentrifuge.Tracing qualified as Tracing
-import Cardano.Benchmarking.TxCentrifuge.Tx qualified as Tx
+import Cardano.Benchmarking.TxCentrifuge.TxAssembly qualified as TxAssembly
 
 --------------------------------------------------------------------------------
 
@@ -119,118 +121,127 @@ main = do
   -- Config.
   ----------
 
-  (runtime, codecConfig, networkId, networkMagic, tracers) <- loadConfig
+  (validated, codecConfig, networkId, networkMagic, tracers) <- loadConfig
 
-  -- Launch.
-  ----------
+  -- Callbacks.
+  -------------
 
-  -- Start tx builders Asyncs.
-  -- A tx builder sits between the fund queue and the tx queue:
-  -- it pulls unspent funds, signs a transaction, and enqueues the
-  -- (tx, outputFunds) pair for a worker to submit.
-  -- The fund queue is unbounded (TQueue); the tx queue is bounded (TBQueue)
-  -- and provides backpressure.
-  let mkBuilder runtimeBuilder builderIndex = do
-        vb <- interpretBuilder (Runtime.parsedBuilder runtimeBuilder)
-        -- Create a "dEtERmiNisTic" signing key and its derived address.
-        -- All tx outputs go to this address; recycled funds carry this key.
-        let (signingKey, signingAddr) = createSigningKeyAndAddress networkId builderIndex
-        let builderName = Runtime.builderName runtimeBuilder
-            builderPipe = Runtime.builderPipe runtimeBuilder
-            fundQueue   = Runtime.pipeInputQueue builderPipe
-            txQueue     = Runtime.pipePayloadQueue builderPipe
-            builderLoop = forever $ do
-              inputFunds <- STM.atomically $
-                replicateM
-                  (fromIntegral (inputsPerTx vb))
-                  (STM.readTQueue fundQueue)
-              case Tx.buildTx signingAddr signingKey
-                           inputFunds (outputsPerTx vb) (L.Coin (fee vb)) of
-                Left err -> die $ "Tx.buildTx: " ++ err
-                Right ans@(tx, outputFunds) -> do
+  -- From 'String' (address) and 'Int' (port) to 'AddrInfo'.
+  let resolveAddr ip port = do
+        let hints = Socket.defaultHints
+              { Socket.addrSocketType = Socket.Stream
+              , Socket.addrFamily     = Socket.AF_INET
+              }
+        addrs <- Socket.getAddrInfo
+          (Just hints)
+          (Just ip)
+          (Just (show port))
+        case addrs of
+          []    -> die $ "Cannot resolve target: " ++ ip ++ ":" ++ show port
+          (a:_) -> pure a
+
+  -- Observer factory: called by Runtime.resolve for each observer in the
+  -- config. Creates a NodeToNode connection with ChainSync + BlockFetch for
+  -- transaction confirmation tracking, and returns an ObserverHandle.
+  -- Takes the IOManager as first argument (partial-applied below).
+  let mkObserver ioManager _observerIndex observerName rawObserver = do
+        -- From JSON/Aeson.Value to the cardano-node specific observer.
+        observer <- case interpretObserver rawObserver of
+          Left err -> die $ "Observer " ++ observerName ++ ": " ++ err
+          Right o  -> pure o
+        -- BlockFetch + ChainSync state and config.
+        syncState <- TxIdSync.emptyState
+          TxIdSync.Config
+            { TxIdSync.confirmationDepth = observerConfirmationDepth observer }
+        -- Protocol clients including KeepAlive.
+        keepAlive <- KeepAlive.keepAliveClient 10
+        let clients = N2N.emptyClients
+             { N2N.clientChainSync  = Just $ TxIdSync.chainSyncClient  syncState
+             , N2N.clientBlockFetch = Just $ TxIdSync.blockFetchClient syncState
+             , N2N.clientKeepAlive  = Just keepAlive
+             }
+        addrInfo <- resolveAddr (observerAddr observer) (observerPort observer)
+        pure Runtime.ObserverHandle
+          { Runtime.ohRun = do
+              result <- N2N.connect
+                          ioManager
+                          codecConfig
+                          networkMagic
+                          tracers
+                          addrInfo
+                          clients
+              case result of
+                Left err -> die $ "observer " ++ observerName ++ ": " ++ err
+                Right () -> pure ()
+          , Runtime.ohSubscribe  = STM.atomically $
+              STM.dupTChan (TxIdSync.stateBroadcast syncState)
+          , -- Transform from whatever the observer returns to something useful.
+            Runtime.ohExtractKey = TxIdSync.confirmedTxId
+          }
+
+  -- Builder factory passed to 'Runtime.resolve'. Given a zero-based index,
+  -- the builder name, and the opaque builder config, returns a BuilderHandle.
+  let mkBuilder builderIndex builderName rawBuilder = do
+        -- From JSON/Aeson.Value to the cardano-node specific builder.
+        builder <- interpretBuilder rawBuilder
+        -- Based on index we create a new unique address/key for each builder.
+        let (signingKey, signingAddr) = createSigningKeyAndAddress
+                                          networkId
+                                          builderIndex
+        pure Runtime.BuilderHandle
+          { -- The number of inputs to wait for.
+            Runtime.bhInputsPerBatch = inputsPerTx builder
+            -- Build and sign.
+          , Runtime.bhBuildPayload   = \inputFunds -> do
+              let buildTxAns = TxAssembly.buildTx
+                                 signingAddr signingKey
+                                 inputFunds (outputsPerTx builder)
+                                 (L.Coin (fee builder))
+              case buildTxAns of
+                Left err -> die $ "TxAssembly.buildTx: " ++ err
+                Right (tx, outputFunds) -> do
+                  -- Trace the building action.
                   Tracing.traceWith
                     (Tracing.trBuilder tracers)
-                    (Tracing.mkBuilderNewTx builderName tx inputFunds outputFunds)
-                  case optimisticRecycle vb of
-                    False -> do
-                      STM.atomically $ STM.writeTBQueue txQueue ans
-                    True -> do
-                      STM.atomically $ STM.writeTBQueue txQueue (tx,[])
-                      STM.atomically $ Runtime.pipeRecycle builderPipe outputFunds
-                      Tracing.traceWith
-                        (Tracing.trBuilder tracers)
-                        (Tracing.mkBuilderRecycle builderName outputFunds)
-        async <- Async.async $ do
-          -- Always label the threads.
-          tid <- myThreadId
-          labelThread tid (Runtime.builderName runtimeBuilder)
-          builderLoop
-        -- Return linked async and with a labeled thread.
-        Async.link async
-        pure async
+                    (Tracing.mkBuilderNewTx
+                      builderName tx inputFunds outputFunds
+                    )
+                  -- The TxID is needed for the "on_confirm" recycling strategy.
+                  let txId = Api.getTxId (Api.getTxBody tx)
+                  pure (txId, tx, outputFunds)
+          }
 
-  -- IOManager (from ouroboros-network-framework, re-exported from
-  -- Win32-network) is a platform abstraction for asynchronous I/O:
-  --
-  --   * On Windows it wraps an I/O Completion Port (IOCP) and spawns a
-  --     dedicated OS thread to dequeue completion packets. Sockets are
-  --     associated with this IOCP via 'associateWithIOManager'.
-  --
-  --   * On POSIX (Linux, macOS) it is a complete no-op — the type is
-  --     @newtype IOManager = IOManager (forall hole. hole -> IO ())@ and
-  --     'withIOManager' simply passes a dummy value to the callback. GHC's
-  --     built-in RTS I/O manager (epoll / kqueue) handles all socket
-  --     multiplexing transparently.
-  --
-  -- The Win32-network documentation states that only one IOManager should run
-  -- at a time, so we cannot create one per target for isolation. Target
-  -- isolation comes from each target having its own Async thread and TCP
-  -- socket, not from the IOManager.
-  --
-  -- Everything must live inside 'withIOManager' because on Windows the IOCP
-  -- handle is closed when 'withIOManager' returns, silently cancelling all
-  -- pending socket I/O. The 'finally cancelAll' block must therefore be
-  -- inside too — putting it outside would try to clean up asyncs whose network
-  -- I/O is already dead.
-  --
-  -- Builders don't use ioManager (they only do STM queue operations and
-  -- 'buildTx'), but they are spawned inside so that the 'finally cancelAll'
-  -- cleanup covers them. Spawning them outside would leak asyncs if any
-  -- setup code between here and 'cancelAll' throws.
+  -- IOManager: no-op on POSIX, required on Windows for IOCP. All network I/O
+  -- and cleanup must live inside this block — the handle is invalidated when
+  -- 'withIOManager' returns.
   withIOManager $ \ioManager -> do
-    -- Start builders provinding a numeric index (zero based).
-    builders <- mapM
-                  (uncurry mkBuilder)
-                  (zip
-                    (Runtime.builders runtime)
-                    [0..]
-                  )
-    -- From 'String' (address) and 'Int' (port) to 'AddrInfo'.
-    let resolveAddr ip port = do
-          let hints = Socket.defaultHints
-                { Socket.addrSocketType = Socket.Stream
-                , Socket.addrFamily     = Socket.AF_INET
-                }
-          addrs <- Socket.getAddrInfo
-            (Just hints)
-            (Just ip)
-            (Just (show port))
-          case addrs of
-            []    -> die $
-              "Cannot resolve target: " ++ ip
-              ++ ":" ++ show port
-            (a:_) -> pure a
+    -- Resolve runtime: creates observers (via mkObserver), pipes, rate
+    -- limiters, and spawns builders. All asyncs are linked and tracked.
+    runtime <- Runtime.resolve
+      mkBuilder
+      (mkObserver ioManager)
+      (\name funds ->
+        Tracing.traceWith
+          (Tracing.trBuilder tracers)
+          (Tracing.mkBuilderRecycle name funds)
+      )
+      validated
     -- The 'TargetWorker' callback, called once per 'Target'.
     let targetWorker target fetchTx tryFetchTx = do
           addrInfo <- resolveAddr
             (Runtime.targetAddr target)
             (Runtime.targetPort target)
-          result <- connect ioManager codecConfig networkMagic tracers addrInfo $
-            mkClient
-              (Tracing.trTxSubmission tracers)
-              (Runtime.targetName target)
-              (Runtime.maxBatchSize target)
-              fetchTx tryFetchTx
+          keepAliveClient <- KeepAlive.keepAliveClient 10
+          result <- N2N.connect ioManager codecConfig networkMagic tracers addrInfo
+            N2N.emptyClients
+              { N2N.clientKeepAlive = Just keepAliveClient
+              , N2N.clientTxSubmission = Just $
+                  TxSubmission.txSubmissionClient
+                    (Tracing.trTxSubmission tracers)
+                    (Runtime.targetName target)
+                    (Runtime.maxBatchSize target)
+                    fetchTx tryFetchTx
+              }
           case result of
             Left err -> die $ Runtime.targetName target ++ ": " ++ err
             Right () -> pure ()
@@ -254,7 +265,7 @@ main = do
     -- 'waitAnyCatch' waiting on async A but async B dies, 'link' delivers the
     -- exception asynchronously, unblocking 'waitAnyCatch' immediately instead
     -- of waiting for A to finish first.
-    let allAsyncs = builders ++ workers
+    let allAsyncs = Runtime.asyncs runtime ++ workers
         cancelAll = mapM_ Async.cancel allAsyncs
     (_, result) <- flip finally cancelAll $
       Async.waitAnyCatch allAsyncs
@@ -294,12 +305,12 @@ instance Aeson.FromJSON InitialFunds where
 --------------------------------------------------------------------------------
 
 -- | Interpreted "value" builder configuration with defaults applied.
-data ValueBuilder = ValueBuilder
-  { inputsPerTx       :: !Natural
-  , outputsPerTx      :: !Natural
-  , fee               :: !Integer
-  , optimisticRecycle :: !Bool
-  }
+data ValueBuilder
+  = ValueBuilder
+    { inputsPerTx  :: !Natural
+    , outputsPerTx :: !Natural
+    , fee          :: !Integer
+    }
 
 -- | Interpret a 'Raw.Builder' (opaque type + params) into a concrete
 -- 'ValueBuilder'. Applies defaults (@inputs_per_tx@ = 1, @outputs_per_tx@ = 1)
@@ -309,28 +320,53 @@ interpretBuilder raw = case Raw.builderType raw of
   "value" ->
     case Aeson.Types.parseEither parseValueParams (Raw.builderParams raw) of
       Left err -> die $ "Builder params: " ++ err
-      Right (maybeInputs, maybeOutputs, rawFee, mOR) -> do
+      Right (maybeInputs, maybeOutputs, rawFee) -> do
         let nInputs  = fromMaybe 1 maybeInputs
             nOutputs = fromMaybe 1 maybeOutputs
-        when (nInputs == 0) $ die "Builder: inputs_per_tx must be >= 1"
+        when (nInputs  == 0) $ die "Builder: inputs_per_tx must be >= 1"
         when (nOutputs == 0) $ die "Builder: outputs_per_tx must be >= 1"
-        when (rawFee < 0) $ die "Builder: fee must be >= 0"
+        when (rawFee   <  0) $ die "Builder: fee must be >= 0"
         pure ValueBuilder
-          { inputsPerTx        = nInputs
-          , outputsPerTx       = nOutputs
-          , fee                = rawFee
-          , optimisticRecycle = case mOR of
-                                  Nothing -> False
-                                  Just oR -> oR
+          { inputsPerTx       = nInputs
+          , outputsPerTx      = nOutputs
+          , fee               = rawFee
           }
   other -> die $
     "Builder: unknown type " ++ show other ++ ", expected \"value\""
   where
     parseValueParams = Aeson.withObject "ValueParams" $ \o ->
-      (,,,) <$> o .:? "inputs_per_tx"
-            <*> o .:? "outputs_per_tx"
-            <*> o .:  "fee"
-            <*> o .:? "optimistic_recycle"
+      (,,) <$> o .:? "inputs_per_tx"
+           <*> o .:? "outputs_per_tx"
+           <*> o .:  "fee"
+
+--------------------------------------------------------------------------------
+-- Observer interpretation
+--------------------------------------------------------------------------------
+
+-- | Interpreted observer.
+data Observer
+  -- | A concrete chain-following endpoint for transaction confirmation tracking
+  -- via ChainSync + BlockFetch.
+  = NodeToNode
+    { observerAddr              :: !String
+    , observerPort              :: !Int
+    , observerConfirmationDepth :: !Natural
+    }
+
+-- | Interpret 'Raw.Observer' (opaque type + params) into a concrete 'Observer'.
+interpretObserver :: Raw.Observer -> Either String Observer
+interpretObserver raw = case Raw.observerType raw of
+  "nodetonode" ->
+    case Aeson.Types.parseEither parseParams (Raw.observerParams raw) of
+      Left  err -> Left $ "Observer params: " ++ err
+      Right n2n -> Right n2n
+  other -> Left $
+    "Observer: unknown \"type\" " ++ show other ++ ", expected \"nodetonode\""
+  where
+    parseParams = Aeson.withObject "ObserverParams" $ \o ->
+      NodeToNode <$> o .: "addr"
+                 <*> o .: "port"
+                 <*> o .: "confirmation_depth"
 
 --------------------------------------------------------------------------------
 -- Signing key loading
@@ -392,16 +428,16 @@ instance Aeson.FromJSON ProtocolParameters where
 --------------------------------------------------------------------------------
 
 -- | Parse CLI args, load all configuration files, create protocol,
--- generate a signing key, load initial funds, and set up tracers.
+-- generate a signing key, load initial funds, and validate config.
 --
--- Returns a fully resolved 'Runtime.Runtime' (validated config, rate
--- limiters, pipeline queues, and initial funds already partitioned
--- across workloads).
+-- Returns a 'Validated.Config' (validated but not yet resolved into a
+-- 'Runtime.Runtime'). The caller is responsible for calling
+-- 'Runtime.resolve' to create STM resources.
 loadConfig
-  :: IO ( -- | Fully resolved runtime (config + rate limiters + queues).
-          Runtime.Runtime Fund.Fund tx
+  :: IO ( -- | Validated configuration (no STM resources yet).
+          Validated.Config Fund.Fund
           -- | Codec config for serialising blocks on the wire.
-        , CodecConfig CardanoBlock
+        , CodecConfig N2N.CardanoBlock
         , Api.NetworkId
           -- | Network magic for the handshake with cardano-node.
         , Api.NetworkMagic
@@ -447,10 +483,9 @@ loadConfig = do
           let allFunds = f NE.:| fs
           hPutStrLn stderr $ "  Loaded " ++ show (NE.length allFunds) ++ " funds"
           pure allFunds
-  -- Validate config and resolve into a Runtime.
-  -- Pipeline: Raw → Validated (with pre-loaded funds) → Runtime.
+  -- Validate config.
+  -- Pipeline: Raw → Validated (with pre-loaded funds).
   validated <- either die pure $ Validated.validate raw funds
-  runtime <- Runtime.resolve validated
 
   -- Load node configuration and create consensus protocol.
   hPutStrLn stderr $ "Loading node config from: " ++ nodeConfigPath
@@ -463,7 +498,7 @@ loadConfig = do
   -- Tracers.
   tracers <- Tracing.setupTracers configFile
 
-  pure ( runtime, codecConfig, networkId, networkMagic, tracers )
+  pure ( validated, codecConfig, networkId, networkMagic, tracers )
 
 --------------------------------------------------------------------------------
 -- Protocol helpers (inlined from NodeConfig.hs and OuroborosImports.hs)
@@ -502,7 +537,7 @@ mkConsensusProtocol nodeConfig =
             byronCfg shelleyCfg alonzoCfg conwayCfg
             dijkstraCfg hardforkCfg checkpointsCfg Nothing)
 
-protocolToCodecConfig :: SomeConsensusProtocol -> CodecConfig CardanoBlock
+protocolToCodecConfig :: SomeConsensusProtocol -> CodecConfig N2N.CardanoBlock
 protocolToCodecConfig (SomeConsensusProtocol Api.CardanoBlockType info) =
     configCodec $ pInfoConfig $ fst $ Api.protocolInfo @IO info
 protocolToCodecConfig _ =

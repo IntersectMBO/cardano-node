@@ -10,12 +10,10 @@
 
 --------------------------------------------------------------------------------
 
--- | Orphan 'LogFormatting' and 'MetaTrace' instances copied from
--- @cardano-node@ (@NodeToNode.hs@ and @NodeToClient.hs@) so that
--- trace-dispatcher can format TxSubmission2, KeepAlive, and
--- TraceSendRecv messages.
-module Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans
-  () where
+-- | Orphan 'LogFormatting' and 'MetaTrace' instances copied from @cardano-node@
+-- (@NodeToNode.hs@ and @NodeToClient.hs@) so that trace-dispatcher can format
+-- TxSubmission2, KeepAlive, and TraceSendRecv messages.
+module Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans () where
 
 --------------------------------------------------------------------------------
 
@@ -27,9 +25,9 @@ import Data.Aeson (Value (String), (.=))
 -- text --
 ----------
 import Data.Text (pack)
---------------------------
+-----------------------
 -- ouroboros-network --
---------------------------
+-----------------------
 -- First two using same qualified as "typed-protocol" imports below.
 -- This is two import "NodeToClient.hs" `TraceSendMsg` instances unmmodified.
 import Ouroboros.Network.Driver.Simple qualified as Simple
@@ -98,7 +96,7 @@ instance MetaTrace (Simple.AnyMessage ps) =>
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Send" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
-  severityFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceSendMsg msg)) =
+  severityFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceRecvMsg msg)) =
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Receive" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
@@ -108,7 +106,7 @@ instance MetaTrace (Simple.AnyMessage ps) =>
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Send" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
-  privacyFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceSendMsg msg)) =
+  privacyFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceRecvMsg msg)) =
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Receive" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
@@ -118,7 +116,7 @@ instance MetaTrace (Simple.AnyMessage ps) =>
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Send" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
-  detailsFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceSendMsg msg)) =
+  detailsFor (Namespace out ("Receive" : tl)) (Just (Simple.TraceRecvMsg msg)) =
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Receive" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (Simple.AnyMessage ps)) Nothing
@@ -152,7 +150,7 @@ instance MetaTrace (Stateful.AnyMessage ps f) =>
   severityFor (Namespace out ("Send" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
 
-  severityFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceSendMsg msg)) =
+  severityFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceRecvMsg msg)) =
     severityFor (Namespace out tl) (Just msg)
   severityFor (Namespace out ("Receive" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
@@ -162,7 +160,7 @@ instance MetaTrace (Stateful.AnyMessage ps f) =>
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Send" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
-  privacyFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceSendMsg msg)) =
+  privacyFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceRecvMsg msg)) =
     privacyFor (Namespace out tl) (Just msg)
   privacyFor (Namespace out ("Receive" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
@@ -172,7 +170,7 @@ instance MetaTrace (Stateful.AnyMessage ps f) =>
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Send" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
-  detailsFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceSendMsg msg)) =
+  detailsFor (Namespace out ("Receive" : tl)) (Just (Stateful.TraceRecvMsg msg)) =
     detailsFor (Namespace out tl) (Just msg)
   detailsFor (Namespace out ("Receive" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (Stateful.AnyMessage ps f)) Nothing
@@ -206,6 +204,16 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgInit"
       , "agency" .= String (pack $ show stok)
       ]
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
+    mconcat
+      [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
+    mconcat
+      [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
@@ -218,16 +226,6 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
     mconcat
       [ "kind" .= String "MsgDone"
@@ -237,13 +235,13 @@ instance (Show txid, Show tx)
 instance MetaTrace (AnyMessage (STX.TxSubmission2 txid tx)) where
     namespaceFor (AnyMessageAndAgency _stok STX.MsgInit {}) =
       Namespace [] ["MsgInit"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
-      Namespace [] ["RequestTxIds"]
-    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
-      Namespace [] ["ReplyTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxIds {}) =
-      Namespace [] ["RequestTxs"]
+      Namespace [] ["RequestTxIds"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxIds {}) =
+      Namespace [] ["ReplyTxIds"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgRequestTxs {}) =
+      Namespace [] ["RequestTxs"]
+    namespaceFor (AnyMessageAndAgency _stok STX.MsgReplyTxs {}) =
       Namespace [] ["ReplyTxs"]
     namespaceFor (AnyMessageAndAgency _stok STX.MsgDone {}) =
       Namespace [] ["Done"]

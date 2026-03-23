@@ -50,7 +50,7 @@ import Cardano.TxGenerator.ProtocolParameters qualified as PP
 -- tx-centrifuge --
 ---------------------
 import Cardano.Benchmarking.TxCentrifuge.Fund qualified as Fund
-import Cardano.Benchmarking.TxCentrifuge.Tx qualified as Tx
+import Cardano.Benchmarking.TxCentrifuge.TxAssembly qualified as TxAssembly
 import Paths_tx_centrifuge qualified as Paths
 
 --------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
         Right (tx, outFunds) -> do
@@ -79,7 +79,7 @@ txTests = Tasty.testGroup "node"
       let fund1 = mkDummyFund signKey 0 5_000_000
           fund2 = mkDummyFund signKey 1 5_000_000
           fee   = L.Coin 200_000
-      case Tx.buildTx {-- ledgerPP --} addr signKey
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey
              [fund1, fund2] 3 fee of
         Left err ->
           HUnit.assertFailure $ "buildTx failed: " ++ err
@@ -94,7 +94,7 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 100_000
           fee  = L.Coin 200_000
-      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -103,7 +103,7 @@ txTests = Tasty.testGroup "node"
   , HUnit.testCase "buildTx: no input funds" $ do
       (_ledgerPP, signKey, addr) <- testSetup
       let fee = L.Coin 200_000
-      case Tx.buildTx {-- ledgerPP --} addr signKey [] 1 fee of
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [] 1 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -113,7 +113,7 @@ txTests = Tasty.testGroup "node"
       (_ledgerPP, signKey, addr) <- testSetup
       let fund = mkDummyFund signKey 0 10_000_000
           fee  = L.Coin 200_000
-      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 0 fee of
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 0 fee of
         Left _  -> pure () -- expected
         Right _ ->
           HUnit.assertFailure
@@ -162,7 +162,7 @@ txTests = Tasty.testGroup "node"
        -> Api.SigningKey Api.PaymentKey -> L.Coin -> IO ()
     go 0 _ _ _ _ _ = pure ()
     go remaining fund ledgerPP addr signKey fee =
-      case Tx.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
+      case TxAssembly.buildTx {-- ledgerPP --} addr signKey [fund] 1 fee of
         Left err ->
           error $ "throughput test: buildTx failed at iteration "
             ++ show remaining ++ ": " ++ err

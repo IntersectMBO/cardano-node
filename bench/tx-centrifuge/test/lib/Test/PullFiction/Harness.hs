@@ -31,10 +31,9 @@ module Test.PullFiction.Harness
 ----------
 -- base --
 ----------
-import Control.Concurrent (myThreadId, threadDelay)
+import Control.Concurrent (threadDelay)
 import Control.Exception (onException, throwIO)
-import Control.Monad (forever, replicateM_, when)
-import GHC.Conc (labelThread)
+import Control.Monad (forever, when)
 import Data.IORef qualified as IORef
 import Data.List (intercalate)
 import Data.List.NonEmpty qualified as NE
@@ -61,10 +60,6 @@ import System.Clock qualified as Clock
 -- containers --
 ----------------
 import Data.Map.Strict qualified as Map
----------
--- stm --
----------
-import Control.Concurrent.STM qualified as STM
 ---------------------
 -- pull-fiction --
 ---------------------
@@ -104,38 +99,42 @@ nodeName i = "node-" ++ (if i < 10 then "0" else "") ++ show i
 -- 'Runtime.Runtime'.
 --
 -- This is the common entry point for tests that need a resolved pipeline.
--- 'loadConfig' is a thin wrapper for the common case of @()@ inputs.
-resolveConfig :: FilePath -> NE.NonEmpty input -> IO (Runtime.Runtime input payload)
+-- Uses a trivial builder (1 input per batch; the input itself is the payload)
+-- so the pipeline exercises rate limiting and recycling without real
+-- transaction building.  'loadConfig' is a thin wrapper for the common case
+-- of @()@ inputs.
+resolveConfig :: FilePath -> NE.NonEmpty input -> IO (Runtime.Runtime input input)
 resolveConfig path inputs = do
   raw <- Aeson.eitherDecodeFileStrict path >>= either fail pure
   validated <- either fail pure $ Validated.validate raw inputs
-  Runtime.resolve validated
+  Runtime.resolve
+    -- mkBuilder: 1 input per batch; input IS the payload; recycle the same
+    -- input as output.
+    (\_ _ _ -> pure Runtime.BuilderHandle
+      { Runtime.bhInputsPerBatch = 1
+      , Runtime.bhBuildPayload   = \is -> pure ((), head is, is)
+      })
+    -- mkObserver: no test config uses observers.
+    (\_ name _ -> fail $ "resolveConfig: unexpected observer: " ++ name)
+    -- onRecycle: no-op.
+    (\_ _ -> pure ())
+    validated
 
 -- | Load a generator config from a JSON file with dummy inputs and resolve into
 -- a 'Runtime.Runtime'.
 --
 -- Useful for tests that only need config metadata (rate limits, targets) and do
 -- not use the input pipeline.
-loadConfig :: FilePath -> IO (Runtime.Runtime () payload)
+loadConfig :: FilePath -> IO (Runtime.Runtime () ())
 loadConfig path = resolveConfig path (() NE.:| [])
 
 -- | Run the pipeline scaffolding shared by all test runners.
 --
--- Spawns one builder per workload that reads an @input@ from the input queue
--- and writes @(input, [input])@ to the payload queue (the input IS the payload;
--- the output list carries the same input for 'runWorkload' to recycle back to
--- the input queue).
---
--- 'Runtime.resolve' loads initial inputs into the input queue ('TQueue'), but
--- the payload queue ('TBQueue') starts empty. The builder moves inputs between
--- them, but it runs asynchronously — workers could start before the builder has
--- been scheduled. A synchronous pre-fill transfers inputs from the input queue
--- to the payload queue (up to its 8192 capacity, or until the input queue is
--- exhausted) so workers never see an empty payload queue at startup.
---
--- Then spawns workers via 'runWorkload', passing the caller-supplied callback.
--- After the configured duration, cancels all builders and workers and returns
--- the elapsed wall-clock time.
+-- 'Runtime.resolve' has already spawned a builder async per workload (each
+-- reads from the input queue, produces payloads, and enqueues them) and loaded
+-- initial inputs.  This function spawns workers via 'runWorkload', races
+-- them against the configured duration, then cancels all asyncs (builders and
+-- workers).
 --
 -- @payload = input@ — the builder treats the input itself as the payload.
 runTest
@@ -150,35 +149,10 @@ runTest
   -> IO Double                        -- ^ Elapsed wall-clock seconds.
 runTest runtime durationSecs workerBody = do
   let allWorkloads = Map.elems (Runtime.workloads runtime)
-  -- Spawn one builder per workload: read an input from the input queue and
-  -- pass it through to the payload queue as an (input, [input]) pair.
-  -- runWorkload's fetchPayload recycles [input] back to the input queue,
-  -- closing the loop.
-  builders <- mapM
-    (\builder -> do
-      let inputsQueue  = Runtime.pipeInputQueue    (Runtime.builderPipe builder)
-          payloadsQueue = Runtime.pipePayloadQueue (Runtime.builderPipe builder)
-      -- Pre-fill: move inputs from the input queue to the payload queue so
-      -- workers don't see an empty payload queue at startup. Iterates up to
-      -- 8192 times (the TBQueue capacity); if the input queue has fewer items,
-      -- the remaining iterations are no-ops via tryReadTQueue.
-      replicateM_ 8192 $ STM.atomically $ do
-        maybeInput <- STM.tryReadTQueue inputsQueue
-        case maybeInput of
-          Nothing    -> pure ()
-          Just input -> STM.writeTBQueue payloadsQueue (input, [input])
-      -- Steady-state: builder runs forever, refilling as workers consume.
-      Async.async $ do
-        threadId <- myThreadId
-        labelThread threadId "builder"
-        forever $ STM.atomically $ do
-          input <- STM.readTQueue inputsQueue
-          STM.writeTBQueue payloadsQueue (input, [input])
-    )
-    (Runtime.builders runtime)
   -- Start time.
   start <- Clock.getTime Clock.MonotonicRaw
   -- Spawn workers via runWorkload, passing the caller-supplied callbacks.
+  -- Runtime asyncs (builders, recyclers) are already running.
   workers <- concat <$> mapM
     (\workload -> runWorkload workload $
       \target fetchPayload tryFetchPayload -> workerBody workload target fetchPayload tryFetchPayload
@@ -187,7 +161,7 @@ runTest runtime durationSecs workerBody = do
   -- Race the test duration against any async dying. Exceptions are thrown
   -- synchronously (not via Async.link) so Tasty's withResource can properly
   -- cache and propagate them to all test cases in the group.
-  let allAsyncs = builders ++ workers
+  let allAsyncs = Runtime.asyncs runtime ++ workers
       cancelAll = mapM_ Async.cancel allAsyncs
   winner <- Async.race
     (threadDelay (round (durationSecs * 1_000_000)))

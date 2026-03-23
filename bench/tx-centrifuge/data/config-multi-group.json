@@ -10,8 +10,10 @@
     "type": "value",
     "params": {
       "fee": 200000
-    }
+    },
+    "recycle": { "type": "on_pull" }
   },
+
   "workloads": {
     "group-01": {
       "rate_limit": {

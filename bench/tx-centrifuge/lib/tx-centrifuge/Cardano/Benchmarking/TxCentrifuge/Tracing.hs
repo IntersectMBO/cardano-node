@@ -42,17 +42,17 @@ import Data.Map.Strict qualified as Map
 -- contra-tracer --
 -------------------
 import "contra-tracer" Control.Tracer (Tracer (..), traceWith)
---------------------------
+-------------------------
 -- ouroboros-consensus --
---------------------------
+-------------------------
 import Ouroboros.Consensus.Cardano qualified as Consensus (CardanoBlock)
 import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Mempool
 import Ouroboros.Consensus.Shelley.Eras qualified as Eras
 -- Orphan instances needed for LedgerSupportsProtocol (ShelleyBlock ...)
 import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
---------------------------
+-----------------------
 -- ouroboros-network --
---------------------------
+-----------------------
 import Ouroboros.Network.Driver.Simple qualified as Simple
 import Ouroboros.Network.Protocol.KeepAlive.Type qualified as KA
 import Ouroboros.Network.Protocol.TxSubmission2.Type qualified as STX
@@ -64,9 +64,9 @@ import Data.Text qualified as Text
 -- trace-dispatcher --
 ----------------------
 import Cardano.Logging qualified as Logging
----------------------
+-------------------
 -- tx-centrifuge --
----------------------
+-------------------
 import Cardano.Benchmarking.TxCentrifuge.Fund qualified as Fund
 -- Imported for its orphan LogFormatting / MetaTrace instances.
 import Cardano.Benchmarking.TxCentrifuge.Tracing.Orphans ()
@@ -81,7 +81,7 @@ data Tracers = Tracers
   { -- | Builder trace: transaction construction and recycling events.
     trBuilder
       :: !(Tracer IO BuilderTrace)
-    -- | Clean, structured TxSubmission2 trace emitted by Client.hs.
+    -- | Clean, structured TxSubmission2 trace emitted by TxSubmission.hs.
   , trTxSubmission
       :: !(Tracer IO TxSubmission)
     -- | Low-level protocol trace from ouroboros-network's Driver.runPeer.
@@ -129,35 +129,30 @@ setupTracers configFile = do
   stdoutTrace      <- Logging.standardTracer
   let trForward = mempty
       mbTrEkg   = Nothing
-
-  -- Builder (TxCentrifuge.Builder.NewTx, TxCentrifuge.Builder.Recycle)
+  -- Builder (TxCentrifuge.Builder.NewTx, TxCentrifuge.Builder.Recycle).
   !builderTr <-
     Logging.mkCardanoTracer
       stdoutTrace trForward mbTrEkg ["TxCentrifuge", "Builder"]
   Logging.configureTracers
     configReflection trConfig [builderTr]
-
-  -- TxSubmission (TxCentrifuge.TxSubmission.*)
+  -- TxSubmission (TxCentrifuge.TxSubmission.*).
   !txSubTraceTr <-
     Logging.mkCardanoTracer
       stdoutTrace trForward mbTrEkg ["TxCentrifuge", "TxSubmission"]
   Logging.configureTracers
     configReflection trConfig [txSubTraceTr]
-
-  -- TxSubmission2 (low-level protocol trace)
+  -- TxSubmission2 (low-level protocol trace).
   !txSub2Trace <-
     Logging.mkCardanoTracer
       stdoutTrace trForward mbTrEkg ["TxSubmission2"]
   Logging.configureTracers
     configReflection trConfig [txSub2Trace]
-
-  -- KeepAlive
+  -- KeepAlive.
   !keepAliveTr <-
     Logging.mkCardanoTracer
       stdoutTrace trForward mbTrEkg ["KeepAlive"]
   Logging.configureTracers
     configReflection trConfig [keepAliveTr]
-
   pure Tracers
     { trBuilder =
         Tracer $ Logging.traceWith builderTr
@@ -193,13 +188,13 @@ defaultTraceConfig = Logging.emptyTraceConfig
 --
 -- The builder consumes input UTxOs (unspent funds) from the input queue, builds
 -- and signs a transaction, and enqueues the result for workers to submit. Each
--- transaction produces new output UTxOs. After submission, these outputs are
--- recycled back to the input queue, forming a closed loop:
+-- transaction produces new output UTxOs. After submission, these outputs can be
+-- recycled at different points back to the input queue, forming a closed loop:
 --
 -- @
--- inputs --> [builder: build & sign tx] --> (tx, outputs) --> [worker: submit]
---    ^                                                              |
---    +----------------------- recycle outputs ----------------------+
+-- inputs --> [builder: build & sign tx] --> (tx, outputs) --> [do something]
+--    ^                                                               |
+--    +---------------------maybe recycle outputs --------------------+
 -- @
 --
 -- == Cardano identifiers
@@ -364,13 +359,13 @@ instance Logging.MetaTrace BuilderTrace where
 -- TxSubmission trace messages
 --------------------------------------------------------------------------------
 
--- | Clean, structured trace of the TxSubmission2 protocol as seen from
--- the generator side. Replaces the verbose @Show@-based tracing in
--- @ouroboros-network@'s @TraceSendRecv@ with fields that are easy to
--- parse and verify.
+-- | Clean, structured trace of the TxSubmission2 protocol as seen from the
+-- generator side. Replaces the verbose @Show@-based tracing in
+-- @ouroboros-network@'s @TraceSendRecv@ with fields that are easy to parse and
+-- verify.
 --
--- Every constructor carries a @target@ field identifying the remote
--- node (the 'Runtime.targetName' of the 'Runtime.Target').
+-- Every constructor carries a @target@ field identifying the remote node (the 
+-- 'Runtime.targetName' of the 'Runtime.Target').
 data TxSubmission
   = -- | The node asked us to announce transaction identifiers
     -- (@MsgRequestTxIds@).
@@ -395,15 +390,15 @@ data TxSubmission
   | RequestTxs   !String [Api.TxId]
     -- | We replied to @MsgRequestTxs@ with the requested transactions.
     --
-    -- * 'String': target node name.
+    -- * 'String':       target node name.
     -- * @['Api.TxId']@: TxIds the node requested.
     -- * @['Api.TxId']@: TxIds we actually sent (subset of requested; a TxId is
     --   missing if it was not in the unacked list).
   | ReplyTxs     !String [Api.TxId] [Api.TxId]
 
--- | Machine-readable and human-readable rendering. All TxId lists are
--- omitted below 'Logging.DDetailed' to avoid the cost of hex-encoding
--- every transaction identifier on every protocol round-trip.
+-- | Machine-readable and human-readable rendering. All TxId lists are omitted
+-- below 'Logging.DDetailed' to avoid the cost of hex-encoding every transaction
+-- identifier on every protocol round-trip.
 --
 -- Machine format ('Logging.DNormal'):
 --
@@ -463,8 +458,8 @@ instance Logging.LogFormatting TxSubmission where
   forHuman (ReplyTxs target _requested _sent) =
        "ReplyTxs [" <> Text.pack target <> "]"
 
--- | Namespace: @TxCentrifuge.TxSubmission.*@. The outer prefix
--- is set via 'Logging.mkCardanoTracer' in 'setupTracers'.
+-- | Namespace: @TxCentrifuge.TxSubmission.*@. The outer prefix is set via
+-- 'Logging.mkCardanoTracer' in 'setupTracers'.
 instance Logging.MetaTrace TxSubmission where
   namespaceFor RequestTxIds{} = Logging.Namespace [] ["RequestTxIds"]
   namespaceFor ReplyTxIds{}   = Logging.Namespace [] ["ReplyTxIds"]
