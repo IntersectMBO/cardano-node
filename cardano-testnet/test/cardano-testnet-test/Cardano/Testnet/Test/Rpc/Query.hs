@@ -18,7 +18,6 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Binary.Version as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.PParams as L
-import qualified Cardano.Ledger.Plutus as L
 import qualified Cardano.Rpc.Client as Rpc
 import qualified Cardano.Rpc.Proto.Api.UtxoRpc.Query as U5c
 import           Cardano.Rpc.Server.Internal.UtxoRpc.Query ()
@@ -104,11 +103,12 @@ hprop_rpc_query_pparams = integrationRetryWorkspace 2 "rpc-query-pparams" $ \tem
   -- https://docs.cardano.org/about-cardano/explore-more/parameter-guide
   let chainParams = pparamsResponse ^. U5c.values . U5c.cardano
   babbageEraOnwardsConstraints (convert ceo) $ do
-    pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.unCoin
+    pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
       ===^ chainParams ^. U5c.coinsPerUtxoByte . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxTxSizeL === chainParams ^. U5c.maxTxSize . to fromIntegral
-    pparams ^. L.ppMinFeeBL ===^ chainParams ^. U5c.minFeeCoefficient . to (fmap L.Coin . utxoRpcBigIntToInteger)
-    pparams ^. L.ppMinFeeAL ===^ chainParams ^. U5c.minFeeConstant . to (fmap L.Coin . utxoRpcBigIntToInteger)
+    pparams ^. L.ppTxFeeFixedL ===^ chainParams ^. U5c.minFeeCoefficient . to (fmap L.Coin . utxoRpcBigIntToInteger)
+    pparams ^. L.ppTxFeePerByteL . to L.unCoinPerByte . to L.fromCompact . to L.unCoin
+      ===^ chainParams ^. U5c.minFeeConstant . to utxoRpcBigIntToInteger
     pparams ^. L.ppMaxBBSizeL === chainParams ^. U5c.maxBlockBodySize . to fromIntegral
     pparams ^. L.ppMaxBHSizeL === chainParams ^. U5c.maxBlockHeaderSize . to fromIntegral
     pparams ^. L.ppKeyDepositL ===^ chainParams ^. U5c.stakeKeyDeposit . to (fmap L.Coin . utxoRpcBigIntToInteger)
