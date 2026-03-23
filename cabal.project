@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2026-02-17T10:15:41Z
-  , cardano-haskell-packages 2026-03-20T13:09:44Z
+  , cardano-haskell-packages 2026-03-23T16:30:47Z
 
 constraints:
   -- haskell.nix patch does not work for 1.6.8
@@ -39,7 +39,7 @@ packages:
   trace-forward
 
 -- Needed when cross compiling
-extra-packages: alex
+extra-packages: alex, dmq-node == 0.3.0.0
 
 program-options
   ghc-options: -Werror
